@@ -1,0 +1,13 @@
+{
+  "operationId": "33333333-3333-4333-8333-333333333333",
+  "selections": [
+    {
+      "target": {
+        "id": "your-workflow",
+        "peerId": "your-peer",
+        "kind": "configuration"
+      },
+      "snapshotId": "select-an-existing-snapshot-id"
+    }
+  ]
+}

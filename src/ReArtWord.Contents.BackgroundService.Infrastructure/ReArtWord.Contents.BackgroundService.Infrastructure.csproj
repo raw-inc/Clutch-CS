@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- LibraryImportの生成するネイティブ呼出しスタブで使用します。 -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Installation/WindowsFirewall.ps1" />
+    <EmbeddedResource Include="../../installer/Register-ClientStartup.ps1" LogicalName="Clutch-CS.RegisterClientStartup" />
+    <EmbeddedResource Include="../../installer/Start-Client.ps1" LogicalName="Clutch-CS.StartClient" />
+    <ProjectReference Include="../ReArtWord.Contents.BackgroundService.Runtime/ReArtWord.Contents.BackgroundService.Runtime.csproj" />
+    <ProjectReference Include="../ReArtWord.Contents.BackgroundService.ManagementTransport/ReArtWord.Contents.BackgroundService.ManagementTransport.csproj" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="YamlDotNet" />
+    <PackageReference Include="Tomlyn" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="ZstdSharp.Port" />
+    <PackageReference Include="ZLinq" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="DeviceManagement/Windows/*.ps1" LogicalName="Contents.DeviceManagement.%(Filename)%(Extension)" WithCulture="false" />
+  </ItemGroup>
+</Project>

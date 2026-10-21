@@ -1,0 +1,35 @@
+.application-target {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px 28px;
+    margin-bottom: 20px;
+}
+
+.application-target label {
+    min-width: 220px;
+    max-width: 100%;
+}
+
+.application-path {
+    max-width: 30rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.application-state {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px 24px;
+}
+
+.application-state dd {
+    margin: 0;
+}
+
+@media (max-width: 600px) {
+    .application-target {
+        display: block;
+    }
+}

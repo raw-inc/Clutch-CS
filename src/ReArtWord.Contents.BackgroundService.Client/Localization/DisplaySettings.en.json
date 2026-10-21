@@ -1,0 +1,17 @@
+{
+  "display.settings.title": "Display settings",
+  "display.settings.save": "Save display settings",
+  "display.settings.saved": "Display settings saved for this browser.",
+  "display.timezone.label": "Display time zone",
+  "display.timezone.help": "Applies to dates and time filters in WorkflowEditor, LogViewer and Dashboard for this browser. The default is UTC. Workflow schedules, recorded timestamps and PC clocks are unchanged.",
+  "display.timezone.current": "Current: {0} · {1}",
+  "display.timezone.readFailed": "The saved display time zone could not be read. UTC is being used.",
+  "display.timezone.writeFailed": "The display time zone was changed for this session, but could not be saved.",
+  "display.timezone.invalid": "Select a supported time zone.",
+  "display.timezone.ambiguous": "{0} is skipped or repeated by daylight saving time in {1}. Choose an unambiguous time, or use UTC in display settings.",
+  "display.timezone.from": "From ({0})",
+  "display.timezone.until": "Until ({0})",
+  "display.timezone.time": "Time ({0})",
+  "display.timezone.point": "Point in time ({0})",
+  "display.timezone.operational": "Operational time zone ID (schedules)"
+}

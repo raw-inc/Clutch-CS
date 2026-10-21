@@ -1,0 +1,14 @@
+{
+  "node.control.progress.name": "ProgressBar",
+  "node.control.progress.description": "Display total and current counts as a progress bar, percentage and numbers. Integers and decimals can be mixed. Zero total displays 0%; overflow is capped at 100% on the bar. No outputs.",
+  "port.control.progress.in.total": "Total count",
+  "port.control.progress.in.current": "Current count",
+  "Progress": "Progress",
+  "Progress requires two non-negative finite numbers.": "Progress requires two non-negative finite numbers.",
+  "progress.invalid": "Progress inputs must be non-negative finite numbers.",
+  "progress.activeExecutions": "Active workflow executions",
+  "setting.progressScope": "Progress grouping",
+  "progress.noActiveExecutions": "No active workflow progress",
+  "choice.control.progress.progressScope.workflow": "Per workflow execution",
+  "choice.control.progress.progressScope.iteration": "Per iteration element"
+}

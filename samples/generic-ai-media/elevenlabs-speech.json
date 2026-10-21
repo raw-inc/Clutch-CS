@@ -1,0 +1,23 @@
+{
+  "id": "elevenlabs-speech",
+  "name": "ElevenLabs speech",
+  "enabled": false,
+  "nodes": [
+    {
+      "id": "speech",
+      "type": "ai.audio.elevenlabs.generate",
+      "settings": {
+        "model": "eleven_multilingual_v2",
+        "voice": "CONFIGURE_VOICE_ID",
+        "secretRef": "ai/elevenlabs",
+        "interfaceId": "CONFIGURE_OS_NIC_ID",
+        "localAddress": "192.0.2.10",
+        "outputPath": "C:/Clutch-CS/content/generated.mp3"
+      },
+      "inputs": { "value": { "kind": "json", "json": "こんにちは。これは音声合成のサンプルです。", "binary": "" } },
+      "target": { "scope": "one", "peers": ["peer-a"] },
+      "position": { "x": 60, "y": 80 }
+    }
+  ],
+  "wires": []
+}

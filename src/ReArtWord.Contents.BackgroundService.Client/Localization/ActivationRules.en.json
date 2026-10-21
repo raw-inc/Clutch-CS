@@ -1,0 +1,8 @@
+{
+  "ActivationChange.Appearance": "Names and layout",
+  "ActivationChange.Structure": "Nodes, contracts and connections",
+  "ActivationChange.Values": "Settings and constant inputs",
+  "ActivationChange.Execution": "Targets and execution policies",
+  "ActivationChange.Diagnostics": "Tracing and personal data",
+  "ActivationChange.Policy": "Activation rules"
+}

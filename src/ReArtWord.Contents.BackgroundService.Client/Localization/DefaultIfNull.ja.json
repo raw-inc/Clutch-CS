@@ -1,0 +1,7 @@
+{
+  "node.data.defaultIfNull.name": "Null → Default",
+  "node.data.defaultIfNull.description": "入力がnullの場合だけ既定値へ置き換えます。false・0・空文字列・空配列はそのまま渡します。バイナリや型情報も保持します。既定値を省略した場合はnullです。未到着や失敗はnullとは扱いません。",
+  "port.data.defaultIfNull.in.value": "入力値",
+  "port.data.defaultIfNull.in.defaultValue": "null時の既定値",
+  "port.data.defaultIfNull.out.value": "選択された値"
+}

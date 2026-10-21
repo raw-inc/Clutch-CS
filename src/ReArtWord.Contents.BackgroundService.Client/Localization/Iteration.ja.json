@@ -1,0 +1,14 @@
+{
+  "node.control.forEach.name": "ForEach",
+  "node.control.forEach.description": "配列の各要素を接続先へ渡し、その要素の処理が終わってから次へ進みます。itemは要素、indexは0から始まる添字、countは要素数です。Endは省略でき、その場合は接続先の末端まで繰り返します。結果を集約して後続を一回だけ実行する場合は、loopをForEach Endへ接続します。 要素型は自動推測・JSONスキーマ・手動設定から選択できます。指定した型は処理前に検証します。 辞書も入力できます。itemは一組のKey-Valueです。辞書の反復順は保証しません。",
+  "node.control.parallelForEach.name": "Parallel ForEach",
+  "node.control.parallelForEach.description": "指定した同時実行数まで、配列の要素を並列処理します。開始間隔(ms)を指定すると、最初の開始を基準にした時刻の刻みで一要素ずつ開始します。最初は即時、空き枠ができたら次の刻みまで待ちます。使わなかった刻みは飛ばし、まとめて開始しません。0は間隔なしです。Endは省略できます。ForEach Endで集約する結果は入力配列の順序を保ちます。失敗時は未開始の要素を止め、開始済みの処理は結果を待ちます。内部ノードの重複実行方針と安全停止設定も適用されます。 要素型は自動推測・JSONスキーマ・手動設定から選択できます。指定した型は処理前に検証します。 辞書も入力できます。itemは一組のKey-Valueです。辞書の反復順は保証しません。",
+  "node.control.forEach.end.name": "ForEach End",
+  "node.control.forEach.end.description": "開始ノードのloopと、要素ごとの処理結果を接続します。入力すると次の欄が増え、各値をそれぞれ入力順の配列にまとめます。continueは今回の未開始処理を省略して次の要素へ、breakは未開始の要素を止めて反復外へ進みます。開始済みの処理は終了を待ちます。信号時に結果の組が揃っていなければ、その要素を全結果配列から省略します。制御信号がなくても従来どおり自動で進みます。空配列の結果も空配列です。入れ子は内側のEndで集約してから外側へ接続します。 Key-Value／Dictionaryの結果は配列ではなく辞書へ収集します。重複キーは既定でエラーとなり、設定で上書きに変更できます。通常の値は従来どおり配列です。",
+  "Item result {0}": "今回の処理結果 {0}",
+  "Collected results {0}": "まとめた処理結果 {0}",
+  "port.control.forEach.end.in.continue": "次の要素へ（continue）",
+  "port.control.forEach.end.in.break": "反復を終了（break）",
+  "setting.maxConcurrency": "同時に処理する要素数",
+  "setting.startIntervalMs": "要素の開始間隔 (ms)"
+}

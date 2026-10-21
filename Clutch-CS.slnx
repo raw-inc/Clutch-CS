@@ -1,0 +1,32 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ReArtWord.Contents.BackgroundService.Installer/ReArtWord.Contents.BackgroundService.Installer.csproj" />
+    <Project Path="src/ReArtWord.Contents.BackgroundService.ManagementTransport/ReArtWord.Contents.BackgroundService.ManagementTransport.csproj" />
+    <Project Path="src/ReArtWord.Contents.BackgroundService.Contracts/ReArtWord.Contents.BackgroundService.Contracts.csproj" />
+    <Project Path="src/ReArtWord.Contents.BackgroundService.Runtime/ReArtWord.Contents.BackgroundService.Runtime.csproj" />
+    <Project Path="src/ReArtWord.Contents.BackgroundService.Nodes/ReArtWord.Contents.BackgroundService.Nodes.csproj" />
+    <Project Path="src/ReArtWord.Contents.BackgroundService.Infrastructure/ReArtWord.Contents.BackgroundService.Infrastructure.csproj" />
+    <Project Path="src/ReArtWord.Contents.BackgroundService.CoreService/ReArtWord.Contents.BackgroundService.CoreService.csproj" />
+    <Project Path="src/ReArtWord.Contents.BackgroundService.SignalCapture/ReArtWord.Contents.BackgroundService.SignalCapture.csproj" />
+    <Project Path="src/ReArtWord.Contents.BackgroundService.Updater/ReArtWord.Contents.BackgroundService.Updater.csproj" />
+    <Project Path="src/ReArtWord.Contents.BackgroundService.CommandLine/ReArtWord.Contents.BackgroundService.CommandLine.csproj" />
+    <Project Path="src/ReArtWord.Contents.BackgroundService.Client/ReArtWord.Contents.BackgroundService.Client.csproj" />
+    <Project Path="src/ReArtWord.Contents.BackgroundService.ClientHost/ReArtWord.Contents.BackgroundService.ClientHost.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ReArtWord.Contents.BackgroundService.Client.Tests/ReArtWord.Contents.BackgroundService.Client.Tests.csproj" />
+    <Project Path="tests/ReArtWord.Contents.BackgroundService.Installer.Tests/ReArtWord.Contents.BackgroundService.Installer.Tests.csproj" />
+    <Project Path="tests/ReArtWord.Contents.BackgroundService.Integration.Tests/ReArtWord.Contents.BackgroundService.Integration.Tests.csproj" />
+    <Project Path="tests/ReArtWord.Contents.BackgroundService.Unit.Tests/ReArtWord.Contents.BackgroundService.Unit.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/fixtures/updates/">
+    <Project Path="tests/ReArtWord.Contents.BackgroundService.Unit.Tests/Updates/FixtureHost/FixtureHost.csproj" />
+  </Folder>
+  <Folder Name="/tests/fixtures/" />
+  <Folder Name="/tests/fixtures/command-line/">
+    <Project Path="tests/ReArtWord.Contents.BackgroundService.Unit.Tests/CommandLine/FixtureHost/FixtureHost.csproj" />
+  </Folder>
+  <Folder Name="/tests/fixtures/desktop/">
+    <Project Path="tests/ReArtWord.Contents.BackgroundService.Unit.Tests/Management/FixtureHost/FixtureHost.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,45 @@
+id: generic-resource-warning
+name: CPU観測と条件警告
+enabled: false
+nodes:
+  - id: observe
+    type: resource.watch
+    position: { x: 60, y: 80 }
+    startOnLoad: true
+    target:
+      scope: one
+      peers: [configured-peer]
+    settings:
+      intervalMs: 5000
+  - id: cpu
+    type: data.extract
+    position: { x: 460, y: 80 }
+    settings:
+      mode: pointer
+      path: /cpu.usage/machine/value
+  - id: high
+    type: control.condition
+    position: { x: 860, y: 80 }
+    settings:
+      operation: greater
+      expected: 90
+  - id: warn
+    type: control.log
+    position: { x: 1260, y: 80 }
+    settings:
+      level: WARN
+      message: 明示したCPU警告条件が成立しました
+wires:
+  - fromNode: observe
+    fromPort: metrics
+    toNode: cpu
+    toPort: value
+  - fromNode: cpu
+    fromPort: value
+    toNode: high
+    toPort: value
+  - fromNode: high
+    fromPort: value
+    when: 'true'
+    toNode: warn
+    toPort: value

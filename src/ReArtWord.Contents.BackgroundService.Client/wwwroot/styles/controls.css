@@ -1,0 +1,103 @@
+.search-field {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: #292b30;
+    border: 1px solid #42454e;
+    border-bottom-color: #626773;
+    border-radius: 4px;
+    padding: 0 9px;
+}
+
+.search-field .ui-icon {
+    width: 14px;
+    color: var(--muted);
+}
+
+.search-field input {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 8px 0;
+    font-size: 11px;
+}
+
+.search-field input:focus {
+    padding-bottom: 8px;
+}
+
+.search-field:focus-within {
+    border-bottom-color: var(--accent);
+}
+
+.tabs-actions button {
+    font-size: 10px;
+    padding: 4px 8px;
+}
+
+.pc-display-toggle {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.pc-display-toggle button {
+    font-size: 12px;
+    padding: 5px 10px;
+}
+
+.pc-display-toggle button.active {
+    background: var(--raised);
+    color: var(--ink);
+    box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.health-card {
+    background: color-mix(in srgb, var(--panel) 70%, transparent);
+    border: 0;
+    border-radius: 4px;
+    padding: 18px;
+    min-width: 0;
+    box-shadow: none;
+}
+
+.path-input {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.path-input input {
+    flex: 1;
+    min-width: 0;
+    width: 0;
+}
+
+.path-input button {
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-size: 11px;
+    padding: 5px 7px;
+}
+
+.tab-error {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    width: 14px;
+    height: 14px;
+    border: 1px solid currentcolor;
+    border-radius: 50%;
+    font-size: 10px;
+    line-height: 1;
+    margin-left: 5px;
+}
+
+/* ノード内の設定と入力は、ポート配置と同じ固定高を共有します。 */
+.node-inline-field {
+    height: 64px;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: block;
+}

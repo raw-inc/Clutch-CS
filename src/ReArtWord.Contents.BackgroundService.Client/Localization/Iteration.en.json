@@ -1,0 +1,14 @@
+{
+  "node.control.forEach.name": "ForEach",
+  "node.control.forEach.description": "Run the connected body once per array element, waiting for each body to finish before starting the next. item is the element, index starts at zero, and count is the array length. End is optional: without it, repeat through the connected leaves. Connect loop to ForEach End to collect results and continue once after completion. Choose automatic inference, JSON Schema or manual element types. Declared types are validated before processing. Dictionaries are also accepted; item is one Key-Value entry. Dictionary iteration order is not guaranteed.",
+  "node.control.parallelForEach.name": "Parallel ForEach",
+  "node.control.parallelForEach.description": "Run array elements with a limited number of concurrent bodies. Start interval (ms) schedules one element per time slot anchored to the first start. The first starts immediately; an available slot waits for the next tick. Missed ticks are skipped rather than replayed in a burst. Zero disables spacing. End is optional. With ForEach End, collect results in input order. A failure stops unstarted elements and waits for already started bodies. Body nodes retain their own overlap and safety settings. Choose automatic inference, JSON Schema or manual element types. Declared types are validated before processing. Dictionaries are also accepted; item is one Key-Value entry. Dictionary iteration order is not guaranteed.",
+  "node.control.forEach.end.name": "ForEach End",
+  "node.control.forEach.end.description": "Connect loop from one ForEach start and the item results. Each populated input adds another pair; each value is collected into its own array in input order. continue skips unstarted work for this item; break stops unstarted items and exits the loop. Already started work is awaited. If a control signal arrives before all item results are available, omit that item from every result array. Automatic advancement remains available without control signals. Empty input produces empty result arrays. Collect nested results with an inner End before passing them outside. Key-Value and Dictionary results are collected into dictionaries instead of arrays. Duplicate keys fail by default, with replacement available in settings. Other values remain arrays.",
+  "Item result {0}": "Item result {0}",
+  "Collected results {0}": "Collected results {0}",
+  "port.control.forEach.end.in.continue": "Next item (continue)",
+  "port.control.forEach.end.in.break": "Exit loop (break)",
+  "setting.maxConcurrency": "Concurrent iterations",
+  "setting.startIntervalMs": "Element start interval (ms)"
+}

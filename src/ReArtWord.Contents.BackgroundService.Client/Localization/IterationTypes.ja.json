@@ -1,0 +1,4 @@
+{
+  "LOOP": "反復範囲",
+  "Connect the loop start directly to its End. This connection pairs the iteration boundary; it does not carry an item value.": "反復開始を対応するEndへ直接接続します。反復範囲を対応付ける接続で、要素の値は渡しません。"
+}

@@ -1,0 +1,19 @@
+{
+  "node.value.constant.name": "Value",
+  "node.value.constant.description": "Create a value from text, using automatic interpretation or an explicit type. A connected type takes priority. Integer and decimal conversions preserve their supported precision.",
+  "node.value.type.name": "Type definition",
+  "node.value.type.description": "Define a value type. Connect an element type for an array, or Key-Value definitions for object properties. Use the result to construct values or validate HTTP parameters.",
+  "node.value.array.name": "Array",
+  "node.value.array.description": "Create an array or append one item to an existing array. An optional element type validates every item. Nested arrays and type definitions are kept as data. Choose automatic inference, JSON Schema or manual element types. Declared types are validated before processing.",
+  "node.value.keyValue.name": "Key-Value",
+  "node.value.keyValue.description": "Create a property from a key and value, or add it to an existing object. Values can be data or type definitions. Duplicate keys are rejected unless replacement is selected.",
+  "node.http.method.name": "HTTP method",
+  "node.http.method.description": "Select an HTTP method and connect it to an HTTP request or server. The output is the selected method name.",
+  "setting.type": "Type",
+  "setting.text": "Value",
+  "setting.optional": "Allow null or missing",
+  "setting.duplicate": "Duplicate keys",
+  "auto": "Automatic",
+  "reject": "Reject",
+  "replace": "Replace"
+}

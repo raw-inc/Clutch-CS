@@ -1,0 +1,118 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@using ReArtWord.Contents.BackgroundService.Client.Operations.Journal
+@page "/logs"
+@using ReArtWord.Contents.BackgroundService.Client.Observability
+@using ReArtWord.Contents.BackgroundService.Contracts.Observability
+<main class="page log-page">
+    <div class="page-title">
+        <h1>@Ui["Logs"]</h1>
+        <div class="toolbar"><button class="quiet" @onclick="()=>operationsOpen=true">@Ui["Operation history"]</button><button @onclick="()=>traceOpen=true" disabled="@(!HasSelection)"><UiIcon Name="settings" />@Ui["Trace settings"]</button><RetentionDialog Disabled="@(!HasSelection)" /></div>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <p class="notice" role="status">@Ui[message]</p>
+    }
+    @if(inputProblem is not null){<p class="notice" role="status">@inputProblem()</p>}
+    <div class="log-search">
+        <div class="log-search-main">
+            <div class="search-field"><UiIcon Name="search" /><input aria-label="@Ui["Log content"]" placeholder="@Ui["Search log content"]" @bind="text" @bind:event="oninput" @onkeydown="args => string.Equals(args.Key, EnterKey, StringComparison.Ordinal) ? SearchAsync(false) : Task.CompletedTask" /></div>
+            <select aria-label="@Ui["Severity"]" @bind="level"><option value="">@Ui["All severities"]</option>@foreach(var value in new[]{"DEBUG","INFO","WARN","ERROR","FATAL"}){<option value="@value">@value</option>}</select>
+            <button class="primary" @onclick="()=>SearchAsync(false)" disabled="@loading"><UiIcon Name="search" />@(loading ? Ui["Searching…"] : Ui["Search"])</button>
+        </div>
+        <div class="log-observation-controls">
+            <label>@Ui["log.viewer.scope"]<select value="@(SearchAllClusters ? "all" : "current")" @onchange="ScopeChangedAsync"><option value="current" disabled="@(!HasSelection)">@Ui["log.viewer.current"]</option><option value="all">@Ui["log.viewer.all"]</option></select></label>
+            <label>@Ui["log.viewer.refresh"]<select value="@refreshSeconds" @onchange="RefreshChangedAsync">@foreach(var seconds in refreshIntervals){<option value="@seconds">@(seconds == 0 ? Ui["log.viewer.off"] : Ui.Format("log.viewer.every", seconds))</option>}</select></label>
+            <label title="@Ui["log.viewer.recentHelp"]"><input type="checkbox" checked="@uncompressedOnly" @onchange="UncompressedOnlyChangedAsync" />@Ui["log.viewer.recentOnly"]</label>
+            @if(lastRefresh is { } updated){<span class="small">@Ui.Format("log.viewer.updated", FormatTime(updated, "HH:mm:ss"))</span>}
+        </div>
+        @if(SearchAllClusters){<p class="small">@Ui[HasSelection ? "log.viewer.settingsContext" : "log.viewer.selectForSettings"]</p>}
+        @if (!string.IsNullOrWhiteSpace(causation))
+        {
+            <div class="log-related-filter"><span title="@causation">@Ui["Related logs"] · @causation[..Math.Min(8,causation.Length)]</span><button class="quiet icon-button" aria-label='@Ui["Clear related log filter"]' @onclick="ClearRelatedAsync"><UiIcon Name="close" /></button></div>
+        }
+        <details>
+            <summary>@Ui["Filter by time, PC, or workflow"]</summary>
+            <div class="log-filters">
+                <label>@Ui.Format("display.timezone.from",DisplayTimeZone.Id)<input type="datetime-local" value="@from" @oninput="FromChanged" /></label>
+                <label>@Ui.Format("display.timezone.until",DisplayTimeZone.Id)<input type="datetime-local" value="@until" @oninput="UntilChanged" /></label>
+                <label>@Ui["PC (Peer ID)"]<input @bind="peer" @bind:event="oninput" placeholder="Peer ID" /></label>
+                <label>@Ui["Workflow"]<input @bind="workflow" @bind:event="oninput" placeholder="Workflow ID" /></label>
+                <label>@Ui["Node"]<input @bind="node" @bind:event="oninput" placeholder="Node ID" /></label>
+                <label>@Ui["Related log ID (exact match)"]<input @bind="causation" @bind:event="oninput" placeholder="GUID" /></label>
+            </div>
+        </details>
+    </div>
+    <div class="section-heading"><h2>@Ui["Search results"]</h2><span role="status">@ResultStatus</span><LogExportControl Query="ReadQuery" AllClusters="SearchAllClusters" ClusterId="Api.SelectedClusterId" PeerId="Api.SelectedPeerId" Disabled="loading" /></div>
+    <div class="log-results @(selected is not null?"has-selection":string.Empty)">
+        <div class="table-wrap">
+            <table class="log-table">
+                <thead><tr><th>@Ui.Format("display.timezone.time",DisplayTimeZone.Id)</th><th>@Ui["Severity"]</th><th>@Ui["Cluster"]</th><th>@Ui["PC / Peer"]</th><th>@Ui["Workflow / Node"]</th><th>@Ui["Content"]</th></tr></thead>
+                <tbody>
+                    @foreach (var row in entries)
+                    {
+                        var entry = row.Entry;
+                        <tr @key="(row.Source.ClusterId, entry.Id)" class="@(selected?.Source.ClusterId == row.Source.ClusterId && selected.Entry.Id == entry.Id ? "selected-log" : string.Empty)" data-select="true" tabindex="0" title="@(entry.WorkflowId is not null ? Ui["editor.navigation.logHint"] : null)" aria-label="@Ui.Format("Details for {0} {1}: {2}", entry.PeerId, entry.Level, entry.Message)" @onclick="()=>selected=row" @ondblclick="()=>OpenLog(row)" @onkeydown="e=>SelectLog(e,row)">
+                            <td class="log-time" title="@FormatTime(entry.Time)">@FormatTime(entry.Time,"HH:mm:ss.fff")<small>@FormatTime(entry.Time,"yyyy-MM-dd")</small></td>
+                            <td><span class="badge log-level @(entry.Level is "ERROR" or "FATAL"?"bad":entry.Level=="WARN"?"warn":string.Empty)">@entry.Level</span></td>
+                            <td class="log-origin">@row.Source.ClusterId</td>
+                            <td class="log-origin">@entry.PeerId</td>
+                            <td class="log-origin">
+                                @if (!string.IsNullOrEmpty(entry.WorkflowId)){<span>@entry.WorkflowId</span>}
+                                @if (!string.IsNullOrEmpty(entry.NodeId)){<small>@entry.NodeId</small>}
+                                @if (string.IsNullOrEmpty(entry.WorkflowId) && string.IsNullOrEmpty(entry.NodeId)){<span class="muted">@Ui["Not recorded"]</span>}
+                            </td>
+                            <td class="log-entry-message">@entry.Message</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            @if (entries.Count == 0)
+            {
+                <div class="empty"><h3>@(query is null ? Ui["No search yet"] : Ui["No matching logs"])</h3><p>@(query is null ? Ui["log.viewer.searchHint"] : Ui["Change the time range or filters."])</p></div>
+            }
+        </div>
+        @if (selected is not null)
+        {
+            <aside class="log-detail">
+                <div class="section-heading"><h2>@Ui["Selected log"]</h2><button class="quiet icon-button" aria-label="@Ui["Close log details"]" @onclick="()=>selected=null"><UiIcon Name="close" /></button></div>
+                <p class="log-detail-message">@selected.Entry.Message</p>
+                <dl class="log-facts">
+                    <dt>@Ui.Format("display.timezone.time",DisplayTimeZone.Id)</dt><dd>@FormatTime(selected.Entry.Time)</dd>
+                    <dt>@Ui["Severity"]</dt><dd>@selected.Entry.Level</dd>
+                    <dt>@Ui["Cluster"]</dt><dd>@selected.Source.ClusterId</dd>
+                    <dt>@Ui["PC / Peer"]</dt><dd>@selected.Entry.PeerId</dd>
+                    <dt>@Ui["Workflow"]</dt><dd>@(selected.Entry.WorkflowId ?? Ui["Not recorded"])</dd>
+                    <dt>@Ui["Node"]</dt><dd>@(selected.Entry.NodeId ?? Ui["Not recorded"])</dd>
+                </dl>
+                @if (LogLocation(selected) is { } uri)
+                {
+                    <a href="@uri">@Ui["editor.navigation.openLog"]</a>
+                }
+                @if (selected.Entry.CausationId is not null)
+                {
+                    <div class="log-related"><button @onclick="()=>SearchCausationAsync(selected.Entry.CausationId)">@Ui["Related logs"]</button></div>
+                }
+                @if (selected.Entry.Data is not null){<JsonDetails Value="selected.Entry.Data" Title="@Ui["Recorded data"]" />}
+                @if (selected.Entry.Raw is not null){<JsonDetails Value="selected.Entry.Raw" Title="@Ui["Communication capture"]" />}
+                <details class="log-technical"><summary>@Ui["Identifiers and original record"]</summary><dl class="log-facts"><dt>@Ui["Log ID"]</dt><dd>@selected.Entry.Id</dd><dt>@Ui["Related log ID"]<br />(Causation ID)</dt><dd>@(selected.Entry.CausationId?.ToString() ?? Ui["Not recorded"])</dd></dl><JsonDetails Value="selected.Entry" Title="@Ui["Full record (JSON)"]" /></details>
+            </aside>
+        }
+    </div>
+    @foreach (var row in entries.Where(row => row.Omission is not null))
+    {
+        var omitted = row.Omission!;
+        <p class="notice log-missing">@Ui["Omitted log details"]: @row.Source.ClusterId / @omitted.EntryId<br />@Ui["Fields"]: @string.Join(", ", omitted.Fields) · @Ui["Reason"]: @omitted.Reason</p>
+    }
+    @if(hasMore){<div class="toolbar section"><button @onclick="()=>SearchAsync(true)" disabled="@loading">@Ui["Next page"]</button>@if(refreshSeconds != 0){<span class="small">@Ui["log.viewer.nextPauses"]</span>}</div>}
+    @if (statistics is not null)
+    {
+        <details class="secondary-details">
+            <summary>@Ui["Recording and forwarding"] <span class="badge @(statistics.SearchAvailable?string.Empty:"warn")">@(statistics.SearchAvailable?Ui["Search available"]:Ui["Search unavailable"])</span>@if(statistics.DroppedEntries>0){<span class="badge warn">@Ui.Format("Dropped logs: {0}", statistics.DroppedEntries)</span>}</summary>
+            <div class="log-health"><span>@Ui["Waiting to record"]<strong>@statistics.QueuedBytes.ToString("N0",CultureInfo.CurrentCulture) bytes</strong></span><span>@Ui["Not forwarded"]<strong>@statistics.ForwardPendingBytes.ToString("N0",CultureInfo.CurrentCulture) bytes</strong></span><span>@Ui["Dropped at generation"]<strong>@Ui.Format("{0} logs / {1} bytes", statistics.DroppedEntries, statistics.DroppedBytes)</strong></span></div>
+            @if (!string.IsNullOrWhiteSpace(statistics.LastFailureCode)){<p class="small">@Ui["Latest recording error"]: @statistics.LastFailureCode</p>}
+            @if (statistics.Failures is { Count: > 0 }){<JsonDetails Value="statistics.Failures" Title="@Ui["Recording and forwarding errors"]" />}
+        </details>
+    }
+</main>
+<Modal Open="traceOpen" Title="@Ui["Log tracing"]" Close="()=>traceOpen=false"><TracePanel /></Modal>
+<Modal Open="operationsOpen" Title="@Ui["Operation history and status"]" Close="()=>operationsOpen=false"><OperationList /></Modal>

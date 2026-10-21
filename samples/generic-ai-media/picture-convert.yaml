@@ -1,0 +1,24 @@
+id: generic-picture-convert
+name: 画像ファイルの形式変換
+enabled: false
+nodes:
+  - id: image
+    type: value.file
+    position: { x: 60, y: 80 }
+    settings:
+      path: C:/Clutch-CS/content/source.png
+  - id: convert
+    type: media.picture.convert
+    position: { x: 460, y: 80 }
+    target:
+      scope: one
+      peers: [media-peer]
+    settings:
+      outputPath: C:/Clutch-CS/content/converted.webp
+      format: webp
+      width: 512
+wires:
+  - fromNode: image
+    fromPort: value
+    toNode: convert
+    toPort: value

@@ -1,0 +1,5 @@
+{
+  "fleet.footer.updating": "Updating",
+  "fleet.footer.unconfirmed": "Update status unconfirmed",
+  "fleet.footer.context": "A service update is in progress. Connections may temporarily reconnect."
+}

@@ -1,0 +1,10 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+<div class="log-export-control">
+    <button @onclick="StartAsync" disabled="@(working || Disabled)"><UiIcon Name="save" />@Ui["log.export.button"]</button>
+    @if(working){<span class="small" role="status">@Ui.Format("log.export.progress", status?.Entries ?? 0)</span><button class="quiet" @onclick="CancelAsync">@Ui["Cancel"]</button>}
+    @if(status?.State is "completed")
+    {
+        <span class="small" role="status">@Ui[status.Complete ? "log.export.complete" : "log.export.partial"]</span>
+    }
+    @if(problem is not null){<span class="small" role="status">@problem()</span>}
+</div>

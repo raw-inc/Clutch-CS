@@ -1,0 +1,33 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@using ReArtWord.Contents.BackgroundService.Contracts.Persistence.InternalData
+@using ReArtWord.Contents.BackgroundService.Contracts.Persistence
+@using ReArtWord.Contents.BackgroundService.Contracts.Nodes
+<section class="card">
+    <h2>@Ui["Inspect internal state and edit locally"]</h2>
+    <p class="small muted">@Ui["Only workflow internal values are handled here. Files, processes, external sends and secrets are not queued offline. ClientHost candidates are unsaved and unsent, and are lost when it exits. Browser drafts are stored separately and are not sent to the execution peer until explicit integration."]</p>
+    <div class="toolbar"><label>Workflow ID<input disabled="@(scope==EInternalDataScope.Cluster)" @bind="workflow" @bind:event="oninput" maxlength="200" /></label><label>@Ui["Scope"]<select @bind="scope"><option value="@EInternalDataScope.Shared">@Ui["Workflow shared"]</option><option value="@EInternalDataScope.Peer">@Ui["Selected peer"]</option><option value="@EInternalDataScope.Cluster">Cluster State</option></select></label><label>@Ui["State key"]<input @bind="key" @bind:event="oninput" maxlength="512" /></label><button disabled="@busy" @onclick="()=>ReadAsync(false)">@Ui["Read current value"]</button></div>
+    @if(view is { } current)
+    {
+        <p class="small">@Ui["Owner"] @current.ClusterId / @current.PeerId / @current.InstanceId · @Ui["Saved value last confirmed"] @(FormatTime(current.ConfirmedAt)??Ui["Unconfirmed"])</p>
+        <p>@(current.Online?Ui["Confirmed from the connected peer"]:Ui["offline · previously confirmed revision"]) · @Ui["Policy"] @Ui[current.Policy.Offline.ToString()] · @(current.Current.State.IsUnsaved?Ui["Unsaved "]:"") @(current.Current.State.IsLocalUnconfirmed?Ui["Unsent / not integrated "]:"") @(current.Current.State.IsStale?Ui["May be stale"]:"")</p>
+        <p class="small">@Ui["Saved revision"] @current.Current.State.SavedRevision / @Ui["Current revision"] @current.Current.State.EffectiveRevision / @Ui["Recovery revision"] @current.Current.State.RecoveryRevision</p>
+        <p class="notice">@current.Current.State.Reason</p>
+        <button disabled="@busy" @onclick="DownloadAsync">@Ui["Export confirmed value and draft"]</button>
+        @if(Connection.Current is { } connected&&connected.InstanceId!=current.InstanceId){<button disabled="@busy" @onclick="NewInstanceAsync">@Ui["Export the original draft and open the new instance"]</button>}
+        @if(!current.Current.State.CanRead){<p class="notice error">@Ui["The current policy does not allow reading this value. This does not mean a null value was saved."]</p>}
+        else
+        {
+            <details><summary>@Ui["Last confirmed value"]</summary><pre>@Preview(current.Current.Value)</pre></details>
+            @if(current.Remote is not null){<details><summary>@Ui["Value retrieved from the connected peer (not applied automatically)"]</summary><pre>@Preview(current.Remote.Value)</pre><p>@current.Remote.Revision</p></details>}
+            <label>@Ui["Input on this device (JSON)"]<textarea rows="7" value="@raw" @oninput="EditAsync" disabled="@(!Editable||busy)" /></label>
+            @if(rawDirty){<p class="notice">@Ui["This input is a browser draft, not confirmation of shared storage or Core activation."]</p>}
+            <div class="toolbar"><button disabled="@(busy||!Editable||writeUnknown)" @onclick="StageAsync">@Ui["Retain as an unsent local candidate"]</button><button disabled="@(busy||!Matches||!current.Current.State.IsLocalUnconfirmed||writeUnknown)" @onclick="ReconcileAsync">@Ui["Reconnect and compare before saving"]</button><button disabled="@(busy||!Matches||writeUnknown)" @onclick="()=>discardOpen=true">@Ui["Discard local candidate and input…"]</button></div>
+        }
+        @if(command is Guid id){<p>@Ui["Original request"] @id <button disabled="@busy" @onclick="QueryAsync">@Ui["Query the result without executing"]</button></p><JsonDetails Value="query" Title="@Ui["Original request result"]" />}
+    }
+    @if(message is not null){<p class="notice">@(message?.Invoke())</p>}
+</section>
+<Modal Open="discardOpen" Title="@Ui["Discard the local internal-state candidate"]" Close="()=>discardOpen=false">
+    <p>@Ui["Read the connected peer’s confirmed saved value and discard this local candidate. This does not cancel a write with an unknown result."]</p>
+    <button disabled="@busy" @onclick="DiscardAsync">@Ui["Discard and reread the saved value"]</button>
+</Modal>

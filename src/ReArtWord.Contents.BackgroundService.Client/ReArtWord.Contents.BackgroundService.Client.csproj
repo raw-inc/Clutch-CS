@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Localization/*.json" WithCulture="false" />
+    <!-- SDK の通常 Content 除外と ItemSpec を一致させ、開発用 worker の二重公開を防ぐ。 -->
+    <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+    <ProjectReference Include="../ReArtWord.Contents.BackgroundService.Contracts/ReArtWord.Contents.BackgroundService.Contracts.csproj" />
+    <ProjectReference Include="$(ContentsSourceQualityAnalyzerRepositoryPath)/src/ReArtWord.CSharp.SourceCodeQuality.Razor.Analyzers/ReArtWord.CSharp.SourceCodeQuality.Razor.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+</Project>

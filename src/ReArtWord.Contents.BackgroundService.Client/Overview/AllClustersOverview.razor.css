@@ -1,0 +1,197 @@
+.overview-heading,
+.panel-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+h2 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.scope,
+.panel-heading > span {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.cluster-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px 32px;
+}
+
+.cluster-label {
+    display: grid;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--muted);
+    padding: 4px 0;
+}
+
+.cluster-label strong {
+    color: var(--ink);
+    font-size: 13px;
+}
+
+.cluster-label.stale {
+    opacity: 0.6;
+}
+
+.secondary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.secondary-grid > section {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.panel-content {
+    flex: 1;
+}
+
+.range-note,
+footer {
+    font-size: 10px;
+    line-height: 1.7;
+    color: var(--muted);
+}
+
+.activity-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 0;
+    font-size: 13px;
+}
+
+.activity-row > div {
+    display: grid;
+    gap: 5px;
+}
+
+.activity-row small,
+.log-row small {
+    font-size: 10px;
+    color: var(--muted);
+}
+
+.activity-row strong {
+    font-weight: 500;
+    overflow-wrap: anywhere;
+}
+
+.log-row {
+    display: grid;
+    grid-template-columns: 52px 44px minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px 0;
+    font-size: 10px;
+}
+
+.log-row p {
+    margin: 0 0 4px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 11px;
+}
+
+.log-row time {
+    color: var(--muted);
+}
+
+.log-row[data-navigable] {
+    cursor: pointer;
+}
+
+.log-row[data-navigable]:hover,
+.log-row[data-navigable]:focus-visible {
+    background: var(--raised);
+    outline: 1px solid var(--line);
+    outline-offset: 3px;
+}
+
+.empty {
+    font-size: 12px;
+    color: var(--muted);
+    padding: 24px 0;
+}
+
+@media (max-width: 750px) {
+    .secondary-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.all-overview {
+    display: grid;
+    gap: 24px;
+    color: var(--ink);
+    container-type: inline-size;
+}
+
+.cluster-health-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+}
+
+.cluster-health-card {
+    container-type: inline-size;
+}
+
+.cluster-health-card header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.cluster-health-card h3 {
+    font-size: 14px;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.cluster-health-card dl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 20px;
+    margin: 16px 0 0;
+}
+
+.cluster-health-card dt {
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 4px;
+}
+
+.cluster-health-card dd {
+    font-size: 12px;
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
+}
+
+@container (min-width:1100px) {
+    .cluster-health-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@container (min-width:640px) {
+    .cluster-health-card dl {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}

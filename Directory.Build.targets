@@ -1,0 +1,13 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)eng/javascript/JavaScriptQuality.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)eng/css/CssQuality.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)eng/analyzers/source-quality-core/SourceQualityAnalyzer.Repository.targets" />
+
+  <!-- 個別projectだけをrestoreする場合の入口です。
+       solutionからの実行ではDirectory.Solution.targetsが一度だけ同期します。
+       cloneされたAnalyzer repository自身のrestoreでは自己同期・dirty gateを再実行しません。 -->
+  <Target Name="SyncContentsSourceQualityAnalyzerForStandaloneProject"
+          BeforeTargets="Restore"
+          Condition="'$(BuildingSolutionFile)' != 'true' and '$(ContentsCurrentBuildIsSourceQualityAnalyzerRepository)' != 'True'"
+          DependsOnTargets="SyncContentsSourceQualityAnalyzerRepository" />
+</Project>

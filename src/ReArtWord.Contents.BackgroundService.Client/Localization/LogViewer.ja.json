@@ -1,0 +1,23 @@
+{
+  "log.export.button": "ZIPをダウンロード",
+  "log.export.progress": "ZIP送信中 · {0}件",
+  "log.export.complete": "テキストと詳細JSONの送信が完了しました。ブラウザーのダウンロードを確認してください。",
+  "log.export.partial": "取得できない範囲・詳細の省略・出力上限のいずれかがあります。ZIP内のsummary.jsonと各ログのomissionを確認してください。",
+  "log.export.failed": "ログを出力できませんでした。検索条件・接続先を確認し、他の出力が終わってから再実行してください。",
+  "log.export.cancelled": "ログ出力を取り消したか、生成期限に達しました。",
+  "log.viewer.scope": "検索範囲",
+  "log.viewer.current": "選択中のPeer",
+  "log.viewer.all": "観測可能なすべてのクラスタ",
+  "log.viewer.recentOnly": "直近の履歴のみ検索する",
+  "log.viewer.recentHelp": "非圧縮で保持されているログだけを検索します。OFFにすると圧縮済みの履歴も検索します。",
+  "log.viewer.searchHint": "検索範囲と条件を指定して検索します。圧縮済みの過去ログも調べる場合は「直近の履歴のみ検索する」をOFFにしてください。",
+  "log.viewer.refresh": "自動再取得",
+  "log.viewer.off": "無効",
+  "log.viewer.every": "{0}秒ごと",
+  "log.viewer.updated": "最終取得: {0}",
+  "log.viewer.settingsContext": "トレース設定・保持設定・操作履歴は、選択中のクラスタを対象にします。",
+  "log.viewer.selectForSettings": "接続先を選択せず、観測可能なすべてのクラスタを検索できます。トレース設定・保持設定を変更する場合は接続先を選択してください。",
+  "log.viewer.noSources": "この範囲で取得可能なログの取得先がありません。",
+  "log.viewer.unconfirmed": "未確認の取得先: {0}",
+  "log.viewer.nextPauses": "次のページを開くと、自動再取得を無効にします。"
+}

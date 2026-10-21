@@ -1,0 +1,22 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@using ReArtWord.Contents.BackgroundService.Contracts.Workflow
+<nav class="editor-workflow-tabs" aria-label="@Ui["Workflows in the selected cluster"]">
+    @foreach(var item in tabs)
+    {
+        <button class="workflow-tab @(item.Id==SelectedId?"selected":null) @(dropTarget==item.Id&&dragged!=item.Id?"drop-target":null) @(Diagnostics.Issues(Model.ClusterId,item.Id).Count>0?"has-error":null)" @key="item.Id" data-workflow-id="@item.Id" draggable="@(!Busy?"true":"false")" @ondragstart="()=>dragged=item.Id" @ondragend="()=>dragged=dropTarget=null" @ondragover:preventDefault="true" @ondragenter="()=>dropTarget=item.Id" @ondrop="()=>MoveAsync(dragged,item.Id,UiCancellation)" @oncontextmenu="e=>OpenMenu(item.Id,e)" @oncontextmenu:preventDefault="true" aria-pressed="@(item.Id==SelectedId)" title="@(item.Id+(item.LocalOnly?" · "+Ui["Local, not shared"]:string.Empty)+(item.Dirty?" · "+Ui["Unsaved draft on this device"]:string.Empty))" aria-disabled="@(Busy?"true":"false")" @onclick="()=>Busy||item.Id==SelectedId?Task.CompletedTask:Open.InvokeAsync(item.Id)" @ondblclick="()=>FocusError.InvokeAsync(item.Id)">
+            <span class="workflow-kind" role="img" aria-label="@Ui[item.IsDashboard?"WFDashboard":item.IsSubworkflow?"SubWorkflow":"Workflow"]" title="@Ui[item.IsDashboard?"WFDashboard":item.IsSubworkflow?"SubWorkflow":"Workflow"]"><UiIcon Name="@(item.IsDashboard?"dashboard":item.IsSubworkflow?"subworkflow":"nodes")" /></span><span>@item.Name</span>@if(Diagnostics.Issues(Model.ClusterId,item.Id).Count>0){<span class="tab-error" role="img" aria-label="@Ui["Node errors"]" title="@Ui["Node errors"]">!</span>}@if(item.Dirty){<span class="tab-state" aria-label="@Ui["Unsaved"]">●</span>}@if(item.LocalOnly){<small>@Ui["Local, not shared"]</small>}
+        </button>
+    }
+    <div class="tabs-actions"><EditorCreateMenu Experimental="Experimental" Busy="Busy" New="New" NewDashboard="NewDashboard" />@if(HasMore){<button class="quiet" disabled="@Busy" @onclick="Next">@Ui["Next page"]</button>}</div>
+</nav>
+@if(preferenceProblem is not null){<p class="notice" role="status">@Ui[preferenceProblem]</p>}
+@if(menuId is not null)
+{
+    <div class="tab-menu-shade" @onclick="()=>menuId=null" @oncontextmenu="()=>menuId=null" @oncontextmenu:preventDefault="true"></div>
+    <div @ref="menu" class="tab-context-menu" role="menu" tabindex="-1" style="@MenuStyle" @onkeydown="MenuKey" @oncontextmenu:preventDefault="true">
+        <button type="button" role="menuitem" disabled="@(Busy||Neighbor(-1) is null)" @onclick="()=>MoveAsync(menuId,Neighbor(-1),UiCancellation)">@Ui["tabs.moveLeft"]</button>
+        <button type="button" role="menuitem" disabled="@(Busy||Neighbor(1) is null)" @onclick="()=>MoveAsync(menuId,Neighbor(1),UiCancellation)">@Ui["tabs.moveRight"]</button>
+        <button type="button" role="menuitem" disabled="@Busy" @onclick="HideAsync">@Ui["tabs.hide"]</button>
+        <button type="button" role="menuitem" class="danger" disabled="@Busy" @onclick="DeleteAsync">@Ui["Delete workflow"]</button>
+    </div>
+}

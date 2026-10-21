@@ -1,0 +1,130 @@
+.editor-navigator {
+    --editor-overlay-background: #1d2127b6;
+
+    position: fixed;
+    z-index: 3;
+    display: grid;
+    justify-items: end;
+    gap: 6px;
+    pointer-events: none;
+}
+
+.editor-navigator:not([data-navigation-ready]) {
+    visibility: hidden;
+}
+
+.navigation-tools,
+.editor-find {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: fit-content;
+    max-width: 100%;
+    padding: 4px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    box-shadow: 0 3px 12px #0004;
+    pointer-events: auto;
+}
+
+.navigation-tools button,
+.editor-find button {
+    height: 28px;
+    font-size: 11px;
+    padding: 3px 7px;
+}
+
+.navigation-tools button[aria-pressed="true"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.editor-find input {
+    width: 190px;
+    min-width: 70px;
+    flex: 1;
+    font-size: 12px;
+    padding: 4px 6px;
+}
+
+.find-count {
+    min-width: 35px;
+    text-align: center;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+}
+
+.editor-minimap {
+    width: 240px;
+    max-width: 100%;
+    height: 160px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--editor-overlay-background);
+    box-shadow: 0 3px 12px #0004;
+    pointer-events: auto;
+    cursor: crosshair;
+    touch-action: none;
+    user-select: none;
+}
+
+.editor-minimap ::deep .map-node {
+    fill: #728094;
+}
+
+.editor-minimap ::deep .map-node[data-search-match] {
+    fill: #e4b561;
+}
+
+.editor-minimap ::deep .map-node[data-search-active] {
+    fill: #d3a5f5;
+}
+
+.editor-minimap ::deep .map-node[data-running] {
+    fill: #55d6be;
+    stroke: #a5ffe4;
+    stroke-width: 1px;
+}
+
+.editor-minimap ::deep .map-node[data-running][data-search-match] {
+    stroke: #e4b561;
+    stroke-width: 2px;
+}
+
+.editor-minimap ::deep .map-node[data-running][data-search-active] {
+    stroke: #d3a5f5;
+    stroke-width: 2px;
+}
+
+.map-viewport {
+    fill: #9dc5fd12;
+    stroke: #b7d5ff;
+    stroke-width: 1.5px;
+    pointer-events: none;
+}
+
+.map-selection {
+    fill: #d3a5f52b;
+    stroke: #d3a5f5;
+    stroke-width: 1.5px;
+    stroke-dasharray: 4 2;
+    pointer-events: none;
+}
+
+.navigation-notice {
+    max-width: 300px;
+    margin: 0;
+    padding: 6px 9px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 11px;
+    pointer-events: auto;
+}
+
+.editor-find[hidden],
+.editor-minimap[hidden] {
+    display: none;
+}

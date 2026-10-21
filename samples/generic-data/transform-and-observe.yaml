@@ -1,0 +1,62 @@
+id: generic-transform-example
+name: JSON変換と状態判定
+# 有効化は利用先の設定・ログ保持方針を確認した後で行います。
+enabled: false
+nodes:
+  - id: tick
+    type: scheduling.timer
+    position: { x: 60, y: 80 }
+    startOnLoad: true
+    settings:
+      mode: interval
+      intervalMilliseconds: 1000
+    inputs:
+      value: '{"device":{"name":"screen","ready":true},"reading":42}'
+  - id: parse
+    type: data.json.parse
+    position: { x: 460, y: 80 }
+    settings: {}
+  - id: shape
+    type: data.transform
+    position: { x: 860, y: 80 }
+    settings:
+      operation: create
+      fields:
+        source: { $path: /device/name }
+        value: { $path: /reading }
+        configured: true
+  - id: condition
+    type: control.condition
+    position: { x: 1260, y: 80 }
+    settings:
+      operation: greater
+      expected: 10
+  - id: log
+    type: control.log
+    position: { x: 1660, y: 80 }
+    settings:
+      level: INFO
+      message: 明示した条件が成立しました
+wires:
+  - fromNode: tick
+    fromPort: value
+    toNode: parse
+    toPort: value
+  - fromNode: parse
+    fromPort: value
+    toNode: shape
+    toPort: value
+  - fromNode: shape
+    fromPort: value
+    toNode: condition
+    toPort: value
+  - fromNode: shape
+    fromPort: value
+    path: /value
+    toNode: condition
+    toPort: comparison
+  - fromNode: condition
+    fromPort: value
+    when: 'true'
+    toNode: log
+    toPort: value

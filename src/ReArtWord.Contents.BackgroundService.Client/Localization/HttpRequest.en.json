@@ -1,0 +1,13 @@
+{
+  "setting.authentication": "Authentication",
+  "choice.http.request.authentication.auto": "Automatic (no saved key means no authentication)",
+  "choice.http.request.authentication.none": "None",
+  "choice.http.request.authentication.secret": "Use saved secret",
+  "Saved authentication key name (optional in automatic mode)": "Saved authentication key name (optional in automatic mode)",
+  "No key is needed for an unauthenticated endpoint. Select None under Authentication, or leave this name empty in Automatic mode. A saved name is required only when using secret authentication.": "No key is needed for an unauthenticated endpoint. Select None under Authentication, or leave this name empty in Automatic mode. A saved name is required only when using secret authentication.",
+  "None sends no authentication header and does not read saved secrets. Automatic preserves existing settings: authenticate only when a saved key name is supplied. Saved secret requires a key name; use Authorization/Bearer or your API's header name and an empty prefix.": "None sends no authentication header and does not read saved secrets. Automatic preserves existing settings: authenticate only when a saved key name is supplied. Saved secret requires a key name; use Authorization/Bearer or your API's header name and an empty prefix.",
+  "Network status unverified": "Status unverified",
+  "Network adapter unavailable": "Down / unavailable",
+  "Network adapter up": "Up",
+  "The selected network adapter is not up. Requests cannot start until it is available; choose an active adapter and its IPv4.": "The selected network adapter is not up. Requests cannot start until it is available; choose an active adapter and its IPv4."
+}

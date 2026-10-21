@@ -1,0 +1,19 @@
+{
+  "node.control.toggleButton.name": "Toggle button",
+  "node.control.toggleButton.description": "Select the OFF or ON input value. Press or supply a toggle signal to change state; emit a signal only on a change. Reading the selected value never toggles it. State is shared within the workflow and survives restarts.",
+  "port.control.toggleButton.in.offValue": "Value when OFF",
+  "port.control.toggleButton.in.onValue": "Value when ON",
+  "port.control.toggleButton.in.label": "Button label",
+  "port.control.toggleButton.in.trigger": "Toggle signal",
+  "port.control.toggleButton.out.value": "Selected value",
+  "port.control.toggleButton.out.isOn": "ON state",
+  "port.control.toggleButton.out.start": "Change signal",
+  "node.control.button.name": "Button",
+  "node.control.button.description": "Press the button in the editor to emit the input values and one start signal. Filling or connecting a value adds the next input/output pair. Saving, automatic runs and reads from other nodes do not press it.",
+  "Value on press {0}": "Value on press {0}",
+  "Pressed value {0}": "Pressed value {0}",
+  "port.control.button.in.value": "Value on press",
+  "port.control.button.in.label": "Button label",
+  "port.control.button.out.value": "Pressed value",
+  "port.control.button.out.start": "Press signal"
+}

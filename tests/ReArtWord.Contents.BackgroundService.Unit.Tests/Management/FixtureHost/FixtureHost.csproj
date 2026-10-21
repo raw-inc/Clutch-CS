@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ContentsDesktopFixture</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../../src/ReArtWord.Contents.BackgroundService.CoreService/ReArtWord.Contents.BackgroundService.CoreService.csproj" />
+  </ItemGroup>
+</Project>

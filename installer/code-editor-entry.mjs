@@ -1,0 +1,14 @@
+export { EditorState, Compartment, EditorSelection, Transaction } from '@codemirror/state';
+export { EditorView, keymap, lineNumbers, drawSelection, highlightActiveLine, highlightSpecialChars, tooltips } from '@codemirror/view';
+export { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+export { syntaxHighlighting, HighlightStyle, indentOnInput, bracketMatching, indentUnit, indentService, StreamLanguage, syntaxTree } from '@codemirror/language';
+export { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap, completeAnyWord, insertCompletionText, acceptCompletion, startCompletion, CompletionContext } from '@codemirror/autocomplete';
+export { tags } from '@lezer/highlight';
+export { javascriptLanguage, localCompletionSource as javascriptLocals } from '@codemirror/lang-javascript';
+export { pythonLanguage, localCompletionSource as pythonLocals } from '@codemirror/lang-python';
+export { json } from '@codemirror/lang-json';
+export { yaml } from '@codemirror/lang-yaml';
+export { csharp } from '@codemirror/legacy-modes/mode/clike';
+export { powerShell } from '@codemirror/legacy-modes/mode/powershell';
+export { shell } from '@codemirror/legacy-modes/mode/shell';
+export { toml } from '@codemirror/legacy-modes/mode/toml';

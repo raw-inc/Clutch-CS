@@ -1,0 +1,17 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Persistence.InternalData
+@using ReArtWord.Contents.BackgroundService.Contracts.Workflow
+@using ReArtWord.Contents.BackgroundService.Contracts.Workflow.Dashboards
+@inject ManagementApi Api
+<details class="state-picker">
+    <summary>@Ui["Add State"]</summary>
+    <label>@Ui["Scope"]<select @bind="scope"><option value="@EInternalDataScope.Shared">@Ui["Workflow shared"]</option><option value="@EInternalDataScope.Peer">@Ui["Selected peer"]</option><option value="@EInternalDataScope.Cluster">Cluster State</option></select></label>
+    @if(scope!=EInternalDataScope.Cluster)
+    {
+        <label>Workflow<select @bind="workflow"><option value="">@Ui["Select a workflow"]</option>@foreach(var item in workflows){<option value="@item.Id">@item.Name (@item.Id)</option>}</select></label>
+        <button type="button" class="quiet" disabled="@busy" @onclick="()=>LoadAsync(UiCancellation)">@Ui[cursor is null?"Refresh workflows":"Next page"]</button>
+    }
+    <label>@Ui["State key"]<input @bind="key" @bind:event="oninput" maxlength="512" /></label>
+    @if(problem is not null){<p class="notice warn">@Ui[problem]</p>}
+    <p class="small muted">@Ui["Shows persisted state. Updates when the value changes."]</p>
+    <button type="button" disabled="@(!Target.IsValid())" @onclick="()=>Added.InvokeAsync(new WfDashboardStateReference(Target))">@Ui["Add State"]</button>
+</details>

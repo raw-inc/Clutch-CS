@@ -1,0 +1,356 @@
+name: Validate Clutch-CS
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_scripts:
+        description: 'リリース規則・スクリプトの試験をスキップ'
+        type: boolean
+        default: false
+      skip_unit:
+        description: '通常の単体試験をスキップ'
+        type: boolean
+        default: false
+      unit_filter:
+        description: '単体試験の絞り込み（例: FullyQualifiedName~MyTests、空欄は全件）'
+        type: string
+        default: ''
+      skip_client:
+        description: 'Clientの通常試験をスキップ'
+        type: boolean
+        default: false
+      skip_installer:
+        description: 'Installerの通常試験をスキップ'
+        type: boolean
+        default: false
+      skip_integration:
+        description: '通常の結合試験をスキップ'
+        type: boolean
+        default: false
+      integration_filter:
+        description: '結合試験の絞り込み（例: FullyQualifiedName~MyTests、空欄は全件）'
+        type: string
+        default: ''
+      skip_performance:
+        description: '性能試験をスキップ'
+        type: boolean
+        default: false
+      performance_filter:
+        description: '性能試験の絞り込み（例: FullyQualifiedName~MyTests、空欄は全件）'
+        type: string
+        default: ''
+      skip_package:
+        description: '配布物の生成・実インストール検証をスキップ'
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+      sha:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    runs-on: ${{ vars.RELEASE_WINDOWS_RUNNER || 'windows-latest' }}
+    timeout-minutes: 180
+    env:
+      ContinuousIntegrationBuild: 'true'
+      RELEASE_TAG: ${{ inputs.tag }}
+      RELEASE_VERSION: ${{ inputs.version }}
+      RELEASE_SHA: ${{ inputs.sha || github.sha }}
+      PACKAGE_RUNTIME_VERSION: '10.0.13'
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Record Windows runner resources
+        run: |
+          $system = Get-CimInstance Win32_ComputerSystem
+          $processors = (Get-CimInstance Win32_Processor | Select-Object -ExpandProperty Name -Unique) -join ', '
+          $drive = [IO.DriveInfo]::new([IO.Path]::GetPathRoot($env:GITHUB_WORKSPACE))
+          $memoryGiB = [Math]::Round($system.TotalPhysicalMemory / 1GB, 1)
+          $freeGiB = [Math]::Round($drive.AvailableFreeSpace / 1GB, 1)
+          @(
+            '### Windows runner'
+            "- Runner: $env:RUNNER_NAME"
+            "- Image: $env:ImageOS $env:ImageVersion"
+            "- Logical CPUs: $([Environment]::ProcessorCount)"
+            "- CPU: $processors"
+            "- Memory: $memoryGiB GiB"
+            "- Workspace free space: $freeGiB GiB"
+          ) | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          foreach ($volume in [IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady -and $_.DriveType -eq 'Fixed' }) {
+            "- Volume $($volume.Name): $([Math]::Round($volume.TotalSize / 1GB, 1)) GiB, $([Math]::Round($volume.AvailableFreeSpace / 1GB, 1)) GiB free" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.sha || github.sha }}
+          persist-credentials: false
+      - name: Resolve manual validation version
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          [xml]$properties = Get-Content -LiteralPath Version.props -Raw
+          $prefix = [string]$properties.Project.PropertyGroup.VersionPrefix
+          $suffix = [string]$properties.Project.PropertyGroup.VersionSuffix
+          $version = $prefix
+          if (-not [string]::IsNullOrWhiteSpace($suffix)) { $version += "-$suffix" }
+          @("RELEASE_VERSION=$version", "RELEASE_TAG=v$version") | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "Validation only: commit $env:RELEASE_SHA, version $version. No tag or GitHub Release will be created." | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+      - name: Record manual validation scope
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          VALIDATION_INPUTS: ${{ toJSON(inputs) }}
+        run: |
+          $selection = ConvertFrom-Json -InputObject $env:VALIDATION_INPUTS -AsHashtable
+          $stages = [ordered]@{
+            skip_scripts = 'Release rules and script tests'
+            skip_unit = 'Unit tests'
+            skip_client = 'Client tests'
+            skip_installer = 'Installer regression tests'
+            skip_integration = 'Integration tests'
+            skip_performance = 'Performance tests'
+            skip_package = 'Package build and installation verification'
+          }
+          $summary = @('', '### Validation scope', '', '| Stage | Selected |', '| --- | --- |', '| Build and analyzers | Run |')
+          foreach ($key in $stages.Keys) {
+            $selected = 'Run'
+            if ($selection[$key]) { $selected = 'Skip' }
+            $summary += "| $($stages[$key]) | $selected |"
+          }
+          if (-not [string]::IsNullOrWhiteSpace($selection.unit_filter)) {
+            $summary += @('', 'Unit test filter:', '', '```text', $selection.unit_filter, '```')
+          }
+          if (-not [string]::IsNullOrWhiteSpace($selection.integration_filter)) {
+            $summary += @('', 'Integration test filter:', '', '```text', $selection.integration_filter, '```')
+          }
+          if (-not [string]::IsNullOrWhiteSpace($selection.performance_filter)) {
+            $summary += @('', 'Performance test filter:', '', '```text', $selection.performance_filter, '```')
+          }
+          $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+      - name: Use preinstalled .NET SDK
+        run: |
+          dotnet --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet --info
+      - name: Ensure WebAssembly tools
+        run: |
+          $workloads = dotnet workload list
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $workloads
+          if (-not ($workloads -match '^\s*wasm-tools\s')) {
+            dotnet workload install wasm-tools --skip-manifest-update
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Restore JavaScript tooling
+        run: npm ci --ignore-scripts
+      - name: Test release rules
+        if: github.event_name != 'workflow_dispatch' || !inputs.skip_scripts
+        run: node --test .github/scripts/release.test.mjs
+      - name: Restore and build the release
+        run: |
+          dotnet restore Clutch-CS.slnx
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet build Clutch-CS.slnx -c Release --no-restore -warnaserror "-p:Version=$env:RELEASE_VERSION"
+      - name: Prepare media tools for integration tests
+        run: |
+          if (-not (Get-Command ffprobe -ErrorAction SilentlyContinue) -or -not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
+            choco install ffmpeg --version=9.0.1 --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          $probe = (Get-Command ffprobe -ErrorAction Stop).Source
+          $encoder = (Get-Command ffmpeg -ErrorAction Stop).Source
+          & $probe -version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          @("CONTENTS_TEST_FFPROBE=$probe", "CONTENTS_TEST_FFMPEG=$encoder") | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Test versioning, source packaging and platform scripts
+        if: github.event_name != 'workflow_dispatch' || !inputs.skip_scripts
+        run: |
+          ./eng/versioning/Test-BuildVersion.ps1
+          ./tests/ReArtWord.Contents.BackgroundService.Installer.Tests/Test-SourcePackage.ps1
+          # 配布先と同じWindows PowerShellで実行し、NetSecurityは試験用の境界へ差し替える。
+          & "$env:WINDIR/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tests/ReArtWord.Contents.BackgroundService.Installer.Tests/Test-WindowsFirewall.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & "$env:WINDIR/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tests/ReArtWord.Contents.BackgroundService.Installer.Tests/Test-WindowsUserStartup.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test tests/ReArtWord.Contents.BackgroundService.Client.Tests/Client/graph-connections.test.mjs
+      - name: Run unit regression tests
+        if: github.event_name != 'workflow_dispatch' || !inputs.skip_unit
+        env:
+          UNIT_TEST_FILTER: ${{ github.event_name == 'workflow_dispatch' && inputs.unit_filter || '' }}
+        run: |
+          $filter = 'Category!=Performance'
+          if (-not [string]::IsNullOrWhiteSpace($env:UNIT_TEST_FILTER)) {
+            $filter += "&($env:UNIT_TEST_FILTER)"
+          }
+          dotnet test tests/ReArtWord.Contents.BackgroundService.Unit.Tests -c Release --no-build --no-restore --filter $filter --settings eng/testing/ci.runsettings --logger trx --logger 'console;verbosity=normal' --results-directory artifacts/TestResults/unit -- xUnit.ParallelizeTestCollections=true RunConfiguration.TreatNoTestsAsError=true
+      - name: Run client regression tests
+        if: github.event_name != 'workflow_dispatch' || !inputs.skip_client
+        run: dotnet test tests/ReArtWord.Contents.BackgroundService.Client.Tests -c Release --no-build --no-restore --filter 'Category!=Performance' --settings eng/testing/ci.runsettings --logger trx --logger 'console;verbosity=normal' --results-directory artifacts/TestResults/client -- xUnit.ParallelizeTestCollections=true
+      - name: Run installer regression tests
+        if: github.event_name != 'workflow_dispatch' || !inputs.skip_installer
+        run: dotnet test tests/ReArtWord.Contents.BackgroundService.Installer.Tests -c Release --no-build --no-restore --settings eng/testing/ci.runsettings --logger trx --logger 'console;verbosity=normal' --results-directory artifacts/TestResults/installer
+      - name: Run integration regression tests
+        if: github.event_name != 'workflow_dispatch' || !inputs.skip_integration
+        env:
+          INTEGRATION_TEST_FILTER: ${{ github.event_name == 'workflow_dispatch' && inputs.integration_filter || '' }}
+        run: |
+          $filter = 'Category!=Performance'
+          if (-not [string]::IsNullOrWhiteSpace($env:INTEGRATION_TEST_FILTER)) {
+            $filter += "&($env:INTEGRATION_TEST_FILTER)"
+          }
+          dotnet test tests/ReArtWord.Contents.BackgroundService.Integration.Tests -c Release --no-build --no-restore --filter $filter --settings eng/testing/ci.runsettings --logger trx --logger 'console;verbosity=normal' --results-directory artifacts/TestResults/integration -- RunConfiguration.TreatNoTestsAsError=true
+      - name: Run isolated performance tests
+        if: github.event_name != 'workflow_dispatch' || !inputs.skip_performance
+        env:
+          PERFORMANCE_TEST_FILTER: ${{ github.event_name == 'workflow_dispatch' && inputs.performance_filter || '' }}
+        run: |
+          $counterPath = Join-Path $PWD 'artifacts/TestResults/performance-resources.csv'
+          [void][IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($counterPath))
+          $monitor = Start-Job -ArgumentList $counterPath -ScriptBlock {
+            param($path)
+            $counters = @(
+              '\Processor(_Total)\% Processor Time', '\System\Processor Queue Length',
+              '\PhysicalDisk(_Total)\Avg. Disk sec/Read', '\PhysicalDisk(_Total)\Avg. Disk sec/Write',
+              '\PhysicalDisk(_Total)\Current Disk Queue Length', '\PhysicalDisk(_Total)\Disk Reads/sec',
+              '\PhysicalDisk(_Total)\Disk Writes/sec', '\Memory\Available MBytes'
+            )
+            Get-Counter -Counter $counters -SampleInterval 1 -Continuous -ErrorAction Stop | ForEach-Object {
+              $sample = $_
+              $sample.CounterSamples | ForEach-Object {
+                [pscustomobject]@{ At = $sample.Timestamp.ToUniversalTime().ToString('O'); Counter = $_.Path; Value = $_.CookedValue }
+              }
+            } | Export-Csv -LiteralPath $path -NoTypeInformation
+          }
+          $processPath = Join-Path $PWD 'artifacts/TestResults/performance-processes.csv'
+          $processMonitor = Start-Job -ArgumentList $processPath -ScriptBlock {
+            param($path)
+            $query = 'SELECT Name,IDProcess,ElapsedTime,PercentProcessorTime,PercentPrivilegedTime,IOReadBytesPerSec,IOWriteBytesPerSec FROM Win32_PerfRawData_PerfProc_Process WHERE IDProcess > 0'
+            while ($true) {
+              $at = [DateTimeOffset]::UtcNow.ToString('O')
+              Get-CimInstance -Query $query -ErrorAction Stop | ForEach-Object {
+                [pscustomobject]@{
+                  At = $at; ProcessId = $_.IDProcess; Name = $_.Name; StartTimestamp = $_.ElapsedTime
+                  CpuMilliseconds = $_.PercentProcessorTime / 10000; KernelCpuMilliseconds = $_.PercentPrivilegedTime / 10000
+                  ReadBytes = $_.IOReadBytesPerSec; WriteBytes = $_.IOWriteBytesPerSec
+                }
+              } | Export-Csv -LiteralPath $path -NoTypeInformation -Append
+              Start-Sleep -Seconds 5
+            }
+          }
+          try {
+            $filter = 'Category=Performance'
+            if (-not [string]::IsNullOrWhiteSpace($env:PERFORMANCE_TEST_FILTER)) {
+              $filter += "&($env:PERFORMANCE_TEST_FILTER)"
+            }
+            $matchedTests = 0
+            foreach ($suite in @('Unit', 'Client', 'Integration')) {
+              $results = "artifacts/TestResults/performance-$suite"
+              dotnet test "tests/ReArtWord.Contents.BackgroundService.$suite.Tests" -c Release --no-build --no-restore --filter $filter --settings eng/testing/ci.runsettings --logger 'trx;LogFileName=performance.trx' --logger 'console;verbosity=normal' --results-directory $results -- xUnit.ParallelizeTestCollections=false RunConfiguration.TreatNoTestsAsError=false
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+              [xml]$report = Get-Content -LiteralPath (Join-Path $results 'performance.trx') -Raw
+              $matchedTests += [int]$report.TestRun.ResultSummary.Counters.total
+            }
+            if ($matchedTests -eq 0) { throw 'No performance tests matched the selected filter.' }
+          } finally {
+            Stop-Job -Job $monitor, $processMonitor
+            Receive-Job -Job $monitor, $processMonitor -ErrorAction Continue
+            Remove-Job -Job $monitor, $processMonitor
+          }
+      - name: Ensure the publishing runtime
+        if: github.event_name != 'workflow_dispatch' || !inputs.skip_package
+        run: |
+          $required = [version]$env:PACKAGE_RUNTIME_VERSION
+          function Test-PublishingRuntime {
+            $runtimes = dotnet --list-runtimes
+            if ($LASTEXITCODE -ne 0) { throw 'Could not list installed .NET runtimes.' }
+            foreach ($runtime in $runtimes) {
+              if ($runtime -match '^Microsoft\.NETCore\.App (\d+\.\d+\.\d+) \[') {
+                $version = [version]$Matches[1]
+                if ($version.Major -eq $required.Major -and $version.Minor -eq $required.Minor -and $version -ge $required) { return $true }
+              }
+            }
+            return $false
+          }
+          if (-not (Test-PublishingRuntime)) {
+            $installer = Join-Path $env:RUNNER_TEMP 'dotnet-install-publishing.ps1'
+            $dotnetRoot = Split-Path (Get-Command dotnet -CommandType Application).Source
+            Invoke-WebRequest 'https://dot.net/v1/dotnet-install.ps1' -OutFile $installer
+            & pwsh -NoProfile -File $installer -Runtime dotnet -Version $env:PACKAGE_RUNTIME_VERSION -Architecture x64 -InstallDir $dotnetRoot -SkipNonVersionedFiles -NoPath
+            if ($LASTEXITCODE -ne 0) { throw 'Could not install the .NET runtime required by the publishing tools.' }
+          }
+          if (-not (Test-PublishingRuntime)) { throw 'The .NET runtime required by the publishing tools is unavailable.' }
+          dotnet --list-runtimes
+      - name: Build the bundled Windows installer
+        if: github.event_name != 'workflow_dispatch' || !inputs.skip_package
+        run: |
+          ./installer/New-InstallPackage.ps1 -OutputRoot (Join-Path $PWD 'artifacts/package') -ReleaseId $env:RELEASE_TAG -Version $env:RELEASE_VERSION -RuntimeIdentifier win-x64 -RuntimeVersion $env:PACKAGE_RUNTIME_VERSION
+      - name: Test install, update, repair and uninstall in an isolated cluster
+        if: github.event_name != 'workflow_dispatch' || !inputs.skip_package
+        run: |
+          $env:CLUTCH_TEST_PACKAGE = Join-Path $PWD 'artifacts/package/files'
+          dotnet test tests/ReArtWord.Contents.BackgroundService.Installer.Tests/ReArtWord.Contents.BackgroundService.Installer.Tests.csproj -c Release --no-build --no-restore --filter 'FullyQualifiedName~WindowsTwoPeerLifecycle|FullyQualifiedName~WindowsStandaloneWebClient' --settings eng/testing/ci.runsettings --logger trx --logger 'console;verbosity=normal' --results-directory artifacts/InstallTestResults
+      - name: Verify installation without AVX2 in isolated processes
+        if: github.event_name != 'workflow_dispatch' || !inputs.skip_package
+        env:
+          DOTNET_EnableAVX2: '0'
+        run: |
+          ./tests/ReArtWord.Contents.BackgroundService.Unit.Tests/Updates/Test-InstallFlow.ps1 -InstallerPath (Join-Path $PWD 'installer/Install-Offline.ps1') -CoreExecutablePath (Join-Path $PWD 'artifacts/package/files/core/Clutch-CS.CoreService.exe') -VerifierExecutablePath (Join-Path $PWD 'artifacts/package/files/updater/ReArtWord.Contents.BackgroundService.Updater.exe') -RequireAvx2Disabled
+      - name: Archive installer and corresponding source
+        if: github.event_name != 'workflow_dispatch' || !inputs.skip_package
+        run: |
+          $directory = Join-Path $PWD 'artifacts/release'
+          [void][IO.Directory]::CreateDirectory($directory)
+          $name = "Clutch-CS-Setup-$($env:RELEASE_TAG)-win-x64.zip"
+          $archive = Join-Path $directory $name
+          [IO.Compression.ZipFile]::CreateFromDirectory((Join-Path $PWD 'artifacts/package'), $archive, [IO.Compression.CompressionLevel]::Optimal, $false)
+          $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
+          [IO.File]::WriteAllText($archive + '.sha256', "$hash  $name`n")
+          ./tests/ReArtWord.Contents.BackgroundService.Installer.Tests/Test-SetupPackage.ps1 -ArchivePath $archive
+          ./installer/New-SourcePackage.ps1 -OutputDirectory $directory -ReleaseId $env:RELEASE_TAG -Revision $env:RELEASE_SHA
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: github.event_name != 'workflow_dispatch' || !inputs.skip_package
+        with:
+          name: ${{ github.event_name == 'workflow_dispatch' && 'validation-windows' || 'release-windows' }}
+          path: artifacts/release/*
+          compression-level: 0
+          overwrite: true
+          if-no-files-found: error
+          retention-days: 7
+      - name: Retain test results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: test-results
+          overwrite: true
+          path: |
+            artifacts/TestResults/**
+            artifacts/InstallTestResults/**
+            .work/integration/**/startup-error.txt
+            .work/integration/**/state/logs/**/*.jsonl
+            .work/integration/**/random-restarts.json
+            .work/integration/**/audio-workload.json
+            .work/integration/**/heartbeat-timing.json
+            .work/integration/**/latency.json
+            .work/integration/**/*-measurement.json
+            .work/performance/**/*.json
+            .work/workflow-latency/**/*.json
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7

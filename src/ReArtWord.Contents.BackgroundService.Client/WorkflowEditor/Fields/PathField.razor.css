@@ -1,0 +1,14 @@
+.path-browser-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 320px;
+    overflow: auto;
+    margin: 12px 0;
+}
+
+.path-browser-entry button {
+    width: 100%;
+    text-align: left;
+    overflow-wrap: anywhere;
+}

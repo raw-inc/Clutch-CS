@@ -1,0 +1,23 @@
+{
+  "node.value.dictionary.name": "Dictionary（辞書）",
+  "Build dictionary": "Dictionary（辞書）",
+  "Build a dictionary from Key and value nodes, an array of property maps, or an existing dictionary. Duplicate keys are rejected or replaced with the last value.": "Key-Valueノードの配列または既存の辞書から辞書を作成します。重複キーはエラー、または後の値で上書きします。",
+  "Reject duplicate keys, or replace with the last supplied value. Keys are case-sensitive.": "重複キーをエラーにするか、最後の値で上書きします。キーの大文字と小文字は区別します。",
+  "port.type.dictionaryOf": "辞書〈{0}, {1}〉",
+  "port.type.dictionary": "辞書",
+  "Dictionary key type": "辞書のキー型",
+  "Dictionary value type": "辞書の値型",
+  "ForEach requires an array or dictionary with at most 4096 elements.": "ForEachには4096件以下の配列または辞書を入力してください。",
+  "node.value.dictionary.description": "Key-Valueの配列または既存辞書から辞書を構築します。キーは大文字小文字を区別し、重複時はエラーまたは後の値で上書きします。",
+  "port.value.dictionary.in.items": "Key-Value配列／既存の辞書",
+  "port.value.dictionary.in.item": "追加するKey-Value",
+  "port.value.dictionary.out.value": "辞書",
+  "node.data.keyValue.key.name": "Key-ValueからKey取得",
+  "node.data.keyValue.value.name": "Key-ValueからValue取得",
+  "node.data.keyValue.key.description": "一組のKey-Valueからキーを取得します。辞書のForEachにも接続できます。空辞書や複数キーはエラーです。",
+  "node.data.keyValue.value.description": "一組のKey-Valueから値を取得します。入れ子の型やPathを保持します。空辞書や複数キーはエラーです。",
+  "port.data.keyValue.key.in.value": "Key-Value",
+  "port.data.keyValue.value.in.value": "Key-Value",
+  "port.data.keyValue.key.out.value": "キー",
+  "port.data.keyValue.value.out.value": "値"
+}

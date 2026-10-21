@@ -1,0 +1,33 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@using ReArtWord.Contents.BackgroundService.Contracts.Configuration
+<Modal Open="Open" Title="@Ui["Compare changes"]" Close="Close">
+    <p>@Ui["Choose the current value or a candidate for each item. Closing the dialog leaves the conflict unresolved."]</p>
+    @foreach(var group in Conflicts.Select((value,index)=>(value,index)).Where(item=>!HasWholeConflict||item.value.Path.Length==0).GroupBy(item=>item.value.Path))
+    {
+        <section class="card section">
+<h3>@(group.Key.Length==0?Ui["Workflow"]:group.Key)</h3>
+        @foreach(var item in group)
+        {
+            <div class="split">
+<div>
+<strong>@Ui["Edited by"]</strong>
+<pre>@Show(item.value.Base,item.value.BaseExists)</pre>
+</div>
+<div>
+<strong>@Ui["Shared"]</strong>
+<pre>@Show(item.value.Current,item.value.CurrentExists)</pre>
+</div>
+<div>
+<strong>@Ui.Format("Candidate {0}",item.index+1)</strong>
+<pre>@Show(item.value.Edited,item.value.EditedExists)</pre>
+</div>
+</div>
+        }
+        <select aria-label="@Ui["Value to keep"]" value="@(choices.TryGetValue(group.Key,out var chosen)?chosen.ToString(CultureInfo.InvariantCulture):string.Empty)" @onchange="e=>Choose(group.Key,e)">
+<option value="">@Ui["Choose a value"]</option>
+<option value="-1">@Ui["Keep current value"]</option>@foreach(var item in group){<option value="@item.index">@Ui.Format("Use candidate {0}",item.index+1)</option>}</select>
+</section>
+    }
+    @if(problem is not null){<p class="notice error">@problem</p>}
+    <button class="primary" @onclick="ApplyAsync">@Ui["Apply selection"]</button>
+</Modal>

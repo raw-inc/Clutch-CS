@@ -1,0 +1,94 @@
+.transfer-footer {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.transfer-toggle {
+    border: 0;
+    padding: 1px 4px;
+    background: transparent;
+    font-size: 10px;
+    color: var(--muted);
+    height: 22px;
+}
+
+.transfer-toggle[aria-expanded="true"] {
+    color: var(--ink);
+    background: var(--raised);
+}
+
+.transfer-popup {
+    position: fixed;
+    bottom: calc(var(--statusbar-height) - 1px);
+    left: 12px;
+    width: min(480px, calc(100vw - 24px));
+    max-height: min(65vh, 600px);
+    overflow: auto;
+    z-index: 20;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 6px 6px 0 0;
+    background: var(--panel);
+    color: var(--ink);
+    box-shadow: 0 -8px 28px #0006;
+    font-size: 12px;
+    white-space: normal;
+}
+
+.transfer-popup header,
+.transfer-name,
+.transfer-bytes {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.transfer-popup header {
+    margin-bottom: 10px;
+}
+
+.transfer-job {
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    margin-top: 8px;
+    background: var(--paper);
+}
+
+.transfer-name strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.transfer-job small,
+.transfer-bytes,
+.transfer-range {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.transfer-job small {
+    display: block;
+    overflow-wrap: anywhere;
+    margin: 4px 0;
+}
+
+.transfer-job progress {
+    width: 100%;
+    height: 6px;
+    accent-color: var(--accent);
+}
+
+.transfer-warning {
+    color: var(--warn);
+    overflow-wrap: anywhere;
+}
+
+.transfer-range {
+    margin-bottom: 0;
+}

@@ -1,0 +1,14 @@
+{
+  "node.control.progress.name": "ProgressBar",
+  "node.control.progress.description": "総件数と現在数の進捗をバー・パーセント・数値で表示します。整数と小数は混在できます。総数0は0%、超過時はバーを100%で表示します。出力はありません。",
+  "port.control.progress.in.total": "総件数",
+  "port.control.progress.in.current": "現在数",
+  "Progress": "進捗",
+  "Progress requires two non-negative finite numbers.": "総件数と現在数には、0以上の有限数値を指定してください。",
+  "progress.invalid": "進捗の入力が不正です。総件数と現在数に0以上の有限数値を指定してください。",
+  "progress.activeExecutions": "実行ごとの進捗",
+  "setting.progressScope": "進捗の集約単位",
+  "progress.noActiveExecutions": "進行中のWFの進捗はありません",
+  "choice.control.progress.progressScope.workflow": "WFの実行ごと（既定）",
+  "choice.control.progress.progressScope.iteration": "反復の要素ごと"
+}

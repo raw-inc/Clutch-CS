@@ -1,0 +1,79 @@
+.file-picker {
+    width: 100%;
+}
+
+.file-picker-owner {
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: var(--panel);
+    overflow-wrap: anywhere;
+}
+
+.file-picker-location {
+    display: flex;
+    gap: 6px;
+    margin: 10px 0;
+}
+
+.file-picker-location input {
+    flex: 1;
+    min-width: 0;
+    font-family: Consolas, monospace;
+}
+
+.file-picker-list {
+    height: min(44vh, 420px);
+    min-height: 180px;
+    overflow: auto;
+    scrollbar-gutter: stable;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--paper);
+}
+
+.file-picker-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 40px;
+    padding: 3px 10px;
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
+}
+
+.file-picker-row:hover {
+    background: var(--raised);
+}
+
+.file-picker-row.selected {
+    background: var(--accent-soft);
+}
+
+.file-picker-name {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    justify-content: flex-start;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: left;
+    border: 0;
+    background: transparent;
+    padding: 6px 0;
+}
+
+.file-picker-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 0;
+}
+
+.file-picker-footer span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.file-picker-footer button {
+    flex: none;
+}

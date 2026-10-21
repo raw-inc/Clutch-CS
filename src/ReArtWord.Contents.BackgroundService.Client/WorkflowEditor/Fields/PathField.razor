@@ -1,0 +1,26 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+<div class="path-input"><input type="text" disabled="@Disabled" value="@Value" @oninput="e=>ValueChanged.InvokeAsync(e.Value?.ToString()??string.Empty)" /><button type="button" disabled="@(Disabled||busy)" @onclick="()=>OpenAsync(UiCancellation)">@Ui["Browse…"]</button></div>
+<Modal Open="open" Title="@Ui["Choose a path on the selected peer"]" Close="()=>open=false">
+    <p><strong>@Ui["Peer"]: @peer</strong><br />@Ui["Only this peer's allowed file roots are shown. You can also type a new path directly."]</p>
+    @if(problem is not null){<p class="error">@Ui[problem]</p>}
+    <fieldset disabled="@(!CanEdit || busy)">
+        <button type="button" @onclick="()=>ReadAsync(null,0,UiCancellation)">@Ui["Allowed folders"]</button>
+        @if(result?.Parent is {} parent){<button type="button" @onclick="()=>ReadAsync(parent,0,UiCancellation)">@Ui["Parent folder"]</button>}
+        <p><code>@result?.Path</code></p>
+        @if(result?.Path is {} directory && (Directories||AllowDirectories)){<button type="button" @onclick="()=>ChooseAsync(directory,UiCancellation)">@Ui["Use this folder"]</button>}
+        @if(result?.Path is not null)
+        {
+            <label>@Ui["New file or folder name"]<input type="text" @bind="newName" /></label><button type="button" disabled="@(string.IsNullOrWhiteSpace(newName)||newName.IndexOfAny(['/','\\'])>=0)" @onclick="()=>ChooseNewAsync(UiCancellation)">@Ui["Use new path without creating it"]</button>
+        }
+        <div class="path-browser-list">
+        @foreach(var entry in result?.Entries ?? [])
+        {
+            <div @key="entry.Path" class="path-browser-entry">
+            @if(entry.IsDirectory){<button type="button" @onclick="()=>ReadAsync(entry.Path,0,UiCancellation)">📁 @entry.Name</button>}
+            else if(!Directories){<button type="button" @onclick="()=>ChooseAsync(entry.Path,UiCancellation)">📄 @entry.Name</button>}
+            </div>
+        }
+        </div>
+        @if(result?.NextOffset is {} next){<button type="button" @onclick="()=>ReadAsync(result.Path,next,UiCancellation)">@Ui["Next page"]</button>}
+    </fieldset>
+</Modal>

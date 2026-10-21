@@ -1,0 +1,13 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Workflow
+<foreignObject x="12" y="9" width="@Width" height="26" class="node-name">
+    <div xmlns="http://www.w3.org/1999/xhtml" class="node-name-content" @onpointerdown:stopPropagation="editing" @onpointerup:stopPropagation="editing" @onclick:stopPropagation="true" @ondblclick:stopPropagation="true" @onkeydown:stopPropagation="true">
+        @if(editing)
+        {
+            <input @ref="input" class="node-name-input" aria-label="@Ui["Logical name"]" placeholder="@Ui.NodeName(Descriptor)" title="@Ui["Enter to apply; Escape to cancel. Leave empty to use the node type name."]" value="@name" @oninput="InputChanged" @onkeydown="EditKey" @onblur="Apply" autocomplete="off" />
+        }
+        else
+        {
+            <span @ref="label" class="node-title" role="button" tabindex="0" aria-disabled="@ReadOnly" aria-label="@Ui.Format("Edit logical name: {0}",Ui.NodeName(Node,Descriptor))" title="@(Ui.NodeName(Node,Descriptor)+" · "+Ui.NodeName(Descriptor)+"\n"+Node.Id+"\n"+Ui["Double-click to edit the logical name."])" @ondblclick="Begin" @onkeydown="LabelKey">@Ui.NodeName(Node,Descriptor)</span>
+        }
+    </div>
+</foreignObject>

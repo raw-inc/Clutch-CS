@@ -1,0 +1,11 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Persistence.InternalData
+@using ReArtWord.Contents.BackgroundService.Contracts.State
+@using ReArtWord.Contents.BackgroundService.Contracts.Workflow.Dashboards
+<div class="state-value" aria-live="polite">
+    <small class="muted">@(Reference.Target.Scope==EInternalDataScope.Cluster?"Cluster State":Reference.Target.WorkflowId) · @Reference.Target.Key</small>
+    @if(State is null){<p class="muted">@Ui["Waiting for state…"]</p>}
+    else if(State.Problem is not null){<p class="notice warn">@Ui[State.Problem]</p>}
+    else if(!State.Exists){<p class="muted">@Ui["State key does not exist"]</p>}
+    else{<pre>@State.Text</pre>@if(State.Truncated){<small class="muted">@Ui["Display truncated"]</small>}}
+    @if(Problem is not null){<p class="notice warn">@Ui[Problem]</p>}
+</div>

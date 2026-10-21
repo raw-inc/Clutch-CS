@@ -1,0 +1,32 @@
+{
+  "id": "parallel-squares",
+  "name": "Parallel squares",
+  "enabled": false,
+  "nodes": [
+    {
+      "id": "each",
+      "type": "control.parallelForEach",
+      "settings": { "maxConcurrency": 2 },
+      "inputs": { "value": { "kind": "json", "json": [2, 3, 4], "binary": "" } },
+      "position": { "x": 60, "y": 80 }
+    },
+    {
+      "id": "square",
+      "type": "math.power",
+      "settings": {},
+      "inputs": { "exponent": { "kind": "json", "json": 2, "binary": "" } },
+      "position": { "x": 460, "y": 420 }
+    },
+    {
+      "id": "end",
+      "type": "control.forEach.end",
+      "settings": {},
+      "position": { "x": 860, "y": 80 }
+    }
+  ],
+  "wires": [
+    { "fromNode": "each", "fromPort": "item", "toNode": "square", "toPort": "base" },
+    { "fromNode": "each", "fromPort": "loop", "toNode": "end", "toPort": "loop" },
+    { "fromNode": "square", "fromPort": "value", "toNode": "end", "toPort": "value" }
+  ]
+}

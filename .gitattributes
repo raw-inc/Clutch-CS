@@ -1,0 +1,160 @@
+# テキストはOSに依存せずLFで正規化します。
+* text=auto eol=lf
+
+# C#／.NET
+*.cs text eol=lf diff=csharp
+*.csx text eol=lf diff=csharp
+*.csproj text eol=lf
+*.fsproj text eol=lf
+*.vbproj text eol=lf
+*.sln text eol=lf
+*.slnx text eol=lf
+*.props text eol=lf
+*.targets text eol=lf
+*.ruleset text eol=lf
+*.globalconfig text eol=lf
+*.config text eol=lf
+*.xml text eol=lf
+*.resx text eol=lf
+*.resw text eol=lf
+*.xaml text eol=lf
+*.axaml text eol=lf
+*.nuspec text eol=lf
+packages.lock.json text eol=lf
+
+# 構成・データ・Web
+*.json text eol=lf
+*.jsonc text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+*.conf text eol=lf
+*.sql text eol=lf
+*.graphql text eol=lf
+*.gql text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.html text eol=lf diff=html
+*.htm text eol=lf diff=html
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+
+# Shell。Windows batch／Windows PowerShell系だけCRLFを維持します。
+*.ps1 text eol=crlf
+*.psm1 text eol=crlf
+*.psd1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.sh text eol=lf
+*.bash text eol=lf
+*.zsh text eol=lf
+
+# 文書
+*.md text eol=lf diff=markdown
+*.markdown text eol=lf diff=markdown
+*.mdx text eol=lf diff=markdown
+*.txt text eol=lf
+*.csv text eol=lf
+*.tsv text eol=lf
+README text eol=lf
+LICENSE text eol=lf
+NOTICE text eol=lf
+CHANGELOG text eol=lf
+
+# 上流ライセンスのハッシュ照合に使う原本は改行コードも保持します。
+installer/ThirdParty/licenses/* -text
+
+# unified diff の空行を表すスペースはパッチの書式として保持します。
+eng/native-skia/msvc-headers.patch -whitespace
+
+# Repository／tool設定
+.editorconfig text eol=lf
+.gitattributes text eol=lf
+.gitignore text eol=lf
+.gitmodules text eol=lf
+global.json text eol=lf
+NuGet.Config text eol=lf
+Dockerfile text eol=lf
+*.dockerfile text eol=lf
+Makefile text eol=lf
+
+# 画像。SVGはテキストとして差分を確認します。
+*.svg text eol=lf
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.png binary
+*.bmp binary
+*.tiff binary
+*.ico binary
+*.webp binary
+*.psd binary
+*.ai binary
+
+# 音声・動画
+*.mp3 binary
+*.flac binary
+*.wav binary
+*.ogg binary
+*.m4a binary
+*.aac binary
+*.mov binary
+*.mp4 binary
+*.avi binary
+*.webm binary
+*.m4v binary
+*.wmv binary
+
+# Font・office・archive
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.doc binary
+*.docx binary
+*.xls binary
+*.xlsx binary
+*.ppt binary
+*.pptx binary
+*.7z binary
+*.gz binary
+*.tar binary
+*.tgz binary
+*.zip binary
+*.rar binary
+
+# 実行物・native artifact・database
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.lib binary
+*.a binary
+*.pdb binary
+*.bin binary
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
+
+# 生成コードは追跡しても通常diffの対象外とします。
+*.designer.cs -diff
+*.Designer.cs -diff
+*.generated.cs -diff
+*.Generated.cs -diff
+*.g.cs -diff
+*.g.i.cs -diff
+
+# Source archiveに開発環境だけの設定を混ぜません。
+.gitattributes export-ignore
+.gitignore export-ignore
+.github export-ignore
+.vscode export-ignore
+.vs export-ignore
+.idea export-ignore
+*.DotSettings export-ignore
+*.DotSettings.user export-ignore

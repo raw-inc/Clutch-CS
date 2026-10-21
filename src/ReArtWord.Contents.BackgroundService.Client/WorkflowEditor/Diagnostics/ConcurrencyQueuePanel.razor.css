@@ -1,0 +1,90 @@
+.concurrency-queue {
+    min-width: 0;
+    font-size: 12px;
+    color: var(--ink);
+}
+
+.queue-counts {
+    display: flex;
+    gap: 18px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--raised);
+    color: var(--muted);
+}
+
+.queue-counts strong {
+    margin-left: 5px;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+}
+
+.queue-empty,
+.queue-unconfirmed {
+    margin: 10px 0;
+    color: var(--muted);
+}
+
+.queue-scroll {
+    max-height: 280px;
+    overflow: auto;
+    margin-top: 6px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--paper);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+th,
+td {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--line);
+}
+
+th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--panel);
+    color: var(--muted);
+    font-weight: 500;
+}
+
+tbody tr:nth-child(even) {
+    background: var(--panel);
+}
+
+.queue-peer {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.compact {
+    font-size: 10px;
+}
+
+.compact .queue-counts {
+    padding: 5px 7px;
+}
+
+.compact .queue-scroll {
+    max-height: 150px;
+}
+
+.compact th,
+.compact td {
+    padding: 4px 5px;
+}
+
+.compact .queue-peer {
+    max-width: 130px;
+}

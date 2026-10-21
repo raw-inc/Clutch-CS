@@ -1,0 +1,50 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Graph
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Inspection
+@using ReArtWord.Contents.BackgroundService.Contracts.Nodes
+
+@if (open)
+{
+    <section @ref="popup" class="quick-add" role="dialog" aria-label="@Ui["Add node"]" aria-modal="false">
+        <div class="quick-search">
+            <UiIcon Name="search" />
+            <input @ref="searchInput" value="@search" @oninput="SearchChanged" aria-label="@Ui["Search nodes to add"]" placeholder="@Ui["Search nodes"]" role="combobox" aria-controls="@listId" aria-expanded="true" aria-autocomplete="list" aria-activedescendant="@ActiveId" autocomplete="off" />
+            <button class="quiet icon-button" aria-label="@Ui["Close node picker"]" @onclick="CloseAsync"><UiIcon Name="close" /></button>
+        </div>
+        <div class="quick-browser">
+            <nav class="quick-categories" aria-label="@Ui["Node categories"]">
+                <button class="@(category is null ? "active" : null)" aria-pressed="@(category is null)" @onclick="()=>CategoryChanged(null)">@Ui["All"]</button>
+                @foreach (var name in Categories)
+                {
+                    <button class="@(category == name ? "active" : null)" aria-pressed="@(category == name)" title="@Ui[GraphPresentation.CategoryName(name)]" @onclick="()=>CategoryChanged(name)">@if(name=="Values"){<UiIcon Name="values" />}@Ui[GraphPresentation.CategoryName(name)]</button>
+                }
+            </nav>
+            <div class="quick-options" id="@listId" role="listbox" aria-label="@Ui["Node choices"]">
+                @{ string? previousCategory = null; }
+                @foreach (var item in matches)
+                {
+                    @if (string.IsNullOrWhiteSpace(search) && previousCategory != item.Category)
+                    {
+                        <div class="quick-category-title">@if(item.Category=="Values"){<UiIcon Name="values" />}@Ui[GraphPresentation.CategoryName(item.Category)]</div>
+                        previousCategory = item.Category;
+                    }
+                    <button id="@OptionId(item)" class="quick-option @(selected?.Type == item.Type ? "active" : null)" role="option" aria-selected="@(selected?.Type == item.Type)" data-quick-selected="@(selected?.Type == item.Type ? "true" : "false")" @onpointerenter="()=>selected=item" @onfocus="()=>selected=item" @onclick="()=>AddAsync(item)">
+                        <span class="quick-item-label"><span title="@Ui[CatalogPresentation.ItemKindLabel(item)]"><UiIcon Name="@CatalogPresentation.Icon(item)" /></span>@Ui.NodeName(item)</span><small>@(item.Kind == ENodeKind.Source ? Ui["Input"] : string.Empty)</small>
+                    </button>
+                }
+                @if (matches.Count == 0){<p class="quick-empty">@Ui["No matching nodes"]</p>}
+            </div>
+        </div>
+        @if (selected is { } descriptor)
+        {
+            <div class="quick-preview">
+                <div><strong>@Ui.NodeName(descriptor)</strong><code>@descriptor.Type</code></div>
+                <p>@Ui.NodeDescription(descriptor)</p>
+                <div class="quick-ports">
+                    @foreach (var port in EditorNodeDescriptor.VisibleInputs(descriptor,[]).Where(port=>!port.IsLegacy)){var info=GraphPresentation.Port(descriptor,port.Name,false);<span title="@Ui[info.Description]">@Ui["Input"] @Ui.PortName(descriptor.Type,port.Name,false) · <b>@info.DisplayLabel(Ui)</b></span>}
+                    @foreach (var port in EditorNodeDescriptor.VisibleOutputs(descriptor,[]).Where(port=>!port.IsLegacy)){var info=GraphPresentation.Port(descriptor,port.Name,true);<span title="@Ui[info.Description]">@Ui["Output"] @Ui.PortName(descriptor.Type,port.Name,true) · <b>@info.DisplayLabel(Ui)</b></span>}
+                </div>
+            </div>
+        }
+    </section>
+}

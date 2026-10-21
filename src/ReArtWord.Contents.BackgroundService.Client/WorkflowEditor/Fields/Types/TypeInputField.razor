@@ -1,0 +1,15 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+<div class="toolbar">
+    <select aria-label="@Ui["Type input mode"]" disabled="@Disabled" value="@Mode" @onchange="e=>ChangeModeAsync(e.Value?.ToString()??string.Empty,UiCancellation)">
+        <option value="auto">@Ui["From input / default"]</option><option value="schema">@Ui["JSON Schema input"]</option><option value="manual">@Ui["Manual type settings"]</option>
+    </select>
+    @if(Mode!="auto"){<button type="button" @onclick="()=>open=true">@Ui[Disabled?"View type and properties":"Edit type and properties"]</button>}
+</div>
+<Modal Open="open" Title="@Ui["Type and properties"]" Close="()=>open=false">
+    @if(Mode=="schema")
+    {
+        <label>JSON Schema<textarea aria-label="JSON Schema" disabled="@Disabled" value="@SchemaText" @oninput="e=>SchemaAsync(e.Value?.ToString()??string.Empty,UiCancellation)"></textarea></label>
+        @if(problem is not null){<p class="small error">@Ui[problem]</p>}
+    }
+    else{<TypeDefinitionEditor Value="@(Value?.Json??default)" Disabled="Disabled" ValueChanged="v=>ValueChanged.InvokeAsync(v)" InvalidChanged="InvalidChanged" />}
+</Modal>

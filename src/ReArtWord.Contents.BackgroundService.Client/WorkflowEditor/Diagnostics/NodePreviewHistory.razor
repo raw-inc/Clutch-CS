@@ -1,0 +1,27 @@
+<section class="preview-history" aria-label="@Ui["preview.history.title"]">
+    <small class="history-scope" title="@Ui["preview.history.retention"]">@Ui.Format("preview.history.scope",DisplayTimeZone.Id)</small>
+    @if(loading){<small>@Ui["Loading preview"]</small>}
+    @if(unavailable){<small class="error">@Ui["preview.history.unavailable"]</small>}
+    @if(rows.Count==0&&!loading){<small>@Ui["preview.history.empty"]</small>}
+    else
+    {
+        <table>
+            <thead><tr><th scope="col">@Ui["preview.history.number"]</th><th scope="col" title="@DisplayTimeZone.Id">@Ui["preview.history.time"]</th><th scope="col">@Ui["preview.history.value"]</th></tr></thead>
+            <tbody>
+                @foreach(var row in rows)
+                {
+                    var captured=TimeZoneInfo.ConvertTime(row.Snapshot.CapturedAt,DisplayTimeZone);
+                    <tr @key="row.Snapshot.Id">
+                        <td title="@(row.Snapshot.PeerId+" · "+row.Snapshot.Revision)">@row.Number.ToString(CultureInfo.CurrentCulture)<small>@row.Snapshot.PeerId</small></td>
+                        <td><time datetime="@row.Snapshot.CapturedAt.ToString("O",CultureInfo.InvariantCulture)" title="@captured.ToString("yyyy-MM-dd HH:mm:ss.fff zzz",CultureInfo.CurrentCulture)">@captured.ToString("HH:mm:ss.fff",CultureInfo.CurrentCulture)</time></td>
+                        <td>
+                            @if(row.Snapshot.Problem is {} problem){<span class="error">@Ui[problem]</span>}
+                            else if(row.Text is {} value){<pre>@value</pre>@if(row.TextTruncated){<small>@Ui["Preview text was truncated"]</small>}}
+                            else{<span>@row.Snapshot.MediaType · @row.Snapshot.Length.ToString("N0",CultureInfo.CurrentCulture) B</span>}
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</section>

@@ -1,0 +1,4 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Workflow
+<label>Workflow<select @onchange="ChooseAsync" disabled="@busy"><option value="">@Ui["Select a target"]</option>@foreach(var item in entries){<option value="@item.Id" disabled="@(item.Id is null)">@item.Name / @item.Id @item.DetailReason</option>}</select></label>
+<button @onclick="()=>LoadAsync(false)" disabled="@busy">@Ui["Refresh workflows"]</button><button @onclick="()=>LoadAsync(true)" disabled="@(busy||cursor is null)">@Ui["Next page"]</button>
+<p class="notice">@(message?.Invoke())</p>

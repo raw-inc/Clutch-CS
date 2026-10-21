@@ -1,0 +1,81 @@
+.application-editor {
+    width: min(740px, 100%);
+}
+
+.application-owner {
+    padding: 12px 14px;
+    background: var(--panel);
+    border-radius: 8px;
+    overflow-wrap: anywhere;
+}
+
+.application-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 18px;
+}
+
+.application-fields .wide {
+    grid-column: 1 / -1;
+}
+
+.executable-field {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.executable-field label {
+    flex: 1;
+    min-width: 0;
+}
+
+.executable-field button {
+    flex: none;
+}
+
+.application-section {
+    margin-top: 22px;
+}
+
+.application-section h3 {
+    margin-bottom: 10px;
+}
+
+.check-row,
+.argument-row,
+.weekday-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.check-row input {
+    width: auto;
+}
+
+.argument-row {
+    margin-bottom: 8px;
+}
+
+.argument-row input {
+    flex: 1;
+    min-width: 0;
+}
+
+.weekday-row {
+    flex-wrap: wrap;
+}
+
+.application-schedule {
+    padding: 14px;
+    margin-bottom: 12px;
+    border: 1px solid rgb(255 255 255 / 12%);
+    border-radius: 8px;
+}
+
+@media (max-width: 600px) {
+    .application-fields {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

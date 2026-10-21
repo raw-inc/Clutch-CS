@@ -1,0 +1,23 @@
+{
+  "node.script.javascript.name": "JavaScript スクリプト（Node.js）",
+  "node.script.javascript.description": "Node.jsでexport function run(...)またはexport async function run(...)を実行します。引数ごとの入力と一括JSON入力を選択でき、不明な型はanyで受け取ります。固定したnpmパッケージをimportできます。",
+  "setting.nodePath": "実行Peer上のNode.js実行ファイル（空欄は管理中のnpm環境）",
+  "port.script.javascript.in.arguments": "名前付き引数",
+  "Node.js executable for analysis": "解析用Node.js実行ファイル",
+  "Choose types when inference is unavailable": "推定できない型を選択",
+  "Statically inferred types take precedence. Select every unresolved argument and result, then analyze again.": "静的に確認できた型を優先します。未確定の引数・返却型を選択して、再解析してください。",
+  "JavaScript: export function run(...) or export async function run(...). Import npm packages as ES Modules. Select unresolved JSON types below.": "JavaScriptの入口はexport function run(...)またはexport async function run(...)です。npmパッケージはES Modulesのimportで読み込めます。未確定のJSON型は下で選択してください。",
+  "Node.js executable on this peer": "このPeer上のNode.js実行ファイル（絶対パス）",
+  "npm-cli.js path (optional)": "npm-cli.jsのパス（標準配置以外の場合に指定）",
+  "npm uses registry.npmjs.org and requires Node.js 24 or later with npm. Scoped packages are supported. Leave the script Node.js path blank to use the managed environment.": "npmはregistry.npmjs.orgから取得します。npmを備えたNode.js 24以降が必要です。@scope/name形式にも対応します。スクリプト側のNode.jsパスが空欄の場合は管理中の環境を使います。",
+  "script.javascriptEntryRequired": "export function run(...)またはexport async function run(...)を一つ定義してください。ジェネレーターは使用できません。",
+  "script.javascriptNamedArgumentsRequired": "runの引数は名前付きの識別子、または末尾の...argsで指定してください。分割代入は使用できません。",
+  "script.javascriptAnalysisUnavailable": "JavaScriptの解析を完了できません。実行PeerのNode.js 24以降のパスを確認してください。",
+  "script.javascriptRuntimeRequired": "Node.js 24以降が必要です。",
+  "script.packages.nodePathRequired": "このPeer上のNode.js実行ファイルを絶対パスで指定してください。",
+  "script.packages.runtimePathRequired": "実行ファイル・CLIを実行Peer上の絶対パスで指定してください。",
+  "script.packages.npmPathRequired": "npm-cli.jsが見つかりません。Node.jsのnpm配置を確認するか、npm-cli.jsを絶対パスで指定してください。",
+  "script.packages.npmResolveFailed": "npmの依存関係を解決できません。名前・固定バージョン・Node.jsとの互換性・通信状態を確認してください。",
+  "script.packages.npmInstallFailed": "npmのインストールに失敗しました。通信状態とパッケージが必要とするビルドツールを確認してください。現在構成は維持します。",
+  "script.packages.npmCheckFailed": "導入後のnpm依存関係に不整合があります。現在構成は維持します。"
+}

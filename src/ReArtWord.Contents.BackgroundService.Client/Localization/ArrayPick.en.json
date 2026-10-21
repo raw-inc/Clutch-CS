@@ -1,0 +1,21 @@
+{
+  "node.data.pick.name": "Pick array or dictionary item",
+  "node.data.pick.description": "Select one array item or dictionary key-value pair by its zero-based Index. Preserve values and types, including null. Empty collections, fractional or out-of-range indices fail. Dictionary order is not guaranteed.",
+  "port.data.pick.in.value": "Array / dictionary",
+  "port.data.pick.in.index": "Index (starting at 0)",
+  "port.data.pick.out.value": "Selected item",
+  "node.data.randomPick.name": "RandomPick array or dictionary item",
+  "node.data.randomPick.description": "Choose one array item or dictionary key-value pair uniformly when executed. Duplicate array values remain separate candidates; repeated executions may choose the same item. Empty collections fail.",
+  "port.data.randomPick.in.value": "Array / dictionary of candidates",
+  "port.data.randomPick.out.value": "Selected item",
+  "node.math.random.name": "Random number",
+  "node.math.random.description": "Generate one number when executed. Integers include both bounds; decimals exclude the upper bound. Equal bounds return that value. Repeated executions may return the same number.",
+  "port.math.random.out.value": "Random value",
+  "setting.minimum": "Minimum",
+  "setting.maximum": "Maximum",
+  "choice.math.random.mode.integer": "Integer (both bounds included)",
+  "choice.math.random.mode.decimal": "Decimal (upper bound excluded)",
+  "Integers include both bounds. Decimals use finite binary64 values and exclude the upper bound unless both bounds are equal.": "Integers include both bounds. Decimals use finite binary64 values and exclude the upper bound unless both bounds are equal.",
+  "Inclusive lower bound. Integer mode requires an exact signed 64-bit integer.": "Inclusive lower bound. Integer mode requires an exact signed 64-bit integer.",
+  "Upper bound, at least the minimum. Integer mode includes this bound; decimal mode excludes it. Equal bounds return that value.": "Upper bound, at least the minimum. Integer mode includes this bound; decimal mode excludes it. Equal bounds return that value."
+}

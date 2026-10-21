@@ -1,0 +1,13 @@
+<div class="health-skeleton" role="status" aria-label='@Ui["Loading…"]'>
+    <span class="sr-only">@Ui["Loading…"]</span>
+    <div aria-hidden="true">
+        <span class="skeleton skeleton-title"></span>
+        <div class="skeleton-facts">@for(var index=0;index<4;index++){<div><span class="skeleton skeleton-line"></span><span class="skeleton skeleton-value"></span></div>}</div>
+        <div class="skeleton-hosts">
+            @for(var host=0;host<3;host++)
+            {
+                <div class="skeleton-host"><span class="skeleton skeleton-title"></span><div class="skeleton-metrics">@for(var metric=0;metric<6;metric++){<div class="skeleton skeleton-chart"></div>}</div></div>
+            }
+        </div>
+    </div>
+</div>

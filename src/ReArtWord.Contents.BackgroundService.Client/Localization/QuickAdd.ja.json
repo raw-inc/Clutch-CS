@@ -1,0 +1,12 @@
+{
+  "Add node": "ノードを追加",
+  "Search nodes to add": "追加するノードを検索",
+  "Search nodes": "ノードを検索",
+  "Close node picker": "追加パネルを閉じる",
+  "Node categories": "ノードの分類",
+  "All": "すべて",
+  "Node choices": "ノードの候補",
+  "Input": "入力",
+  "Output": "出力",
+  "No matching nodes": "一致するノードはありません"
+}

@@ -1,0 +1,60 @@
+.dialog::backdrop {
+    background: #0009;
+}
+
+.dialog > h2 {
+    font-size: 19px;
+    margin-bottom: 20px;
+}
+
+.dialog ::deep textarea {
+    min-height: 180px;
+}
+
+.dialog ::deep .toolbar {
+    margin-top: 16px;
+}
+
+.dialog ::deep > .toolbar:last-child {
+    justify-content: flex-end;
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+    margin-top: 24px;
+}
+
+.dialog ::deep .card {
+    background: #22242a;
+}
+
+.dialog-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.dialog-heading h2 {
+    font-size: 19px;
+    margin: 0;
+}
+
+.dialog {
+    margin: auto;
+    position: fixed;
+    inset: 0;
+    background: #27292f;
+    border: 1px solid #4a4d56;
+    border-radius: 8px;
+    padding: 26px;
+    width: min(850px, 90vw);
+    max-height: 86vh;
+    overflow: auto;
+    box-shadow: 0 20px 60px #0008;
+    font-size: 13px;
+    color: var(--ink);
+}
+
+.dialog.dialog-wide {
+    width: min(1400px, 94vw);
+    max-width: 94vw;
+}

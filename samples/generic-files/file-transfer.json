@@ -1,0 +1,40 @@
+{
+  "id": "asset-delivery",
+  "name": "Explicit host file transfer",
+  "enabled": false,
+  "nodes": [
+    {
+      "id": "destination",
+      "type": "execution.pc.select",
+      "position": { "x": 60, "y": 80 },
+      "settings": {
+        "mode": "selected",
+        "hostIds": [
+          "REPLACE_DESTINATION_HOST"
+        ]
+      }
+    },
+    {
+      "id": "transfer",
+      "type": "file.transfer",
+      "position": { "x": 460, "y": 80 },
+      "settings": {
+        "sourcePath": "C:/Clutch-CS/assets",
+        "path": "C:/Clutch-CS/received",
+        "requestId": "asset-delivery-001",
+        "recursive": true,
+        "overwrite": false,
+        "failurePolicy": "rollbackAll",
+        "sourceHost": "REPLACE_SOURCE_HOST"
+      }
+    }
+  ],
+  "wires": [
+    {
+      "fromNode": "destination",
+      "fromPort": "value",
+      "toNode": "transfer",
+      "toPort": "$execution.pc"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "process.launchRejected": "Application launch was rejected before the process started.",
+  "process.interactiveUserUnavailable": "The logged-in user is unavailable. Check the target PC's login and Core account.",
+  "process.interactiveLaunchRejected": "The application could not start on the logged-in desktop. Check file access, working directory and arguments. No application was started.",
+  "process.interactiveLaunchUnavailable": "This runtime does not provide Windows interactive application launching."
+}

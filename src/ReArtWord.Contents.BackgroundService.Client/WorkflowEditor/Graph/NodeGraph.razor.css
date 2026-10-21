@@ -1,0 +1,363 @@
+.graph {
+    display: block;
+    user-select: none;
+}
+
+.node-box {
+    fill: #272a31;
+    stroke: #4b5360;
+    stroke-width: 1;
+    filter: drop-shadow(0 3px 5px #0003);
+}
+
+.graph-node {
+    cursor: grab;
+    outline: none;
+}
+
+.node-type {
+    font-size: 10px;
+    fill: #98a4b6;
+    pointer-events: none;
+}
+
+.graph-node > g > text,
+.port-label {
+    font-size: 10px;
+    fill: #adb8c9;
+    pointer-events: none;
+}
+
+.port {
+    fill: #242932;
+    stroke: #9bb9df;
+    stroke-width: 2;
+    cursor: crosshair;
+}
+
+.port:hover {
+    fill: #9bb9df;
+}
+
+.wire {
+    fill: none;
+    stroke: #718daa;
+    stroke-width: 2;
+    cursor: pointer;
+    pointer-events: stroke;
+}
+
+.wire:hover,
+.wire.selected {
+    stroke: var(--accent);
+    stroke-width: 3;
+}
+
+.wire-label {
+    font-size: 9px;
+    fill: #a1b8d5;
+    pointer-events: none;
+}
+
+.node-card-fields {
+    font: 11px/1.4 "Segoe UI", "Yu Gothic UI", sans-serif;
+    color: var(--ink);
+    cursor: default;
+    user-select: text;
+}
+
+.node-card-fields ::deep fieldset {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.node-card-fields ::deep .node-inline-group {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #92a0b5;
+    border-top: 1px solid #3c434e;
+    padding-top: 4px;
+}
+
+.node-card-fields ::deep .node-inline-field {
+    margin: 0;
+    padding: 3px 0 5px;
+    font-size: 10px;
+    color: #abb6c7;
+    line-height: 16px;
+}
+
+::deep .node-inline-field > input,
+::deep .node-inline-field > select,
+::deep .node-inline-field > textarea {
+    display: block;
+    width: 100%;
+    margin-top: 4px;
+    font-size: 11px;
+    padding: 5px 7px;
+    border-color: #464e5c;
+    border-bottom-color: #64748b;
+    background: #20242b;
+}
+
+::deep .node-inline-field > input,
+::deep .node-inline-field > select {
+    height: 29px;
+}
+
+::deep .node-inline-field > textarea {
+    height: 34px;
+    min-height: 34px;
+    max-height: 34px;
+    resize: none;
+    line-height: 20px;
+}
+
+::deep .node-inline-field > small,
+::deep .node-inline-field > .small {
+    display: block;
+    font-size: 9px;
+    line-height: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+    color: #8d9ab0;
+}
+
+::deep .node-inline-field .error {
+    color: var(--danger);
+}
+
+::deep .node-inline-field > input:disabled,
+::deep .node-inline-field > select:disabled,
+::deep .node-inline-field > textarea:disabled {
+    background: #272a30;
+    color: #818894;
+    border-color: #3a404a;
+}
+
+.graph-node:focus-visible {
+    outline: none;
+}
+
+.graph-node .node-box {
+    fill: #25282e;
+    stroke: #444b54;
+    filter: none;
+    rx: 6px;
+}
+
+.graph-node .category-strip {
+    fill: var(--category-color);
+}
+
+.graph-node .node-type {
+    fill: #929ca8;
+    font-size: 9px;
+}
+
+.graph-node .node-kind {
+    fill: var(--category-color);
+    font: 8px Consolas, monospace;
+    letter-spacing: 0.6px;
+    pointer-events: none;
+}
+
+.graph-node .port-group > text {
+    fill: #c4cad2;
+    font-size: 10px;
+}
+
+.graph-node .port-group .port-type {
+    fill: var(--port-color);
+    font: 8px Consolas, monospace;
+    letter-spacing: 0.3px;
+    pointer-events: none;
+}
+
+.graph-node .port {
+    stroke: var(--port-color);
+    fill: #20242a;
+    stroke-width: 1.8;
+}
+
+.graph-node .port:hover,
+.graph-node .port:focus-visible,
+.graph-node .port.pending,
+.graph-node .port.endpoint-highlight,
+.graph-node .port.wire-snap-target,
+.graph-node .port.wire-endpoint-hover {
+    fill: var(--port-color);
+    stroke: #eff3f7;
+    stroke-width: 2;
+}
+
+.graph-node:focus .node-box,
+.graph-node.selected .node-box {
+    stroke: var(--category-color);
+    stroke-width: 1.8;
+}
+
+.graph-node .node-card-fields ::deep .node-inline-group {
+    font-size: 8px;
+    letter-spacing: 0.4px;
+    color: #848e9b;
+    border-color: #353b45;
+}
+
+.graph-node ::deep .node-inline-field > input,
+.graph-node ::deep .node-inline-field > select,
+.graph-node ::deep .node-inline-field > textarea {
+    border-color: #3c434d;
+    border-bottom-color: #545f6d;
+    background: #1e2228;
+}
+
+.graph-node ::deep .node-inline-field > small {
+    font-size: 8px;
+    color: #838b97;
+}
+
+.wire-group .wire {
+    stroke: var(--port-color);
+    stroke-width: 2;
+    stroke-linecap: round;
+    opacity: 0.82;
+    pointer-events: none;
+}
+
+.wire-group:hover .wire,
+.wire-group.selected .wire,
+.wire-group:focus-within .wire {
+    stroke: var(--port-color);
+    stroke-width: 3;
+    opacity: 1;
+}
+
+.wire-hit {
+    cursor: pointer;
+    pointer-events: stroke;
+    outline: none;
+}
+
+.wire-group.kind-trigger .wire {
+    stroke-dasharray: 5 4;
+}
+
+.wire-group.animate .wire {
+    stroke-dasharray: 12 8;
+    animation: contents-wire-direction 1.2s steps(36, end) infinite;
+    animation-play-state: paused;
+}
+
+.wire-group.animate.wire-visible .wire {
+    animation-play-state: running;
+}
+
+.graph-wire-details,
+.graph-connection-pending {
+    position: absolute;
+    left: 14px;
+    bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: calc(100% - 28px);
+    padding: 7px 10px;
+    background: #232830f2;
+    border: 1px solid #444d58;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #c5cbd3;
+    box-shadow: 0 3px 12px #0003;
+}
+
+.graph-connection-pending {
+    bottom: 48px;
+}
+
+.graph-connection-pending button {
+    padding: 2px 7px;
+    font-size: 10px;
+}
+
+.graph-wire-details {
+    overflow-wrap: anywhere;
+    pointer-events: none;
+}
+
+@keyframes contents-wire-direction {
+    to {
+        stroke-dashoffset: -40;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wire-group.animate .wire {
+        animation: none;
+    }
+}
+
+.code-block-container,
+.code-block-container > fieldset {
+    height: 100%;
+    min-height: 0;
+}
+
+.node-resize-handle {
+    fill: var(--raised);
+    stroke: var(--muted);
+    cursor: nwse-resize;
+}
+
+.node-resize-handle:hover,
+.node-resize-handle:focus {
+    fill: var(--accent-soft);
+    stroke: var(--accent);
+}
+
+.graph .graph-node.has-error .node-box {
+    stroke: var(--danger);
+    stroke-width: 2;
+    fill: color-mix(in srgb, var(--danger) 6%, var(--panel));
+}
+
+.graph-node.has-error ::deep .node-title {
+    color: var(--danger);
+}
+
+.port-group {
+    cursor: crosshair;
+    user-select: none;
+}
+
+.port-group:has(.port:hover) .port {
+    filter: brightness(1.4);
+}
+
+.graph[data-connection-dragging="true"] {
+    cursor: crosshair;
+}
+
+.graph-node[data-search-match] > .node-box {
+    vector-effect: non-scaling-stroke;
+    stroke: #e4b561;
+    stroke-width: 2px;
+    stroke-dasharray: 7 3;
+}
+
+.graph-node[data-search-active] > .node-box,
+.graph-node[data-navigation-target] > .node-box {
+    vector-effect: non-scaling-stroke;
+    stroke: #d3a5f5;
+    stroke-width: 3px;
+    stroke-dasharray: none;
+}
+
+.graph.scope-highlight .graph-node.outside-scope {
+    opacity: 0.35;
+    filter: brightness(0.65);
+}

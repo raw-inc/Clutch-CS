@@ -1,0 +1,155 @@
+.kind-caption {
+    font-size: 9px;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.node-identifier {
+    display: block;
+    font: 10px/1.6 Consolas, monospace;
+    color: #a0a6b0;
+    overflow-wrap: anywhere;
+}
+
+.category-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 2px;
+    background: var(--category-color);
+    flex-shrink: 0;
+}
+
+[data-category] {
+    --category-color: #8f9aa8;
+}
+
+[data-category="communication"] {
+    --category-color: #78b8dc;
+}
+
+[data-category="control"] {
+    --category-color: #d5b570;
+}
+
+[data-category="data"] {
+    --category-color: #aa9add;
+}
+
+[data-category="values"] {
+    --category-color: #8db5cf;
+}
+
+[data-category="state"] {
+    --category-color: #69b9b3;
+}
+
+[data-category="files"] {
+    --category-color: #b4bf86;
+}
+
+[data-category="processes"] {
+    --category-color: #d5947e;
+}
+
+[data-category="scheduling"] {
+    --category-color: #c88faa;
+}
+
+[data-category="resources"] {
+    --category-color: #89b68d;
+}
+
+[data-category="media"] {
+    --category-color: #93a4dd;
+}
+
+[data-category="ai"] {
+    --category-color: #bb9acc;
+}
+
+[data-category="audio-generation"] {
+    --category-color: #99bdd7;
+}
+
+.kind-any {
+    --port-color: #9eafb9;
+}
+
+.kind-json {
+    --port-color: #dfbd76;
+}
+
+.kind-binary {
+    --port-color: #b69add;
+}
+
+.kind-trigger {
+    --port-color: #d2d8de;
+}
+
+.kind-result {
+    --port-color: #80b999;
+}
+
+.kind-source {
+    --port-color: #79b4d8;
+}
+
+.kind-transaction {
+    --port-color: #d69e77;
+}
+
+.kind-loop {
+    --port-color: #74bdb8;
+}
+
+.kind-extracted,
+.kind-unknown {
+    --port-color: #9b9fa9;
+}
+
+[data-category="math"] {
+    --category-color: #6fc8bb;
+}
+
+[data-category="execution"] {
+    --category-color: #8ac9a7;
+}
+
+.kind-pc-selection {
+    --port-color: #8ac9a7;
+}
+
+.kind-string,
+.kind-path {
+    --port-color: #dfbd76;
+}
+
+.kind-boolean {
+    --port-color: #91ce9b;
+}
+
+.kind-integer {
+    --port-color: #8fb6ed;
+}
+
+.kind-number {
+    --port-color: #7ec9e0;
+}
+
+.kind-array {
+    --port-color: #d99fae;
+}
+
+.kind-object {
+    --port-color: #bca1d8;
+}
+
+.kind-type-definition {
+    --port-color: #c9ac85;
+}
+
+.kind-unused {
+    --port-color: #848e9b;
+}

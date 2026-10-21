@@ -1,0 +1,303 @@
+.host-card.stale {
+    opacity: 0.75;
+}
+
+.host-card header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.host-name {
+    display: flex;
+    gap: 10px;
+    min-width: 0;
+    align-items: center;
+}
+
+.host-name > div {
+    min-width: 0;
+}
+
+.host-icon {
+    display: flex;
+    padding: 8px;
+    color: var(--muted);
+    border: 0;
+    border-radius: 0;
+    flex: none;
+}
+
+h3 {
+    margin: 0 0 4px;
+    font-size: 14px;
+    font-weight: 600;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.host-name small {
+    font-size: 10px;
+    color: var(--muted);
+}
+
+.primary-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.metric-label {
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+}
+
+.metric-number {
+    font-size: 29px;
+    font-weight: 550;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+    margin-top: 5px;
+}
+
+.metric-number small {
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: 5px;
+    font-weight: 400;
+}
+
+.metric-cell {
+    min-width: 0;
+    min-height: 150px;
+    position: relative;
+    background: color-mix(in srgb, var(--panel) 55%, transparent);
+}
+
+.metric-content {
+    position: relative;
+    z-index: 1;
+    padding: 10px 8px 24px;
+    text-shadow: 0 0 1px #0006;
+}
+
+.metric-detail {
+    margin-top: 8px;
+    font-size: 10px;
+    line-height: 1.6;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+}
+
+.cpu-name {
+    display: block;
+    margin-top: 3px;
+    overflow-wrap: anywhere;
+    color: var(--muted);
+}
+
+.device-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    margin-top: 12px;
+    font-size: 11px;
+}
+
+.device-line > span:first-child {
+    color: var(--muted);
+}
+
+.unavailable {
+    color: var(--muted);
+}
+
+.network {
+    border-top: 0;
+    margin-top: 17px;
+    padding-top: 13px;
+}
+
+.network-caption {
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.network-caption span {
+    font-size: 9px;
+    letter-spacing: 0.05em;
+}
+
+.network-values {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 9px;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+}
+
+.network-values i {
+    font-style: normal;
+    font-size: 12px;
+    color: var(--accent);
+    padding-right: 5px;
+}
+
+.network small {
+    font-size: 9px;
+    color: var(--muted);
+    display: block;
+    margin-top: 7px;
+}
+
+.host-card footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--muted);
+    font-size: 9px;
+    border-top: 0;
+    margin-top: 16px;
+    padding-top: 11px;
+}
+
+.sample-status,
+.warning,
+.activity-warning {
+    color: #c9aa73;
+}
+
+@media (min-width: 1000px) {
+    .host-card.detailed:only-child {
+        display: grid;
+        grid-template-columns: minmax(260px, 1.2fr) minmax(240px, 1fr) minmax(210px, 0.8fr);
+        column-gap: 30px;
+    }
+
+    .host-card.detailed:only-child header,
+    .host-card.detailed:only-child footer {
+        grid-column: 1 / -1;
+    }
+
+    .host-card.detailed:only-child .primary-metrics {
+        margin-top: 18px;
+    }
+
+    .host-card.detailed:only-child .device-metrics {
+        align-self: center;
+        padding-left: 26px;
+        border-left: 0;
+    }
+
+    .host-card.detailed:only-child .network {
+        align-self: center;
+        border-top: 0;
+        border-left: 0;
+        padding: 8px 0 8px 26px;
+        margin-top: 0;
+    }
+}
+
+.gpu-values {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.gpu-reading {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    max-width: 220px;
+}
+
+.gpu-reading small {
+    color: var(--muted);
+    font-size: 9px;
+    max-width: 155px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gpu-reading b {
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.host-card.summary .primary-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 14px;
+}
+
+.host-card.summary .metric-cell {
+    min-height: 120px;
+}
+
+.host-card.summary .metric-number {
+    font-size: clamp(18px, 2vw, 26px);
+}
+
+.host-card.summary .memory-number {
+    font-size: clamp(13px, 1.6vw, 21px);
+    margin-top: 9px;
+}
+
+.throughput-breakdown {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 4px;
+    font-size: 9px;
+}
+
+.throughput-breakdown > span {
+    white-space: nowrap;
+}
+
+.throughput-divider {
+    color: var(--muted);
+}
+
+@media (max-width: 600px) {
+    .host-card.summary .primary-metrics {
+        gap: 5px;
+    }
+
+    .host-card.summary .metric-content {
+        padding: 8px 4px 18px;
+    }
+
+    .host-card.summary .metric-detail {
+        font-size: 9px;
+    }
+
+    .host-card.summary .throughput-cell .metric-number {
+        font-size: clamp(12px, 3.6vw, 18px);
+    }
+}
+
+.gpu-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.host-card.summary .cpu-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    overflow-wrap: normal;
+    margin-top: 0;
+}

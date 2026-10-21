@@ -1,0 +1,6 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Persistence
+<details class="secondary-details"><summary>@Ui["Saved, active and recoverable versions"]</summary>
+<button @onclick="ReadAsync">@Ui["Check status"]</button>
+@foreach(var state in states){<p>@state.PeerId · @Ui["Saved"] @state.SavedRevision · @Ui["Active"] @state.EffectiveRevision · @Ui["Recoverable"] @state.RecoveryRevision</p><p>@(state.IsUnsaved?Ui["Active value is not saved"]:"") @(state.CandidateIsUnsaved?Ui["Unsaved candidate"]:"") @(state.IsLocalUnconfirmed?Ui["Not reconciled"]:"") @state.Reason</p>}
+@if(message is not null){<p>@message()</p>}
+</details>

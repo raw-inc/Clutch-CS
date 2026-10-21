@@ -1,0 +1,16 @@
+{
+  "node.script.javascript.name": "JavaScript script (Node.js)",
+  "node.script.javascript.description": "Run export function run(...) or export async function run(...) with Node.js. Choose individual or named JSON inputs, accept unknown types as any, and import pinned npm dependencies.",
+  "setting.nodePath": "Node.js executable on the execution peer (blank uses the managed npm environment)",
+  "port.script.javascript.in.arguments": "Named arguments",
+  "script.javascriptEntryRequired": "Define exactly one export function run(...) or export async function run(...). Generators are not supported.",
+  "script.javascriptNamedArgumentsRequired": "run must use named identifiers or a final ...args parameter, without destructuring.",
+  "script.javascriptAnalysisUnavailable": "JavaScript analysis could not be completed. Check the execution peer's path to Node.js 24 or later.",
+  "script.javascriptRuntimeRequired": "Node.js 24 or later is required.",
+  "script.packages.nodePathRequired": "Specify the absolute path to Node.js on this peer.",
+  "script.packages.runtimePathRequired": "Specify the absolute path to the runtime or CLI on the execution peer.",
+  "script.packages.npmPathRequired": "npm-cli.js is unavailable. Check the Node.js installation or specify its absolute path.",
+  "script.packages.npmResolveFailed": "npm dependency resolution failed. Check package names, exact versions, Node.js compatibility and connectivity.",
+  "script.packages.npmInstallFailed": "npm installation failed. Check connectivity and required build tools. The current configuration was retained.",
+  "script.packages.npmCheckFailed": "npm dependencies could not be validated. The current configuration was retained."
+}

@@ -1,0 +1,17 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+<div class="editor-navigator" @ref="root" aria-label="@Ui["editor.navigation.label"]">
+    <div class="navigation-tools">
+        <button type="button" class="quiet" disabled="@Disabled" aria-pressed="@(mapVisible?"true":"false")" @onclick="()=>mapVisible=!mapVisible" title="@Ui["editor.navigation.mapShortcut"]"><UiIcon Name="dashboard" />@Ui["editor.navigation.map"]</button>
+        <button type="button" class="quiet icon-button" disabled="@Disabled" @onclick="OpenSearch" aria-label="@Ui["editor.navigation.findShortcut"]" title="@Ui["editor.navigation.findShortcut"]"><UiIcon Name="search" /></button>
+    </div>
+    <div class="editor-find" hidden="@(!searchVisible)" role="search">
+        <input @ref="searchInput" value="@query" @oninput="SearchChanged" @onkeydown="SearchKeyAsync" placeholder="@Ui["editor.navigation.findPlaceholder"]" aria-label="@Ui["editor.navigation.findPlaceholder"]" autocomplete="off" />
+        <span class="find-count" role="status">@(matches.Length==0?0:matchIndex+1)/@matches.Length</span>
+        <button type="button" class="quiet icon-button" disabled="@(matches.Length==0)" @onclick="()=>Next(-1)" aria-label="@Ui["editor.navigation.previous"]" title="@Ui["editor.navigation.previous"]">↑</button>
+        <button type="button" class="quiet icon-button" disabled="@(matches.Length==0)" @onclick="()=>Next(1)" aria-label="@Ui["editor.navigation.next"]" title="@Ui["editor.navigation.next"]">↓</button>
+        <button type="button" class="quiet icon-button" @onclick="CloseSearch" aria-label="@Ui["Close"]"><UiIcon Name="close" /></button>
+    </div>
+    <svg class="editor-minimap" hidden="@(!mapVisible)" role="img" tabindex="0" aria-label="@Ui["editor.navigation.mapHelp"]" title="@Ui["editor.navigation.mapHelp"]" preserveAspectRatio="xMidYMid meet"><g data-map-nodes></g><rect data-map-viewport class="map-viewport" vector-effect="non-scaling-stroke" /><rect data-map-selection class="map-selection" visibility="hidden" vector-effect="non-scaling-stroke" /></svg>
+    @Notifications
+    @if(problem is not null){<p class="navigation-notice" role="status">@Ui[problem]</p>}
+</div>

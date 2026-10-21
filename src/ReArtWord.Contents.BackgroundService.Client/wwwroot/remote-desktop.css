@@ -1,0 +1,534 @@
+
+.page:has(.desktop-workspace) {
+    max-width: none;
+    padding: 16px 24px 38px;
+}
+
+.remote-tools:has(.desktop-workspace) .page-title {
+    margin-bottom: 12px;
+}
+
+.page:has(.desktop-workspace) .page-title h1 {
+    font-size: 20px;
+}
+
+.desktop-workspace {
+    position: relative;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-rows: 44px minmax(0, 1fr);
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--paper);
+}
+
+.desktop-toolbar {
+    grid-column: 1/-1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    min-width: 0;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+    white-space: nowrap;
+}
+
+.desktop-toolbar > select {
+    height: 30px;
+    padding: 4px 8px;
+    font-size: 11px;
+    flex: 0 1 180px;
+    width: 180px;
+    min-width: 110px;
+}
+
+.desktop-toolbar > select:nth-child(2) {
+    flex-basis: 200px;
+    width: 200px;
+}
+
+.desktop-toolbar .desktop-connect {
+    height: 30px;
+    font-size: 11px;
+    padding: 4px 10px;
+    flex: none;
+    flex-direction: row-reverse;
+}
+
+.desktop-connection {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    margin: 0 6px;
+    font-size: 10px;
+    color: var(--muted);
+}
+
+.desktop-connection::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex: none;
+}
+
+.desktop-connection[data-state="connected"]::before {
+    background: var(--green);
+}
+
+.desktop-connection[data-state="pending"]::before {
+    background: var(--warn);
+}
+
+.desktop-keybar {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex: none;
+}
+
+.desktop-keybar .desktop-key {
+    height: 28px;
+    min-width: 32px;
+    padding: 3px 6px;
+    font-size: 10px;
+    line-height: 1;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--muted);
+}
+
+.desktop-key-separator {
+    height: 22px;
+    width: 1px;
+    flex: none;
+    margin: 0 3px;
+    background: var(--line);
+}
+
+.desktop-rail {
+    grid-column: 1;
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 0;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+}
+
+.desktop-workspace .desktop-action,
+.desktop-menu > summary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex: none;
+    width: 32px;
+    height: 32px;
+    padding: 6px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0;
+    cursor: pointer;
+    list-style: none;
+    margin: 0;
+}
+
+.desktop-workspace .ui-icon {
+    width: 17px;
+    height: 17px;
+}
+
+.desktop-menu > summary::-webkit-details-marker {
+    display: none;
+}
+
+.desktop-menu > summary:hover,
+.desktop-action:hover {
+    background: var(--raised);
+    color: var(--ink);
+}
+
+.desktop-menu[open] > summary,
+.desktop-workspace [aria-pressed="true"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+}
+
+.desktop-toolbar .desktop-labeled {
+    width: auto;
+    min-width: 32px;
+    padding: 6px 8px;
+    gap: 6px;
+    font-size: 11px;
+    flex-direction: row-reverse;
+}
+
+.desktop-toolbar .desktop-action[data-muted="true"] {
+    color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 12%, var(--panel));
+    border-color: color-mix(in srgb, var(--warn) 40%, var(--line));
+}
+
+.desktop-popover {
+    position: absolute;
+    z-index: 4;
+    left: 48px;
+    top: 48px;
+    width: min(300px, calc(100% - 56px));
+    max-height: calc(100% - 56px);
+    overflow: auto;
+    padding: 16px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    box-shadow: 0 8px 26px #0006;
+}
+
+.desktop-popover h2 {
+    font-size: 12px;
+    margin: 0 0 14px;
+}
+
+.desktop-popover label {
+    font-size: 11px;
+    margin: 12px 0;
+    gap: 5px;
+}
+
+.desktop-popover input,
+.desktop-popover select {
+    font-size: 12px;
+    height: 32px;
+    width: 100%;
+    padding: 5px 8px;
+}
+
+.desktop-popover p {
+    font-size: 11px;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+    line-height: 1.7;
+}
+
+.desktop-popover p:empty {
+    display: none;
+}
+
+.desktop-popover .desktop-bitrate-mode {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+    width: 100%;
+    padding: 3px;
+    background: var(--raised);
+    color: var(--muted);
+    border-color: var(--line);
+}
+
+.desktop-bitrate-mode span {
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+.desktop-toolbar > .desktop-transmission-preset {
+    min-width: 190px;
+    max-width: 230px;
+    flex: 0 1 220px;
+}
+
+.desktop-bitrate-mode[data-quality="false"][aria-pressed="false"] span:first-child,
+.desktop-bitrate-mode[data-quality="false"][aria-pressed="true"] span:last-child {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.desktop-viewport {
+    position: relative;
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    gap: 0.5rem;
+    background: var(--paper);
+    outline: none;
+    padding: 0;
+}
+
+.desktop-viewport:focus .desktop-monitor {
+    outline: 1px solid var(--accent);
+    outline-offset: -1px;
+}
+
+.desktop-monitor > span {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: block;
+    padding: 3px 8px;
+    font-size: 10px;
+    background: var(--panel);
+}
+
+.desktop-monitor > span > span {
+    position: sticky;
+    left: 8px;
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.desktop-monitor canvas {
+    display: block;
+    min-width: 0;
+    min-height: 0;
+    max-width: 100%;
+    object-fit: contain;
+    touch-action: none;
+}
+
+.desktop-viewport[data-scale="native"] {
+    overflow: auto;
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+.desktop-viewport[data-scale="native"] .desktop-monitor,
+.desktop-viewport[data-scale="native"] canvas {
+    max-width: none;
+}
+
+.desktop-viewport[data-scale="native"] canvas {
+    image-rendering: pixelated;
+}
+
+.desktop-viewport:fullscreen {
+    width: 100vw;
+    height: 100dvh;
+    padding: 0;
+    background: #000;
+}
+
+.desktop-viewport:fullscreen .desktop-monitor > span {
+    display: none;
+}
+
+.desktop-viewport:fullscreen:focus .desktop-monitor {
+    outline: none;
+}
+
+.desktop-workspace:fullscreen {
+    width: 100%;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+}
+
+.desktop-empty {
+    margin: auto;
+    padding: 24px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.desktop-empty .ui-icon {
+    width: 32px;
+    height: 32px;
+    color: #68798e;
+}
+
+.desktop-empty p {
+    margin: 12px 0 0;
+}
+
+.desktop-stats {
+    position: absolute;
+    z-index: 2;
+    top: 10px;
+    right: 10px;
+    margin: 0;
+    padding: 10px 12px;
+    min-width: 190px;
+    max-width: calc(100% - 20px);
+    background: color-mix(in srgb, var(--panel) 60%, transparent);
+    border: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
+    border-radius: 4px;
+    pointer-events: none;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 1px 2px #0009;
+}
+
+.desktop-stats > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    line-height: 1.65;
+}
+
+.desktop-stats dt {
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.desktop-stats dd {
+    margin: 0;
+    text-align: right;
+    color: var(--ink);
+}
+
+@media (max-width: 650px) {
+    .page:has(.desktop-workspace) {
+        padding: 12px 10px 34px;
+    }
+
+    .desktop-toolbar {
+        padding: 4px 6px;
+        gap: 4px;
+    }
+
+    .desktop-toolbar > select {
+        min-width: 100px;
+        height: 26px;
+        padding: 3px 7px;
+    }
+
+    .desktop-toolbar .desktop-connect {
+        height: 26px;
+        padding: 3px 8px;
+    }
+
+    .desktop-toolbar .desktop-action {
+        height: 26px;
+        width: 26px;
+        min-width: 26px;
+        padding: 4px;
+    }
+
+    .desktop-connection {
+        display: none;
+    }
+
+    .desktop-stats {
+        font-size: 10px;
+        min-width: 0;
+        padding: 8px;
+    }
+
+    .desktop-popover {
+        padding: 12px;
+    }
+
+    .desktop-toolbar .desktop-labeled {
+        width: auto;
+        padding: 4px 6px;
+    }
+}
+
+.desktop-screen-tabs {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex: none;
+    margin-left: auto;
+    max-width: 40vw;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.desktop-screen-tabs button {
+    flex: none;
+    min-width: 30px;
+    height: 28px;
+    padding: 3px 7px;
+    font-size: 11px;
+    background: transparent;
+    border-color: var(--line);
+}
+
+.desktop-screen-symbol {
+    position: relative;
+    display: block;
+    width: 25px;
+    height: 23px;
+}
+
+.desktop-screen-symbol .ui-icon {
+    width: 25px;
+    height: 23px;
+}
+
+.desktop-screen-number {
+    position: absolute;
+    inset: 4px 3px auto;
+    text-align: center;
+    font-size: 9px;
+    line-height: 11px;
+    font-weight: 600;
+}
+
+.desktop-screen-tabs button:has(.desktop-screen-symbol) {
+    height: 30px;
+    min-width: 35px;
+    padding: 2px 4px;
+}
+
+.desktop-text-input {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 1px;
+    min-width: 0;
+    height: 1px;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    opacity: 0.01;
+    pointer-events: none;
+    font-size: 16px;
+    resize: none;
+}
+
+.desktop-monitor {
+    flex: none;
+    min-width: 0;
+    max-width: 100%;
+    color: var(--muted);
+    position: relative;
+}
+
+.desktop-monitor canvas.desktop-annotations {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    pointer-events: none;
+    touch-action: auto;
+}

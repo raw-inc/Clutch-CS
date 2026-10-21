@@ -1,0 +1,22 @@
+.workflow-button {
+    display: flex;
+    min-width: 0;
+}
+
+.workflow-button > button {
+    width: 100%;
+    height: 40px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.toggle-state {
+    margin-right: 8px;
+    font-weight: 700;
+}
+
+.workflow-button > button[aria-pressed="false"] {
+    background: var(--panel);
+    color: var(--ink);
+}

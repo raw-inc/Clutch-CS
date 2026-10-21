@@ -1,0 +1,15 @@
+{
+  "preview.view.label": "プレビュー表示",
+  "preview.view.latest": "直近",
+  "preview.view.history": "履歴",
+  "preview.history.title": "プレビュー履歴",
+  "preview.history.scope": "直近50件 · {0}",
+  "preview.history.retention": "5分以内の直近50件。インデックスはPCごと、時間は選択中の表示用タイムゾーンです。長文は省略し、媒体は形式とサイズを表示します。",
+  "preview.history.unavailable": "一部のプレビュー履歴を取得できませんでした。",
+  "preview.history.empty": "表示できる取得履歴はありません。",
+  "preview.history.number": "インデックス",
+  "preview.history.time": "時間",
+  "preview.history.value": "値",
+  "preview.history.allPeers": "すべてのPC",
+  "preview.retry": "再試行"
+}

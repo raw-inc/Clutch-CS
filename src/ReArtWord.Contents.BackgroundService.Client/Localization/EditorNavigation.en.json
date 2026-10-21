@@ -1,0 +1,15 @@
+{
+  "editor.navigation.label": "Workflow navigation",
+  "editor.navigation.map": "Map",
+  "editor.navigation.mapShortcut": "Toggle map (M on the empty canvas)",
+  "editor.navigation.mapHelp": "Workflow map: click or drag to move; Shift+drag to fit a selected area",
+  "editor.navigation.findShortcut": "Find nodes (Ctrl+F)",
+  "editor.navigation.findPlaceholder": "Node name or input value",
+  "editor.navigation.previous": "Previous match (Shift+Enter)",
+  "editor.navigation.next": "Next match (Enter)",
+  "editor.navigation.nodeMissing": "The node is not in the current workflow.",
+  "editor.navigation.noErrors": "There are no node errors to navigate to.",
+  "editor.navigation.errorShortcut": "Go to a node error (Ctrl+B / double-click the workflow tab)",
+  "editor.navigation.logHint": "Double-click to open the workflow and recorded node",
+  "editor.navigation.openLog": "Open workflow / node"
+}

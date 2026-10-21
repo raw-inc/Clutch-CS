@@ -1,0 +1,6 @@
+{
+  "node.data.isNull.name": "IsNull",
+  "node.data.isNull.description": "Return true only for null. Empty text, false, zero, arrays, dictionaries and binary data return false. Missing or failed input is not treated as null.",
+  "port.data.isNull.in.value": "Input value",
+  "port.data.isNull.out.value": "Is null"
+}

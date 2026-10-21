@@ -1,0 +1,38 @@
+@if(Report is not null)
+{
+    @foreach(var node in Report.Nodes.Where(item => item.PcSelection is not null))
+    {
+        var selection = node.PcSelection!;
+        <details class="secondary-details">
+            <summary>@Ui["Execution PC selection"] · @node.NodeId</summary>
+            <p>@Ui["Selection time"]: @FormatTime(selection.EvaluatedAt)</p>
+            <p>@Ui["Candidate PCs"]: @string.Join(", ", selection.CandidateHostIds)</p>
+            <p>@Ui["Execution targets"]: @string.Join(", ", node.Targets.Select(item => item.PeerId))</p>
+            @if(selection.CandidateProblems is not null)
+            {
+                @foreach(var problem in selection.CandidateProblems)
+                {
+                    <p class="notice">@problem.Key: @Ui[problem.Value]</p>
+                }
+            }
+            @if(selection.Observations.Count != 0)
+            {
+                <div class="table-wrap"><table>
+                    <thead><tr><th>PC / Peer</th><th>@Ui["Resource"]</th><th>@Ui["Observed value"]</th><th>@Ui["Observation time"]</th><th>@Ui["Reason"]</th></tr></thead>
+                    <tbody>
+                    @foreach(var observation in selection.Observations)
+                    {
+                        <tr>
+                            <td>@observation.HostId / @observation.PeerId<div class="small mono">@observation.InstanceId</div></td>
+                            <td>@observation.Resource @observation.GpuId</td>
+                            <td>@(observation.Value?.ToString("G6", CultureInfo.CurrentCulture) ?? Ui["Unavailable"]) @observation.Unit</td>
+                            <td>@(FormatTime(observation.ObservedAt) ?? Ui["Unavailable"])</td>
+                            <td>@(observation.Reason is null ? string.Empty : Ui[observation.Reason])</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table></div>
+            }
+        </details>
+    }
+}

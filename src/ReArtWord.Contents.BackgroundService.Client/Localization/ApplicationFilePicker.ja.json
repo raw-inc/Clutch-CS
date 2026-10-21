@@ -1,0 +1,18 @@
+{
+  "Browse executable": "参照…",
+  "Select application executable": "実行ファイルを選択",
+  "Open folders with a double-click or Enter. Select a file to use its absolute path.": "フォルダーはダブルクリックまたはEnterで開きます。ファイルを選択すると絶対パスが入力されます。",
+  "Drives": "ドライブ",
+  "Parent folder": "上のフォルダーへ",
+  "Folder path": "フォルダーパス",
+  "Drives / enter a folder path": "ドライブ / フォルダーパスを入力",
+  "Go to folder": "移動",
+  "Files and folders": "ファイルとフォルダー",
+  "Folder": "フォルダー",
+  "File": "ファイル",
+  "No files or folders found.": "ファイルやフォルダーはありません。",
+  "More files": "続きを表示",
+  "Select a file": "ファイルを選択してください",
+  "Use this file": "このファイルを選択",
+  "The folder could not be read. Check its path and the host permissions.": "フォルダーを読み取れません。パスとホスト側のアクセス権を確認してください。"
+}

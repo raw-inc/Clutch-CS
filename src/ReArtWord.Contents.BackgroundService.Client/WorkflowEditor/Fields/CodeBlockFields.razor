@@ -1,0 +1,12 @@
+<div class="code-block-fields">
+    <label>@Ui["Code language"]<select aria-label="@Ui["Code language"]" value="@Read("language","text")" @onchange='e=>Change("language",e.Value?.ToString()??"text")'>@foreach(var language in Contracts.Scripting.CodeBlockLanguages.All){<option value="@language">@Ui.SettingChoiceName("value.code","language",language)</option>}</select></label>
+    @if(Read("language","text")=="python")
+    {
+        <label>@Ui["Python executable for analysis"]<ScriptRuntimeField NodeId="@NodeId" Language="python" Value="@Read("pythonPath")" ValueChanged='v=>Change("pythonPath",v)' /></label>
+    }
+    @if(Read("language","text")=="javascript")
+    {
+        <label>@Ui["Node.js executable for analysis"]<ScriptRuntimeField NodeId="@NodeId" Language="javascript" Value="@Read("nodePath")" ValueChanged='v=>Change("nodePath",v)' /></label>
+    }
+    <ScriptCodeField NodeId="@NodeId" Value="@Read("code")" Inline="true" ValueChanged='v=>Change("code",v)'  />
+</div>

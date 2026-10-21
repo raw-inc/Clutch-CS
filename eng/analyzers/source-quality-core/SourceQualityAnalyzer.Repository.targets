@@ -1,0 +1,55 @@
+<Project>
+  <PropertyGroup>
+    <ContentsSourceQualityAnalyzerRepositoryUrl>https://github.com/raw-inc/ReArtWord.CSharp.SourceCodeQuality.Analyzers.git</ContentsSourceQualityAnalyzerRepositoryUrl>
+    <ContentsSourceQualityAnalyzerRepositoryPath>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../../excludes/ReArtWord.CSharp.SourceCodeQuality.Analyzers'))</ContentsSourceQualityAnalyzerRepositoryPath>
+    <ContentsSourceQualityAnalyzerGitPath>$(ContentsSourceQualityAnalyzerRepositoryPath)/.git</ContentsSourceQualityAnalyzerGitPath>
+    <ContentsSourceQualityAnalyzerProjectPath>$(ContentsSourceQualityAnalyzerRepositoryPath)/src/ReArtWord.CSharp.SourceCodeQuality.Core.Analyzers/ReArtWord.CSharp.SourceCodeQuality.Core.Analyzers.csproj</ContentsSourceQualityAnalyzerProjectPath>
+    <ContentsCurrentBuildDirectoryNormalized>$([System.String]::Copy('$(MSBuildProjectDirectory)').Replace('\', '/'))</ContentsCurrentBuildDirectoryNormalized>
+    <ContentsSourceQualityAnalyzerRepositoryPathNormalized>$([System.String]::Copy('$(ContentsSourceQualityAnalyzerRepositoryPath)').Replace('\', '/'))</ContentsSourceQualityAnalyzerRepositoryPathNormalized>
+    <ContentsCurrentBuildDirectoryInvariant>$([System.String]::Copy('$(ContentsCurrentBuildDirectoryNormalized)').ToUpperInvariant())/</ContentsCurrentBuildDirectoryInvariant>
+    <ContentsSourceQualityAnalyzerRepositoryPathInvariant>$([System.String]::Copy('$(ContentsSourceQualityAnalyzerRepositoryPathNormalized)').ToUpperInvariant())/</ContentsSourceQualityAnalyzerRepositoryPathInvariant>
+    <ContentsCurrentBuildIsSourceQualityAnalyzerRepository>$([System.String]::Copy('$(ContentsCurrentBuildDirectoryInvariant)').StartsWith('$(ContentsSourceQualityAnalyzerRepositoryPathInvariant)'))</ContentsCurrentBuildIsSourceQualityAnalyzerRepository>
+  </PropertyGroup>
+
+  <Target Name="SyncContentsSourceQualityAnalyzerRepository">
+    <Error Condition="Exists('$(ContentsSourceQualityAnalyzerRepositoryPath)') and !Exists('$(ContentsSourceQualityAnalyzerGitPath)')"
+           Text="Analyzer取得先がGit repositoryではありません。別ファイルを消さず、内容を確認してください: $(ContentsSourceQualityAnalyzerRepositoryPath)" />
+
+    <Exec Condition="!Exists('$(ContentsSourceQualityAnalyzerGitPath)')"
+          Command="git -c core.longpaths=true clone --origin origin &quot;$(ContentsSourceQualityAnalyzerRepositoryUrl)&quot; &quot;$(ContentsSourceQualityAnalyzerRepositoryPath)&quot;" />
+
+    <!-- Windowsの深いcheckoutでもAnalyzer sourceを欠損させないため、clone後もlocal repository設定を維持します。 -->
+    <Exec Command="git -C &quot;$(ContentsSourceQualityAnalyzerRepositoryPath)&quot; config core.longpaths true" />
+
+    <!-- 変更を黙って捨てず、dirty sourceを取得済みcommitと同一視もしません。 -->
+    <Exec Command="git -C &quot;$(ContentsSourceQualityAnalyzerRepositoryPath)&quot; status --porcelain --untracked-files=all"
+          ConsoleToMsBuild="true"
+          StandardOutputImportance="Low">
+      <Output TaskParameter="ConsoleOutput" ItemName="ContentsSourceQualityAnalyzerWorkingTreeStatus" />
+    </Exec>
+    <Error Condition="'@(ContentsSourceQualityAnalyzerWorkingTreeStatus)' != ''"
+           Text="Analyzer repositoryに未commit変更があります。自動破棄せずrestoreを停止しました。内容をcommitまたは別途退避してから再実行してください: $(ContentsSourceQualityAnalyzerRepositoryPath)" />
+
+    <Exec Command="git -C &quot;$(ContentsSourceQualityAnalyzerRepositoryPath)&quot; remote set-url origin &quot;$(ContentsSourceQualityAnalyzerRepositoryUrl)&quot;" />
+    <ReadLinesFromFile File="$(MSBuildThisFileDirectory)accepted-commit.txt">
+      <Output TaskParameter="Lines" ItemName="ContentsSourceQualityAcceptedCommit" />
+    </ReadLinesFromFile>
+    <Exec Command="git -C &quot;$(ContentsSourceQualityAnalyzerRepositoryPath)&quot; fetch origin main" />
+    <Exec Command="git -C &quot;$(ContentsSourceQualityAnalyzerRepositoryPath)&quot; checkout --detach @(ContentsSourceQualityAcceptedCommit)" />
+    <Exec Command="git -C &quot;$(ContentsSourceQualityAnalyzerRepositoryPath)&quot; rev-parse HEAD"
+          ConsoleToMsBuild="true"
+          StandardOutputImportance="Low">
+      <Output TaskParameter="ConsoleOutput" ItemName="ContentsSourceQualityAnalyzerRevision" />
+    </Exec>
+
+    <!-- 初回の復元では、ソリューションの依存関係を評価する時点でアナライザーのプロジェクトがまだ存在しません。
+         clone後にCore・MVVM・Razorの依存パッケージを復元します。アナライザー自身のビルドは
+         Directory.Build.targetsの同期対象から除外しているため、この呼び出しは再帰しません。 -->
+    <MSBuild Projects="$(ContentsSourceQualityAnalyzerProjectPath);$(ContentsSourceQualityAnalyzerRepositoryPath)/src/ReArtWord.CSharp.SourceCodeQuality.MVVM.Analyzers/ReArtWord.CSharp.SourceCodeQuality.MVVM.Analyzers.csproj;$(ContentsSourceQualityAnalyzerRepositoryPath)/src/ReArtWord.CSharp.SourceCodeQuality.Razor.Analyzers/ReArtWord.CSharp.SourceCodeQuality.Razor.Analyzers.csproj"
+             Targets="Restore"
+             BuildInParallel="false" />
+
+    <Message Importance="High"
+             Text="Source Quality Analyzer同期済み: @(ContentsSourceQualityAnalyzerRevision)" />
+  </Target>
+</Project>

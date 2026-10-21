@@ -1,0 +1,9 @@
+@{var active=Updates.Where(update=>!update.Completed).ToArray();var total=active.Sum(update=>update.Total);var confirmed=active.Sum(update=>update.Confirmed);var unavailable=Unavailable||active.Any(update=>StaleOperations.Contains(update.OperationId));}
+@if(active.Length!=0)
+{
+    <div class="fleet-footer" role="status" aria-label="@Ui["Fleet update in progress"]" title="@Ui["fleet.footer.context"]">
+        <span>@Ui[unavailable?"fleet.footer.unconfirmed":"fleet.footer.updating"]</span>
+        <progress max="@Math.Max(1,total)" value="@(unavailable?null:(int?)confirmed)" aria-label="@Ui["Confirmed update progress"]"></progress>
+        @if(!unavailable){<span class="fleet-footer-percent">@((100L*confirmed/Math.Max(1,total)).ToString(CultureInfo.CurrentCulture))%</span>}
+    </div>
+}

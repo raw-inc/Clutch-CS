@@ -1,0 +1,309 @@
+.metric-card > strong {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.metric-card .metric {
+    font-size: 30px;
+    line-height: 1.2;
+    margin: 10px 0 4px;
+}
+
+.metric-card .metric-caption {
+    font-size: 11px;
+    color: var(--muted);
+    margin: 4px 0 0;
+}
+
+.metric-card .coordinator-name {
+    font-size: 23px;
+    margin: 10px 0 4px;
+    line-height: 1.6;
+}
+
+.metric-card {
+    padding: 16px 22px;
+}
+
+.overview {
+    display: grid;
+    gap: 18px;
+    color: var(--ink);
+}
+
+.cluster-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 4px 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.cluster-title,
+.cluster-facts {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
+.cluster-title strong {
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+}
+
+.cluster-facts {
+    color: var(--muted);
+    font-size: 12px;
+    flex-wrap: wrap;
+}
+
+.cluster-facts b {
+    color: var(--ink);
+    font-weight: 600;
+}
+
+.connection-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex: none;
+}
+
+.connection-dot.connected {
+    background: #80b69a;
+}
+
+.state-chip,
+.window-chip {
+    font-size: 10px;
+    white-space: nowrap;
+    color: var(--muted);
+    border: 0;
+    padding: 4px 0;
+    border-radius: 0;
+}
+
+.overview-heading,
+.panel-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+}
+
+.overview-heading {
+    margin-top: 8px;
+}
+
+h2 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.sampling,
+.scope-note {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.secondary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.activity-panel,
+.logs-panel {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.panel-content {
+    flex: 1;
+}
+
+.panel-heading a {
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.scope-note {
+    margin: 0 0 16px;
+}
+
+.activity-row {
+    margin: 18px 0;
+}
+
+.activity-row > div:first-child {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 12px;
+}
+
+.activity-row a {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--ink);
+    text-decoration: none;
+}
+
+.activity-row span {
+    font-variant-numeric: tabular-nums;
+}
+
+.activity-row small {
+    font-size: 9px;
+    color: var(--muted);
+}
+
+.activity-track {
+    height: 4px;
+    background: var(--line);
+    border-radius: 2px;
+    margin-top: 9px;
+    overflow: hidden;
+}
+
+.activity-track span {
+    height: 100%;
+    display: block;
+    background: var(--accent);
+    opacity: 0.7;
+    border-radius: 2px;
+}
+
+.activity-warning {
+    display: block;
+    margin-top: 5px;
+}
+
+.activity-panel footer,
+.logs-panel footer,
+.range-note {
+    font-size: 10px;
+    line-height: 1.7;
+    color: var(--muted);
+    margin-top: 18px;
+}
+
+.log-row {
+    display: grid;
+    grid-template-columns: 52px 44px minmax(0, 1fr);
+    gap: 10px;
+    padding: 11px 0;
+    border-bottom: 0;
+    align-items: start;
+}
+
+.log-row time {
+    color: var(--muted);
+    font-size: 10px;
+    padding-top: 3px;
+    font-variant-numeric: tabular-nums;
+}
+
+.log-row[data-navigable] {
+    cursor: pointer;
+}
+
+.log-row[data-navigable]:hover,
+.log-row[data-navigable]:focus-visible {
+    background: var(--raised);
+    outline: 1px solid var(--line);
+    outline-offset: 3px;
+}
+
+.log-level {
+    font-size: 9px;
+    font-weight: 600;
+    padding: 3px 4px;
+    border: 0;
+    border-radius: 0;
+    text-align: center;
+    color: var(--muted);
+}
+
+.log-level.error {
+    color: #d59c98;
+}
+
+.log-level.warning {
+    color: #c9aa73;
+}
+
+.log-row p {
+    font-size: 11px;
+    line-height: 1.6;
+    margin: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.log-row small {
+    font-size: 9px;
+    color: var(--muted);
+    display: block;
+    margin-top: 4px;
+}
+
+.activity-empty {
+    color: var(--muted);
+    padding: 32px 20px;
+    font-size: 12px;
+}
+
+@media (max-width: 1100px) {
+    .cluster-strip {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 12px;
+    }
+}
+
+@media (max-width: 750px) {
+    .secondary-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .sampling {
+        max-width: 120px;
+        text-align: right;
+    }
+
+    .cluster-title strong {
+        max-width: 175px;
+    }
+}
+
+.overview-controls {
+    flex-wrap: wrap;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.kicker {
+    font-size: 9px;
+    font-weight: 650;
+    letter-spacing: 0.16em;
+    color: var(--muted);
+    margin: 0 0 6px;
+    text-transform: uppercase;
+}

@@ -1,0 +1,13 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Values
+@if(Value is {} progress)
+{
+    <div class="progress-display">
+        <progress max="100" value="@progress.Percentage.ToString(CultureInfo.InvariantCulture)" aria-label="@Ui["Progress"]"></progress>
+        <strong>@progress.Percentage.ToString("0.##",CultureInfo.CurrentCulture)%</strong>
+        <span>@progress.Current.ToString("G",CultureInfo.CurrentCulture) / @progress.Total.ToString("G",CultureInfo.CurrentCulture)</span>
+    </div>
+}
+else
+{
+    <p class="small">@Ui["Progress requires two non-negative finite numbers."]</p>
+}

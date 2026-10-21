@@ -1,0 +1,18 @@
+.state-picker {
+    display: grid;
+    gap: 8px;
+    border-bottom: 1px solid var(--line);
+    padding: 14px;
+    font-size: 12px;
+}
+
+.state-picker label {
+    display: grid;
+    gap: 4px;
+    margin: 10px 0;
+}
+
+.state-picker :is(input, select) {
+    width: 100%;
+    min-width: 0;
+}

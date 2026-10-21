@@ -1,0 +1,59 @@
+.gpu {
+    display: grid;
+    gap: 7px;
+    width: 100%;
+    min-width: 0;
+    padding: 8px 0;
+}
+
+.gpu-heading,
+.gpu-memory {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.gpu-heading span {
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gpu-heading b {
+    font-size: 13px;
+    white-space: nowrap;
+    font-weight: 550;
+}
+
+.gpu-memory small,
+.unavailable {
+    font-size: 9px;
+    color: var(--muted);
+}
+
+.gpu-memory {
+    flex-wrap: wrap;
+    font-size: 10px;
+    color: var(--muted);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 3px 8px;
+}
+
+.gpu-memory > span {
+    grid-column: 1 / -1;
+}
+
+.gpu-memory b {
+    color: var(--ink);
+    font-weight: 450;
+    font-variant-numeric: tabular-nums;
+    white-space: normal;
+}
+
+.gpu-memory small {
+    text-align: right;
+    white-space: nowrap;
+}

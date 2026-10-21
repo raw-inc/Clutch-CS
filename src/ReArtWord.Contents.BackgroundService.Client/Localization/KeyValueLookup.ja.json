@@ -1,0 +1,12 @@
+{
+  "node.data.keyValue.get.name": "Keyで値を取得",
+  "node.data.keyValue.get.description": "Key-Valueの配列から、大文字・小文字を区別してキーを検索します。既存Key-ValueノードのObject配列と、key/valueペア配列に対応します。キーがない場合だけデフォルト値を返し、未指定ならnullです。 辞書を直接入力することもできます。",
+  "port.data.keyValue.get.in.value": "Key-Value配列／辞書",
+  "port.data.keyValue.get.in.key": "検索するKey",
+  "port.data.keyValue.get.in.defaultValue": "デフォルト値（Keyがない場合）",
+  "port.data.keyValue.get.out.value": "取得したValue",
+  "choice.data.keyValue.get.format.auto": "自動判別（要素ごと）",
+  "choice.data.keyValue.get.format.objects": "Object配列（既存Key-Valueノード）",
+  "choice.data.keyValue.get.format.pairs": "key/valueペア配列",
+  "Automatic treats an object containing exactly key/value or Key/Value as a pair; all other objects are property maps. Object array accepts arrays made by Key and value nodes. Pair array requires string keys. Duplicate matching keys fail; null values are returned as null, not replaced by the default.": "自動ではkey/valueまたはKey/Valueの2項目だけを持つ要素をペア、それ以外をObjectとして扱います。Object配列は既存Key-Valueノードの配列に対応します。ペアのキーは文字列です。検索キーが重複した場合はエラー、値がnullの場合はデフォルト値へ置き換えずnullを返します。"
+}

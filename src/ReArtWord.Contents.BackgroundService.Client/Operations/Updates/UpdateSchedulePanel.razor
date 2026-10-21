@@ -1,0 +1,28 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@using ReArtWord.Contents.BackgroundService.Contracts.Updates.Scheduling
+@using ReArtWord.Contents.BackgroundService.Contracts.Updates
+<button type="button" @onclick="()=>OpenAsync(UiCancellation)">@Ui["Update reservations"]</button>
+<Modal Open="open" Title="@Ui["Update reservations"]" Close="()=>open=false">
+    <p>@Ui["Owning peer"]: @peer</p>
+    <button type="button" disabled="@busy" @onclick="()=>RefreshAsync(UiCancellation)">@Ui["Refresh"]</button>
+    @if(message is not null){<p class="notice">@message()</p>}
+    @foreach(var view in schedules)
+    {
+        var item=view.Schedule;
+        <section class="card" @key="item.Plan.Update.OperationId">
+            <strong>@item.Plan.Update.Manifest.ReleaseId · @FormatTime(item.Plan.StartAt)</strong>
+            <p>@Ui["State"]: @Ui[item.State.ToString()] · @Ui[item.Outcome.ToString()]</p>
+            <p>@Ui["Maximum start delay (seconds)"]: @item.Plan.MaximumDelaySeconds</p>
+            <p>@string.Join(", ",item.Plan.Update.PeerIds)</p>
+            @if(item.Reason is not null){<p class="notice">@Ui[item.Reason]</p>}
+            <code>@item.Plan.Update.OperationId</code>
+            <JsonDetails Value="item" />
+            @if(item.State==EUpdateScheduleState.Waiting)
+            {
+                <button type="button" disabled="@busy" @onclick="()=>EditAsync(view,UiCancellation)">@Ui["Change reservation"]</button>
+                <button type="button" disabled="@busy" @onclick="()=>CancelAsync(view,UiCancellation)">@Ui["Cancel before start"]</button>
+            }
+        </section>
+    }
+    @if(schedules.Count==0){<p>@Ui["No update reservations on this peer."]</p>}
+</Modal>

@@ -1,0 +1,9 @@
+@foreach(var group in displayed.GroupBy(notice=>notice.Channel,StringComparer.Ordinal))
+{
+    <div class="editor-notice-slot @(Compact?"compact":null)" @key="group.Key">
+        @foreach(var notice in group.Reverse())
+        {
+            <EditorResultNotice @key="notice.Id" Message="notice.Text" Compact="Compact" Persistent="notice.Persistent" Leaving="@(!Notices.Items.Any(active=>active.Id==notice.Id))" Dismissed="()=>Notices.Dismiss(notice.Id)" Closed="()=>RemoveClosed(notice.Id)" />
+        }
+    </div>
+}

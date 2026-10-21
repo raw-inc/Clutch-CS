@@ -1,0 +1,70 @@
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Diagnostics
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Graph
+@using ReArtWord.Contents.BackgroundService.Contracts.Configuration.Workflows
+@using ReArtWord.Contents.BackgroundService.Contracts.Observability.Tracing
+@inject EditorPresentationCache Presentation
+@using ReArtWord.Contents.BackgroundService.Contracts.Workflow
+@using ReArtWord.Contents.BackgroundService.Contracts.Observability
+@using ReArtWord.Contents.BackgroundService.Contracts.Nodes
+@using ReArtWord.Contents.BackgroundService.Contracts.Configuration
+@if(Visible)
+{
+@if(Model.SelectedWire is int index&&index<Model.Draft.Document.Wires.Count)
+{
+    var wire=Model.Draft.Document.Wires[index];
+    var source=Model.Draft.Document.Nodes.FirstOrDefault(node=>node.Id==wire.FromNode);
+    var destination=Model.Draft.Document.Nodes.FirstOrDefault(node=>node.Id==wire.ToNode);
+    var sourceType=Catalog.FirstOrDefault(item=>item.Type==source?.Type);
+    var destinationType=Catalog.FirstOrDefault(item=>item.Type==destination?.Type);
+    var inference=Presentation.Graph(Model.Draft.Document,Catalog);
+    var data=inference.Wire(wire);
+    var input=inference.Port(wire.ToNode,wire.ToPort,false);
+    <fieldset disabled="@(Model.Locks.Node(Model.Draft.Document.Id,wire.FromNode)||Model.Locks.Node(Model.Draft.Document.Id,wire.ToNode))">
+    <div class="wire-inspector-summary kind-@data.Key"><code class="kind-@data.Key" title="@Ui[data.Description]">@data.DisplayLabel(Ui)</code><span>→</span><code class="kind-@input.Key" title="@Ui[input.Description]">@input.DisplayLabel(Ui)</code></div>
+    <dl class="wire-endpoints"><dt>@Ui["From"]</dt><dd><strong>@(source is null?wire.FromNode:Ui.NodeName(source,sourceType))</strong><span>@GraphPortNames.Resolve(Model.Draft.Document,Ui,wire.FromNode,wire.FromPort,true)</span><code>@wire.FromNode.@wire.FromPort</code></dd><dt>@Ui["To"]</dt><dd><strong>@(destination is null?wire.ToNode:Ui.NodeName(destination,destinationType))</strong><span>@Ui.PortName(destination?.Type,wire.ToPort,false)</span><code>@wire.ToNode.@wire.ToPort</code></dd></dl>
+    <label>@Ui["Result route"]<select value="@wire.When" @onchange="e=>Wire(index,value=>value with{When=e.Value!.ToString()!})">@if(!Routes.Contains(wire.When,StringComparer.Ordinal)){<option value="@wire.When" selected>@wire.When — @Ui["Not in current choices"]</option>}@foreach(var route in Routes){<option @key="route" value="@route" selected="@(route==wire.When)">@route</option>}</select>
+</label>
+    <label>@Ui["Extract JSON pointer"]<input value="@wire.Path" @oninput="e=>Wire(index,value=>value with{Path=e.Value?.ToString()})" />
+</label>
+    <button class="danger" @onclick="()=>RemoveWire(index)">@Ui["Delete connection"]</button>
+    </fieldset>
+}
+else
+{
+    <fieldset disabled="@Model.Locks.Whole(Model.Draft.Document.Id)">
+    <h3>@Ui["Workflow settings"]</h3>
+    <label><input type="checkbox" checked="@Model.Draft.Document.IsRecipe" @onchange="e=>Model.Change(document=>document with{IsRecipe=(bool)e.Value!})" />@Ui["Keep as a reusable SubWorkflow without public ports"]</label>
+    <p class="small muted">@Ui["Public input or output nodes also make this a SubWorkflow. Remove those nodes and clear this option to use it as a regular workflow."]</p>
+    <details><summary>@Ui["Activation by change kind"]</summary>
+        <p class="small muted">@Ui["The strongest rule applies to all changes since the effective version. Changing a rule does not bypass its previous confirmation requirement."]</p>
+        @foreach(var kind in Enum.GetValues<EWorkflowChangeKind>())
+        {
+            <label>@Ui["ActivationChange."+kind]<select value="@ActivationRule(kind)" @onchange="args=>ChangeActivationRule(kind,args)">
+                <option value="@EActivationPolicy.Auto">@Ui["Activate after saving"]</option>
+                <option value="@EActivationPolicy.Explicit">@Ui["Save without activation"]</option>
+                <option value="@EActivationPolicy.ConfirmImpact">@Ui["Confirm impact before activation"]</option>
+            </select></label>
+        }
+    </details>
+    <label>@Ui["Identifier"]<input value="@Model.Draft.Document.Id" disabled="@(Model.Draft.BaseRevision is not null)" @oninput="e=>Model.Change(document=>document with{Id=e.Value?.ToString()??document.Id})" />
+</label>
+    <label>
+<input type="checkbox" checked="@Model.Draft.Document.Enabled" @onchange="e=>Model.Change(document=>document with{Enabled=(bool)e.Value!})" />@Ui["Enable automatic inputs"]</label>
+    <p class="small muted">@Ui["Edit automatic workflow inputs. Save and activate to apply. OFF stops automatic inputs after activation; manual runs remain available."]</p>
+    <label>
+<input type="checkbox" checked="@Model.Draft.Document.Trace" @onchange="e=>Model.Change(document=>document with{Trace=(bool)e.Value!})" />@Ui["Keep detailed tracing enabled"]</label>
+    <label>
+<input type="checkbox" checked="@Model.Draft.Document.ContainsPersonalData" @onchange="e=>Model.Change(document=>document with{ContainsPersonalData=(bool)e.Value!})" />@Ui["Inputs or outputs contain personal data"]</label>
+    @if(Model.Draft.Document.Trace)
+    {
+        <label><input type="checkbox" checked="@(Model.Draft.Document.TraceSelection?.Inputs??true)" @onchange="e=>Trace(value=>value with{Inputs=(bool)e.Value!})" />@Ui["Record inputs"]</label>
+        <label><input type="checkbox" checked="@(Model.Draft.Document.TraceSelection?.Outputs??true)" @onchange="e=>Trace(value=>value with{Outputs=(bool)e.Value!})" />@Ui["Record outputs"]</label>
+        <label><input type="checkbox" checked="@(Model.Draft.Document.TraceSelection?.RawCommunication??true)" @onchange="e=>Trace(value=>value with{RawCommunication=(bool)e.Value!})" />@Ui["Record raw communication"]</label>
+        <label>@Ui["Raw byte limit (blank for all)"]<input type="text" inputmode="numeric" value="@(Model.ReadInput("workflow/traceRawLimit")??Model.Draft.Document.TraceSelection?.RawByteLimit?.ToString(CultureInfo.InvariantCulture))" @oninput="TraceLimit" /></label>
+    }
+    <p class="small muted">@Ui["Tracing remains enabled until disabled. With no values selected, only metadata is recorded. Secrets are always masked."]</p>
+<p class="detail">@(Model.Draft.BaseRevision??Ui["Unsaved"])</p>
+    </fieldset>
+}
+
+}

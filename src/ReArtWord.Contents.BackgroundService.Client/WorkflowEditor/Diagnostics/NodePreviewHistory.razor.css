@@ -1,0 +1,91 @@
+.preview-history {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 0;
+}
+
+.preview-history table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 6px;
+    table-layout: fixed;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.preview-history th,
+.preview-history td {
+    padding: 8px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+}
+
+.preview-history th:first-child {
+    width: 6em;
+}
+
+.preview-history th:nth-child(2) {
+    width: 13ch;
+}
+
+.preview-history time {
+    white-space: nowrap;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.preview-history th {
+    position: sticky;
+    top: 0;
+    background: var(--raised);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.preview-history tbody tr:nth-child(even) {
+    background: color-mix(in srgb, var(--raised) 45%, var(--panel));
+}
+
+.preview-history tbody tr:hover {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.preview-history td + td {
+    border-left: 1px solid var(--line);
+}
+
+.preview-history tr:last-child td {
+    border-bottom: 0;
+}
+
+.preview-history td:first-child {
+    font-variant-numeric: tabular-nums;
+}
+
+.preview-history td small {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.history-scope {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.preview-history pre {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font: inherit;
+    user-select: text;
+}

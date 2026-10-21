@@ -1,0 +1,22 @@
+.runtime-picker {
+    display: grid;
+    gap: 0.4rem;
+    min-width: 0;
+}
+
+.runtime-choice {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.runtime-choice select,
+.runtime-choice input {
+    flex: 1;
+    min-width: 0;
+}
+
+.runtime-picker small {
+    overflow-wrap: anywhere;
+}

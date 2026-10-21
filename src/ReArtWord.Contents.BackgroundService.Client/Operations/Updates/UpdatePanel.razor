@@ -1,0 +1,45 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@using ReArtWord.Contents.BackgroundService.Contracts.Updates
+<section class="card">
+<h2>@Ui["Release update"]</h2>
+<button @onclick="Open">@Ui["Select a release to install"]</button>
+<p class="notice">@(message?.Invoke())</p>
+</section>
+<UpdateSchedulePanel Edit="EditSchedule" />
+<Modal Open="open" Title="@Ui["Update a fixed set of peers"]" Close="()=>open=false">
+<p class="notice">@(message?.Invoke())</p>
+<p>@Ui.Format("The initiating peer is {0}. The request is retained on this device before sending.", ownerPeer)</p>
+<label>@Ui["Manifest or release-bundle.json"]<InputFile OnChange="ReadManifestAsync" accept=".json" />
+</label>
+@if(manifest is not null){<p>@manifest.ReleaseId · @manifest.Platform · @manifest.Files.Count files · @(variants?.Count??0) variants</p>
+<JsonDetails Value="manifest" />}
+<label>@Ui["Absolute payload path on the initiating peer"]<input @bind="payloadRoot" @bind:event="oninput" />
+</label>
+<fieldset>
+<legend>@Ui["Fixed peers"]</legend>@foreach(var peer in Connection.Current?.Peers??[]){<label>
+<input type="checkbox" checked="@peers.Contains(peer.PeerId)" @onchange="e=>SelectPeer(peer.PeerId,(bool)e.Value!)" />@peer.PeerId · @Ui[peer.Status.ToString()]</label>}</fieldset>
+<label>@Ui["On update failure"]<select @bind="failure">
+<option value="@EUpdateFailurePolicy.RollbackSuccessful">@Ui["Roll back successfully updated peers"]</option>
+<option value="@EUpdateFailurePolicy.KeepCompatibleMixed">@Ui["Keep the confirmed compatible version mix"]</option>
+</select>
+</label>
+<label>@Ui["If rollback also fails"]<select @bind="rollback">
+<option value="@EUpdateRollbackFailurePolicy.ExcludeFailed">@Ui["Exclude failed peers and keep the remaining peers"]</option>
+<option value="@EUpdateRollbackFailurePolicy.StopCluster">@Ui["Stop normal processing in the target cluster"]</option>
+</select>
+</label>
+<label>
+<input type="checkbox" @bind="allowActive" />@Ui["Explicitly allow updates while running"]</label>
+<label>
+<input type="checkbox" @bind="remainingConfirmed" />@Ui["I confirmed the remaining peers can continue normal processing"]</label>
+<label>@Ui["Confirmation timeout per peer (seconds)"]<input type="text" inputmode="numeric" @bind="timeoutSeconds" @bind:event="oninput" />
+</label>
+<label><input type="checkbox" @bind="scheduled" disabled="@(editing is not null)" />@Ui["Schedule this update"]</label>
+@if(scheduled)
+{
+    <label>@Ui["Start at (ISO date with UTC offset)"]<input @bind="scheduleAt" /></label>
+    <label>@Ui["Maximum start delay (seconds)"]<input inputmode="numeric" @bind="maximumDelay" /></label>
+    <p class="notice">@Ui["The initiating peer owns this reservation. It must retain the payload. Target instances are fixed; changed instances require reviewing the reservation again. Unknown starts are not retried."]</p>
+}
+<button @onclick="StartAsync" disabled="@(manifest is null||reading)">@Ui[scheduled?"Save update reservation":"Start update with this policy"]</button>
+</Modal>

@@ -1,0 +1,11 @@
+.running-outline {
+    fill: none;
+    stroke: var(--accent, #8fb9ee);
+    stroke-width: 2.5;
+    filter: drop-shadow(0 0 5px var(--accent, #8fb9ee));
+    pointer-events: none;
+}
+
+.collaborator-selection {
+    pointer-events: none;
+}

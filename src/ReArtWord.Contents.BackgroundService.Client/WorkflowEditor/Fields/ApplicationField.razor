@@ -1,0 +1,13 @@
+<div class="path-input"><input type="text" readonly disabled="@Disabled" value="@(candidates.FirstOrDefault(item=>item.Id==Value)?.Name??Value)" title="@Value" /><button type="button" disabled="@(Disabled||busy)" @onclick="()=>OpenAsync(UiCancellation)">@Ui["Select registered application"]</button></div>
+<Modal Open="open" Title='@Ui["Registered applications"]' Close="()=>open=false">
+    <p class="small muted">@Ui["Applications belong to their registered host and cluster peer. The workflow keeps the registration ID when its display name changes."]</p>
+    @if(problem is not null){<p class="notice">@Ui[problem]</p>}
+    <input aria-label='@Ui["Search applications"]' placeholder='@Ui["Search applications"]' @bind="search" @bind:event="oninput" />
+    <div class="table-wrap"><table><thead><tr><th>@Ui["Application name"]</th><th>@Ui["Host"] / Peer</th><th>@Ui["Actions"]</th></tr></thead><tbody>
+        @foreach(var item in candidates.Where(item=>item.Name.Contains(search,StringComparison.OrdinalIgnoreCase)||item.Id.Contains(search,StringComparison.OrdinalIgnoreCase)||item.Host.Contains(search,StringComparison.OrdinalIgnoreCase)))
+        {
+            <tr @key="(item.Peer,item.Id)"><td><strong>@item.Name</strong><div class="small muted">@item.Id</div></td><td>@item.Host<div class="small muted">@item.Peer</div></td><td><button disabled="@(!CanEdit||busy)" @onclick="()=>SelectAsync(item.Id,UiCancellation)">@Ui["Select"]</button></td></tr>
+        }
+    </tbody></table></div>
+    @if(!busy&&candidates.Count==0){<p class="empty">@Ui["No applications registered on this host."]</p>}
+</Modal>

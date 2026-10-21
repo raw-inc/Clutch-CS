@@ -1,0 +1,45 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Graph
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Inspection
+@using ReArtWord.Contents.BackgroundService.Contracts.Nodes
+@if(Visible)
+{
+    var filtered=Filtered;
+    var searching=!string.IsNullOrWhiteSpace(search);
+<div class="catalog-heading"><h2>@Ui["Nodes"]</h2><span class="count">@filtered.Count</span><button class="quiet icon-button" aria-label="@Ui["Close node catalog"]" @onclick="()=>Close.InvokeAsync()"><UiIcon Name="close" /></button></div>
+<div class="catalog-filters">
+    <div class="search-field"><UiIcon Name="search" /><input aria-label="@Ui["Search nodes"]" placeholder="@Ui["Search nodes"]" @bind="search" @bind:event="oninput" /></div>
+    <label class="sr-only" for="catalog-category">@Ui["Node category"]</label><select id="catalog-category" @bind="category"><option value="">@Ui["All categories"]</option>@foreach(var name in Catalog.Select(item=>item.Category).Distinct().OrderBy(GraphPresentation.CategoryOrder)){<option value="@name">@Ui[GraphPresentation.CategoryName(name)]</option>}</select>
+</div>
+<div class="catalog-view" role="group" aria-label="@Ui["Catalog view"]">
+    @foreach(var option in new[]{ECatalogLayout.Category,ECatalogLayout.Kind,ECatalogLayout.Name}){<button class="quiet @(layout==option?"active":string.Empty)" aria-pressed="@(layout==option)" @onclick="()=>layout=option">@Ui[LayoutLabel(option)]</button>}
+</div>
+<div class="catalog-list">
+    @foreach(var group in CatalogPresentation.Groups(filtered,layout,Ui.NodeName,Ui.Language,includeEmpty:!searching&&category.Length==0,ranked:searching))
+    {
+        var expanded=searching || layout==ECatalogLayout.Name || CatalogPresentation.IsExpanded(group.Key,search,collapsed);
+        @if(!searching&&layout!=ECatalogLayout.Name){<button class="catalog-category catalog-fold" data-category="@GraphPresentation.CategoryKey(group.Category)" aria-expanded="@expanded" @onclick="()=>Toggle(group.Key)"><span class="fold-chevron" aria-hidden="true">@(expanded?"▾":"▸")</span>@if(group.Label=="Values & types"){<UiIcon Name="values" />}else{<span class="category-dot"></span>}@Ui[group.Label] <span class="category-count">@group.Items.Count</span></button>}
+        @if(expanded){@foreach(var item in group.Items)
+        {
+            <button draggable="true" data-contents-node-type="@item.Type" @ondragstart="()=>DragStarted.InvokeAsync(item)" @ondragend="()=>DragEnded.InvokeAsync()" class="catalog-item @(selected?.Type==item.Type?"selected":string.Empty)" data-category="@GraphPresentation.CategoryKey(item.Category)" aria-label="@(Ui.NodeName(item)+" "+item.Type)" aria-pressed="@(selected?.Type==item.Type)" @onclick="()=>selected=item" @ondblclick="()=>Add.InvokeAsync(item)" title="@Ui.NodeDescription(item)">
+                <span class="catalog-kind" title="@Ui[CatalogPresentation.ItemKindLabel(item)]"><UiIcon Name="@CatalogPresentation.Icon(item)" /></span>
+                <span><strong>@Ui.NodeName(item)</strong></span>
+            </button>
+        }
+        }
+    }
+    @if(filtered.Count==0){<div class="empty">@Ui["No matches"]</div>}
+</div>
+@if(selected is {} descriptor)
+{
+<div class="catalog-preview" data-category="@GraphPresentation.CategoryKey(descriptor.Category)">
+        <div class="catalog-preview-description">
+        <div class="catalog-preview-title"><strong>@Ui.NodeName(descriptor)</strong><span class="kind-caption">@Ui[CatalogPresentation.ItemKindLabel(descriptor)]</span></div>
+        <code class="node-identifier">@descriptor.Type</code><p>@Ui.NodeDescription(descriptor)</p>
+        <div class="catalog-port-list">@foreach(var port in EditorNodeDescriptor.VisibleInputs(descriptor,[]).Where(port=>!port.IsLegacy)){var info=GraphPresentation.Port(descriptor,port.Name,false);<div class="kind-@info.Key"><span>@Ui["Inputs"]</span><strong>@Ui.PortName(descriptor.Type,port.Name,false)</strong><code title="@Ui[info.Description]">@info.DisplayLabel(Ui)</code></div>}@foreach(var port in EditorNodeDescriptor.VisibleOutputs(descriptor,[]).Where(port=>!port.IsLegacy)){var info=GraphPresentation.Port(descriptor,port.Name,true);<div class="kind-@info.Key"><span>@Ui["Outputs"]</span><strong>@Ui.PortName(descriptor.Type,port.Name,true)</strong><code title="@Ui[info.Description]">@info.DisplayLabel(Ui)</code></div>}</div>
+        </div>
+        <button class="primary" @onclick="()=>Add.InvokeAsync(descriptor)"><UiIcon Name="add" />@Ui["Add"]</button>
+</div>
+}
+
+}

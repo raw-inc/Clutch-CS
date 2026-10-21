@@ -1,0 +1,10 @@
+{
+  "Script argument inputs": "引数の入力方式",
+  "Individual arguments": "引数ごとの個別入力",
+  "Named JSON object": "JSONオブジェクトで一括入力",
+  "Argument names and types become input ports after analysis. Unknown types accept any JSON value.": "解析後、引数名と型に対応する入力ポートを生成します。型を推定できない箇所はanyとしてJSON値を受け取ります。",
+  "Disconnect argument wires before changing the input mode. Constant values are preserved.": "入力方式を切り替えるには引数の配線を外してください。固定値は保持して変換します。",
+  "C#: public static Run(...). Python: def run(...).": "入口はC#がpublic static Run(...)、Pythonがdef run(...)です。",
+  "JavaScript: export function run(...) or export async function run(...). Import npm packages as ES Modules.": "JavaScriptの入口はexport function run(...)またはexport async function run(...)です。npmパッケージはES Modulesとしてimportできます。",
+  "Statically inferred types take precedence. Unknown types use any; optionally choose a more specific type and analyze again.": "静的に確認できた型を優先し、不明な型はanyにします。必要に応じて具体的な型を選択し、再解析してください。"
+}

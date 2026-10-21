@@ -1,0 +1,14 @@
+{
+  "Add State": "Add State",
+  "Select a workflow": "Select a workflow",
+  "Refresh workflows": "Refresh workflows",
+  "Shows persisted state. Updates when the value changes.": "Shows persisted state. Updates when the value changes.",
+  "Waiting for state…": "Waiting for state…",
+  "State key does not exist": "State key does not exist",
+  "State observation disconnected": "State observation disconnected",
+  "State observation unavailable": "State observation unavailable",
+  "Display truncated": "Display truncated",
+  "Select a state scope, workflow and key.": "Select a state scope, workflow and key.",
+  "node.state.changed.name": "State changed",
+  "node.state.changed.description": "Emit a signal and the committed value whenever the selected State changes. The initial value does not emit a signal."
+}

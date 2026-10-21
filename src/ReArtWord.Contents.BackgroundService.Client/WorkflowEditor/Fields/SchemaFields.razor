@@ -1,0 +1,152 @@
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Diagnostics
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Fields.Types
+@using ReArtWord.Contents.BackgroundService.Contracts.Nodes
+@inject EditorPresentationCache Presentation
+@{var preview=Presentation.Preview(Model.Draft);}
+@foreach(var property in Properties())
+{
+    var key=property.Name;var schema=ChoiceSchema(property.Value);var type=TypeOf(schema);var connected=Connected(key);var value=Current(key);
+    if(connected)
+    {
+        var node=Model.Draft.Document.Nodes.First(item=>item.Id==NodeId);
+        value=preview.Setting(node,key,Inputs)?.Json??default;
+    }
+    var raw=(connected?null:Model.ReadInput(NodeId+"/settings/"+key))??(type=="json"&&!schema.TryGetProperty("enum",out _)&&value.ValueKind!=JsonValueKind.Undefined?value.GetRawText():Text(value));
+    var nodeType=Model.Draft.Document.Nodes.FirstOrDefault(node=>node.Id==NodeId)?.Type;var guidance=SettingGuidance.Help(nodeType,key);var label=SettingGuidance.Label(nodeType,key);
+    if(key==NetworkBindingSettings.BindingsKey && NetworkBindingSettings.Supports(Schema) && Applicable(schema))
+    {
+        <div @key="key" class="@(Inline ? "node-inline-field" : null)" data-setting-key="@key" title="@Ui["Each execution PC uses its own adapter and IPv4. Unassigned PCs do not start."]">
+            @Ui.SettingName(key) @(Required(key)?"*":"")
+            <NetworkBindingsField NodeId="@NodeId" Value="value" Disabled="connected" Inline="Inline" ValueChanged='v=>CommitAsync(key,v.GetRawText(),type)' />
+        </div>
+        continue;
+    }
+    <label @key="key" class="@(Inline ? "node-inline-field" : null)" data-setting-key="@key" title="@(guidance is not null?Ui[guidance]:schema.TryGetProperty("description",out var hint)?Ui[hint.GetString()??string.Empty]:null)">@(label is null?Ui.SettingName(key):Ui[label]) @(Required(key)?"*":"")
+    @if(schema.TryGetProperty("x-legacy",out var legacy)&&legacy.ValueKind==JsonValueKind.True)
+    {
+        <small>@Ui["This saved setting is not used by this operation."]</small>
+        <button type="button" disabled="@connected" @onclick="()=>CommitAsync(key,string.Empty,type)">@Ui["Remove unused setting"]</button>
+    }
+    else if(!Applicable(schema))
+    {
+        <small>@Ui["Not used with the current selection"]</small>
+    }
+    else if(schema.TryGetProperty("x-type-definition",out var typed)&&typed.ValueKind==JsonValueKind.True)
+    {
+        <TypeDefinitionField IncludeRuntimeTypes="@Contracts.Workflow.SubworkflowInterface.IsBoundary(nodeType??string.Empty)" Value="value" Disabled="connected" ValueChanged='v=>CommitAsync(key,v.GetRawText(),type)' InvalidChanged='raw=>TypeEditorBinding.InvalidAsync(Model,NodeId+"/settings/"+key,InvalidChanged,raw,UiCancellation)' />
+    }
+    else if(schema.TryGetProperty("x-script-code",out var script)&&script.ValueKind==JsonValueKind.True)
+    {
+        <ScriptCodeField @key="NodeId" NodeId="@NodeId" Value="@raw" Disabled="connected" Inline="Inline" ValueChanged="v=>CommitAsync(key,v,type)" />
+    }
+    else if(key=="argumentTypes" && Model.Draft.Document.Nodes.Any(node=>node.Id==NodeId && OscPorts.Supports(node.Type)))
+    {
+        var effective=value;
+        <OscArgumentFields Value="effective" Disabled="connected" ValueChanged="v=>CommitAsync(key,v.ValueKind==JsonValueKind.Undefined?string.Empty:v.GetRawText(),type)" />
+    }
+    else if(IsPcList(key))
+    {
+        <PcListField NodeId="@NodeId" Value="value" Disabled="connected" ValueChanged="v=>CommitAsync(key,v.GetRawText(),type)" />
+    }
+    else if(key=="sourceHost")
+    {
+        <PeerField Value="@raw" Hosts="true" Disabled="@(connected||Connected("sourcePeer"))" ValueChanged="v=>CommitAsync(key,v,type)" />
+    }
+    else if(key is "sourcePeer" or "peerId")
+    {
+        <PeerField Value="@raw" Disabled="connected" ValueChanged="v=>CommitAsync(key,v,type)" />
+    }
+    else if(nodeType=="script.python" && key=="pythonPath" || nodeType=="script.javascript" && key=="nodePath")
+    {
+        <ScriptRuntimeField NodeId="@NodeId" Language='@(nodeType=="script.python"?"python":"javascript")' Value="@raw" Disabled="connected" ValueChanged="v=>CommitAsync(key,v,type)" />
+    }
+    else if(ResourceSettingContext.IsPath(Model.Draft.Document.Nodes.FirstOrDefault(node=>node.Id==NodeId)?.Type,key))
+    {
+        var directory=Model.Draft.Document.Nodes.First(node=>node.Id==NodeId).Type is "value.directory" or "file.watch" || Model.Draft.Document.Nodes.First(node=>node.Id==NodeId).Type.StartsWith("directory.",StringComparison.Ordinal);
+        <PathField NodeId="@NodeId" Setting="@key" Value="@raw" Disabled="connected" Directories="directory" AllowDirectories='@(nodeType=="file.transfer")' ValueChanged="v=>CommitAsync(key,v,type)" />
+    }
+    else if(key=="processId" && nodeType?.StartsWith("process.",StringComparison.Ordinal)==true)
+    {
+        <ApplicationField NodeId="@NodeId" Value="@raw" Disabled="connected" ValueChanged="v=>CommitAsync(key,v,type)" />
+    }
+    else if(key is "secretRef" or "secretId")
+    {
+        <SecretField NodeId="@NodeId" Value="@raw" Disabled="connected" ValueChanged="v=>CommitAsync(key,v,type)" />
+    }
+    else if(schema.TryGetProperty("enum",out var values))
+    {
+        SettingChoiceValues.TryEnum(values,raw,out var selectedChoice);
+        <select disabled="@connected" value="@raw" @onchange="e=>CommitAsync(key,e.Value?.ToString()??string.Empty,type,values)">
+<option value="" selected="@(raw.Length==0)">@Ui["Not set"]</option>@if(Missing(raw,values)){<option value="@raw" selected>@Ui.SettingChoiceName(Model.Draft.Document.Nodes.FirstOrDefault(node=>node.Id==NodeId)?.Type,key,raw) — @Ui["Not in current choices"]</option>}@foreach(var item in values.EnumerateArray()){<option value="@Text(item)" selected="@(selectedChoice.ValueKind!=JsonValueKind.Undefined&&item.GetRawText()==selectedChoice.GetRawText())">@Ui.SettingChoiceName(Model.Draft.Document.Nodes.FirstOrDefault(node=>node.Id==NodeId)?.Type,key,Text(item))</option>}</select>
+    }
+    else if(SettingChoiceProvider.Supports(key))
+    {
+        var candidates=NetworkOptions(key);var found=candidates.Any(item=>item.Key==raw);
+        <select disabled="@connected" value="@raw" @onchange="e=>CommitAsync(key,e.Value?.ToString()??string.Empty,type)">
+            <option value="" selected="@(raw.Length==0)">@Ui["Not set"]</option>
+            @if(raw.Length!=0&&!found){<option value="@raw" selected>@raw — @Ui["Not in current choices"]</option>}
+            @foreach(var candidate in candidates){<option @key="candidate.Key" value="@candidate.Key" selected="@(candidate.Key==raw)">@candidate.Value</option>}
+        </select>
+        @if(NetworkProblem(key) is {} networkProblem){<small class="error">@Ui[networkProblem]</small>}
+        else if(!connected&&raw.Length!=0&&!found){<small class="error">@Ui["The saved value is not in the current choices."]</small>}
+        @if(!Inline){<small>@Ui["Execution peer"]: @network.PeerId <button type="button" @onclick="RefreshNetworkAsync">@Ui["Refresh choices"]</button></small>}
+    }
+    else if(type=="boolean")
+    {
+        <select disabled="@connected" value="@raw" @onchange="e=>CommitAsync(key,e.Value?.ToString()??string.Empty,type)">
+<option value="" selected="@(raw.Length==0)">@Ui["Not set"]</option>
+@if(raw.Length!=0&&raw is not ("true" or "false")){<option value="@raw" selected>@raw — @Ui["Not in current choices"]</option>}
+<option value="true" selected='@(raw=="true")'>@Ui["true"]</option>
+<option value="false" selected='@(raw=="false")'>@Ui["false"]</option>
+</select>
+    }
+    else if(type is "array" or "object" or "json" || schema.TryGetProperty("x-multiline",out var multiline)&&multiline.ValueKind==JsonValueKind.True)
+    {
+        <textarea disabled="@connected" value="@raw" @oninput="e=>CommitAsync(key,e.Value?.ToString()??string.Empty,type)">
+</textarea>
+    }
+    else
+    {
+        <input disabled="@connected" type="text" inputmode="@(type is "integer" or "number"?"decimal":"text")" value="@raw" min="@Bound(schema,"minimum")" max="@Bound(schema,"maximum")" step="@(type=="integer"?"1":"any")" @oninput="e=>CommitAsync(key,e.Value?.ToString()??string.Empty,type)" />
+    }
+    @if(NodeSettingVisibility.AllowsNull(schema))
+    {
+        <button type="button" disabled="@connected" @onclick='()=>CommitAsync(key,"null","json")'>@Ui[key=="timeoutMs"?"No time limit":"Set null explicitly"]</button>
+    }
+    @if(!connected&&(schema.TryGetProperty("enum",out var options)&&Missing(raw,options)||type=="boolean"&&raw.Length!=0&&raw is not ("true" or "false"))){<small class="error">@Ui["The saved value is not in the current choices."]</small>}
+    @if(!connected && !Required(key) && value.ValueKind==JsonValueKind.Undefined && schema.TryGetProperty("default",out var defaultValue)){<small>@Ui.Format("Default: {0}",Text(defaultValue))</small>}
+    @if(connected){<small class="node-inline-reason" title="@Ui["Input overrides setting · saved value retained"]">@Ui[value.ValueKind==JsonValueKind.Undefined?"Connected value is not available without execution":"Connected value preview · read-only"]</small>}
+    @if(!connected&&Model.ReadInput(NodeId+"/settings/"+key) is not null){<span class="small error">@Ui["Check the value type and JSON format."]</span>}
+    @if(!Inline && schema.TryGetProperty("description",out var description)){<small>@Ui[description.GetString()??string.Empty]</small>}
+    @if(!Inline && guidance is not null){<small>@Ui[guidance]</small>}
+    </label>
+}
+@if(!Properties().Any() && (Inline || Schema.TryGetProperty("properties",out _)))
+{
+    <small class="node-inline-empty">@Ui["No settings"]</small>
+}
+@if(!Inline && !Properties().Any() && !Schema.TryGetProperty("properties",out _))
+{
+    <label>@Ui["Settings (JSON)"]<textarea value="@(Model.ReadInput(NodeId+"/settings/whole")??Settings.GetRawText())" @oninput="CommitWholeAsync">
+</textarea>
+</label>
+}
+
+@if(!Inline && Model.Draft.Document.Nodes.FirstOrDefault(node=>node.Id==NodeId) is {} currentNode)
+{
+    var region=Settings.ValueKind==JsonValueKind.Object&&Settings.TryGetProperty("region",out var selectedRegion)&&selectedRegion.ValueKind==JsonValueKind.String?selectedRegion.GetString():"singapore";
+    var explicitEndpoint=preview.Setting(currentNode,"endpoint",Inputs)?.GetString();
+    var workspaceId=preview.Setting(currentNode,"workspaceId",Inputs)?.GetString();
+    @if(!string.IsNullOrWhiteSpace(explicitEndpoint))
+    {
+        <p class="small"><strong>@Ui.SettingName("endpoint")</strong><br /><code>@explicitEndpoint</code></p>
+    }
+    else if(AiServiceConnection.Endpoint(currentNode.Type,region??"singapore",workspaceId) is {} endpoint)
+    {
+        <p class="small"><strong>@Ui["API endpoint (automatic)"]</strong><br /><code>@endpoint.AbsoluteUri</code><br />@Ui["The service node and region determine the endpoint. Use an API key and model from the same region."]</p>
+    }
+    @if(currentNode.Type=="value.type" && new Contracts.Values.WorkflowSettingValues(Model.Draft.Document).Output(NodeId) is {} typeValue)
+    {
+        <p class="small">@Ui["Resulting type definition (passed to connected inputs)"]</p><pre class="type-preview">@typeValue.Json.GetRawText()</pre>
+    }
+}

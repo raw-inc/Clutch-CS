@@ -1,0 +1,13 @@
+.runtime-path {
+    overflow-wrap: anywhere;
+}
+
+progress {
+    display: block;
+    width: 8rem;
+    max-width: 100%;
+}
+
+td small {
+    display: block;
+}

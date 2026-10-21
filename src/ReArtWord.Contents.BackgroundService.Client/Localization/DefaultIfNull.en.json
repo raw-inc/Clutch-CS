@@ -1,0 +1,7 @@
+{
+  "node.data.defaultIfNull.name": "Null → Default",
+  "node.data.defaultIfNull.description": "Use the default only when the input is null. Preserve false, zero, empty text, arrays, binary data and type metadata. An omitted default returns null. Missing or failed input is not treated as null.",
+  "port.data.defaultIfNull.in.value": "Input value",
+  "port.data.defaultIfNull.in.defaultValue": "Default when null",
+  "port.data.defaultIfNull.out.value": "Selected value"
+}

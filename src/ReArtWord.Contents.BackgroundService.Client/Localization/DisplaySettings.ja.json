@@ -1,0 +1,17 @@
+{
+  "display.settings.title": "表示設定",
+  "display.settings.save": "表示設定を保存",
+  "display.settings.saved": "このブラウザーの表示設定を保存しました。",
+  "display.timezone.label": "表示用タイムゾーン",
+  "display.timezone.help": "このブラウザーのWorkflowEditor・LogViewer・Dashboard等の日時表示と日時検索に適用します。既定はUTCです。WFの実行スケジュール、記録済みの日時、PCの時計は変更しません。",
+  "display.timezone.current": "現在の設定: {0} · {1}",
+  "display.timezone.readFailed": "保存した表示用タイムゾーンを読み取れませんでした。UTCを使用しています。",
+  "display.timezone.writeFailed": "この画面の表示用タイムゾーンを変更しましたが、設定を保存できませんでした。",
+  "display.timezone.invalid": "利用可能なタイムゾーンを選択してください。",
+  "display.timezone.ambiguous": "{0}は{1}の夏時間切替で存在しないか、二度現れる日時です。一意な時刻を指定するか、表示設定をUTCに切り替えてください。",
+  "display.timezone.from": "開始日時（{0}）",
+  "display.timezone.until": "終了日時（{0}）",
+  "display.timezone.time": "日時（{0}）",
+  "display.timezone.point": "基準日時（{0}）",
+  "display.timezone.operational": "稼働用タイムゾーンID（スケジュール）"
+}

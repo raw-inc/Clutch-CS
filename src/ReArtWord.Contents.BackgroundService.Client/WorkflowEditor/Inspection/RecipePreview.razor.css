@@ -1,0 +1,76 @@
+.recipe-preview {
+    min-width: 0;
+}
+
+.recipe-viewport {
+    overflow: auto;
+    height: 70vh;
+    border: 1px solid var(--stroke, #41464f);
+    background: var(--surface, #20242b);
+}
+
+.recipe-canvas {
+    display: block;
+}
+
+.recipe-wire {
+    stroke: #69879f;
+    stroke-width: 2;
+}
+
+.recipe-node > rect {
+    fill: var(--surface, #24282e);
+    stroke: #718096;
+    stroke-width: 1.5;
+}
+
+.recipe-node text {
+    fill: var(--text, #eee);
+    font-size: 11px;
+}
+
+.recipe-node .recipe-title {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.recipe-node .recipe-id {
+    font-size: 10px;
+    opacity: 0.6;
+}
+
+.recipe-node circle {
+    fill: #77b1c7;
+}
+
+.recipe-node.running > rect {
+    stroke: #43df9a;
+    stroke-width: 3;
+    filter: drop-shadow(0 0 7px #43df9a99);
+}
+
+.recipe-details {
+    height: 100%;
+    overflow: auto;
+    font-size: 11px;
+    color: var(--text, #eee);
+}
+
+.recipe-details pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    margin: 2px 0 8px;
+    font-size: 11px;
+}
+
+.recipe-preview .toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.recipe-preview .toolbar label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}

@@ -1,0 +1,11 @@
+<Project>
+  <Target Name="VerifyContentsJavaScriptQuality" BeforeTargets="CoreCompile;PrepareForPublish"
+          Condition="'$(MSBuildProjectName)' == 'ReArtWord.Contents.BackgroundService.Client' and '$(DesignTimeBuild)' != 'true'">
+    <PropertyGroup>
+      <ContentsJavaScriptRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../..'))</ContentsJavaScriptRoot>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(ContentsJavaScriptRoot)/node_modules/eslint/bin/eslint.js')"
+           Text="JavaScript検査の依存関係がありません。リポジトリルートで npm ci --ignore-scripts を実行してください。" />
+    <Exec WorkingDirectory="$(ContentsJavaScriptRoot)" Command="node node_modules/eslint/bin/eslint.js . --max-warnings 0" />
+  </Target>
+</Project>

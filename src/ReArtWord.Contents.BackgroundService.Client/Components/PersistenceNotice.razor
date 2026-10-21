@@ -1,0 +1,16 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Cluster
+<button class="statusbar-action @(HasProblems?"warn":string.Empty)" @onclick="()=>open=true" title="@Ui["Check saved, effective and recovery revisions for each peer"]">
+    @(HasProblems?Ui["Check storage and local changes"]:Ui["Storage status"]) @if(!Connected){<span>・@Ui["Last observed"]</span>}
+</button>
+<Modal Open="open" Title="@Ui["Saved and currently active state"]" Close="()=>open=false">
+    <p class="muted">@Ui["Unsaved effective revisions may be lost on restart. Check each peer’s saved, effective and recovery revisions separately."]</p>
+    @if(!Connected){<p class="notice">@Ui["Current peer state is unavailable. The membership information below is the last observation."]</p>}
+    <div class="table-wrap"><table><thead><tr><th>Peer</th><th>@Ui["Active but unsaved"]</th><th>@Ui["Unsaved candidate"]</th><th>@Ui["Local, not integrated"]</th></tr></thead><tbody>
+    @foreach(var peer in Peers)
+    {
+        <tr><td>@peer.PeerId <small class="muted">@Ui[peer.Status.ToString()]</small></td><td>@Count(peer.PersistenceStatus?.UnsavedActive)</td><td>@Count(peer.PersistenceStatus?.UnsavedCandidates)</td><td>@Count(peer.PersistenceStatus?.LocalUnconfirmed)</td></tr>
+    }
+    </tbody></table></div>
+    <p class="small muted">@Ui["Counts cover what each peer reported. Unreachable peers must be checked again."]</p>
+    @if(open){<AvailabilityPanel />}
+</Modal>

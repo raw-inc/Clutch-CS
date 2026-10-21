@@ -1,0 +1,31 @@
+{
+  "id": "math-and-logic",
+  "name": "Math and logic",
+  "enabled": false,
+  "nodes": [
+    { "id": "power", "type": "math.power", "settings": {}, "inputs": {"base": {"kind": "json", "json": 2, "binary": ""}, "exponent": {"kind": "json", "json": 3, "binary": ""}}, "position": { "x": 60, "y": 680 } },
+    { "id": "root", "type": "math.root", "settings": {}, "inputs": {"degree": {"kind": "json", "json": 3, "binary": ""}}, "position": { "x": 460, "y": 80 } },
+    { "id": "compare", "type": "math.compare", "settings": { "operation": "less" }, "inputs": {"right": {"kind": "json", "json": 3, "binary": ""}}, "position": { "x": 860, "y": 80 } },
+    { "id": "equal", "type": "math.equal", "settings": {}, "inputs": {"right": {"kind": "json", "json": 8, "binary": ""}}, "position": { "x": 460, "y": 680 } },
+    { "id": "not-equal", "type": "math.notEqual", "settings": {}, "inputs": {"right": {"kind": "json", "json": 3, "binary": ""}}, "position": { "x": 860, "y": 1280 } },
+    { "id": "and", "type": "math.and", "settings": {}, "position": { "x": 1260, "y": 680 } },
+    { "id": "or", "type": "math.or", "settings": {}, "position": { "x": 1660, "y": 1280 } },
+    { "id": "not", "type": "math.not", "settings": {}, "position": { "x": 2060, "y": 1280 } },
+    { "id": "nand", "type": "math.nand", "settings": {}, "inputs": {"left": {"kind": "json", "json": 7, "binary": ""}, "right": {"kind": "json", "json": 3, "binary": ""}}, "position": { "x": 1260, "y": 80 } },
+    { "id": "nor", "type": "math.nor", "settings": {}, "inputs": {"left": {"kind": "json", "json": 1, "binary": ""}, "right": {"kind": "json", "json": 2, "binary": ""}}, "position": { "x": 1660, "y": 80 } },
+    { "id": "xor", "type": "math.xor", "settings": {}, "inputs": {"left": {"kind": "json", "json": 7, "binary": ""}, "right": {"kind": "json", "json": 3, "binary": ""}}, "position": { "x": 2060, "y": 80 } },
+    { "id": "ands", "type": "math.ands", "settings": {}, "inputs": {"value": {"kind": "json", "json": [7, 3, 1], "binary": ""}}, "position": { "x": 60, "y": 1280 } },
+    { "id": "ors", "type": "math.ors", "settings": {}, "inputs": {"value": {"kind": "json", "json": [1, 2, 4], "binary": ""}}, "position": { "x": 460, "y": 1280 } }
+  ],
+  "wires": [
+    { "fromNode": "power", "fromPort": "value", "toNode": "root", "toPort": "value" },
+    { "fromNode": "root", "fromPort": "value", "toNode": "compare", "toPort": "left" },
+    { "fromNode": "power", "fromPort": "value", "toNode": "equal", "toPort": "left" },
+    { "fromNode": "root", "fromPort": "value", "toNode": "not-equal", "toPort": "left" },
+    { "fromNode": "compare", "fromPort": "value", "toNode": "and", "toPort": "left" },
+    { "fromNode": "equal", "fromPort": "value", "toNode": "and", "toPort": "right" },
+    { "fromNode": "and", "fromPort": "value", "toNode": "or", "toPort": "left" },
+    { "fromNode": "not-equal", "fromPort": "value", "toNode": "or", "toPort": "right" },
+    { "fromNode": "or", "fromPort": "value", "toNode": "not", "toPort": "value" }
+  ]
+}

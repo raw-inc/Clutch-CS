@@ -1,0 +1,12 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@using ReArtWord.Contents.BackgroundService.Contracts.Execution
+<Modal Open="Open" Title="@Ui["Delete workflow"]" Close="()=>CloseAsync(UiCancellation)">
+    <p><strong>@name</strong> · <code>@id</code></p>
+    <p>@Ui[revision is null ? "Delete this unsaved draft from this browser?" : "Delete the saved workflow from this cluster? A snapshot is required before deletion. New inputs will stop as each peer applies the deletion; already running executions are not cancelled."]</p>
+    @if(dirty){<p class="notice">@Ui["Unsaved changes in this draft will also be discarded."]</p>}
+    @if(localOnly){<p class="notice">@Ui["Rejoin the cluster and resolve local changes before deleting this saved workflow."]</p>}
+    @if(result is not null){<p role="status">@Ui.Format("Snapshot: {0} / Deleted: {1} / Local deactivation: {2}",Ui[result.Snapshot.Outcome.ToString()],Ui[result.Deleted.Outcome.ToString()],Ui[result.Deactivation.Outcome.ToString()])<br />@result.Deleted.Reason @result.Deactivation.Reason<br />@Ui["Snapshot"]: @result.SnapshotId</p>}
+    @if(problem is not null){<p class="notice error" role="alert">@problem</p>}
+    <button class="danger" disabled="@(working||submitted||localOnly)" @onclick="()=>DeleteAsync(UiCancellation)"><UiIcon Name="trash" />@Ui["Confirm deletion"]</button>
+    @if(submitted && result?.Deleted.Outcome != EOutcome.Succeeded){<p>@Ui["Check the original operation in History and result lookup. Do not repeat an unconfirmed deletion."]</p>}
+</Modal>

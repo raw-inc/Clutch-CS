@@ -1,0 +1,178 @@
+.dashboard-page > .page-title {
+    margin-bottom: 18px;
+}
+
+.dashboard-page > .page-title h1 {
+    font-size: 25px;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+}
+
+.dashboard-page > .page-title .page-description {
+    font-size: 12px;
+}
+
+.dashboard-page > .notice:empty {
+    display: none;
+}
+
+.dashboard-page > .tabs {
+    margin-bottom: 22px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+}
+
+.dashboard-page > .tabs button {
+    white-space: nowrap;
+}
+
+.dashboard-page .section {
+    margin-top: 28px;
+}
+
+.dashboard-page .secondary-details {
+    margin-top: 20px;
+}
+
+.dashboard-operations {
+    display: grid;
+    gap: 24px;
+    min-width: 0;
+}
+
+.dashboard-operations ::deep section {
+    min-width: 0;
+    margin: 0;
+    padding: 20px 0;
+}
+
+.dashboard-operations ::deep section + section {
+    border-top: 1px solid var(--line);
+}
+
+.dashboard-operations ::deep h2 {
+    font-size: 16px;
+    letter-spacing: -0.015em;
+    margin-bottom: 16px;
+}
+
+.dashboard-operations ::deep .section-heading h2 {
+    margin: 0;
+}
+
+.dashboard-operations ::deep .table-wrap {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+}
+
+.dashboard-operations ::deep table {
+    font-size: 12px;
+}
+
+.dashboard-operations ::deep th {
+    background: transparent;
+    padding: 12px;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.dashboard-operations ::deep td {
+    padding: 16px 12px;
+    border-color: color-mix(in srgb, var(--line) 65%, transparent);
+}
+
+.dashboard-operations ::deep tbody tr:hover {
+    background: color-mix(in srgb, var(--panel) 70%, transparent);
+}
+
+.dashboard-operations ::deep .card {
+    border: 0;
+    background: var(--panel);
+    padding: 20px;
+}
+
+.dashboard-operations ::deep .toolbar {
+    gap: 10px;
+    margin: 14px 0;
+    align-items: center;
+}
+
+.dashboard-operations ::deep .empty {
+    padding: 32px 16px;
+    text-align: left;
+    border: 0;
+    color: var(--muted);
+}
+
+.dashboard-operations ::deep .secondary-details {
+    border: 0;
+    background: var(--panel);
+    padding: 8px 18px;
+    margin: 0;
+}
+
+.dashboard-operations ::deep .secondary-details summary {
+    font-size: 13px;
+}
+
+.dashboard-operations ::deep .footer-note {
+    line-height: 1.8;
+    margin: 8px 0;
+}
+
+.dashboard-operations .split {
+    gap: 32px;
+    margin: 0;
+    align-items: start;
+}
+
+@media (max-width: 1050px) {
+    .dashboard-operations .split {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.execution-telemetry {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 28px;
+    padding: 12px 0;
+    border-block: 1px solid var(--line);
+}
+
+.dashboard-operations .execution-telemetry .footer-note {
+    margin: 0;
+}
+
+.dashboard-operations ::deep .resource-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.dashboard-operations ::deep .resource-metrics .metric-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.07em;
+}
+
+.dashboard-operations ::deep .resource-metrics .metric-number {
+    font-size: 24px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+.dashboard-operations ::deep .maintenance-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 24px;
+    max-width: 1050px;
+}
+
+@media (max-width: 750px) {
+    .dashboard-operations ::deep .maintenance-form {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

@@ -1,0 +1,16 @@
+{
+  "node.control.signalWatchdog.name": "信号監視",
+  "node.control.signalWatchdog.description": "WFの自動実行開始時から監視し、一度も生存信号を受け取らなくても計時します。受信のたびに期限を更新し、途絶えたら一度だけ退避開始Signalを送ります。次の生存・再開信号で、その退避経路が開始した待ち受けを終了して監視へ戻ります。受付済みの有限処理は完了できます。主系とは別の監視PCを1台選択してください。",
+  "port.control.signalWatchdog.in.trigger": "生存・再開Signal",
+  "port.control.signalWatchdog.out.start": "退避開始Signal",
+  "watchdog.timedOut": "生存信号がタイムアウトし、退避経路が動作中です。",
+  "watchdog.target": "監視PCを1台、またはCoordinatorを指定してください。",
+  "watchdog.unavailable": "監視ランタイムを使用できないか、監視範囲の入れ子上限に達しました。",
+  "watchdog.cancelled": "信号監視を取り消しました。",
+  "source.scope.closed": "退避経路は終了済みのため、この待ち受けは開始しませんでした。",
+  "source.scope.invalid": "待ち受けの所有情報が不正です。",
+  "source.scope.unconfirmed": "退避経路の所有元で、待ち受けの開始許可を確認できませんでした。",
+  "source.scope.stopUnconfirmed": "一部の退避待ち受けの終了を確認できませんでした。",
+  "source.scope.unsupported": "この退避経路を開始する前に、実行先Coreを更新してください。",
+  "source.scope.unavailable": "実行先は待ち受けの所有情報に対応していません。"
+}

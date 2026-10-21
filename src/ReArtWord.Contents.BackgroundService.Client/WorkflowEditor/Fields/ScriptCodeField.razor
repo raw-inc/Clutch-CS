@@ -1,0 +1,45 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Serialization
+@using ReArtWord.Contents.BackgroundService.Contracts.Scripting
+@using ReArtWord.Contents.BackgroundService.Contracts.Values
+<div class="code-input @(Inline?"code-input-inline":null)">
+    <pre @ref="highlight" aria-hidden="true"></pre>
+    <textarea @ref="codeInput" aria-label="@Ui["Script code"]" disabled="@Disabled" value="@Value" rows="12" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" @oninput="e=>ValueChanged.InvokeAsync(e.Value?.ToString()??string.Empty)" @onchange="()=>AnalyzeAsync(UiCancellation)" @onblur="()=>AnalyzeAsync(UiCancellation)"></textarea>
+</div>
+@if(!Inline){<small>@Ui["Enter: auto-indent · Tab / Shift+Tab: indent · Ctrl+Space: suggestions · Escape then Tab: move focus"]</small>}
+@if(Inline && problem is not null){<small class="error">@Ui[problem]</small>}
+@if(!Inline && CanAnalyze)
+{
+    @if(Node is {} inputNode && ScriptSettings.IsScript(inputNode.Type))
+    {
+        <label>@Ui["Script argument inputs"]<select disabled="@(Disabled||!ScriptInputMode.CanChange(Model.Draft.Document,NodeId))" value="@(ScriptInputPorts.Individual(inputNode.Settings)?"individual":"object")" @onchange="ChangeInputMode"><option value="individual">@Ui["Individual arguments"]</option><option value="object">@Ui["Named JSON object"]</option></select></label>
+        <small>@Ui["Argument names and types become input ports after analysis. Unknown types accept any JSON value."]</small>
+        @if(!ScriptInputMode.CanChange(Model.Draft.Document,NodeId)){<small>@Ui["Disconnect argument wires before changing the input mode. Constant values are preserved."]</small>}
+    }
+    @if(Language!="javascript"){<small>@Ui["C#: public static Run(...). Python: def run(...)."]</small>}
+    @if(Language=="javascript"){<small>@Ui["JavaScript: export function run(...) or export async function run(...). Import npm packages as ES Modules."]</small>}
+    <small>@Ui["Analysis peer"]: @(Node is {} node?Analysis.Peer(node):null)</small>
+    <button type="button" disabled="@(Model.Locks.Node(Model.Draft.Document.Id,NodeId)||busy)" @onclick="()=>AnalyzeAsync(UiCancellation)">@Ui["Analyze code and types"]</button>
+    @if(problem is not null){<p class="error">@Ui[problem]</p>}
+    @if(Report is {} report)
+    {
+        @if(report.PackageEnvironmentId is {} environment){<small class="script-package-reference">@Ui["Package configuration"]: <span class="mono">@environment</span></small>}
+        @foreach(var diagnostic in report.Diagnostics){<p class="error">@Ui[diagnostic]</p>}
+        @if(Node is {} checkedNode && ScriptSettings.Confirmed(checkedNode.Type,checkedNode.Settings)?.Contract is {} contract)
+        {
+            <pre class="small">@JsonSerializer.Serialize(contract,ContractJson.Options)</pre>
+        }
+    }
+    @if(Node?.Type is "script.python" or "script.javascript" && TypeSuggestions is {} suggested)
+    {
+        <details><summary>@Ui["Choose types when inference is unavailable"]</summary>
+            <small>@Ui["Statically inferred types take precedence. Unknown types use any; optionally choose a more specific type and analyze again."]</small>
+            @foreach(var argument in suggested.Arguments)
+            {
+                <label>@argument.Key<select disabled="@Disabled" value="@ManualType(argument.Key)" @onchange="e=>Choose(argument.Key,e.Value?.ToString())"><option value="">@Ui["Infer from code"]</option>@foreach(var type in TypeNames){<option value="@type">@Ui["port.type."+type]</option>}</select></label>
+            }
+            <label>@Ui["Return type"]<select disabled="@Disabled" value="@ManualType(null)" @onchange="e=>Choose(null,e.Value?.ToString())"><option value="">@Ui["Infer from code"]</option>@foreach(var type in TypeNames){<option value="@type">@Ui["port.type."+type]</option>}</select></label>
+            <label>@Ui["Structured type definition (optional JSON)"]<textarea disabled="@Disabled" value="@ManualJson" @onchange="ManualChanged"></textarea></label>
+        </details>
+    }
+    <small>@Ui["Code runs with the execution peer's OS permissions. Process limits do not roll back external side effects."]</small>
+}

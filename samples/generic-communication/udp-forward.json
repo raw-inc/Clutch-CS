@@ -1,0 +1,35 @@
+{
+  "id": "udp-forward",
+  "name": "Generic UDP forwarding",
+  "enabled": false,
+  "nodes": [
+    {
+      "id": "receive",
+      "type": "udp.receive",
+      "position": { "x": 60, "y": 80 },
+      "startOnLoad": true,
+      "target": { "scope": "One", "peers": ["REPLACE_PEER_ID"] },
+      "settings": {
+        "interfaceId": "REPLACE_INTERFACE_ID",
+        "localAddress": "192.0.2.10",
+        "localPort": 9100
+      }
+    },
+    {
+      "id": "send",
+      "type": "udp.send",
+      "position": { "x": 460, "y": 80 },
+      "target": { "scope": "One", "peers": ["REPLACE_PEER_ID"] },
+      "settings": {
+        "interfaceId": "REPLACE_INTERFACE_ID",
+        "localAddress": "192.0.2.10",
+        "remoteAddress": "192.0.2.20",
+        "remotePort": 9101,
+        "timeoutMs": 30000
+      }
+    }
+  ],
+  "wires": [
+    { "fromNode": "receive", "fromPort": "value", "toNode": "send", "toPort": "value", "when": "success" }
+  ]
+}

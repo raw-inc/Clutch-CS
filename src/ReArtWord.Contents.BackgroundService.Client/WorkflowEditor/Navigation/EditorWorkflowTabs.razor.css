@@ -1,0 +1,163 @@
+.editor-workflow-tabs {
+    display: flex;
+    align-items: stretch;
+    height: 34px;
+    flex-shrink: 0;
+    gap: 1px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+    padding: 0 13px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.workflow-tab {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    border: 0;
+    border-radius: 0;
+    border-right: 1px solid #33363d;
+    background: transparent;
+    font-size: 11px;
+    padding: 6px 14px;
+    min-width: 100px;
+    max-width: 240px;
+    flex-shrink: 0;
+    position: relative;
+    color: #959eab;
+}
+
+.workflow-tab > span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.workflow-tab.selected {
+    background: var(--panel);
+    color: var(--ink);
+}
+
+.workflow-tab.selected::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #788ba4;
+}
+
+.workflow-tab:hover {
+    background: var(--raised);
+}
+
+.workflow-tab[aria-disabled="true"] {
+    opacity: 0.55;
+    cursor: wait;
+}
+
+.workflow-tab .tab-state {
+    font-size: 8px;
+    color: var(--warn);
+}
+
+.workflow-tab small {
+    font-size: 9px;
+    color: var(--warn);
+}
+
+.editor-workflow-tabs .tabs-actions {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-left: 7px;
+}
+
+.editor-workflow-tabs .tabs-actions button {
+    font-size: 10px;
+}
+
+@media (max-width: 750px) {
+    .editor-workflow-tabs {
+        padding: 0 6px;
+    }
+
+    .workflow-tab {
+        min-width: 90px;
+        padding: 5px 10px;
+    }
+}
+
+.workflow-tab.has-error {
+    color: var(--danger);
+    box-shadow: inset 0 -2px color-mix(in srgb, var(--danger) 65%, transparent);
+}
+
+.workflow-tab.has-error.selected::after {
+    background: var(--danger);
+}
+
+.workflow-kind {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    color: var(--muted);
+}
+
+.workflow-kind ::deep  .ui-icon {
+    width: 13px;
+    height: 13px;
+}
+
+.workflow-tab.selected .workflow-kind {
+    color: var(--accent);
+}
+
+.workflow-tab.drop-target {
+    box-shadow: inset 3px 0 var(--accent);
+}
+
+.workflow-tab > span:nth-child(2) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tab-menu-shade {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+}
+
+.tab-context-menu {
+    position: fixed;
+    z-index: 81;
+    width: 232px;
+    padding: 5px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--raised);
+    box-shadow: 0 8px 24px #0005;
+}
+
+.tab-context-menu button {
+    display: flex;
+    justify-content: flex-start;
+    width: 100%;
+    padding: 8px 10px;
+    border: 0;
+    background: transparent;
+    text-align: start;
+}
+
+.tab-context-menu button:hover:not(:disabled) {
+    background: var(--accent-soft);
+}
+
+.tab-context-menu .danger {
+    color: var(--danger);
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    margin-top: 4px;
+}

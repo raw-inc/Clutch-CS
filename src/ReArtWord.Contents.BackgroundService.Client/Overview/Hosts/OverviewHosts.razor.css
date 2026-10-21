@@ -1,0 +1,28 @@
+.host-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 14px;
+}
+
+.host-grid.all-clusters {
+    gap: 22px;
+}
+
+.host-grid.summary {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
+}
+
+.overview-empty {
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    padding: 32px 20px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+@media (max-width: 750px) {
+    .host-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

@@ -1,0 +1,11 @@
+{
+  "tabs.moveLeft": "Move tab left",
+  "tabs.moveRight": "Move tab right",
+  "tabs.hide": "Hide from tabs",
+  "tabs.readFailed": "The saved tab layout could not be read.",
+  "tabs.writeFailed": "The tab layout was changed for this view, but could not be saved.",
+  "tabs.hideFailed": "The current draft could not be retained. The tab has not been hidden.",
+  "tabs.empty": "No workflow is open",
+  "tabs.empty.help": "Choose a saved workflow or create one. Hidden tabs remain in the workflow list.",
+  "tabs.select": "Select a workflow"
+}

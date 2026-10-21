@@ -1,0 +1,47 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Scripting.Packages
+<section class="package-browser">
+    <form class="package-search" @onsubmit="()=>SearchAsync(query,0,UiCancellation)" @onsubmit:preventDefault>
+        <label>@Ui["Search packages"]<input @bind="query" @bind:event="oninput" maxlength="100" autocomplete="off" placeholder="@Ui["Package name or keyword"]" /></label>
+        <button type="submit" disabled="@(searching||string.IsNullOrWhiteSpace(query))">@Ui["Search"]</button>
+    </form>
+    @if(Kind == EScriptPackageKind.Pip){<p class="footer-note">@Ui["PyPI searches package names. The first search downloads the public name index."]</p>}
+    @if(searching){<p role="status">@Ui["Searching packages…"]</p>}
+    @if(results?.Problem is {} problem){<p class="notice error" role="alert">@Ui[problem]</p>}
+    @if(results?.Notice is {} notice){<p class="footer-note">@Ui[notice]</p>}
+    <div class="package-browser-layout">
+        <div>
+            @if(results is {Problem:null})
+            {
+                <h3>@Ui["Search results"]: @searched</h3>
+                @if(results.Items.Count==0){<p>@Ui["No packages matched this search."]</p>}
+                <ul class="package-results">
+                    @foreach(var item in results.Items)
+                    {
+                        <li><button type="button" class="package-result @(details?.Id.Equals(item.Id,StringComparison.OrdinalIgnoreCase)==true?"selected":null)" @onclick="()=>SelectAsync(item.Id,UiCancellation)">
+                            <strong>@item.Id</strong><span class="mono">@item.Version</span>
+                            @if(InstalledVersion(item.Id) is {} installed){<span class="badge">@Ui["Installed"] @installed</span>}
+                            @if(item.Description.Length!=0){<span class="package-description">@item.Description</span>}
+                            @if(item.Downloads is {} count){<small>@Ui["Downloads"]: @count.ToString("N0",CultureInfo.CurrentCulture)</small>}
+                        </button></li>
+                    }
+                </ul>
+                <div class="package-pages"><button disabled="@(searching||offset==0)" @onclick="()=>SearchAsync(searched,Math.Max(0,offset-20),UiCancellation)">@Ui["Previous"]</button><button disabled="@(searching||!results.HasMore||1000<=offset)" @onclick="()=>SearchAsync(searched,offset+20,UiCancellation)">@Ui["Next"]</button></div>
+            }
+        </div>
+        <section class="package-detail" aria-live="polite">
+            @if(selecting){<p>@Ui["Loading package details…"]</p>}
+            @if(details?.Problem is {} detailProblem){<p class="notice error" role="alert">@Ui[detailProblem]</p>}
+            @if(details is {Problem:null})
+            {
+                <h3>@details.Id</h3>
+                <p class="package-description">@details.Description</p>
+                @if(details.RegistryUrl is {} registry){<a href="@registry.AbsoluteUri" target="_blank" rel="noopener noreferrer">@Ui["View on package registry"]</a>}
+                @if(InstalledVersion(details.Id) is {} installed){<p>@Ui["Installed"]: <span class="mono">@installed</span></p>}
+                <label>@Ui["Version to install"]<select aria-label="@Ui["Version to install"]" @bind="selectedVersion" disabled="@(selecting||Busy)">@foreach(var version in details.Versions){<option value="@version">@version</option>}</select></label>
+                @if(details.VersionsTruncated){<p class="footer-note">@Ui["Up to 500 versions are shown. Use exact package entry for another published version."]</p>}
+                <button class="primary" disabled="@(selecting||Busy||string.IsNullOrWhiteSpace(selectedVersion))" @onclick="()=>Install.InvokeAsync(new ScriptPackageReference(details.Id,selectedVersion))">@Ui["Install / update package"]</button>
+            }
+            @if(details is null&&!selecting){<p class="muted">@Ui["Select a package to choose its version and install it."]</p>}
+        </section>
+    </div>
+</section>

@@ -1,0 +1,90 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Scripting.Packages
+<section class="section script-packages">
+    <div class="section-heading">
+        <h2>@Ui["Script packages"]</h2>
+        <button disabled="@loading" @onclick="()=>RefreshAsync(UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh"]</button>
+    </div>
+    <p class="footer-note">@Ui.Format("Package destination: {0} / {1}", cluster, peer)</p>
+    <p>@Ui["Packages are installed on this peer. Analyze and save a script to adopt the current package configuration. Existing saved scripts keep their previous configuration."]</p>
+    @if (message is not null)
+    {
+        <p class="notice" role="status">@message.Invoke()</p>
+    }
+    @if (catalog is not null)
+    {
+        <div class="package-form">
+            <label>@Ui["Package source"]<select aria-label="@Ui["Package source"]" @bind="kind" disabled="@Busy"><option value="Nuget">NuGet · C#</option><option value="Pip">pip · Python</option><option value="Npm">npm · JavaScript</option></select></label>
+            @if (kind == EScriptPackageKind.Pip)
+            {
+                <label class="package-runtime">@Ui["Python executable on this peer"]<ScriptRuntimePicker @key="runtimeGeneration" Language="python" PeerId="@peer" ClusterId="@cluster" @bind-Value="pythonPath" Disabled="Busy" Manage="true" /></label>
+            }
+            @if (kind == EScriptPackageKind.Npm)
+            {
+                <label class="package-runtime">@Ui["Node.js executable on this peer"]<ScriptRuntimePicker @key="runtimeGeneration" Language="javascript" PeerId="@peer" ClusterId="@cluster" @bind-Value="nodePath" Disabled="Busy" Manage="true" /></label>
+                <label class="package-runtime">@Ui["npm-cli.js path (optional)"]<input @bind="npmPath" @bind:event="oninput" maxlength="4096" disabled="@Busy" placeholder="@catalog.Npm?.NpmPath" /></label>
+            }
+        </div>
+        @if(kind is EScriptPackageKind.Pip or EScriptPackageKind.Npm)
+        {
+            <ScriptRuntimeInstallPanel @key='("runtime",kind)' Language='@(kind==EScriptPackageKind.Pip?"python":"javascript")' PeerId="@peer" ClusterId="@cluster" Disabled="Busy" DefaultUpdated="RuntimeInstalled" />
+        }
+        <ScriptPackageBrowser @key="kind" Kind="kind" Busy="Busy" Installed="@(Current(kind)?.Requested??[])" Install="package=>ChangeAsync(kind,package,false,UiCancellation)" />
+        <details class="secondary-details"><summary>@Ui["Enter an exact package and version"]</summary>
+            <div class="package-form">
+                <label>@Ui["Package name"]<input @bind="packageId" @bind:event="oninput" maxlength="214" disabled="@Busy" autocomplete="off" /></label>
+                <label>@Ui["Exact version"]<input @bind="version" @bind:event="oninput" maxlength="128" disabled="@Busy" autocomplete="off" /></label>
+                <button disabled="@(Busy || string.IsNullOrWhiteSpace(packageId) || string.IsNullOrWhiteSpace(version))" @onclick="()=>ChangeAsync(kind, new(packageId.Trim(), version.Trim()), false, UiCancellation)">@Ui["Install / update package"]</button>
+            </div>
+        </details>
+        @if(kind != EScriptPackageKind.Npm){<p class="footer-note">@Ui["Use an exact published version. NuGet uses nuget.org; pip uses PyPI and requires Python 3.10 or later with venv. A blank Python path in a script uses the managed environment."]</p>}
+        @if(kind == EScriptPackageKind.Npm){<p class="footer-note">@Ui["npm uses registry.npmjs.org and requires Node.js 24 or later with npm. Scoped packages are supported. Leave the script Node.js path blank to use the managed environment."]</p>}
+        @if (catalog.Busy)
+        {
+            <p class="notice" role="status">@Ui["Installing packages. The current configuration remains available until installation succeeds."]</p>
+        }
+        @foreach (var source in new[] { EScriptPackageKind.Nuget, EScriptPackageKind.Pip, EScriptPackageKind.Npm })
+        {
+            var environment = Current(source);
+            <section class="package-environment">
+                <h3>@SourceName(source)</h3>
+                @if (environment is null || environment.Requested.Count == 0)
+                {
+                    <p class="muted">@Ui["No packages selected for new analysis."]</p>
+                }
+                @if (environment is not null)
+                {
+                    <p class="small mono package-revision">@Ui["Package configuration"]: @environment.Revision</p>
+                    @if (environment.PythonPath is not null)
+                    {
+                        <p class="small">Python @environment.PythonVersion · @environment.PythonPath</p>
+                    }
+                    @if (environment.NodePath is not null)
+                    {
+                        <p class="small">Node.js @environment.NodeVersion · @environment.NodePath</p>
+                    }
+                    <div class="table-wrap"><table>
+                        <thead><tr><th>@Ui["Package name"]</th><th>@Ui["Exact version"]</th><th>@Ui["Actions"]</th></tr></thead>
+                        <tbody>
+                            @foreach (var package in environment.Requested)
+                            {
+                                <tr><td>@package.Id</td><td>@package.Version</td><td><button disabled="@Busy" @onclick="()=>ChangeAsync(source, package, true, UiCancellation)">@Ui["Remove from new analysis"]</button></td></tr>
+                            }
+                        </tbody>
+                    </table></div>
+                    <details class="secondary-details"><summary>@Ui["Resolved dependencies"] (@environment.Installed.Count)</summary>
+                        <div class="package-dependencies">@foreach (var package in environment.Installed){<div><span>@package.Id</span><span class="mono">@package.Version</span></div>}</div>
+                    </details>
+                }
+            </section>
+        }
+        <p class="footer-note">@Ui["Removing a package changes new analyses only. Previous environments are retained for saved workflows. Install the same dependencies on every execution peer."]</p>
+        <h3>@Ui["Recent package operations"]</h3>
+        <div class="table-wrap"><table>
+            <thead><tr><th>@Ui["Operation ID"]</th><th>@Ui["Package name"]</th><th>@Ui["Operation"]</th><th>@Ui["State"]</th><th>@Ui["Reason"]</th></tr></thead>
+            <tbody>@foreach (var operation in catalog.Operations)
+                {
+                    <tr><td class="mono">@operation.Request.OperationId</td><td>@operation.Request.Package.Id @operation.Request.Package.Version</td><td>@(operation.Request.Remove ? Ui["Remove from new analysis"] : Ui["Install / update package"])</td><td>@Ui["script.packages.phase." + operation.Phase]</td><td>@Reason(operation.Reason)</td></tr>
+                }</tbody>
+        </table></div>
+    }
+</section>

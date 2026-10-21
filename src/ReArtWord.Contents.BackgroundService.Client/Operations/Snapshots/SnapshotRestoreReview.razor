@@ -1,0 +1,34 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@using ReArtWord.Contents.BackgroundService.Contracts.Configuration.Snapshots
+@using ReArtWord.Contents.BackgroundService.Contracts.Configuration
+@using ReArtWord.Contents.BackgroundService.Contracts.Collaboration
+@using ReArtWord.Contents.BackgroundService.Contracts.Execution
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor
+<Modal Open="@(Request is not null)" Title="@Ui["Review edits before restore"]" Close="CancelAsync">
+    <p>@Ui["Review the fixed original restore request. Out-of-scope changes and unsaved input in other pages are not discarded automatically."]</p>
+    <p class="notice">@(message?.Invoke())</p>
+    @if(preparation is not null)
+    {
+        <p>@Ui["Operation"] @preparation.OperationId · @preparation.Reason</p>
+        <JsonDetails Value="preparation.Targets" Title="@Ui["Fixed restore scope"]" />
+        @foreach(var editor in preparation.Editors)
+        {
+            <section class="card section">
+                <p>@editor.PeerId / @editor.WorkflowId · @(editor.NodeIds is null?Ui["Whole scope"]:string.Join(", ",editor.NodeIds))</p>
+                <p>@Ui["Draft revision"] @editor.SessionVersion · @Ui["Unsaved "]@editor.Dirty</p>
+                @foreach(var presence in editor.Presence){<p>@presence.Presence.DisplayName · @presence.Presence.UiInstanceId · @Ui["Unsaved "]@presence.Presence.Dirty</p>}
+                @if(CanResolve(editor))
+                {
+                    @if(Model.Draft.Document.Id==editor.WorkflowId&&Api.SelectedPeerId==editor.PeerId){<button @onclick="()=>SaveAsync(editor)" disabled="@busy">@Ui["Save and confirm this workflow draft"]</button>}
+                    <button @onclick="()=>ResolveAsync(editor,ESnapshotDraftAction.ConfirmSaved)" disabled="@busy">@Ui["Confirm scope already saved by another operation"]</button>
+                    <button @onclick="()=>ResolveAsync(editor,ESnapshotDraftAction.Discard)" disabled="@busy">@Ui["Discard unsaved changes in this selected scope"]</button>
+                }
+                else {<p>@Ui["The original page with unsaved input must confirm saving or discarding it."]</p>}
+            </section>
+        }
+        @if(preparation.Locks.Count!=0){<JsonDetails Value="preparation.Locks" Title="@Ui["Active restore protection"]" />}
+        <button @onclick="RefreshAsync" disabled="@busy">@Ui["Check again"]</button>
+        <button @onclick="StartAsync" disabled="@(busy||!preparation.Ready)">@Ui["Start restoring this fixed scope"]</button>
+    }
+    <button @onclick="CancelAsync" disabled="@busy">@Ui["Cancel without starting restore"]</button>
+</Modal>

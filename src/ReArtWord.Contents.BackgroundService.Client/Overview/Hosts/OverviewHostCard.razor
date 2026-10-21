@@ -1,0 +1,58 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@using ReArtWord.Contents.BackgroundService.Client.Overview.Charts
+@using ReArtWord.Contents.BackgroundService.Client.Overview.Telemetry
+@using ReArtWord.Contents.BackgroundService.Contracts.Resources
+@using ReArtWord.Contents.BackgroundService.Contracts.Cluster
+
+                <article class="health-card host-card @(Detailed ? "detailed" : "summary") @(stale ? "stale" : "")">
+                    <header><div class="host-name"><span class="host-icon"><UiIcon Name="monitor" /></span><div><h3 title="@item.Peer.HostId">@item.Peer.HostId</h3>@if(Detailed){<small title="@Memberships">@(Memberships ?? item.Peer.PeerId) · @item.Peer.Address@if(Peers.Count>1){<span> · @Ui.Format("{0} peers on this host", Peers.Count)</span>}</small>}</div></div><HostPowerControl HostId="@item.Peer.HostId" TargetIdentity="@TargetIdentity" Status="@(PowerTarget?.Peer.Status??item.Peer.Status)" Stale="stale" Offline="Offline" Busy="powerBusy" Problem="@powerProblem" ActionConfirmed="ActAsync" /></header>
+                    <div class="primary-metrics">
+                        <div class="metric-cell"><OverviewTrend Samples="item.Samples" Metric="cpu.usage" Label='@Ui["Measured CPU usage"]' /><div class="metric-content"><span class="metric-label">CPU</span><div class="metric-number">@Percent(cpu)<small>@(cpu is null ? Ui["Not measured"] : "%")</small></div>@if(Detailed){<div class="metric-detail">@Ui.Format("{0} cores / {1} threads", Count(DashboardMetrics.Value(sample,"cpu.cores")), Count(DashboardMetrics.Value(sample,"cpu.threads")))<span class="cpu-name">@CpuName</span></div>}else{<div class="metric-detail"><span>@Count(DashboardMetrics.Value(sample,"cpu.cores")) C / @Count(DashboardMetrics.Value(sample,"cpu.threads")) T</span><span class="cpu-name" title="@CpuName">@CpuName</span></div>}</div></div>
+                        <div class="metric-cell"><OverviewTrend Samples="item.Samples" Metric="memory.usage" Label='@Ui["Measured RAM usage"]' /><div class="metric-content"><span class="metric-label">MEM</span>@if(Detailed){<div class="metric-number">@Percent(memory)<small>@(memory is null ? Ui["Not measured"] : "%")</small></div><div class="metric-detail">@GiB(DashboardMetrics.Value(sample,"memory.used")) / @GiB(DashboardMetrics.Value(sample,"memory.total"))</div>}else{<div class="metric-number memory-number">@GiB(DashboardMetrics.Value(sample,"memory.used"))</div><div class="metric-detail">/ @GiB(DashboardMetrics.Value(sample,"memory.total")) · @Percent(memory) @(memory is null ? Ui["Not measured"] : "%")</div>}</div></div>
+                        @if(!Detailed)
+                        {
+                            var diskMaximum=DashboardMetrics.ThroughputMaximum(item.Samples,"disk.transfer.rate",1048576);
+                            <div class="metric-cell throughput-cell" title='@Ui["Total physical disk traffic on this host."]'>
+                                <OverviewTrend Samples="item.Samples" Metric="disk.transfer.rate" Maximum="diskMaximum" Label='@Ui["Measured total disk traffic"]' />
+                                <div class="metric-content">
+                                    <span class="metric-label">IO</span>
+                                    <div class="metric-number" title='@Ui.Format("Chart range: 0–{0} {1}",Throughput(diskMaximum,1048576),"MiB/s")'>@Throughput(DashboardMetrics.Value(sample,"disk.transfer.rate"),1048576)<small>MiB/s</small></div>
+                                    <div class="metric-detail throughput-breakdown"><span>Read @Throughput(DashboardMetrics.Value(sample,"disk.read.rate"),1048576) MiB/s</span><span class="throughput-divider">|</span><span>Write @Throughput(DashboardMetrics.Value(sample,"disk.write.rate"),1048576) MiB/s</span></div>
+                                </div>
+                            </div>
+                            var gpuTarget=summaryGpu?.Target ?? string.Empty;
+                            var gpuUsage=DashboardMetrics.Value(sample,"gpu.usage",gpuTarget);
+                            var dedicatedUsage=DashboardMetrics.Value(sample,"gpu.memory.usage",gpuTarget);
+                            <div class="metric-cell"><OverviewTrend Samples="item.Samples" Metric="gpu.usage" Target="@gpuTarget" Label='@Ui["Measured GPU usage"]' /><div class="metric-content"><span class="metric-label">GPU</span><div class="metric-number">@Percent(gpuUsage)<small>@(gpuUsage is null ? Ui["Not measured"] : "%")</small></div><div class="metric-detail gpu-name" title='@(Ui["GPU chosen by largest dedicated memory capacity."]+" "+(summaryGpu?.Label ?? gpuTarget))'>@(summaryGpu?.Label ?? summaryGpu?.Target ?? Ui["GPU capacity unavailable"])</div></div></div>
+                            <div class="metric-cell"><OverviewTrend Samples="item.Samples" Metric="gpu.memory.usage" Target="@gpuTarget" Label='@Ui["Measured dedicated GPU memory usage"]' /><div class="metric-content"><span class="metric-label" title='@Ui["Dedicated GPU memory"]'>VRAM</span><div class="metric-number memory-number">@GiB(DashboardMetrics.Value(sample,"gpu.memory.used",gpuTarget))</div><div class="metric-detail">/ @GiB(summaryGpu?.Value) · @Percent(dedicatedUsage) @(dedicatedUsage is null ? Ui["Not measured"] : "%")</div></div></div>
+                            var networkMaximum=DashboardMetrics.ThroughputMaximum(item.Samples,"network.transfer.rate",125);
+                            var network=NetworkThroughput(DashboardMetrics.Value(sample,"network.transfer.rate"));
+                            var down=NetworkThroughput(DashboardMetrics.Value(sample,"network.received.rate"));
+                            var up=NetworkThroughput(DashboardMetrics.Value(sample,"network.sent.rate"));
+                            var networkScale=NetworkThroughput(networkMaximum);
+                            <div class="metric-cell throughput-cell" title='@Ui["Total physical NIC traffic on this host. Virtual NICs and VPNs are excluded."]'>
+                                <OverviewTrend Samples="item.Samples" Metric="network.transfer.rate" Maximum="networkMaximum" Label='@Ui["Measured total physical NIC traffic"]' />
+                                <div class="metric-content">
+                                    <span class="metric-label">NW</span>
+                                    <div class="metric-number" title='@Ui.Format("Chart range: 0–{0} {1}",networkScale.Number,networkScale.Unit)'>@network.Number<small>@network.Unit</small></div>
+                                    <div class="metric-detail throughput-breakdown"><span>Down @down.Number @down.Unit</span><span class="throughput-divider">|</span><span>Up @up.Number @up.Unit</span></div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    @if(Detailed)
+                    {
+                    <div class="device-metrics"><div class="device-line"><span>GPU</span><div class="gpu-values">@if(gpus.Count==0){<span class="unavailable">@Ui["Not measured"]</span>}@foreach(var gpu in gpus.Take(4)){<OverviewGpu Gpu="gpu" Sample="sample" />}@if(gpus.Count>4){<span>@Ui.Format("{0} more GPUs", gpus.Count-4)</span>}</div></div>
+                    <div class="device-line"><span>@Ui["CPU temperature"]</span><span title='@Ui["Shown only when a CPU temperature provider is available."]'>@Temperature(DashboardMetrics.Value(sample, "cpu.temperature"))</span></div></div>
+                    <div class="network"><div class="network-caption">@Ui["Selected NICs"] <span>@Ui["OS traffic"]</span></div>
+                    @foreach(var nic in networkPeers)
+                    {
+                        var prior=nic.Samples.Count>1?nic.Samples[^2]:null;
+                        var rx=DashboardMetrics.NetworkRate(prior,nic.Latest,"network.received");
+                        var tx=DashboardMetrics.NetworkRate(prior,nic.Latest,"network.sent");
+                        <div title="@(nic.Latest?.SelectedInterfaceId is {} id ? Ui.Format("OS traffic on NIC {0}; not application-specific traffic.",id) : Ui["The selected NIC is unconfirmed. No other NIC is substituted."])"><small>@nic.Peer.Address</small><div class="network-values"><span><i>↓</i> @Rate(rx)</span><span><i>↑</i> @Rate(tx)</span></div>@if(rx is null || tx is null){<small>@Ui["First samples, gaps and counter resets have no confirmed rate."]</small>}</div>
+                    }
+                    </div>
+                    <footer><span title="@(FormatTime(sample?.ObservedAt))">@(sample is null ? Ui["No observation"] : Ui.Format("Observed {0}", FormatTime(sample.ObservedAt,"HH:mm:ss")))</span><span class="sample-status" title="@((item.Problem is not null ? Ui[item.Problem] : null) ?? (sample is { HistoryStored: false, HistoryPending: false } ? Ui["Diagnostic history persistence is unconfirmed."] : null))">@(item.Problem is not null ? Ui["Read failed"] : sample is { HistoryStored: false, HistoryPending: false } ? Ui["History unconfirmed"] : "")</span></footer>
+                    }
+                </article>

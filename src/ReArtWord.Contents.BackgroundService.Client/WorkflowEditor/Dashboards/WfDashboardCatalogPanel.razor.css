@@ -1,0 +1,23 @@
+.dashboard-catalog {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+}
+
+.dashboard-catalog-items {
+    display: grid;
+    gap: 6px;
+}
+
+.dashboard-catalog-item {
+    display: grid;
+    gap: 4px;
+    width: 100%;
+    text-align: left;
+    padding: 10px;
+}
+
+.dashboard-catalog-item small,
+.dashboard-catalog-item strong {
+    overflow-wrap: anywhere;
+}

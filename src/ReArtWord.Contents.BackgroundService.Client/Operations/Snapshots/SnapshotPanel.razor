@@ -1,0 +1,57 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@using ReArtWord.Contents.BackgroundService.Contracts.Configuration.Snapshots
+@using ReArtWord.Contents.BackgroundService.Contracts.Configuration
+@using ReArtWord.Contents.BackgroundService.Contracts.Management
+<section class="card">
+<h2>@Ui["Snapshots"]</h2>
+<p class="small muted">@Ui["Restore settings and explicitly included runtime state. External effects that already occurred are not undone."]</p>
+<div class="toolbar"><button class="primary" @onclick="OpenCapture"><UiIcon Name="save" />@Ui["Capture current state"]</button><button @onclick="OpenRestoreAsync"><UiIcon Name="undo" />@Ui["Restore by target"]</button></div>
+<p class="notice">@(message?.Invoke())</p>
+</section>
+<Modal Open="captureOpen" Title="@Ui["Capture current state"]" Close="()=>captureOpen=false">
+<label><input type="checkbox" @bind="permanent" />@Ui["Keep this snapshot permanently (otherwise use history retention)"]</label>
+<p class="notice">@(message?.Invoke())</p>
+    <label>@Ui["Kind"]<select @bind="kind">@foreach(var value in Enum.GetValues<ESnapshotKind>()){<option value="@value">@Ui[value.ToString()]</option>}</select>
+</label>
+    <label>Peer<select @bind="peer">@foreach(var item in Connection.Current?.Peers??[]){<option value="@item.PeerId">@item.PeerId</option>}</select>
+</label>
+<label>@Ui["Target ID"]<input @bind="target" @bind:event="oninput" placeholder="Workflow ID / workflow:ID / peer:Peer:ID" />
+</label>
+<button @onclick="CaptureAsync">@Ui["Capture and share"]</button>
+<SnapshotScopePicker Selected="ExpandCaptureAsync" />
+@if(captureTargets.Count!=0)
+{
+    <p>@Ui["Expanded, fixed configuration scopes (a separate capture operation per target)"]</p>
+    @foreach(var item in captureTargets){<p>@item.PeerId / @item.Id · @(item.NodeIds is null?Ui["Whole scope"]:string.Join(", ",item.NodeIds))</p>}
+    <button @onclick="CaptureScopeAsync">@Ui["Capture these resolved targets"]</button>
+}
+</Modal>
+<Modal Open="restoreOpen" Title="@Ui["Restore individual targets"]" Close="()=>restoreOpen=false">
+<p class="notice">@(message?.Invoke())</p>
+<p>@Ui["Choose one snapshot per target. Targets with no snapshot at that time are not applied but remain in the original compensation scope. Explicitly excluded targets are also excluded from compensation."]</p>
+<label>@Ui.Format("display.timezone.point",DisplayTimeZone.Id)<input type="datetime-local" value="@at" @oninput="TimeChanged" />
+</label>
+@foreach(var row in rows)
+{
+    <label>@row.Target.PeerId / @row.Target.Id (@Ui[row.Target.Kind.ToString()]) · @(row.Target.NodeIds is null?Ui["Whole scope"]:string.Join(", ",row.Target.NodeIds))<select @bind="row.Choice">
+<option value="omit">@Ui["Do not include in this request"]</option>
+<option value="at">@Ui["Latest at the specified time"]</option>
+<option value="exclude">@Ui["Explicitly exclude from scope"]</option>@foreach(var snapshot in snapshots.Where(item=>SnapshotSelectionRules.Covers(item,row.Target))){<option value="@snapshot.Id">@FormatTime(snapshot.CapturedAt) · @snapshot.Id</option>}</select>
+</label>
+}
+<button @onclick="NextSnapshotsAsync" disabled="@(snapshotCursor is null)">@Ui["Load the next snapshot page"]</button>
+@foreach(var omitted in snapshots.Where(item=>item.DetailReason is not null)){<p class="notice">@Ui.Format("Candidate {0} metadata was omitted: {1}. Omitted scopes cannot be selected for restore.", omitted.IdentifierHash, omitted.DetailReason)</p>}
+<details>
+<summary>@Ui["Add a target not listed"]</summary>
+<label>@Ui["Kind"]<select @bind="kind">@foreach(var value in Enum.GetValues<ESnapshotKind>()){<option value="@value">@Ui[value.ToString()]</option>}</select>
+</label>
+<label>Peer<input @bind="peer" @bind:event="oninput" />
+</label>
+<label>@Ui["Target ID"]<input @bind="target" @bind:event="oninput" />
+</label>
+<button @onclick="AddTarget">@Ui["Add to scope"]</button>
+</details>
+<SnapshotScopePicker Selected="ExpandRestoreAsync" />
+<button @onclick="RestoreAsync">@Ui["Restore selected scope"]</button>
+</Modal>
+<SnapshotRestoreReview Request="pendingRestore" Closed="()=>pendingRestore=null" />

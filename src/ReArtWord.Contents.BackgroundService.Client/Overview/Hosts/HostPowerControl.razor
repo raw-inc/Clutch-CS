@@ -1,0 +1,35 @@
+@using ReArtWord.Contents.BackgroundService.Client.Overview.Charts
+@using ReArtWord.Contents.BackgroundService.Contracts.Cluster
+<div class="host-power-control" @ref="root">
+    <button type="button" class="health-indicator @HealthClass" aria-label="@(HostId + ": " + StatusLabel)" aria-expanded="false" aria-controls="@panelId" aria-disabled="@((Busy || !CanAct) ? "true" : "false")" data-power-trigger>
+        @if(Offline || Status == EPeerStatus.Ready)
+        {
+            <svg class="power-symbol" data-power-animation="@(Offline ? "none" : "ready")" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9M6.3 5.7a9 9 0 1 0 11.4 0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" /></svg>
+        }
+        else if(Status == EPeerStatus.Syncing)
+        {
+            <span class="power-syncing @(!Stale ? "confirmed" : null)"><ActivityRing Active="true" Identity="@HostId" /></span>
+        }
+        else
+        {
+            <span class="power-unknown" aria-hidden="true">?</span>
+        }
+        <span class="health-label">@StatusLabel</span>
+    </button>
+    <div id="@panelId" class="power-panel" role="group" aria-label="@Ui.Format("Power actions for {0}",HostId)" hidden>
+        <div data-power-choices>
+            <button type="button" data-power-action="restart" hidden="@Offline">@Ui["Restart"]</button>
+            <button type="button" data-power-action="shutdown" hidden="@Offline">@Ui["Shut down"]</button>
+            <button type="button" data-power-action="wake" hidden="@(!Offline)">@Ui["Send Wake-on-LAN"]</button>
+            <button type="button" data-power-action="remove" hidden="@(!Offline)">@Ui["Remove from display"]</button>
+        </div>
+        <div data-power-confirmation hidden>
+            <p>@Ui.Format("Confirm action for {0}",HostId)</p>
+            <button type="button" class="confirm-power" data-power-confirm="restart" hidden>@Ui["Confirm restart"]</button>
+            <button type="button" class="confirm-power" data-power-confirm="shutdown" hidden>@Ui["Confirm shutdown"]</button>
+            <button type="button" class="confirm-power" data-power-confirm="remove" hidden>@Ui["Confirm removal"]</button>
+            <button type="button" class="confirm-power" data-power-confirm="wake" hidden>@Ui["wake.confirm"]</button>
+        </div>
+    </div>
+    @if(Problem is not null){<p class="power-problem" role="status">@Ui[Problem]</p>}
+</div>

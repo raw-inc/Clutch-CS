@@ -1,0 +1,53 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)Version.props" />
+  <PropertyGroup>
+    <LangVersion>14.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Deterministic>true</Deterministic>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-all</AnalysisLevel>
+    <AnalysisMode>AllEnabledByDefault</AnalysisMode>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <Product>Clutch-CS</Product>
+    <RepositoryType>git</RepositoryType>
+    <Authors>raw inc. and Tomonari Hayashi (kabayaki-sauce)</Authors>
+    <Company>raw inc.</Company>
+    <Copyright>Copyright (c) 2026 raw inc. and Tomonari Hayashi (kabayaki-sauce)</Copyright>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <RAW101MaxClassLineCount>350</RAW101MaxClassLineCount>
+    <RAW130MaxPartialClassDeclarationCount>4</RAW130MaxPartialClassDeclarationCount>
+    <RAW455TernaryConditionCountThreshold>5</RAW455TernaryConditionCountThreshold>
+    <ContentsSourceQualityAnalyzerRepositoryPath>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)excludes/ReArtWord.CSharp.SourceCodeQuality.Analyzers'))</ContentsSourceQualityAnalyzerRepositoryPath>
+    <ContentsSourceQualityAnalyzerProjectPath>$(ContentsSourceQualityAnalyzerRepositoryPath)/src/ReArtWord.CSharp.SourceCodeQuality.Core.Analyzers/ReArtWord.CSharp.SourceCodeQuality.Core.Analyzers.csproj</ContentsSourceQualityAnalyzerProjectPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="" Visible="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" PrivateAssets="all" />
+    <ProjectReference Include="$(ContentsSourceQualityAnalyzerProjectPath)" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)Directory.Build.props" />
+    <AdditionalFiles Include="$(MSBuildProjectFullPath)" />
+  </ItemGroup>
+  <Target Name="VerifyContentsSourceQualityAnalyzer" BeforeTargets="CoreCompile">
+    <Error Condition="!Exists('$(ContentsSourceQualityAnalyzerProjectPath)')" Text="共通 Analyzer がありません。solution の dotnet restore を実行してください。" />
+    <ReadLinesFromFile File="$(MSBuildThisFileDirectory)eng/analyzers/source-quality-core/accepted-commit.txt">
+      <Output TaskParameter="Lines" ItemName="ContentsAcceptedAnalyzerRevision" />
+    </ReadLinesFromFile>
+    <Exec Command="git -C &quot;$(ContentsSourceQualityAnalyzerRepositoryPath)&quot; rev-parse HEAD" ConsoleToMsBuild="true" StandardOutputImportance="Low">
+      <Output TaskParameter="ConsoleOutput" ItemName="ContentsActualAnalyzerRevision" />
+    </Exec>
+    <Exec Command="git -C &quot;$(ContentsSourceQualityAnalyzerRepositoryPath)&quot; status --porcelain --untracked-files=all" ConsoleToMsBuild="true" StandardOutputImportance="Low">
+      <Output TaskParameter="ConsoleOutput" ItemName="ContentsAnalyzerChanges" />
+    </Exec>
+    <Error Condition="'@(ContentsAcceptedAnalyzerRevision)' != '@(ContentsActualAnalyzerRevision)'" Text="共通 Analyzer の受入 commit と取得 commit が一致しません。受入: @(ContentsAcceptedAnalyzerRevision)、取得: @(ContentsActualAnalyzerRevision)" />
+    <Error Condition="'@(ContentsAnalyzerChanges)' != ''" Text="共通 Analyzer に未 commit 変更があります。内容を確認してください。" />
+  </Target>
+</Project>

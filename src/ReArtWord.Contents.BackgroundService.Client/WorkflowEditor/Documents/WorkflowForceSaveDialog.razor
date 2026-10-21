@@ -1,0 +1,24 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@using ReArtWord.Contents.BackgroundService.Contracts.Execution
+<Modal Open="Open" Title="@Ui["Force save current draft"]" Close="()=>CloseAsync(UiCancellation)">
+    <p>@Ui["Save this draft without waiting for collaborative reconciliation. The latest saved version will be replaced, then the confirmed conflict choices will be synchronized."]</p>
+    @if(force?.Review is {} review)
+    {
+        <p><strong>@review.Draft.Document.Name</strong> · <code>@review.Draft.Document.Id</code><br />@review.Cluster / @review.Peer</p>
+        <p>@Ui["Saved revision"]: <code>@(review.Saved?.Revision ?? Ui["Not saved"])</code></p>
+        <p>@Ui.Format("Nodes: {0} → {1} / Connections: {2} → {3}",review.Saved?.Definition.Nodes.Count??0,review.Draft.Document.Nodes.Count,review.Saved?.Definition.Wires.Count??0,review.Draft.Document.Wires.Count)</p>
+        <details><summary>@Ui["Changed fields"] (@review.Differences.Count)</summary><ul>@foreach(var difference in review.Differences){<li><code>@difference.Path</code></li>}</ul>@if(review.Truncated){<p>@Ui["Only the first changes are shown. Export the definitions to review the complete contents."]</p>}</details>
+        <button disabled="@(working||review.Saved is null)" @onclick="()=>ExportAsync(true,UiCancellation)">@Ui["Export saved version"]</button>
+    }
+    <button disabled="@working" @onclick="()=>ExportAsync(false,UiCancellation)">@Ui["Export current draft"]</button>
+    <p class="muted small">@Ui["The draft and overwritten version are backed up on this browser before sending. Validation, restore locks and concurrent-save checks still apply."]</p>
+    <p>@Ui["Activation after saving"]: @Ui[Activation.ToString()]</p>
+    @if(problem is not null){<p class="notice error" role="alert">@problem</p>}
+    @if(force?.OperationId is {} operation){<p>@Ui["Operation"]: <code>@operation</code></p><button disabled="@working" @onclick="()=>SubmitAsync(true,UiCancellation)">@Ui["Look up original save"]</button>}
+    @if(force?.Result is {} result){<p role="status">@Ui.Format("Saved: {0} / Shared: {1} / Snapshot: {2} / Active: {3}",Ui[result.Saved.Outcome.ToString()],Ui[result.Shared.Outcome.ToString()],Ui[result.Snapshot.Outcome.ToString()],Ui[result.Activation.Outcome.ToString()])</p><p>@result.Saved.Reason @result.Shared.Reason @result.Activation.Reason</p>}
+    @if(force?.Result?.BeforeSnapshot is {} before){<p>@Ui.Format("Before-change snapshot: {0}",Ui[before.Outcome.ToString()]) · @force.Result.BeforeSnapshotId</p>}
+    <div class="toolbar">
+        <button disabled="@working" @onclick="()=>PrepareAsync(UiCancellation)">@Ui["Review latest version"]</button>
+        <button class="danger" disabled="@(working||force?.Review is null||force.OperationId is not null)" @onclick="()=>SubmitAsync(false,UiCancellation)">@Ui["Confirm overwrite and save"]</button>
+    </div>
+</Modal>

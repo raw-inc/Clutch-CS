@@ -1,0 +1,20 @@
+{
+  "Check compatibility": "互換性を確認",
+  "Behavior contract compatibility": "動作契約の互換性",
+  "Settings to check": "確認する設定",
+  "Inspect next snapshot page": "次のスナップショットを確認",
+  "Compare the saved and effective definitions with the implementation on this peer. Validate unsaved editor changes separately.": "このPeerの実装と、保存版・有効版を比較します。エディター内の未保存の変更は、通常の検証で確認してください。",
+  "Saved: {0}; effective: {1}; snapshots inspected on this page: {2}.": "保存版: {0}、有効版: {1}。今回確認したスナップショット: {2} 件。",
+  "No incompatibilities were found in the definitions and snapshot page inspected here.": "今回確認した定義とスナップショットの範囲では、不適合は見つかりませんでした。",
+  "Some issue details were omitted. Inspect the affected definition and validate it in the editor.": "指摘の一部を省略しています。対象の定義を開き、エディターで検証してください。",
+  "This inspection does not change settings or restore snapshots. Snapshot results apply to this peer; select another peer to inspect its implementation and snapshots.": "この確認では、設定の変更や復元は行いません。別のPeerの実装とスナップショットを確認する場合は、そのPeerを選択してください。",
+  "Compatibility could not be confirmed for the selected peer.": "選択したPeerの互換性を確認できません。",
+  "snapshot.saved": "スナップショットの保存版",
+  "snapshot.effective": "スナップショットの有効版",
+  "snapshot.state": "スナップショットの状態",
+  "Behavior contract": "動作契約",
+  "Expected contract: {0}; installed implementation: {1}.": "設定が要求する契約: {0}、現在の実装の契約: {1}。",
+  "Required contract version": "要求する動作契約の版",
+  "1 · legacy definition": "1・版未指定の既存定義",
+  "Changing the contract version does not convert settings. Check the affected settings and connections, then validate and apply the definition.": "契約の版を変更しても、設定値は変換しません。関係する設定と接続を確認し、定義を検証してから反映してください。"
+}

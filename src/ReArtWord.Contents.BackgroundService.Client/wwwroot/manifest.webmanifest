@@ -1,0 +1,26 @@
+{
+  "id": "/",
+  "name": "Clutch-CS WebClient",
+  "short_name": "Clutch-CS",
+  "description": "Workflow editing, monitoring, and remote host management.",
+  "lang": "en",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#101114",
+  "theme_color": "#202125",
+  "icons": [
+    {
+      "src": "icons/app-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/app-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@using ReArtWord.Contents.BackgroundService.Contracts.Execution
+<section class="section">
+    <div class="section-heading"><h2>@Ui["Running workflows"]</h2><button disabled="@busy" @onclick="()=>LoadAsync(null, UiCancellation)">@Ui["Refresh"]</button></div>
+    <p class="footer-note">@Ui["Executions accepted by the selected peer. Cancellation targets the original execution; it does not undo completed effects."]</p>
+    @if(message is not null){<p class="notice" role="status">@message()</p>}
+    @if(page is not null)
+    {
+        <div class="table-wrap"><table><thead><tr><th>Workflow</th><th>@Ui["Operation ID"]</th><th>@Ui["Actions"]</th></tr></thead><tbody>
+        @foreach(var run in page.Items)
+        {
+            <tr @key="run.OperationId"><td>@run.WorkflowId</td><td class="mono">@run.OperationId</td><td>
+                @if(run.OwnerInstanceId is Guid owner){<RunCancelButton RunId="run.OperationId" OwnerInstanceId="owner" PeerId="@peer" ClusterId="@cluster" Completed="()=>CheckAsync(run.OperationId, UiCancellation)" />}
+                <button disabled="@busy" @onclick="()=>CheckAsync(run.OperationId, UiCancellation)">@Ui["Check execution result"]</button>
+            </td></tr>
+        }
+        </tbody></table></div>
+        @if(page.Items.Count==0){<p class="empty">@Ui["No running workflows were found on this peer."]</p>}
+        @if(page.Next is Guid next){<button disabled="@busy" @onclick="()=>LoadAsync(next, UiCancellation)">@Ui["Next page"]</button>}
+    }
+    @if(result is not null)
+    {
+        <p class="notice">@result.WorkflowId · @result.OperationId · @(result.Running?Ui["Running"]:Ui[result.Outcome.ToString()])</p>
+        <PcSelectionDetails Report="result.Report" />
+        <JsonDetails Value="result" Title='@Ui["Original execution result"]' />
+    }
+</section>

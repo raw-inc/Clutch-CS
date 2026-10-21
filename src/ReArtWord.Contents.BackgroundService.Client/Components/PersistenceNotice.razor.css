@@ -1,0 +1,13 @@
+
+.app-statusbar .statusbar-action {
+    padding: 1px 4px;
+    height: 22px;
+    border: 0;
+    background: transparent;
+    font-size: 10px;
+    color: var(--muted);
+}
+
+.app-statusbar .statusbar-action.warn {
+    color: var(--warn);
+}

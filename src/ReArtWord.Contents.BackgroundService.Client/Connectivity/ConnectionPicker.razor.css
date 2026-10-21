@@ -1,0 +1,48 @@
+.connection-button {
+    font-size: 12px;
+    background: #292b30;
+    border-color: #3a3d45;
+    gap: 9px;
+    max-width: 340px;
+}
+
+.connection-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.connection-name small {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.connection-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--warn);
+    flex-shrink: 0;
+}
+
+.connection-dot.online {
+    background: var(--green);
+}
+
+.connection-button ::deep > .ui-icon {
+    width: 12px;
+    height: 12px;
+    margin-left: 4px;
+}
+
+@media (max-width: 1100px) {
+    .connection-button {
+        max-width: 260px;
+    }
+}
+
+@media (max-width: 750px) {
+    .connection-button {
+        max-width: 220px;
+        font-size: 10px;
+    }
+}

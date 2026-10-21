@@ -1,0 +1,36 @@
+.fleet-footer {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: none;
+    font-size: 10px;
+    white-space: nowrap;
+    color: var(--accent);
+}
+
+.fleet-footer progress {
+    width: 72px;
+    height: 4px;
+    border: 0;
+    border-radius: 3px;
+    overflow: hidden;
+    background: var(--raised);
+    accent-color: var(--accent);
+}
+
+.fleet-footer progress::-webkit-progress-bar {
+    background: var(--raised);
+}
+
+.fleet-footer progress::-webkit-progress-value {
+    background: var(--accent);
+}
+
+.fleet-footer progress::-moz-progress-bar {
+    background: var(--accent);
+}
+
+.fleet-footer-percent {
+    min-width: 3ch;
+    font-variant-numeric: tabular-nums;
+}

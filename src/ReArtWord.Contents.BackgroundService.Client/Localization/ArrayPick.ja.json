@@ -1,0 +1,21 @@
+{
+  "node.data.pick.name": "配列・辞書の要素を取得（Pick）",
+  "node.data.pick.description": "0始まりのIndexで配列の1要素または辞書のKey-Value一組を取得します。nullを含む値と型を保持します。空の候補、小数・範囲外のIndexはエラーになります。辞書の順序は保証されません。",
+  "port.data.pick.in.value": "配列／辞書",
+  "port.data.pick.in.index": "Index（0始まり）",
+  "port.data.pick.out.value": "選択した要素",
+  "node.data.randomPick.name": "配列・辞書からランダムに取得（RandomPick）",
+  "node.data.randomPick.description": "実行時に配列の1要素または辞書のKey-Value一組を等確率で選びます。配列の同じ値は別々の候補として扱い、連続実行で同じ結果になることもあります。空の候補はエラーになります。",
+  "port.data.randomPick.in.value": "候補の配列／辞書",
+  "port.data.randomPick.out.value": "選択した要素",
+  "node.math.random.name": "乱数を取得（Random）",
+  "node.math.random.description": "実行時に範囲内の乱数を1つ生成します。整数は両端を含み、小数は上限を含みません。上下限が同じ場合はその値を返します。連続実行で同じ値になることもあります。",
+  "port.math.random.out.value": "乱数",
+  "setting.minimum": "最小値",
+  "setting.maximum": "最大値",
+  "choice.math.random.mode.integer": "整数（両端を含む）",
+  "choice.math.random.mode.decimal": "小数（上限を含まない）",
+  "Integers include both bounds. Decimals use finite binary64 values and exclude the upper bound unless both bounds are equal.": "整数は両端を含みます。小数は有限の倍精度浮動小数点数で、上下限が同じ場合を除き上限を含みません。",
+  "Inclusive lower bound. Integer mode requires an exact signed 64-bit integer.": "下限を含みます。整数モードでは符号付き64bit整数の範囲内で、小数部のない値を指定します。",
+  "Upper bound, at least the minimum. Integer mode includes this bound; decimal mode excludes it. Equal bounds return that value.": "最小値以上の上限です。整数では上限を含み、小数では上限を含みません。上下限が同じ場合はその値を返します。"
+}

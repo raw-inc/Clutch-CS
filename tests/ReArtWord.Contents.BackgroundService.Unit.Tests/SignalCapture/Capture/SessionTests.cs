@@ -1,0 +1,157 @@
+using System.Globalization;
+using ReArtWord.Contents.BackgroundService.SignalCapture.Protocol;
+using Xunit;
+
+namespace ReArtWord.Contents.BackgroundService.SignalCapture.Capture.Tests;
+
+/// <summary>取得元数、除外・欠落計数、停止時の所有権を検証します。</summary>
+public sealed class SessionTests
+{
+    /// <summary>後続 NIC の列挙待ちが先行 NIC の解析と状態通知を止めません。</summary>
+    /// <returns>開始中の並行動作の検証。</returns>
+    [Fact]
+    public async Task EncodesAndReportsWhileAnotherSourceIsOpeningAsync()
+    {
+        using var opening = new ManualResetEventSlim();
+        using var resume = new ManualResetEventSlim();
+        using var first = new TestCapture();
+        using var second = new TestCapture(beforeEnumeration: () =>
+        {
+            opening.Set();
+            Assert.True(resume.Wait(TimeSpan.FromSeconds(10)));
+        });
+        var queue = new PacketQueue();
+        int created = 0;
+        using var session = new WorkerSession(new CaptureFactory(true), queue, _ =>
+        {
+            if (Interlocked.Increment(ref created) == 1)
+            {
+                return first;
+            }
+            return second;
+        });
+        Task<PipeEvent> starting = Task.Run(() => session.Start(new PipeCommand("start", new[] { new SourceRequest("demo", "demo0"), new SourceRequest("demo", "demo1") })));
+        try
+        {
+            Assert.True(await Task.Run(() => opening.Wait(TimeSpan.FromSeconds(5))));
+            first.Emit(DemoCapture.Create(0));
+            QueuedPacket packet = Assert.IsType<QueuedPacket>(queue.Read());
+            byte[]? frame = await Task.Run(() => session.Encode(packet)).WaitAsync(TimeSpan.FromSeconds(2));
+            Assert.NotNull(frame);
+            PipeEvent state = await Task.Run(session.State).WaitAsync(TimeSpan.FromSeconds(2));
+            Assert.True(state.Running);
+            PipeEvent statistics = await Task.Run(session.Statistics).WaitAsync(TimeSpan.FromSeconds(2));
+            Assert.Equal(7, statistics.Received);
+            Assert.Equal(0, queue.Dropped);
+            session.ReplaceExclusions(new PipeCommand("exclusions", ExcludedTcpEndpoints: new[] { new EndpointRequest("127.0.0.2", 80) }));
+            first.Emit(DemoCapture.Create(2));
+            Assert.Null(queue.Read());
+        }
+        finally
+        {
+            resume.Set();
+            await starting.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+    }
+
+    /// <summary>ネイティブの停止完了を待つ間も、停止済み世代を出力へ戻しません。</summary>
+    /// <returns>停止中の世代切替の検証。</returns>
+    [Fact]
+    public async Task RejectsPendingPacketsWhileNativeStopIsWaitingAsync()
+    {
+        using var stopping = new ManualResetEventSlim();
+        using var resume = new ManualResetEventSlim();
+        using var capture = new TestCapture(beforeStop: () =>
+        {
+            stopping.Set();
+            Assert.True(resume.Wait(TimeSpan.FromSeconds(10)));
+        });
+        var queue = new PacketQueue();
+        using var session = new WorkerSession(new CaptureFactory(true), queue, _ => capture);
+        session.Start(new PipeCommand("start", new[] { new SourceRequest("demo", "demo0") }));
+        capture.Emit(DemoCapture.Create(0));
+        QueuedPacket pending = Assert.IsType<QueuedPacket>(queue.Read());
+        Task<PipeEvent> ending = Task.Run(session.Stop);
+        try
+        {
+            Assert.True(await Task.Run(() => stopping.Wait(TimeSpan.FromSeconds(5))));
+            Assert.Null(await Task.Run(() => session.Encode(pending)).WaitAsync(TimeSpan.FromSeconds(2)));
+        }
+        finally
+        {
+            resume.Set();
+            await ending.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        Assert.Equal(3, session.Statistics().Dropped);
+    }
+
+    /// <summary>置換前の待機原本へも新しい除外を適用し、不正な置換では集合を保持します。</summary>
+    [Fact]
+    public void ReplacesExclusionsWithoutResettingStatistics()
+    {
+        var queue = new PacketQueue();
+        using var capture = new TestCapture();
+        using var session = new WorkerSession(new CaptureFactory(true), queue, _ => capture);
+        session.Start(new PipeCommand("start", new[] { new SourceRequest("demo", "demo0") }));
+        capture.Emit(DemoCapture.Create(0));
+        capture.Emit(DemoCapture.Create(1));
+        session.ReplaceExclusions(new PipeCommand("exclusions", ExcludedEndpoints: new[] { new TransportEndpointRequest("udp", "127.0.0.2", 9000) }));
+        Assert.Null(session.Encode(Assert.IsType<QueuedPacket>(queue.Read())));
+        Assert.NotNull(session.Encode(Assert.IsType<QueuedPacket>(queue.Read())));
+        Assert.Equal(4, session.Statistics().Suppressed);
+        Assert.Throws<ArgumentException>(() => session.ReplaceExclusions(new PipeCommand("exclusions", ExcludedEndpoints: new[] { new TransportEndpointRequest("udp", "localhost", 9000) })));
+        capture.Emit(DemoCapture.Create(0));
+        Assert.Null(queue.Read());
+        Assert.Equal(5, session.Statistics().Suppressed);
+        session.ReplaceExclusions(new PipeCommand("exclusions"));
+        capture.Emit(DemoCapture.Create(0));
+        Assert.NotNull(queue.Read());
+        Assert.Equal(7, session.Statistics().Received);
+        Assert.Equal(2, session.Statistics().Dropped);
+    }
+
+    /// <summary>16取得元を独立所有し、繰り返し stop でも一度だけ解放します。</summary>
+    [Fact]
+    public void ClosesEverySourceAndSeparatesSuppressionFromDrops()
+    {
+        var captures = new List<TestCapture>();
+        var queue = new PacketQueue();
+        using var session = new WorkerSession(new CaptureFactory(true), queue, _ =>
+        {
+            var capture = new TestCapture();
+            captures.Add(capture);
+            return capture;
+        });
+        SourceRequest[] requests = Enumerable.Range(0, 16).Select(index => new SourceRequest("demo", "demo" + index.ToString(CultureInfo.InvariantCulture))).ToArray();
+        PipeEvent state = session.Start(new PipeCommand("start", requests, new[] { new EndpointRequest("127.0.0.2", 80) }));
+        Assert.True(state.Running);
+        foreach (TestCapture capture in captures)
+        {
+            capture.Emit(DemoCapture.Create(0));
+            capture.Emit(DemoCapture.Create(2));
+        }
+
+        Assert.Equal(80, session.Statistics().Received);
+        Assert.Equal(64, session.Statistics().Suppressed);
+        Assert.Equal(32, session.Statistics().Dropped);
+        Assert.False(session.Stop().Running);
+        session.Stop();
+        Assert.Null(queue.Read());
+        Assert.Equal(48, session.Statistics().Dropped);
+        Assert.All(captures, capture =>
+        {
+            Assert.Equal(1, capture.Stops);
+            Assert.Equal(1, capture.Disposals);
+        });
+    }
+
+    /// <summary>過剰・重複指定はキャプチャ開始前に拒否します。</summary>
+    [Fact]
+    public void RejectsInvalidSelectionsBeforeOpeningSources()
+    {
+        using var session = new WorkerSession(new CaptureFactory(true), new PacketQueue());
+        Assert.Throws<ArgumentException>(() => session.Start(new PipeCommand("start", Array.Empty<SourceRequest>())));
+        Assert.Throws<ArgumentException>(() => session.Start(new PipeCommand("start", Enumerable.Repeat(new SourceRequest("demo", "demo0"), 17).ToArray())));
+        Assert.Throws<ArgumentException>(() => session.Start(new PipeCommand("start", new[] { new SourceRequest("demo", "demo0"), new SourceRequest("demo", "demo0") })));
+    }
+}

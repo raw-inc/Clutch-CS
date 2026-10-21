@@ -1,0 +1,1542 @@
+.page.host-manager {
+    max-width: 1920px;
+    padding: 18px 24px 34px;
+    margin: 0 auto;
+    color: var(--ink);
+}
+
+.host-manager * {
+    box-sizing: border-box;
+}
+
+.host-manager [hidden] {
+    /* 例外理由: hidden 属性による非表示を、個別の display 指定より優先します。 */
+    display: none !important;
+}
+
+.hm-page-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 16px;
+}
+
+.hm-page-heading h1 {
+    font-size: 22px;
+    letter-spacing: -0.025em;
+    margin: 0 0 5px;
+    font-weight: 600;
+}
+
+.hm-muted {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.65;
+    margin: 0;
+}
+
+.host-manager .ui-icon {
+    width: 16px;
+    height: 16px;
+    flex: none;
+}
+
+.host-manager button {
+    font-size: 12px;
+    min-height: 30px;
+    line-height: 1.35;
+}
+
+.host-manager button:focus-visible,
+.host-manager input:focus-visible,
+.host-manager select:focus-visible,
+.host-manager textarea:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.host-manager button[aria-busy="true"] {
+    cursor: progress;
+    opacity: 0.6;
+}
+
+.host-manager button:disabled {
+    cursor: default;
+}
+
+.hm-actions,
+.hm-button {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.hm-actions {
+    flex-wrap: wrap;
+}
+
+.hm-button {
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.host-manager .primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--paper);
+}
+
+.host-manager .danger {
+    color: var(--warn);
+    border-color: color-mix(in srgb, var(--warn) 35%, var(--line));
+    background: transparent;
+}
+
+.host-manager .hm-icon-button {
+    font-size: 0;
+    width: 30px;
+    padding: 6px;
+    gap: 0;
+    flex: none;
+}
+
+.hm-workspace {
+    display: grid;
+    grid-template-columns: 236px minmax(0, 1fr);
+    height: calc(100dvh - var(--topbar-height) - 94px - var(--statusbar-height));
+    min-height: 430px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--paper);
+}
+
+.hm-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    padding: 14px 12px 0;
+}
+
+.hm-sidebar-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px;
+}
+
+.hm-sidebar-heading h2 {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.hm-sidebar > input {
+    width: 100%;
+    min-width: 0;
+    font-size: 12px;
+    padding: 8px 10px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+}
+
+.hm-selection-tools {
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+}
+
+.hm-selection-tools button {
+    background: transparent;
+    border: 0;
+    min-height: 24px;
+    padding: 2px 4px;
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.hm-selection-tools button:hover {
+    color: var(--ink);
+}
+
+.hm-host-list {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    scrollbar-width: thin;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin: 0 -5px;
+    padding: 0 5px 10px;
+}
+
+.hm-host-list .hm-host {
+    display: grid;
+    grid-template-columns: 14px 16px minmax(0, 1fr);
+    gap: 9px;
+    align-items: center;
+    flex: none;
+    margin: 0;
+    padding: 8px 9px;
+    min-height: 48px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    background: transparent;
+}
+
+.hm-host:hover {
+    background: var(--raised);
+}
+
+.hm-host[data-selected="true"] {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+    background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+}
+
+.hm-host[data-selected="true"] > .ui-icon {
+    color: var(--accent);
+}
+
+.hm-host:has(input:disabled) {
+    opacity: 0.48;
+    cursor: default;
+}
+
+.hm-host-copy {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.hm-host-copy strong {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hm-host-copy small {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hm-selection-count {
+    padding: 11px 4px;
+    border-top: 1px solid var(--line);
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.hm-main {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.hm-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 3px;
+    padding: 0 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    overflow: auto;
+    flex: none;
+}
+
+.hm-tabs button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--muted);
+    padding: 12px 16px;
+    min-height: 44px;
+    flex: none;
+}
+
+.hm-tabs button[aria-selected="true"] {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--accent) 7%, var(--panel));
+    box-shadow: inset 0 -2px var(--accent);
+}
+
+.hm-tabs button[aria-selected="true"] .ui-icon {
+    color: var(--accent);
+}
+
+.hm-content {
+    min-height: 0;
+    flex: 1;
+    overflow: auto;
+    scrollbar-width: thin;
+}
+
+.hm-area {
+    min-height: 100%;
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.hm-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.hm-heading h2 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0 0 4px;
+    letter-spacing: -0.015em;
+}
+
+.hm-heading h3 {
+    margin: 0;
+    font-size: 14px;
+}
+
+.hm-toolbar {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.hm-toolbar > .hm-field {
+    margin: 0;
+    min-width: 140px;
+}
+
+.hm-toolbar .hm-search {
+    flex: 1;
+    min-width: 160px;
+    max-width: 300px;
+}
+
+.hm-search {
+    font-size: 12px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 4px;
+}
+
+.hm-area > h3 {
+    font-size: 13px;
+    font-weight: 500;
+    margin: 0;
+}
+
+.hm-stacked > .hm-badge {
+    justify-self: start;
+}
+
+.hm-content[inert] {
+    opacity: 0.6;
+}
+
+.hm-filter-field > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+}
+
+.hm-segmented {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 2px;
+    gap: 2px;
+    background: var(--panel);
+    width: max-content;
+    max-width: 100%;
+    flex-shrink: 0;
+}
+
+.hm-segmented button {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    min-height: 27px;
+    padding: 5px 10px;
+    white-space: nowrap;
+}
+
+.hm-segmented button[aria-pressed="true"] {
+    color: var(--ink);
+    background: var(--raised);
+    box-shadow: 0 1px 3px #0002;
+}
+
+.hm-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+    padding: 3px 7px;
+    border-radius: 4px;
+    background: var(--raised);
+    font-size: 10px;
+    line-height: 1.3;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.hm-badge.good {
+    color: var(--green);
+    background: color-mix(in srgb, var(--green) 9%, var(--panel));
+}
+
+.hm-badge.accent {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+}
+
+.hm-badge.warn {
+    color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 10%, var(--panel));
+}
+
+.hm-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 10px;
+    min-height: 230px;
+    flex: 1;
+    color: var(--muted);
+    padding: 28px 20px;
+}
+
+.hm-empty > .ui-icon {
+    width: 38px;
+    height: 38px;
+    opacity: 0.65;
+    margin-bottom: 4px;
+}
+
+.hm-empty h3 {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink);
+    margin: 0;
+}
+
+.hm-empty p {
+    font-size: 12px;
+    max-width: 360px;
+    line-height: 1.7;
+    margin: 0;
+}
+
+.hm-host-list .hm-empty {
+    min-height: 100px;
+    padding: 10px;
+    font-size: 11px;
+}
+
+.hm-host-list .hm-empty h3 {
+    font-size: 12px;
+}
+
+.hm-badge.vlan-access {
+    color: #a7d5ff;
+    background: #2b6ea52e;
+    box-shadow: inset 0 0 0 1px #73b9f45c;
+}
+
+.hm-badge.vlan-trunk {
+    color: #dfb9ff;
+    background: #8a4fb72e;
+    box-shadow: inset 0 0 0 1px #c08beb66;
+}
+
+.hm-badge.vlan-untagged {
+    color: var(--muted);
+    background: var(--raised);
+    box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.hm-comparison .hm-badge {
+    margin-bottom: 8px;
+}
+
+.hm-preview > .hm-badge {
+    margin-bottom: 12px;
+}
+
+.hm-tristate {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: var(--paper);
+    white-space: nowrap;
+}
+
+.host-manager .hm-tristate button {
+    min-height: 28px;
+    padding: 4px 9px;
+    font-size: 11px;
+    background: transparent;
+    border-color: transparent;
+    color: var(--muted);
+}
+
+.hm-tristate button[data-value="enable"][aria-checked="true"] {
+    background: color-mix(in srgb, var(--green) 13%, var(--panel));
+    color: var(--green);
+    border-color: color-mix(in srgb, var(--green) 40%, var(--line));
+}
+
+.hm-tristate button[data-value="disable"][aria-checked="true"] {
+    background: var(--raised);
+    color: var(--ink);
+    border-color: var(--line);
+}
+
+.hm-tristate button[data-value="other"][aria-checked="true"] {
+    background: color-mix(in srgb, var(--warn) 10%, var(--panel));
+    color: var(--warn);
+    border-color: color-mix(in srgb, var(--warn) 35%, var(--line));
+}
+
+.hm-tristate button:disabled {
+    opacity: 0.45;
+}
+
+.hm-protocols {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.host-manager .hm-protocol {
+    font-size: 10px;
+    min-height: 25px;
+    padding: 3px 7px;
+    color: var(--muted);
+    background: transparent;
+    border-color: var(--line);
+    gap: 6px;
+}
+
+.hm-protocol::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+}
+
+.host-manager .hm-protocol[aria-checked="true"] {
+    color: var(--green);
+    border-color: color-mix(in srgb, var(--green) 40%, var(--line));
+    background: color-mix(in srgb, var(--green) 6%, var(--panel));
+}
+
+.hm-protocol[aria-checked="true"]::before {
+    background: var(--green);
+}
+
+.hm-message:empty,
+.hm-dialog-actions:empty {
+    display: none;
+}
+
+.hm-message {
+    flex: none;
+    font-size: 12px;
+    line-height: 1.6;
+    border-left: 2px solid var(--warn);
+    padding: 10px 14px;
+    background: color-mix(in srgb, var(--warn) 6%, var(--panel));
+    overflow-wrap: anywhere;
+    margin: 0;
+}
+
+.hm-loading {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 12px;
+    color: var(--muted);
+    padding: 10px 0;
+}
+
+.hm-spinner {
+    width: 14px;
+    height: 14px;
+    flex: none;
+    border: 2px solid var(--line);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: hm-spin 0.9s linear infinite;
+}
+
+@keyframes hm-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.hm-read-error {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 12px;
+    line-height: 1.6;
+    padding: 10px 12px;
+    background: color-mix(in srgb, var(--warn) 8%, var(--panel));
+    border-radius: 4px;
+    color: var(--warn);
+    margin: 5px 0;
+}
+
+.hm-table-wrap {
+    width: 100%;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    scrollbar-width: thin;
+}
+
+.hm-table-wrap table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin: 0;
+    table-layout: auto;
+}
+
+.hm-table-wrap th {
+    height: auto;
+    padding: 9px 11px;
+    text-align: left;
+    white-space: nowrap;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+}
+
+.hm-table-wrap td {
+    height: auto;
+    padding: 11px;
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
+    vertical-align: middle;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+    max-width: 360px;
+    font-size: 12px;
+    line-height: 1.5;
+    background: transparent;
+}
+
+.hm-table-wrap tr:last-child td {
+    border-bottom: 0;
+}
+
+.hm-table-wrap tbody tr:hover {
+    background: color-mix(in srgb, var(--panel) 65%, transparent);
+}
+
+.hm-table-wrap tr[data-selected="true"] {
+    background: color-mix(in srgb, var(--accent) 6%, var(--paper));
+}
+
+.hm-table-wrap td small {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+    margin-top: 3px;
+}
+
+.hm-table-wrap .hm-check {
+    margin: 0;
+}
+
+.hm-table-wrap td .hm-actions {
+    flex-wrap: nowrap;
+}
+
+.hm-table-wrap td button {
+    min-height: 28px;
+    padding: 5px 8px;
+    font-size: 11px;
+}
+
+.hm-adapter-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 175px;
+}
+
+.hm-adapter-name > div {
+    min-width: 0;
+}
+
+.hm-adapter-name strong {
+    font-weight: 500;
+    display: block;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hm-address {
+    font-family: Consolas, monospace;
+    font-size: 11px;
+}
+
+.hm-stacked {
+    display: grid;
+    gap: 5px;
+}
+
+.hm-stacked > small {
+    margin: 0;
+}
+
+.host-manager button.hm-link {
+    background: transparent;
+    border: 0;
+    text-align: left;
+    justify-content: flex-start;
+    color: var(--accent);
+    padding: 0;
+    white-space: normal;
+}
+
+.hm-selection-bar {
+    position: sticky;
+    bottom: -20px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+    border-radius: 5px;
+    background: var(--panel);
+    box-shadow: 0 -8px 20px #0002;
+    font-size: 12px;
+    margin-top: auto;
+}
+
+.hm-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 20px;
+}
+
+.hm-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+    font-size: 12px;
+    margin: 0;
+}
+
+.hm-field > span {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.hm-field small {
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+.hm-field input,
+.hm-field select,
+.hm-field textarea {
+    width: 100%;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--panel);
+    color: var(--ink);
+}
+
+.hm-field textarea {
+    resize: vertical;
+    font-family: Consolas, monospace;
+}
+
+.hm-field input:disabled,
+.hm-field textarea:disabled {
+    opacity: 0.5;
+}
+
+.hm-check {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 12px;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.hm-check input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    flex: none;
+    accent-color: var(--accent);
+}
+
+.hm-section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 0;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.hm-section:first-child {
+    padding-top: 0;
+}
+
+.hm-section:last-child {
+    border-bottom: 0;
+}
+
+.hm-section > h3 {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.hm-section > .hm-muted {
+    margin-top: -8px;
+}
+
+.hm-dialog {
+    width: min(880px, calc(100vw - 40px));
+    max-height: calc(100dvh - 64px);
+    padding: 0;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    box-shadow: 0 20px 80px #0008;
+    overflow: hidden;
+}
+
+.hm-dialog[open] {
+    display: flex;
+    flex-direction: column;
+}
+
+.hm-dialog::backdrop {
+    background: #080b10a8;
+}
+
+.hm-dialog-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    padding: 15px 22px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+    flex: none;
+}
+
+.hm-dialog-title h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.hm-entry-dialog {
+    width: min(640px, calc(100vw - 40px));
+}
+
+.hm-text-diff > span {
+    display: block;
+    white-space: pre-wrap;
+    padding: 1px 5px;
+}
+
+.hm-diff-added {
+    background: color-mix(in srgb, var(--green) 12%, transparent);
+    color: var(--green);
+}
+
+.hm-diff-removed {
+    background: color-mix(in srgb, var(--warn) 12%, transparent);
+    color: var(--warn);
+}
+
+.hm-diff-context {
+    color: var(--muted);
+}
+
+.hm-dialog-body {
+    overflow: auto;
+    min-height: 0;
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scrollbar-width: thin;
+}
+
+.hm-dialog-body > h3 {
+    font-size: 13px;
+    font-weight: 500;
+    margin: 0;
+    color: var(--muted);
+}
+
+.hm-dialog-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 13px 22px;
+    border-top: 1px solid var(--line);
+    background: var(--panel);
+    flex: none;
+}
+
+.hm-editor-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    gap: 16px;
+    min-height: 310px;
+    flex: 1;
+}
+
+.hm-editor-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+    padding: 14px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+}
+
+.hm-editor-pane h3 {
+    font-size: 12px;
+    margin: 0;
+    font-weight: 500;
+}
+
+.hm-editor-pane pre,
+.hm-code-editor {
+    font: 12px/1.8 Consolas, monospace;
+    white-space: pre;
+    tab-size: 4;
+    overflow: auto;
+    margin: 0;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 12px;
+    flex: 1;
+    min-height: 240px;
+    max-height: 500px;
+    width: 100%;
+    color: var(--ink);
+}
+
+.hm-code-editor {
+    resize: vertical;
+    outline-offset: 0;
+}
+
+.hm-editor-pane .hm-field {
+    flex: none;
+}
+
+.hm-editor-meta {
+    font-size: 10px;
+    color: var(--muted);
+}
+
+.hm-profile-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.hm-profile {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 14px;
+    background: var(--panel);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.hm-profile > div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: space-between;
+}
+
+.hm-profile strong {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.hm-profile .hm-muted {
+    font-size: 11px;
+}
+
+.hm-profile button {
+    align-self: flex-start;
+}
+
+.hm-value {
+    max-width: 500px;
+    max-height: 72px;
+    overflow: hidden;
+    font: 11px/1.6 Consolas, monospace;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    margin: 0;
+}
+
+.hm-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.hm-pagination > span {
+    margin-right: auto;
+}
+
+.hm-hosts-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    min-height: 280px;
+}
+
+.hm-hosts-editor > div:nth-child(2) {
+    min-height: 220px;
+    max-height: 500px;
+    overflow: auto;
+    scrollbar-width: thin;
+}
+
+.hm-hosts-editor .hm-code-editor {
+    min-height: 300px;
+}
+
+.hm-hosts-entry {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    border-bottom: 1px solid var(--line);
+    padding: 12px 0;
+}
+
+.hm-hosts-entry:last-child {
+    border: 0;
+}
+
+.hm-hosts-entry-copy {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    flex: 1;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.hm-hosts-entry-copy strong {
+    font: 12px Consolas, monospace;
+}
+
+.hm-hosts-entry-copy small {
+    font-size: 10px;
+    color: var(--muted);
+}
+
+.hm-hosts-entry .hm-badge {
+    font-size: 9px;
+}
+
+.hm-hosts-editor > .hm-muted {
+    font-size: 10px;
+}
+
+.hm-confirm-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+}
+
+.hm-confirm-footer > .hm-actions {
+    justify-content: flex-end;
+}
+
+.hm-summary {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.hm-preview-targets button small {
+    display: block;
+    color: var(--muted);
+    margin-top: 4px;
+    font-size: 10px;
+}
+
+.hm-path-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.hm-path-entry {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) 30px 30px 30px;
+    align-items: center;
+    gap: 5px;
+}
+
+.hm-path-entry > span {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+}
+
+.hm-path-entry > input {
+    width: 100%;
+    min-width: 0;
+    padding: 8px;
+    font: 12px Consolas, monospace;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+}
+
+.hm-preview-layout {
+    display: grid;
+    grid-template-columns: 190px minmax(0, 1fr);
+    gap: 18px;
+    min-height: 220px;
+}
+
+.hm-preview-targets {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    max-height: 380px;
+    overflow: auto;
+}
+
+.hm-preview-targets button {
+    text-align: left;
+    white-space: normal;
+    background: transparent;
+    padding: 10px;
+    border-color: transparent;
+    font-size: 11px;
+}
+
+.hm-preview-targets button[aria-pressed="true"] {
+    border-color: var(--line);
+    background: var(--panel);
+    color: var(--accent);
+}
+
+.hm-preview h3 {
+    font-size: 14px;
+    margin: 0 0 12px;
+}
+
+.hm-comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.hm-comparison h4 {
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 500;
+    margin: 0 0 8px;
+}
+
+.hm-comparison pre {
+    margin: 0;
+    background: var(--panel);
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    max-height: 340px;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font: 11px/1.7 Consolas, monospace;
+}
+
+.hm-comparison > div:last-child pre {
+    border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+}
+
+.host-manager details {
+    padding: 0;
+}
+
+.host-manager summary {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.6;
+    padding: 10px 0;
+}
+
+.host-manager details[open] > summary {
+    margin-bottom: 8px;
+}
+
+.host-manager details.hm-history-entry {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0 14px;
+    background: var(--panel);
+}
+
+.hm-history-entry > summary {
+    font-size: 12px;
+    padding: 13px 0;
+}
+
+.hm-history-entry > div {
+    padding-bottom: 14px;
+}
+
+.hm-history-entry code {
+    font-size: 10px;
+    overflow-wrap: anywhere;
+}
+
+.hm-result {
+    font-size: 11px;
+}
+
+.hm-result.succeeded {
+    color: var(--green);
+}
+
+.hm-result.failed,
+.hm-result.unknown {
+    color: var(--warn);
+}
+
+.host-manager button.hm-activity {
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    padding: 10px 16px;
+    text-align: left;
+    color: var(--accent);
+    background: var(--panel);
+    flex: none;
+}
+
+@media (max-width: 1100px) {
+    .hm-workspace {
+        grid-template-columns: 212px minmax(0, 1fr);
+    }
+
+    .hm-area {
+        padding: 18px 16px;
+    }
+
+    .hm-tabs {
+        padding: 0 8px;
+    }
+
+    .hm-tabs button {
+        padding: 12px;
+    }
+
+    .hm-editor-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hm-editor-pane pre {
+        max-height: 180px;
+        min-height: 140px;
+    }
+
+    .hm-profile-grid {
+        gap: 8px;
+    }
+
+    .hm-profile {
+        padding: 12px;
+    }
+}
+
+@media (max-width: 760px) {
+    .page.host-manager {
+        padding: 14px 10px 32px;
+    }
+
+    .hm-page-heading {
+        gap: 10px;
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .hm-page-heading h1 {
+        font-size: 19px;
+    }
+
+    .hm-page-heading p {
+        font-size: 11px;
+    }
+
+    .hm-workspace {
+        height: auto;
+        min-height: 0;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hm-sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        padding: 12px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 9px;
+    }
+
+    .hm-sidebar-heading {
+        grid-column: 1;
+    }
+
+    .hm-sidebar > input {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    .hm-selection-tools {
+        grid-column: 1;
+    }
+
+    .hm-selection-count {
+        grid-column: 2;
+        grid-row: 2;
+        padding: 4px;
+        border: 0;
+        text-align: right;
+    }
+
+    .hm-host-list {
+        grid-column: 1/-1;
+        grid-row: 3;
+        flex-direction: row;
+        padding: 0 0 6px;
+        margin: 0;
+        overflow: auto;
+    }
+
+    .hm-host-list .hm-host {
+        min-width: 206px;
+        max-width: 240px;
+        flex: 0 0 auto;
+        min-height: 54px;
+    }
+
+    .hm-area {
+        min-height: 440px;
+        padding: 16px 12px;
+    }
+
+    .hm-tabs button {
+        font-size: 11px;
+        padding: 11px 10px;
+        gap: 5px;
+    }
+
+    .hm-profile-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .hm-profile {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    .hm-profile > div {
+        gap: 10px;
+    }
+
+    .hm-grid,
+    .hm-comparison,
+    .hm-preview-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .hm-preview-targets {
+        flex-direction: row;
+        max-height: none;
+        overflow: auto;
+    }
+
+    .hm-preview-targets button {
+        flex: 0 0 auto;
+        max-width: 200px;
+    }
+
+    .hm-dialog {
+        width: calc(100vw - 20px);
+        max-height: calc(100dvh - 24px);
+    }
+
+    .hm-dialog-title,
+    .hm-dialog-body,
+    .hm-dialog-actions {
+        padding: 14px;
+    }
+
+    .hm-selection-bar {
+        bottom: -16px;
+        padding: 10px;
+    }
+
+    .hm-path-entry {
+        grid-template-columns: 18px minmax(0, 1fr) 26px 26px 26px;
+        gap: 3px;
+    }
+
+    .hm-path-entry .hm-icon-button {
+        width: 26px;
+        padding: 4px;
+    }
+
+    .hm-host-list .hm-empty {
+        min-height: 60px;
+    }
+
+    .hm-toolbar .hm-search {
+        max-width: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hm-spinner {
+        animation: none;
+    }
+}
+
+.hm-protocols > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.hm-protocol-change {
+    font-size: 10px;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.hm-protocol[data-pending="true"] {
+    border-color: #d9b777;
+    outline: 1px solid #d9b777;
+    outline-offset: 2px;
+    animation: hm-protocol-pending 1.8s ease-in-out infinite;
+}
+
+.hm-protocol-drafts {
+    position: sticky;
+    bottom: 0;
+    background: var(--panel, #191c22);
+    border-top: 1px solid var(--border);
+    z-index: 2;
+}
+
+.hm-protocol-drafts .hm-selection-bar {
+    position: static;
+}
+
+.hm-protocol-drafts details {
+    padding: 8px 14px;
+    max-height: 240px;
+    overflow: auto;
+}
+
+@keyframes hm-protocol-pending {
+    0%,
+    100% {
+        outline-color: #d9b77788;
+    }
+
+    50% {
+        outline-color: #f2ce8d;
+        box-shadow: 0 0 0 3px #d9b77722;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hm-protocol[data-pending="true"] {
+        animation: none;
+        outline-color: #d9b777;
+    }
+}

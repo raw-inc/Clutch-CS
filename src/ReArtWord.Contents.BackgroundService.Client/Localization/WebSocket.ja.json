@@ -1,0 +1,18 @@
+{
+  "node.websocket.request.name": "WebSocket要求",
+  "node.websocket.request.description": "指定NICから一接続を開き、任意の一送信・一返信を行います。暗黙に送り直しません。",
+  "node.websocket.listen.name": "WebSocket待受",
+  "node.websocket.listen.description": "同時接続数を制限して文字列・バイト列を受信します。固定値または後続ノードで返信できます。",
+  "node.websocket.reply.name": "WebSocket返信",
+  "node.websocket.reply.description": "受信した返信ハンドルを使い、元の接続・元のPeerから一回だけ返信します。",
+  "port.websocket.listen.out.value": "受信メッセージ",
+  "port.websocket.listen.out.request": "返信先",
+  "port.websocket.listen.out.messageType": "メッセージ種類",
+  "port.websocket.request.in.value": "送信メッセージ",
+  "port.websocket.request.out.value": "返信または送信結果",
+  "port.websocket.request.out.messageType": "返信メッセージ種類",
+  "port.websocket.reply.in.request": "返信先",
+  "port.websocket.reply.in.value": "返信メッセージ",
+  "setting.maxConnections": "同時接続数の上限",
+  "choice.replyMode.none": "受信のみ"
+}

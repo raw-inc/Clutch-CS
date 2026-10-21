@@ -1,0 +1,25 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@{var arguments=Contracts.Nodes.OscPorts.ArgumentTypes(Value);}
+<button type="button" disabled="@Disabled" @onclick="()=>open=true">@(arguments is not null?Ui.Format("OSC arguments ({0})",arguments.Count):Ui["OSC packet mode"])</button>
+<Modal Open="open" Title="@Ui["OSC argument types"]" Close="()=>open=false">
+    <p>@Ui["Choose arguments in message order. Each argument becomes a separate port. Received types must match; values are never silently converted."]</p>
+    @if(arguments is not null)
+    {
+        @foreach(var item in arguments.Select((value,index)=>(value,index)))
+        {
+            <div class="toolbar" @key="item.index">
+                <span>@Ui.Format("Argument {0}",item.index+1)</span>
+                <select disabled="@Disabled" aria-label="@Ui.Format("Argument {0}",item.index+1)" value="@item.value" @onchange="e=>ChangeAsync(item.index,e.Value?.ToString(),UiCancellation)">
+                    @foreach(var type in types){<option value="@type">@Ui["osc.type."+type]</option>}
+                </select>
+                <button type="button" disabled="@Disabled" @onclick="()=>RemoveAsync(item.index,UiCancellation)">@Ui["Remove"]</button>
+            </div>
+        }
+    }
+    <div class="toolbar">
+        <button type="button" disabled="@(Disabled || arguments is not null && arguments.Count>=64)" @onclick="()=>AddAsync(UiCancellation)">@Ui["Add argument"]</button>
+        <button type="button" disabled="@Disabled" @onclick="()=>ValueChanged.InvokeAsync(JsonSerializer.SerializeToElement(Array.Empty<string>()))">@Ui["No arguments"]</button>
+        <button type="button" disabled="@Disabled" @onclick="()=>ValueChanged.InvokeAsync(default)">@Ui["Use packet mode"]</button>
+    </div>
+    <p class="small">@Ui["Changing or removing an argument may invalidate existing connections. Validate the workflow after editing."]</p>
+</Modal>

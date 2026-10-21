@@ -1,0 +1,57 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@using ReArtWord.Contents.BackgroundService.Contracts.Cluster
+@using ReArtWord.Contents.BackgroundService.Contracts.Configuration
+@using ReArtWord.Contents.BackgroundService.Contracts.Nodes
+@using ReArtWord.Contents.BackgroundService.Contracts.Workflow
+<section class="card">
+    <div class="toolbar"><h2>@Ui["Shared state conflicts"]</h2><button disabled="@busy" @onclick="LoadAsync">@Ui["Review current candidates"]</button></div>
+    <p class="small muted">@Ui["Compare concurrently saved candidates. Resolution checks all reviewed revisions and does not rewrite an already-running occurrence."]</p>
+    @if(loaded)
+    {
+        <p>@Ui.Format("{0} items · observed on {1} / {2}", conflicts.Count, cluster, peer)</p>
+        <div class="table-wrap"><table><thead><tr><th>@Ui["Storage purpose / target"]</th><th>@Ui["Affected scope"]</th><th>@Ui["Candidates"]</th><th></th></tr></thead><tbody>
+        @foreach(var conflict in conflicts)
+        {
+            <tr><td>@conflict.Scope / @conflict.Key</td><td>@string.Join(", ",conflict.WorkflowIds.Concat(conflict.OperationalFields))</td><td>@conflict.CandidateVersions.Count @(conflict.ValuesHidden?Ui["Content hidden"]:"")</td><td><button disabled="@(!SameConnection||busy||!conflict.DetailAvailable)" @onclick="()=>OpenAsync(conflict)">@Ui["Compare"]</button>@if(!conflict.DetailAvailable){<small>@conflict.DetailReason</small>}</td></tr>
+        }
+        </tbody></table></div>
+        @if(cursor is not null){<button disabled="@(busy||!SameConnection)" @onclick="()=>LoadPageAsync(true)">@Ui["Show more candidates"]</button>}
+    }
+    @if(message is not null){<p class="notice">@(message?.Invoke())</p>}
+    @if(lastId is Guid id)
+    {
+        <p>@Ui["Submitted operation"] @id <button disabled="@busy" @onclick="ReadAsync">@Ui["Query original result"]</button></p>
+        @if(result is not null)
+        {
+            <p>@Ui["Saved"]: @Ui[result.Saved.Outcome.ToString()] · @Ui["Shared"]: @Ui[result.Shared.Outcome.ToString()] · @Ui["Local adoption"]: @Ui[result.Activation.Outcome.ToString()]</p>
+            <p class="small">@result.Saved.Reason @result.Shared.Reason @result.Activation.Reason</p>
+            @foreach(var issue in result.Issues){<p class="error">@issue.Code · @issue.Message</p>}
+        }
+    }
+</section>
+<Modal Open="@(selected is not null)" Title="@Ui["Compare shared state candidates"]" Close="Cancel">
+    @if(selected is { } current)
+    {
+        <p>@current.Scope / @current.Key</p>
+        <p class="small mono">@Ui["Conflict ID"] @current.Id</p>
+        @if(!current.Resolvable){<p class="notice error">@Ui["This purpose is unsupported or the candidate is invalid. Check diagnostics and stored artifacts instead of resolving here."]</p>}
+        @if(current.ValuesHidden){<p>@Ui["Secret values are not displayed or saved on this device. Select a reviewed candidate revision."]</p>}
+        @foreach(var candidate in current.Candidates)
+        {
+            <details class="card"><summary>@candidate.Version @(candidate.Value is null&&!current.ValuesHidden?Ui["· Deletion candidate"]:"")</summary>
+                @if(!current.ValuesHidden){<pre>@Preview(candidate.Value)</pre>}
+                <button disabled="@(busy||!current.Resolvable)" @onclick="()=>Choose(candidate.Version)">@Ui["Choose this candidate"]</button>
+            </details>
+        }
+        <p>@Ui["Selected candidate"]: @(version??Ui["Not selected"])</p>
+        @if(CanEdit(current,SelectedCandidate))
+        {
+            <label><input type="checkbox" checked="@edit" @onchange="ChangeEdit" disabled="@busy" />@Ui["Edit the selected candidate for comparison"]</label>
+            @if(edit){<label>@Ui["Content to edit (JSON)"]<textarea rows="12" @bind="edited" @bind:event="oninput" disabled="@busy" /></label><p class="small">@Ui["Definition and operational-setting hashes are recalculated while retaining the saved envelope. JSON null differs from deletion."]</p>}
+        }
+        <label><input type="checkbox" @bind="reviewed" disabled="@busy" />@Ui["I reviewed all displayed candidate revisions"]</label>
+        <div class="toolbar"><button disabled="@(busy||!SameConnection||!current.Resolvable||version is null||!reviewed)" @onclick="ResolveAsync">@Ui["Resolve using the reviewed candidate"]</button><button disabled="@busy" @onclick="Cancel">@Ui["Cancel without changes"]</button></div>
+        @if(message is not null){<p class="notice">@(message?.Invoke())</p>}
+        @if(!SameConnection){<p class="notice error">@Ui["The connection changed. Retrieve the list again."]</p>}
+    }
+</Modal>

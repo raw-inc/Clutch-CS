@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "target": "ES2024",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2024", "DOM", "DOM.Iterable", "WebWorker"],
+    "skipLibCheck": true
+  },
+  "include": ["src/ReArtWord.Contents.BackgroundService.Client/wwwroot/**/*.js", "src/ReArtWord.Contents.BackgroundService.Nodes/Scripting/JavaScript/*.mjs"],
+  "exclude": ["**/vendor/**", "**/bin/**", "**/obj/**"]
+}

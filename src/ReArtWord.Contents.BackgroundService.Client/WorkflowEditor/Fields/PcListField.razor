@@ -1,0 +1,13 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+<button type="button" disabled="@Disabled" @onclick="()=>OpenAsync(UiCancellation)">@Ui.Format("Select PCs ({0})",Selected.Count)</button>
+<Modal Open="open" Title="@Ui["Select execution PCs"]" Close="()=>open=false">
+    <p class="notice">@Ui[message]</p>
+    <button type="button" @onclick="()=>RefreshAsync(UiCancellation)">@Ui["Refresh choices"]</button>
+    <fieldset disabled="@(!CanEdit)">
+        @foreach(var pc in Choices())
+        {
+            <label class="pc-selection-row" @key="pc.Id"><input type="checkbox" checked="@Selected.Contains(pc.Id)" @onchange="e=>ChangeAsync(pc.Id,e.Value is true,UiCancellation)" /><span>@pc.Id <small>@Ui[pc.Status]</small></span></label>
+        }
+    </fieldset>
+    @if(!Choices().Any()){<p>@Ui["No PCs have been observed in this cluster."]</p>}
+</Modal>

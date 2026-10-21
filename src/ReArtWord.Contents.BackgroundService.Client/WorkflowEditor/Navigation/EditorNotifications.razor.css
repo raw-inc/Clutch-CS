@@ -1,0 +1,16 @@
+.editor-notice-slot {
+    display: grid;
+    width: 380px;
+    max-width: 100%;
+}
+
+.editor-notice-slot.compact {
+    grid-template-columns: minmax(0, 1fr);
+    width: fit-content;
+    min-width: 0;
+}
+
+.editor-notice-slot ::deep .editor-result-notice {
+    grid-area: 1 / 1;
+    align-self: start;
+}

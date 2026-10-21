@@ -1,0 +1,22 @@
+{
+  "This candidate is not durably saved or shared.": "この候補の永続保存・共有は成立していません。",
+  "Refresh impact comparison": "影響の比較を更新",
+  "Effective revision": "現在有効な版",
+  "Changed field": "変更項目",
+  "Effective value": "現在有効な値",
+  "Saved value": "保存候補の値",
+  "Value omitted or shortened": "値の省略・短縮あり",
+  "The comparison is limited. Review the full saved and effective definitions before applying.": "差分の取得上限に達しています。反映前に保存版と有効版の完全な定義を確認してください。",
+  "Applies to new inputs; already started inputs retain their configuration.": "新しい入力から適用し、開始済みの入力は現在の設定を維持します。",
+  "External applications, devices and physical side effects cannot be predicted from configuration alone.": "外部アプリケーション・機器・物理動作への影響は、設定だけでは確認できません。",
+  "The saved version changed. Reload the workflow before applying.": "保存版が変わりました。反映前にワークフローを読み直してください。",
+  "Impact information could not be confirmed.": "影響情報を確認できませんでした。",
+  "ActivationChange.Appearance": "表示名・配置",
+  "ActivationChange.Structure": "ノード・動作契約・配線",
+  "ActivationChange.Values": "設定・定数入力",
+  "ActivationChange.Execution": "実行先・実行方針",
+  "ActivationChange.Diagnostics": "追跡・個人情報",
+  "ActivationChange.Policy": "反映方針",
+  "Activation by change kind": "変更種類ごとの反映方針",
+  "The strongest rule applies to all changes since the effective version. Changing a rule does not bypass its previous confirmation requirement.": "現在の有効版からの全変更に、最も厳しい方針を適用します。方針そのものの変更でも、変更前に必要だった確認を省略しません。"
+}

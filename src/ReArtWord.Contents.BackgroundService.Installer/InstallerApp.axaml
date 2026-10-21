@@ -1,0 +1,75 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="ReArtWord.Contents.BackgroundService.Installer.InstallerApp"
+             RequestedThemeVariant="Dark">
+  <Application.Resources>
+    <StreamGeometry x:Key="ClutchBrandGeometry">M3 3h6v6H3z M15 15h6v6h-6z M15 3h6v6h-6z M9 6h6 M6 9v9h9</StreamGeometry>
+    <FontFamily x:Key="ContentControlThemeFontFamily">Yu Gothic UI,Meiryo,Noto Sans CJK JP,Hiragino Sans,Segoe UI,$Default</FontFamily>
+    <Color x:Key="SystemAccentColorLight1">#ADCDF7</Color>
+    <Color x:Key="SystemAccentColorDark1">#709CD8</Color>
+    <SolidColorBrush x:Key="InstallerOnAccentBrush" Color="#101824" />
+    <SolidColorBrush x:Key="InstallerHintForegroundBrush" Color="#969CA6" />
+    <SolidColorBrush x:Key="InstallerDisabledForegroundBrush" Color="#9BA4B2" />
+    <SolidColorBrush x:Key="InstallerDisabledBackgroundBrush" Color="#30343C" />
+    <StaticResource x:Key="AccentButtonForeground" ResourceKey="InstallerOnAccentBrush" />
+    <StaticResource x:Key="AccentButtonForegroundPointerOver" ResourceKey="InstallerOnAccentBrush" />
+    <StaticResource x:Key="AccentButtonForegroundPressed" ResourceKey="InstallerOnAccentBrush" />
+    <StaticResource x:Key="AccentButtonForegroundDisabled" ResourceKey="InstallerDisabledForegroundBrush" />
+    <StaticResource x:Key="AccentButtonBackgroundDisabled" ResourceKey="InstallerDisabledBackgroundBrush" />
+    <StaticResource x:Key="CheckBoxCheckGlyphForegroundChecked" ResourceKey="InstallerOnAccentBrush" />
+    <StaticResource x:Key="CheckBoxCheckGlyphForegroundCheckedPointerOver" ResourceKey="InstallerOnAccentBrush" />
+    <StaticResource x:Key="CheckBoxCheckGlyphForegroundCheckedPressed" ResourceKey="InstallerOnAccentBrush" />
+    <StaticResource x:Key="CheckBoxCheckGlyphForegroundIndeterminate" ResourceKey="InstallerOnAccentBrush" />
+    <StaticResource x:Key="CheckBoxCheckGlyphForegroundIndeterminatePointerOver" ResourceKey="InstallerOnAccentBrush" />
+    <StaticResource x:Key="CheckBoxCheckGlyphForegroundIndeterminatePressed" ResourceKey="InstallerOnAccentBrush" />
+    <StaticResource x:Key="RadioButtonCheckGlyphFill" ResourceKey="InstallerOnAccentBrush" />
+    <StaticResource x:Key="RadioButtonCheckGlyphFillPointerOver" ResourceKey="InstallerOnAccentBrush" />
+    <StaticResource x:Key="RadioButtonCheckGlyphFillPressed" ResourceKey="InstallerOnAccentBrush" />
+  </Application.Resources>
+  <Application.Styles>
+    <FluentTheme>
+      <FluentTheme.Palettes><ColorPaletteResources x:Key="Dark" Accent="#91B8EE" /></FluentTheme.Palettes>
+    </FluentTheme>
+    <Style Selector="Window">
+      <Setter Property="Background" Value="#101114" />
+      <Setter Property="Foreground" Value="#E5E7EB" />
+      <Setter Property="FontFamily" Value="{DynamicResource ContentControlThemeFontFamily}" />
+      <Setter Property="FontSize" Value="14" />
+    </Style>
+    <Style Selector="TextBlock.note">
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Foreground" Value="{DynamicResource InstallerHintForegroundBrush}" />
+      <Setter Property="LineHeight" Value="23" />
+    </Style>
+    <Style Selector="TextBlock.label">
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="StackPanel.form">
+      <Setter Property="Spacing" Value="16" />
+    </Style>
+    <Style Selector="Grid.path-picker">
+      <Setter Property="ColumnSpacing" Value="10" />
+    </Style>
+    <Style Selector="Grid.path-picker > Button">
+      <Setter Property="Padding" Value="12,6" />
+    </Style>
+    <Style Selector="Button">
+      <Setter Property="Padding" Value="18,10" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="ComboBox">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="PlaceholderForeground" Value="{DynamicResource InstallerHintForegroundBrush}" />
+    </Style>
+    <Style Selector="Button.link">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Foreground" Value="#ADCDF7" />
+      <Setter Property="Padding" Value="0,6" />
+      <Setter Property="FontWeight" Value="Normal" />
+    </Style>
+    <Style Selector="TextBox">
+      <Setter Property="PlaceholderForeground" Value="{DynamicResource InstallerHintForegroundBrush}" />
+    </Style>
+  </Application.Styles>
+</Application>

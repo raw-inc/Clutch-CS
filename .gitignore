@@ -1,0 +1,187 @@
+# Build output
+node_modules/
+.eslintcache
+[Bb]in/
+[Oo]bj/
+[Aa]rtifacts/
+[Dd]ebug/
+[Rr]elease/
+[Rr]eleases/
+# 更新リリースの契約・検証コードは配布生成物ではないため追跡します。
+!src/**/Updates/Releases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+publish/
+*.publishproj
+*.pubxml
+*.azurePubxml
+
+# Test・coverage・benchmark output
+[Tt]est[Rr]esults/
+*.trx
+*.coverage
+*.coveragexml
+coverage.xml
+[Cc]ode[Cc]overage/
+[Gg]enerated[Rr]eports/
+[Bb]enchmark[Dd]ot[Nn]et.[Aa]rtifacts/
+
+# Visual Studio／VS Code
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# JetBrains Rider／ReSharper
+.idea/
+*.sln.iml
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# NuGet／MSBuild
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+!src/**/Scripting/Packages/*.cs
+!tests/**/Scripting/Packages/*.cs
+*.nupkg
+*.snupkg
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+*.binlog
+*.rsp
+*.cache
+
+# Compiler／native build intermediates
+*.obj
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.ilk
+*.idb
+*.tlog
+*.tlb
+*.exp
+*.lib
+*.a
+*.so
+*.dylib
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+ipch/
+.native-cache/
+
+# Runtime logs・dumps・crash files
+*.log
+*.dmp
+*.dump
+*.stackdump
+mono_crash.*
+
+# Local application settings and secrets
+.env
+.env.*
+!.env.example
+appsettings.local.json
+appsettings.*.local.json
+secrets.json
+*.pfx
+*.p12
+*.snk
+*.key
+
+# Local database files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+
+# Log／SQLiteのtest fixture、受入証跡、明示sampleはruntime生成物ではないため追跡できます。
+!tests/**/fixtures/**/*.log
+!tests/**/fixtures/**/*.db
+!tests/**/fixtures/**/*.sqlite
+!tests/**/fixtures/**/*.sqlite3
+!docs/**/evidence/**/*.log
+!docs/**/evidence/**/*.db
+!docs/**/evidence/**/*.sqlite
+!docs/**/evidence/**/*.sqlite3
+!samples/**/*.log
+!samples/**/*.db
+!samples/**/*.sqlite
+!samples/**/*.sqlite3
+
+# Node／frontend tooling
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+.parcel-cache/
+.vite/
+dist/
+
+# Local tool state
+.dotnet/
+.store/
+.localhistory/
+.mcps/
+.mcp.json
+
+# restore時に取得する共通Source Quality Analyzer repository
+excludes/ReArtWord.CSharp.SourceCodeQuality.Analyzers/
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Linux／Unix desktop and network filesystem leftovers
+*~
+.directory
+.Trash-*
+.fuse_hidden*
+.nfs*
+
+# Temporary local files
+tmp_*
+*.bak
+*.orig
+*.rej
+
+# Local service data
+/data/
+.work/

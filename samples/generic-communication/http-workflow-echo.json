@@ -1,0 +1,33 @@
+{
+  "id": "http-workflow-echo",
+  "name": "Workflow HTTP response",
+  "enabled": false,
+  "nodes": [
+    {
+      "id": "receive",
+      "type": "http.listen",
+      "position": { "x": 60, "y": 80 },
+      "startOnLoad": true,
+      "target": { "scope": "One", "peers": ["REPLACE_PEER_ID"] },
+      "settings": {
+        "interfaceId": "REPLACE_INTERFACE_ID",
+        "localAddress": "192.0.2.10",
+        "localPort": 9080,
+        "path": "/echo",
+        "replyMode": "workflow",
+        "timeoutMs": 30000
+      }
+    },
+    {
+      "id": "reply",
+      "type": "http.reply",
+      "position": { "x": 460, "y": 80 },
+      "target": { "scope": "One", "sourcePeer": true },
+      "settings": {}
+    }
+  ],
+  "wires": [
+    { "fromNode": "receive", "fromPort": "value", "toNode": "reply", "toPort": "value" },
+    { "fromNode": "receive", "fromPort": "request", "toNode": "reply", "toPort": "request" }
+  ]
+}

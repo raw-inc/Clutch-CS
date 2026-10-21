@@ -1,0 +1,16 @@
+{
+  "node.control.signalWatchdog.name": "Signal Watchdog",
+  "node.control.signalWatchdog.description": "Monitor from automatic workflow startup, even before the first heartbeat. Each heartbeat resets the timeout. Silence emits one fallback signal; the next heartbeat stops listeners started by that fallback and rearms monitoring. Already accepted work can finish. Choose one monitoring PC independent of the primary sender.",
+  "port.control.signalWatchdog.in.trigger": "Heartbeat / resume",
+  "port.control.signalWatchdog.out.start": "Start fallback",
+  "watchdog.timedOut": "Heartbeat timeout: fallback active",
+  "watchdog.target": "Choose one fixed monitoring PC or the coordinator.",
+  "watchdog.unavailable": "The monitoring runtime is unavailable or the nested scope limit was reached.",
+  "watchdog.cancelled": "Signal monitoring was cancelled.",
+  "source.scope.closed": "The fallback has ended; this listener was not started.",
+  "source.scope.invalid": "The listener lifetime information is invalid.",
+  "source.scope.unconfirmed": "The fallback owner could not confirm that the listener may start.",
+  "source.scope.stopUnconfirmed": "Some fallback listeners did not confirm shutdown.",
+  "source.scope.unsupported": "Update the target Core before starting this fallback path.",
+  "source.scope.unavailable": "The execution target cannot preserve listener ownership."
+}

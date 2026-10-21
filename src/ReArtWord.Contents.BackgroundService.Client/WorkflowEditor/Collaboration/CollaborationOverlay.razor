@@ -1,0 +1,38 @@
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Diagnostics
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Documents
+@inject EditorCollaboration Collaboration
+@inject EditorDocument Model
+@inject EditorNodeActivity Activity
+<g class="collaboration-overlay" pointer-events="none">
+    @foreach(var peer in Collaboration.Presence.Where(item=>item.Presence.UiInstanceId!=Collaboration.UiInstanceId && item.ExpiresAt>DateTimeOffset.UtcNow && string.Equals(item.Presence.WorkflowId,Model.Draft.Document.Id,StringComparison.Ordinal)))
+    {
+        var presence=peer.Presence;
+        var color=Color(presence.UiInstanceId);
+        @foreach(var selected in presence.SelectedNodeIds)
+        {
+            @if(Bounds.TryGetValue(selected,out var box))
+            {
+                <rect class="collaborator-selection" x="@(box.Position.X-3)" y="@(box.Position.Y-3)" width="@(box.Size.Width+6)" height="@(box.Size.Height+6)" rx="12" fill="none" stroke="@color" stroke-width="2" stroke-dasharray="6 4"><title>@Label(presence) · @selected</title></rect>
+            }
+        }
+        @if(presence.DragPosition is {} position && Model.Draft.Document.Nodes.Any(node=>string.Equals(node.Id,presence.DragNodeId,StringComparison.Ordinal)))
+        {
+            <g><rect x="@position.X" y="@position.Y" width="320" height="64" rx="8" fill="none" stroke="@color" stroke-width="2" stroke-dasharray="6 4" />
+            <text x="@(position.X+8)" y="@(position.Y+22)" fill="#d3c4ff">@Label(presence) · @presence.DragNodeId · @Ui["Moving"]</text>
+            </g>
+        }
+        @if(presence.CursorX is double x && presence.CursorY is double y)
+        {
+            <g><path d="@FormattableString.Invariant($"M{x},{y} l0,16 l5,-5 l8,0 z")" fill="@color" />
+            <text x="@(x+16)" y="@(y+18)" fill="#d3c4ff">@Label(presence) @if(presence.Dirty){<tspan> · @Ui["Unsaved"]</tspan>}</text>
+            </g>
+        }
+    }
+    @if(HighlightRunning)
+    {
+        @foreach(var item in Bounds.Where(item=>Activity.IsRunning(Model.ClusterId,Model.Draft,item.Key)))
+        {
+            <rect class="running-outline" x="@(item.Value.Position.X-2)" y="@(item.Value.Position.Y-2)" width="@(item.Value.Size.Width+4)" height="@(item.Value.Size.Height+4)" rx="11"><title>@Ui["Running · saved workflow version"]</title></rect>
+        }
+    }
+</g>

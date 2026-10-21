@@ -1,0 +1,24 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@using ReArtWord.Contents.BackgroundService.Contracts.Configuration
+@using ReArtWord.Contents.BackgroundService.Contracts.Workflow
+<details>
+    <summary>@Ui["Select configuration scope by node, subgraph, host or host group"]</summary>
+    <button @onclick="LoadAsync">@Ui["Retrieve effective candidates"]</button>
+    <p class="notice">@(message?.Invoke())</p>
+    <WorkflowPagePicker Selected="SelectWorkflowAsync" />
+    <label>@Ui["Execution destination"]<select @bind="destination"><option value="peer">Peer</option><option value="host">Host</option><option value="group">Host Group</option></select></label>
+    @foreach(var id in Destinations)
+    {
+        <label class="check-row"><input type="checkbox" checked="@chosen.Contains((destination,id))" @onchange="e=>ChooseDestination(id,(bool)e.Value!)" />@id</label>
+    }
+    <label class="check-row"><input type="checkbox" @bind="allAssigned" />@Ui["Expand nodes assigned to these destinations"]</label>
+    @if(!allAssigned)
+    {
+        <p class="small muted">@Ui["Selected nodes and their incident wires form one subgraph. Other nodes and unrelated wires are excluded."]</p>
+        @foreach(var node in selectedWorkflow?.Effective?.Nodes??[])
+        {
+            <label class="check-row"><input type="checkbox" checked="@nodes.Contains(node.Id)" @onchange="e=>ChooseNode(node.Id,(bool)e.Value!)" />@node.Id / @node.Type</label>
+        }
+    }
+    <button @onclick="SelectAsync">@Ui["Resolve this selection to actual targets"]</button>
+</details>

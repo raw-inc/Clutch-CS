@@ -1,0 +1,11 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@if(visible && Message is not null)
+{
+    <aside class="editor-result-notice @(Compact?"compact":null) @(Persistent?"persistent":null) @(Leaving?"leaving":null)" role="status" aria-live="polite" aria-atomic="true" aria-hidden="@(Leaving?"true":null)" @onpointerenter="()=>hovered=!Compact" @onpointerleave="()=>hovered=false" @onfocusin="()=>focused=!Compact" @onfocusout="()=>focused=false">
+        @if(!Compact)
+        {
+            <div class="result-notice-heading"><strong>@Ui[Persistent?"Status notice":"Operation result"]</strong><button type="button" class="quiet icon-button" disabled="@Leaving" @onclick="DismissAsync" aria-label="@Ui["Dismiss result"]" title="@Ui["Dismiss result"]"><UiIcon Name="close" /></button></div>
+        }
+        <p>@Message()</p>
+    </aside>
+}

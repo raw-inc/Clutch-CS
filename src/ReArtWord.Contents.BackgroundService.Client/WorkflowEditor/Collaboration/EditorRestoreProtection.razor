@@ -1,0 +1,6 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Configuration
+@foreach(var item in visible)
+{
+    <p class="notice">@Ui.Format("Restore {0}: {1} and its connections are read-only.",item.OperationId,item.NodeIds is null?Ui["Entire workflow"]:string.Join(", ",item.NodeIds))</p>
+}
+@if(problem is not null){<p class="notice">@problem()</p>}

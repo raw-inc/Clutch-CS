@@ -1,0 +1,14 @@
+{
+  "Execution PC selection": "実行PCの選択結果",
+  "Selection time": "選択時刻",
+  "Candidate PCs": "候補PC",
+  "Execution targets": "実行先Peer",
+  "Observed value": "測定値",
+  "Observation time": "測定時刻",
+  "selection.pcMissing": "このPCのクラスタ参加情報を確認できません。",
+  "selection.pcUnavailable": "選択時点では、このPCで処理を開始できませんでした。",
+  "selection.observationMissing": "このPeer実体の測定値を取得できていません。",
+  "selection.observationExpired": "測定時刻が古いか不正なため、比較から除外しました。",
+  "selection.metricMissing": "比較するリソースの測定項目がありません。",
+  "selection.metricUnavailable": "比較に使用できる測定値を確認できません。"
+}

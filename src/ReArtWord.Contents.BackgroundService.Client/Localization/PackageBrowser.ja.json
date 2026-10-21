@@ -1,0 +1,21 @@
+{
+  "Search packages": "パッケージを検索",
+  "Package name or keyword": "パッケージ名・キーワード",
+  "Searching packages…": "パッケージを検索しています…",
+  "PyPI searches package names. The first search downloads the public name index.": "PyPIはパッケージ名で検索します。初回の検索では公開されている名前の索引を取得します。",
+  "No packages matched this search.": "検索条件に一致するパッケージはありません。",
+  "Loading package details…": "パッケージの詳細を取得しています…",
+  "Installed": "導入済み",
+  "Downloads": "ダウンロード数",
+  "View on package registry": "公式の配布ページを開く",
+  "Version to install": "インストールするバージョン",
+  "Up to 500 versions are shown. Use exact package entry for another published version.": "バージョンは最大500件を表示します。ほかの公開版はパッケージ名と固定バージョンを直接指定できます。",
+  "Select a package to choose its version and install it.": "検索結果からパッケージを選び、バージョンを確認してインストールしてください。",
+  "Enter an exact package and version": "パッケージ名と固定バージョンを直接指定",
+  "script.packages.searchInvalid": "配布方式と検索条件を確認してください。",
+  "script.packages.searchUnavailable": "配布元から検索結果を取得できませんでした。接続を確認して再検索してください。",
+  "script.packages.detailsUnavailable": "公開バージョンを取得できませんでした。パッケージを選び直してください。",
+  "script.packages.pypiNameSearch": "PyPIの公開名簿から、完全一致・前方一致・部分一致の順で表示しています。",
+  "script.packages.pypiCachedSearch": "PyPIの索引を更新できなかったため、前回取得した名前の索引を使用しています。",
+  "Enter: auto-indent · Tab / Shift+Tab: indent · Ctrl+Space: suggestions · Escape then Tab: move focus": "Enter：自動字下げ · Tab／Shift+Tab：字下げ · Ctrl+Space：入力補完 · Esc→Tab：次の欄へ移動"
+}

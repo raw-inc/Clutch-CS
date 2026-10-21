@@ -1,0 +1,8 @@
+{
+  "footer.transfers.title": "File transfer progress",
+  "footer.transfers.unconfirmed": "Some transfer states are unconfirmed. Last received values are shown.",
+  "footer.transfers.empty": "No transfers have been observed.",
+  "footer.transfers.progress": "Confirmed bytes transferred",
+  "footer.transfers.range": "Showing {0} of {1} transfers, active first",
+  "footer.version": "Loaded UI version"
+}

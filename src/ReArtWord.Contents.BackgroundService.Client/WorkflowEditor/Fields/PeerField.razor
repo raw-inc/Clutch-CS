@@ -1,0 +1,21 @@
+@using ReArtWord.Contents.BackgroundService.Client.Services
+@inject ConnectionState Connection
+@if(Hosts)
+{
+    var hosts=(Connection.Current?.Peers??[]).Select(peer=>peer.HostId).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
+    <select value="@Value" disabled="@Disabled" @onchange="e=>ValueChanged.InvokeAsync(e.Value?.ToString()??string.Empty)">
+        <option value="" selected="@(Value.Length==0)">@Ui["Not set"]</option>
+        @if(Value.Length!=0&&!hosts.Contains(Value,StringComparer.Ordinal)){<option value="@Value" selected>@Value — @Ui["Not in current choices"]</option>}
+        @foreach(var host in hosts){<option @key="host" value="@host" selected="@(host==Value)">@host</option>}
+    </select>
+}
+else
+{
+<input type="text" list="@listId" value="@Value" disabled="@Disabled" @oninput="e=>ValueChanged.InvokeAsync(e.Value?.ToString()??string.Empty)" />
+<datalist id="@listId">
+    @foreach(var peer in Connection.Current?.Peers ?? [])
+    {
+        <option value="@peer.PeerId">@peer.HostId · @peer.PeerId · @Ui[peer.Status.ToString()]</option>
+    }
+</datalist>
+}

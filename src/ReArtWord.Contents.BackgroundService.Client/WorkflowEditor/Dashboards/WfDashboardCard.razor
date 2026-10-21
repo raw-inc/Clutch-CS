@@ -1,0 +1,46 @@
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Diagnostics
+<div class="dashboard-card-content" aria-busy="@Busy.ToString().ToLowerInvariant()">
+    @if(State?.Problem is {} problem)
+    {
+        <p class="notice warn">@Ui[problem]</p>
+    }
+    else if(Reference.NodeType is "control.preview" or "control.progress")
+    {
+        <NodePreviewPanel Node="PreviewNode" RuntimeOnly="true" Compact="true" WorkflowId="@Reference.WorkflowId" ClusterId="@Cluster" Snapshots="Snapshots" />
+    }
+    else if(Reference.NodeType is "control.button" or "control.toggleButton")
+    {
+        var label=string.IsNullOrWhiteSpace(State?.Label)?Ui[IsToggle?"node.control.toggleButton.name":"Press button"]:State.Label;
+        @if(IsToggle)
+        {
+            <button type="button" class="dashboard-control dashboard-switch" data-state="@(Toggle==true?"on":Toggle==false?"off":"unknown")" role="@(Toggle is null?"button":"switch")" aria-checked="@Toggle?.ToString().ToLowerInvariant()" aria-label="@label" aria-description="@(Toggle is null?Ui["Waiting for source state…"]:null)" disabled="@(!CanPress)" @onclick="Pressed" title="@Ui[State?.Active==true?"Toggle the selected value and emit a signal when the state changes.":"Save and activate the source workflow before using this control."]">
+                <span class="dashboard-control-label">@label</span>
+                <span class="dashboard-switch-setting" aria-hidden="true"><span class="dashboard-switch-state">@(Toggle==true?"ON":Toggle==false?"OFF":Ui["Unknown"])</span><span class="dashboard-switch-track"><span class="dashboard-switch-thumb"></span></span></span>
+                <span class="dashboard-action-feedback" aria-hidden="true"></span>
+            </button>
+        }
+        else
+        {
+            <button type="button" class="primary dashboard-control dashboard-push" aria-label="@label" disabled="@(!CanPress)" @onclick="Pressed" title="@Ui[State?.Active==true?"Press button":"Save and activate the source workflow before using this control."]">
+                <span class="dashboard-push-icon" aria-hidden="true"><UiIcon Name="play" /></span><span class="dashboard-control-label">@label</span>
+                <span class="dashboard-action-feedback" aria-hidden="true"></span>
+            </button>
+        }
+    }
+    else if(Reference.NodeType is "control.concurrencyLimit")
+    {
+        <ConcurrencyQueuePanel Snapshot="@(Available?State?.Concurrency:null)" />
+    }
+    else if(Reference.NodeType is "value.constant")
+    {
+        @if(State?.ValueType is "array" or "object")
+        {
+            <textarea rows="3" aria-label="@(State.Title+" · "+Ui["Value"])" title="@Ui["Edit the existing type. Leave the field to save; Escape cancels."]" value="@text" @oninput="Input" @onchange="()=>CommitAsync(UiCancellation)" @onkeydown="e=>KeyAsync(e,UiCancellation)" disabled="@(!CanEdit)" maxlength="16384"></textarea>
+        }
+        else
+        {
+            <input type="text" aria-label="@((State?.Title??Reference.NodeId)+" · "+Ui["Value"])" title="@Ui["Edit the existing type. Enter or leave the field to save; Escape cancels."]" value="@text" @oninput="Input" @onchange="()=>CommitAsync(UiCancellation)" @onkeydown="e=>KeyAsync(e,UiCancellation)" disabled="@(!CanEdit)" maxlength="16384" />
+        }
+    }
+    @if(!Available){<small class="muted">@Ui["Waiting for source state…"]</small>}
+</div>

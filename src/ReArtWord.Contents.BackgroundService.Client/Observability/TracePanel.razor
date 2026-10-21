@@ -1,0 +1,45 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Observability
+
+<section class="card section">
+    <div class="toolbar"><h2>@Ui["Normal policy and temporary tracing"]</h2><button @onclick="RefreshAsync">@Ui["Get status"]</button></div>
+    <p class="small muted">@Ui["Clearing temporary tracing restores the saved normal policy. Saved and effective policies are shown separately."]</p>
+    <p class="notice" role="status">@(message?.Invoke())</p>
+    @if(state is not null)
+    {
+        <table>
+            <thead><tr><th>Workflow</th><th>@Ui["Saved normal"]</th><th>@Ui["Effective normal"]</th><th>@Ui["Current effective decision"]</th><th>@Ui["Temporary"]</th><th>@Ui["Retrieved"]</th></tr></thead>
+            <tbody>
+            @foreach(var item in state.States)
+            {
+                <tr><td>@item.WorkflowId</td><td>@Ui[(item.Saved.Enabled).ToString() ?? "Unconfirmed"]</td><td>@Ui[(item.ActiveNormal?.Enabled).ToString() ?? "Unconfirmed"]</td><td>@Ui[(item.Effective.Enabled).ToString() ?? "Unconfirmed"]</td><td>@Ui[(item.Temporary).ToString() ?? "Unconfirmed"]</td><td>@Ui[(item.Loaded).ToString() ?? "Unconfirmed"] · @item.Reason</td></tr>
+            }
+            </tbody>
+        </table>
+        <label>@Ui["Target workflow"]<select @bind="workflow">@foreach(var item in state.States){<option value="@item.WorkflowId">@item.WorkflowId</option>}</select></label>
+        <div class="toolbar">
+            <label><input type="checkbox" @bind="inputs" />@Ui["Record inputs"]</label>
+            <label><input type="checkbox" @bind="outputs" />@Ui["Record outputs"]</label>
+            <label><input type="checkbox" @bind="raw" />@Ui["Record communication bodies and frames"]</label>
+            <label>@Ui["Leading bytes (empty means full content)"]<input type="text" inputmode="numeric" @bind="rawLimit" @bind:event="oninput" /></label>
+        </div>
+        <p class="small muted">@Ui["With no content options selected, only metadata is recorded. Secrets remain redacted even in detailed tracing."]</p>
+        <button @onclick="EnableAsync" disabled="@(!state.Loaded||state.Closing.OperationId is not null)">@Ui["Start temporary tracing with this selection"]</button>
+        <button @onclick="DisableAsync" disabled="@(!state.Loaded)">@Ui["Clear temporary tracing and restore normal policy"]</button>
+        @if(state.Closing.OperationId is Guid closing)
+        {
+            <p>@Ui.Format("Restart is on hold because of stop request {0}.", closing)</p>
+            <button @onclick="ReleaseAsync">@Ui["Release only the restart hold"]</button>
+            <p class="small muted">@Ui["Releasing this hold does not cancel an accepted host-stop request."]</p>
+        }
+        else
+        {
+            <button @onclick="()=>stopOpen=true" disabled="@(!state.Loaded)">@Ui["Clear temporary tracing and request cluster stop"]</button>
+        }
+        <JsonDetails Value="state" Title="@Ui["Trace scope and fixed targets"]" />
+    }
+</section>
+<Modal Open="stopOpen" Title="@Ui["Clear tracing and request cluster stop"]" Close="()=>stopOpen=false">
+    <p>@Ui["Request stop for the displayed peer instances. Acceptance does not confirm every process has exited."]</p>
+    <JsonDetails Value="state?.Targets" Title="@Ui["Instances fixed at the start"]" />
+    <button @onclick="StopAsync">@Ui["Request stop for these instances"]</button>
+</Modal>

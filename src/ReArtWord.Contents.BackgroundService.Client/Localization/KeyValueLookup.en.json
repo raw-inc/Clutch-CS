@@ -1,0 +1,12 @@
+{
+  "node.data.keyValue.get.name": "Get value by key",
+  "node.data.keyValue.get.description": "Look up a case-sensitive key in an array of property maps or key/value pairs. Return the default only when the key is absent; omitted defaults return null. Dictionaries can also be supplied directly.",
+  "port.data.keyValue.get.in.value": "Key-Value array / dictionary",
+  "port.data.keyValue.get.in.key": "Key",
+  "port.data.keyValue.get.in.defaultValue": "Default value (key not found)",
+  "port.data.keyValue.get.out.value": "Selected value",
+  "choice.data.keyValue.get.format.auto": "Automatic (per entry)",
+  "choice.data.keyValue.get.format.objects": "Object array (Key and value nodes)",
+  "choice.data.keyValue.get.format.pairs": "Key/value pair array",
+  "Automatic treats an object containing exactly key/value or Key/Value as a pair; all other objects are property maps. Object array accepts arrays made by Key and value nodes. Pair array requires string keys. Duplicate matching keys fail; null values are returned as null, not replaced by the default.": "Automatic treats an object containing exactly key/value or Key/Value as a pair; all other objects are property maps. Object array accepts arrays made by Key and value nodes. Pair array requires string keys. Duplicate matching keys fail; null values are returned as null, not replaced by the default."
+}

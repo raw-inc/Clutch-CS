@@ -1,0 +1,114 @@
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Collaboration
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Diagnostics
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Fields
+@using ReArtWord.Contents.BackgroundService.Contracts.Nodes
+@using ReArtWord.Contents.BackgroundService.Contracts.Workflow
+@inject EditorPresentationCache Presentation
+@inject SettingChoiceProvider Choices
+@inject EditorConcurrencyQueues ConcurrencyQueues
+@{regions.Update(Model.Draft.Document);var nodeIssues=Diagnostics.Issues(Model.ClusterId,Model.Draft.Document.Id).ToLookup(issue=>issue.NodeId,StringComparer.Ordinal);var running=Diagnostics.Values.RunningNodes(Model.ClusterId,Model.Draft);var width=CanvasWidth;var height=CanvasHeight;var bounds=new Dictionary<string,(NodePosition Position,NodeSize Size)>();}
+<svg @ref="canvas" class="graph" data-can-copy="@(Model.Selection.Nodes.Count>0?"true":"false")" data-realtime-pointer="@(View.RealtimePointer?"true":"false")" data-connection-version="@connectionVersion" data-node-dragging="@(dragging is not null ? "true" : "false")" width="@(width*Zoom)" height="@(height*Zoom)" viewBox="@FormattableString.Invariant($"0 0 {width} {height}")" @onpointerup="EndAsync" @onpointercancel="CancelDragAsync" @onkeydown="CanvasKeyAsync">
+    @foreach(var wire in Model.Draft.Document.Wires.Select((value,index)=>(value,index)))
+    {
+        var from=Endpoint(wire.value.FromNode,wire.value.FromPort,true);var to=Endpoint(wire.value.ToNode,wire.value.ToPort,false);
+        var port=inference.Wire(wire.value);
+        if(from is not null&&to is not null)
+        {
+            var path=WirePath(wire.value,from,to);var description=WireDescription(wire.value,port);
+            <g class="wire-group kind-@port.Key @(Model.SelectedWire==wire.index?"selected":null) @(View.AnimateConnections?"animate":null)" data-wire-index="@wire.index" data-kind="@port.Key" data-from-node="@wire.value.FromNode" data-from-port="@wire.value.FromPort" data-to-node="@wire.value.ToNode" data-to-port="@wire.value.ToPort">
+                <title>@description</title>
+                <path class="wire kind-@port.Key @(Model.SelectedWire==wire.index?"selected":null)" d="@path" pointer-events="none" />
+                <path role="button" tabindex="0" aria-label="@description" class="wire-hit" d="@path" fill="none" stroke="transparent" stroke-width="16" @onclick="()=>SelectWireAsync(wire.index)" @onkeydown="e=>WireKeyAsync(wire.index,e)" />
+            </g>
+        }
+    }
+    @foreach(var node in Model.Draft.Document.Nodes)
+    {
+        var position=Position(node);var descriptor=inference.EditorDescriptor(node.Id);var inputs=Ports(descriptor,false,node.Id);var outputs=Ports(descriptor,true);
+        bounds[node.Id]=(position,new(CardWidth(node),NodeHeight(node,descriptor,inputs.Count,outputs.Count)));
+        var nodeError=string.Join("\n",nodeIssues[node.Id].Select(issue=>Ui[issue.Message]));
+        <g @key="node.Id" data-node-id="@node.Id" data-selected-scope="@regions.SelectedScope(node.Id)" data-scope-membership="@regions.Membership(node.Id)" data-running="@(running.Contains(node.Id)?"true":null)" @onpointerdown="e=>BeginAsync(node,e)" role="button" tabindex="0" aria-label="@(Ui.NodeName(node,descriptor)+" "+node.Id)" @onkeydown="e=>NodeKeyAsync(node.Id,e)" transform="@FormattableString.Invariant($"translate({position.X} {position.Y})")" class="graph-node @(Model.Selection.Nodes.Contains(node.Id)?"selected":null) @(nodeError.Length>0?"has-error":null)" aria-invalid="@(nodeError.Length>0?"true":"false")" data-category="@GraphPresentation.CategoryKey(descriptor?.Category??string.Empty)">
+            @if(nodeError.Length>0){<title>@nodeError</title>}
+            <rect class="node-box" width="@CardWidth(node)" height="@(NodeHeight(node,descriptor,inputs.Count,outputs.Count))" rx="10" />
+            <rect class="category-strip" x="1" y="1" width="@(CardWidth(node)-2)" height="4" rx="3" pointer-events="none" />
+            <NodeNameLabel Node="node" Descriptor="descriptor" Width="@(CardWidth(node)-24)" />
+<text x="12" y="45" class="node-type">@Short(string.IsNullOrWhiteSpace(node.LogicalName)?node.Id:Ui.NodeName(descriptor),24)<title>@node.Id</title></text>
+            <text x="@(CardWidth(node)-12)" y="45" text-anchor="end" class="node-kind">@Ui[descriptor is null?"?":descriptor.IsValueOperation?"VALUE":descriptor.Kind==ENodeKind.Source?"SOURCE":"ACTION"]<title>@Ui[GraphPresentation.CategoryName(descriptor?.Category??string.Empty)]</title></text>
+            @for(var index=0;index<inputs.Count;index++)
+            {
+                var name=inputs[index];var port=InputPresentation(inference,node.Id,name);var y=68+index*GraphPresentation.PortSpacing(View);
+                <g class="port-group kind-@port.Key" @onpointerdown:stopPropagation="true" data-wire-node="@node.Id" data-wire-port="@name" data-wire-output="false" @onclick="()=>Input(node.Id,name)">
+                    <title>@(node.Id+"."+PortName(node.Id,name,false)+" ← "+port.DisplayLabel(Ui)+" · "+Ui[port.Description])</title>
+                    <circle role="button" tabindex="0" aria-label="@Ui.Format("{0} input {1} ({2})",node.Id,PortName(node.Id,name,false),port.DisplayLabel(Ui))" @onkeydown:stopPropagation="true" @onkeydown="e=>InputKey(node.Id,name,e)" cx="0" cy="@y" r="7" class="port @(EndpointHighlighted(node.Id,name,false)?"endpoint-highlight":null)" />
+                    <text x="12" y="@(y+4)">@Short(PortName(node.Id,name,false),16)</text>
+                    @if(View.ShowPortTypes){<g><text class="port-type" x="12" y="@(y+16)">@Short(port.DisplayLabel(Ui),18)</text></g>}
+                </g>
+            }
+            @for(var index=0;index<outputs.Count;index++)
+            {
+                var name=outputs[index];var port=inference.Port(node.Id,name,true);var y=68+index*GraphPresentation.PortSpacing(View);
+                <g class="port-group kind-@port.Key" @onpointerdown:stopPropagation="true" data-wire-node="@node.Id" data-wire-port="@name" data-wire-output="true" @onclick="()=>Output(node.Id,name)">
+                    <title>@(node.Id+"."+PortName(node.Id,name,true)+" → "+port.DisplayLabel(Ui)+" · "+Ui[port.Description])</title>
+                    <circle role="button" tabindex="0" aria-label="@Ui.Format("{0} output {1} ({2})",node.Id,PortName(node.Id,name,true),port.DisplayLabel(Ui))" @onkeydown:stopPropagation="true" @onkeydown="e=>OutputKey(node.Id,name,e)" cx="@CardWidth(node)" cy="@y" r="7" class="port @(output is {} pending&&pending.Node==node.Id&&pending.Port==name?"pending":null) @(EndpointHighlighted(node.Id,name,true)?"endpoint-highlight":null)" />
+                    <text x="@(CardWidth(node)-12)" y="@(y+4)" text-anchor="end">@Short(PortName(node.Id,name,true),16)@if(string.Equals(name,CompletionPorts.Success,StringComparison.Ordinal)){<tspan>: @Diagnostics.Values.Display(Model.ClusterId,Model.Draft,node.Id)</tspan>}</text>
+                    @if(View.ShowPortTypes){<g><text class="port-type" x="@(CardWidth(node)-12)" y="@(y+16)" text-anchor="end">@Short(port.DisplayLabel(Ui),18)</text></g>}
+                </g>
+            }
+            @if(node.Type is "control.button" or "control.toggleButton")
+            {
+                <foreignObject x="12" y="@(90+Math.Max(inputs.Count,outputs.Count)*GraphPresentation.PortSpacing(View))" width="266" height="44">
+                    <div xmlns="http://www.w3.org/1999/xhtml" @onpointerdown:stopPropagation="true" @onpointerup:stopPropagation="true" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
+                        <ButtonNodeControl Node="node" Pressed="ButtonPressed" ToggleState="@ToggleStates.GetValueOrDefault(node.Id)" />
+                    </div>
+                </foreignObject>
+            }
+            @if(ShowDetails && node.Type is "value.code" or "control.preview" or "control.progress")
+            {
+                var top=90+Math.Max(inputs.Count,outputs.Count)*GraphPresentation.PortSpacing(View);
+                <foreignObject x="12" y="@top" width="@(CardWidth(node)-24)" height="@(NodeHeight(node,descriptor,inputs.Count,outputs.Count)-top-20)">
+                    <div xmlns="http://www.w3.org/1999/xhtml" class="code-block-container" @onpointerdown:stopPropagation="true" @onpointerup:stopPropagation="true" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true" @onfocusin="()=>SelectNodeAsync(node.Id)">
+                        @if(node.Type is "control.preview" or "control.progress"){@if(SubworkflowInterface.IsSubworkflow(Model.Draft.Document)){<small>@Ui["Open a placed recipe to see live previews."]</small>}else{<NodePreviewPanel @key="node.Id" Node="node" />}}else{<fieldset disabled="@Model.Locks.Node(Model.Draft.Document.Id,node.Id)"><CodeBlockFields NodeId="@node.Id" /></fieldset>}
+                    </div>
+                </foreignObject>
+                <rect class="node-resize-handle" role="button" tabindex="0" aria-label="@Ui[node.Type is "control.preview" or "control.progress"?"Resize preview":"Resize code block"]" x="@(CardWidth(node)-18)" y="@(NodeHeight(node,descriptor,inputs.Count,outputs.Count)-18)" width="16" height="16" rx="3" @onpointerdown="e=>BeginResizeAsync(node,e)" @onpointerdown:stopPropagation="true" @onkeydown="e=>ResizeKey(node,e)" @onkeydown:stopPropagation="true" />
+            }
+            else if(ShowDetails && descriptor is not null && (GraphPresentation.SettingsCount(descriptor)>0 || descriptor.Inputs.Count>0))
+            {
+                var top=90+Math.Max(inputs.Count,outputs.Count)*GraphPresentation.PortSpacing(View)+(node.Type is "control.button" or "control.toggleButton"?56:0);
+                @foreach(var setting in SettingProperties(descriptor).Select((property,index)=>(property,index)))
+                {
+                    var settingPort=SettingPorts.Name(setting.property.Name);var settingInfo=inference.Port(node.Id,settingPort,false);var settingY=SettingY(inputs.Count,outputs.Count,setting.index);
+                    @if(GraphSettingPorts.Visible(Model.Draft.Document,node.Id,descriptor,settingPort))
+                    {
+                    <g class="port-group kind-@settingInfo.Key" @onpointerdown:stopPropagation="true" data-wire-node="@node.Id" data-wire-port="@settingPort" data-wire-output="false" @onclick="()=>Input(node.Id,settingPort)">
+                        <title>@Ui.SettingName(setting.property.Name) · @settingInfo.DisplayLabel(Ui) · @Ui["Setting input"]</title>
+                        <circle role="button" tabindex="0" aria-label="@Ui.Format("{0} setting {1}",node.Id,Ui.SettingName(setting.property.Name))" @onkeydown:stopPropagation="true" @onkeydown="e=>InputKey(node.Id,settingPort,e)" cx="0" cy="@settingY" r="7" class="port @(EndpointHighlighted(node.Id,settingPort,false)?"endpoint-highlight":null)" />
+                    </g>
+                    }
+                }
+                <foreignObject x="12" y="@top" width="266" height="@(CardHeight(descriptor,inputs.Count,outputs.Count)-top)">
+                    <div xmlns="http://www.w3.org/1999/xhtml" class="node-card-fields" @onpointerdown:stopPropagation="true" @onpointerup:stopPropagation="true" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true" @onfocusin="()=>SelectNodeAsync(node.Id)">
+                        <NodeInlineFields Node="node" Descriptor="descriptor" ReadOnly="@Model.Locks.Node(Model.Draft.Document.Id,node.Id)" ChoicesVersion="@choicesVersion" />
+                    </div>
+                </foreignObject>
+            }
+            @if(ShowDetails && ConcurrencyNodeTypes.IsStart(node.Type))
+            {
+                <foreignObject x="12" y="@CardHeight(descriptor,inputs.Count,outputs.Count)" width="266" height="210">
+                    <div xmlns="http://www.w3.org/1999/xhtml" @onpointerdown:stopPropagation="true" @onpointerup:stopPropagation="true" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
+                        <ConcurrencyQueuePanel Snapshot="@ConcurrencyQueues.Find(Model.ClusterId,Model.Draft.Document.Id,node.Id)" Compact="true" />
+                    </div>
+                </foreignObject>
+            }
+        </g>
+    }
+    <CollaborationOverlay Bounds="bounds" HighlightRunning="View.HighlightRunning" />
+</svg>
+@if(output is {} pendingOutput){<div class="graph-connection-pending" role="status">@pendingOutput.Node.@PortName(pendingOutput.Node,pendingOutput.Port,true) → <button @onclick="CancelConnection">@Ui["Cancel"]</button><span class="small">Esc</span></div>}
+@if(Model.SelectedWire is int selected && 0<=selected && selected<Model.Draft.Document.Wires.Count)
+{
+    var wire=Model.Draft.Document.Wires[selected];var node=Model.Draft.Document.Nodes.FirstOrDefault(item=>item.Id==wire.FromNode);
+    <div class="graph-wire-details">@WireDescription(wire,inference.Wire(wire))</div>
+}
+@if(problem is not null){<p class="notice error">@Ui[problem]</p>}
+<GraphContextMenu @ref="contextMenu" Changed="ContextChangedAsync" ExtractRequested="ExtractRequested" />

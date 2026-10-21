@@ -1,0 +1,22 @@
+{
+  "script-package": "Script package",
+  "script.packages.phase.installing": "Installing",
+  "script.packages.phase.completed": "Completed",
+  "script.packages.phase.failed": "Failed",
+  "script.packages.phase.rejected": "Not executed",
+  "script.packages.phase.interrupted": "Interrupted / unknown",
+  "script.packages.busy": "Another installation is running on this peer. Refresh after it completes.",
+  "script.packages.configurationChanged": "The current configuration changed. Refresh before changing packages.",
+  "script.packages.operationMismatch": "The operation ID was previously used with a different request.",
+  "script.packages.pythonPathRequired": "Specify the absolute path to Python on this peer.",
+  "script.packages.packageLimit": "Each package source supports up to 32 direct dependencies.",
+  "script.packages.installFailed": "Installation failed. Check the executable, network, free disk space and permissions.",
+  "script.packages.interrupted": "Installation was interrupted. Query the current configuration and original operation. No automatic retry was made.",
+  "script.packages.nugetRestoreFailed": "NuGet restore failed. Check the package name, version, compatibility and connectivity.",
+  "script.packages.venvFailed": "The Python environment could not be created. Check venv, ensurepip and write permissions.",
+  "script.packages.pipInstallFailed": "pip installation failed. Check the package name, version, Python compatibility, connectivity and required build tools.",
+  "script.packages.pipCheckFailed": "Dependency validation failed. The current configuration was retained.",
+  "script.packages.dependencyLimit": "The resolved dependency count exceeds 512.",
+  "script.packages.dependencyLimitOrMissing": "A requested package is missing or the dependency count exceeds 512.",
+  "script.packages.assetUnavailable": "A restored package asset is unavailable."
+}

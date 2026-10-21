@@ -1,0 +1,10 @@
+<div class="language-selector" @ref="root">
+    <button type="button" class="quiet language-button" title="@Ui["Language"]" aria-label="@(Ui["Language"] + ": " + LanguageName)" aria-haspopup="menu" aria-controls="@menuId" aria-expanded="false" data-language-trigger>
+        <span class="language-code" aria-hidden="true">@(Ui.Language == "ja" ? "JP" : "EN")</span><span class="language-chevron" aria-hidden="true"></span>
+    </button>
+    <div id="@menuId" class="language-menu" role="menu" aria-label="@Ui["Language"]" hidden>
+        <button type="button" role="menuitemradio" aria-checked="@(Ui.Language == "en" ? "true" : "false")" lang="en" @onclick="@(()=>ChangeLanguageAsync("en"))"><span class="language-code">EN</span><span>English</span><span class="language-check" aria-hidden="true">✓</span></button>
+        <button type="button" role="menuitemradio" aria-checked="@(Ui.Language == "ja" ? "true" : "false")" lang="ja" @onclick="@(()=>ChangeLanguageAsync("ja"))"><span class="language-code">JP</span><span>日本語</span><span class="language-check" aria-hidden="true">✓</span></button>
+    </div>
+    @if(Ui.PreferenceProblem is not null){<p class="language-problem notice error" role="status">@Ui[Ui.PreferenceProblem]</p>}
+</div>

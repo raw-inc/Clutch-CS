@@ -1,0 +1,59 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@using ReArtWord.Contents.BackgroundService.Contracts.Configuration.Editing
+@using ReArtWord.Contents.BackgroundService.Contracts.Configuration.Workflows
+@using ReArtWord.Contents.BackgroundService.Contracts.Configuration
+@using ReArtWord.Contents.BackgroundService.Contracts.Execution
+@using ReArtWord.Contents.BackgroundService.Contracts.Workflow
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor
+<section class="card">
+    <div class="toolbar"><h2>@Ui["Local changes while detached"]</h2><button disabled="@busy" @onclick="()=>LoadAsync(false)">@Ui["Check unshared and pending changes"]</button></div>
+    <p class="small muted">@Ui["Local storage is separate from cluster sharing. After rejoining, non-conflicting changes are merged; conflicting changes must be compared and selected."]</p>
+    @if(loaded)
+    {
+        <p>@Ui.Format("{0} items · {1} / {2}", entries.Count, cluster, peer)</p>
+        <div class="table-wrap"><table><thead><tr><th>Workflow</th><th>@Ui["Local revision"]</th><th>@Ui["Integration status"]</th><th></th></tr></thead><tbody>
+        @foreach(var entry in entries)
+        {
+            <tr><td>@entry.Name</td><td class="mono small">@entry.LocalRevision</td><td>@Ui["Conflict"] @entry.ConflictCount · @(entry.IntegrationOutcome?.ToString()??Ui["Not integrated"])</td><td><button disabled="@(busy||!SameConnection)" @onclick="()=>OpenAsync(entry)">@Ui["Compare"]</button></td></tr>
+        }
+        </tbody></table></div>
+        @if(cursor is not null){<button disabled="@(busy||!SameConnection)" @onclick="()=>LoadAsync(true)">@Ui["Next page"]</button>}
+    }
+    @if(message is not null){<p class="notice">@(message?.Invoke())</p>}
+    @if(operation is Guid id){<p>@Ui["Original operation"] @id <button disabled="@busy" @onclick="ReadOperationAsync">@Ui["Query result again"]</button></p>}
+    @if(saved is not null){<p>@Ui["Saved"] @Ui[saved.Saved.Outcome.ToString()] · @Ui["Shared"] @Ui[saved.Shared.Outcome.ToString()] · snapshot @Ui[saved.Snapshot.Outcome.ToString()] · @Ui["Locally applied"] @Ui[saved.Activation.Outcome.ToString()]</p><p class="small">@saved.Shared.Reason @saved.Activation.Reason @(saved.LocalOnly?Ui["Local operation, not shared"]:"")</p>}
+</section>
+<Modal Open="@(state is not null)" Title="@Ui["Compare local changes with the shared revision after rejoining"]" Close="Cancel">
+    @if(state is { } current)
+    {
+        <p>@current.WorkflowId · @Ui["Local revision"] @current.Local.Revision</p>
+        <details><summary>@Ui["Base shared revision"] · @(current.Base?.Revision??Ui["Not created"])</summary><pre>@Preview(current.Base?.Definition)</pre></details>
+        <details><summary>@Ui["Current shared revision"] · @(current.Current?.Revision??Ui["Deleted or not created"])</summary><pre>@Preview(current.Current?.Definition)</pre></details>
+        <details><summary>@Ui["This peer’s local revision"]</summary><pre>@Preview(current.Local.Definition)</pre></details>
+        @foreach(var conflict in current.Conflicts)
+        {
+            <section class="card"><h3>@conflict.Path</h3>
+                <p>@Ui["Base value"]</p><pre>@ValuePreview(conflict.Base,conflict.BaseExists)</pre>
+                <p>@Ui["Current shared value"]</p><pre>@ValuePreview(conflict.Current,conflict.CurrentExists)</pre>
+                <p>@Ui["Locally edited value"]</p><pre>@ValuePreview(conflict.Edited,conflict.EditedExists)</pre>
+                <label>@Ui["Value to adopt"]<select disabled="@(busy||current.IntegrationOperationId is not null&&!current.IntegrationRetryAllowed)" value="@(choices.GetValueOrDefault(conflict.Path)?.ToString()??string.Empty)" @onchange="e=>Choose(conflict.Path,e)"><option value="">@Ui["Not selected"]</option><option value="@EEditResolution.KeepCurrent">@Ui["Current shared value"]</option><option value="@EEditResolution.UseEdited">@Ui["Locally edited value"]</option></select></label>
+            </section>
+        }
+        <details><summary>@Ui["Integration candidate under review"]</summary><pre>@Preview(candidate?.Candidate)</pre><p>@(candidate?.Conflicts.Count>0?Ui["Some conflicts have not been selected"]:Ui["This is a comparison candidate. Nothing has been saved or shared yet."])</p></details>
+        @if(current.IntegrationOperationId is Guid pending&&!current.IntegrationRetryAllowed)
+        {
+            <p class="notice">@Ui.Format("Integration {0} is already fixed. Query the original result; do not send a new integration or discard from this page.", pending)</p>
+            <button disabled="@busy" @onclick="ReadOperationAsync">@Ui["Query the original integration result"]</button>
+        }
+        else
+        {
+            <label>@Ui["Apply after integration is saved"]<select @bind="activation" disabled="@busy"><option value="@EActivationPolicy.Auto">@Ui["Apply automatically"]</option><option value="@EActivationPolicy.Explicit">@Ui["Save only"]</option><option value="@EActivationPolicy.ConfirmImpact">@Ui["After impact confirmation"]</option></select></label>
+            <div class="toolbar"><button disabled="@(busy||!SameConnection||candidate?.Conflicts.Count!=0||candidate?.Candidate is null)" @onclick="()=>ResolveAsync(false)">@Ui["Integrate this candidate"]</button><button disabled="@(busy||!SameConnection)" @onclick="()=>discardOpen=true">@Ui["Discard local changes…"]</button></div>
+        }
+        @if(message is not null){<p class="notice">@(message?.Invoke())</p>}
+    }
+</Modal>
+<Modal Open="discardOpen" Title="@Ui["Discard local changes without sharing"]" Close="()=>discardOpen=false">
+    <p>@Ui.Format("Discard only the reviewed local revision of {0}. This does not undo file changes, process actions or external outputs that already occurred.", state?.WorkflowId)</p>
+    <button class="danger" disabled="@busy" @onclick="()=>ResolveAsync(true)">@Ui["Confirm discard of the local revision"]</button>
+</Modal>

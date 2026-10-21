@@ -1,0 +1,63 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Values
+@inject EditorPresentationCache Presentation
+<section class="node-preview" aria-busy="@((busy||textRead.Loading).ToString().ToLowerInvariant())">
+    @if(Node.Type=="control.preview")
+    {
+        <div class="preview-view" role="group" aria-label="@Ui["preview.view.label"]">
+            <button type="button" class="@(historyVisible?null:"active")" aria-pressed="@(!historyVisible?"true":"false")" @onclick="()=>SetHistoryAsync(false)">@Ui["preview.view.latest"]</button>
+            <button type="button" class="@(historyVisible?"active":null)" aria-pressed="@(historyVisible?"true":"false")" @onclick="()=>SetHistoryAsync(true)">@Ui["preview.view.history"]</button>
+        </div>
+    }
+    @if(!HasScopedProgress&&(options.Count>1||selectedPeer.Length!=0))
+    {
+        <label>@Ui["Execution peer"]<select value="@selectedPeer" @onchange="SelectPeerAsync"><option value="" selected="@(selectedPeer.Length==0)">@Ui[historyVisible?"preview.history.allPeers":"Latest preview"]</option>@if(selectedPeer.Length!=0&&!options.Any(item=>item.PeerId==selectedPeer)){<option value="@selectedPeer" selected>@selectedPeer — @Ui["Not in current choices"]</option>}@foreach(var item in options){<option value="@item.PeerId" selected="@(item.PeerId==selectedPeer)">@item.PeerId</option>}</select></label>
+    }
+    @if(HasScopedProgress)
+    {
+        var progressSessions=ProgressSessions();
+        <div class="progress-stack" aria-label="@Ui["progress.activeExecutions"]">
+            @foreach(var item in progressSessions)
+            {
+                var session=item.Session!;
+                <div class="progress-session" @key="(session.RunId,session.OwnerInstanceId,session.ScopeId)">
+                    @if(progressSessions.Length>1||!Compact){<small>@FormatTime(session.StartedAt) · @item.PeerId · @session.RunId.ToString("N")[..8]@if(session.ScopeId!=Guid.Empty){<span> / @session.ScopeId.ToString("N")[..8]</span>}</small>}
+                    @if(item.Problem is {} issue){<p class="small error">@Ui[issue]</p>}else{<ProgressDisplay Value="@item.Progress" />}
+                </div>
+            }
+            @if(DisplaySnapshot is {Session:null} legacy){<div class="progress-session"><small>@legacy.PeerId · @FormatTime(legacy.CapturedAt)</small><ProgressDisplay Value="@ReadProgress()" /></div>}
+        </div>
+    }
+    else if(historyVisible)
+    {
+        <NodePreviewHistory ClusterId="@PreviewCluster" Snapshots="@(options.Where(item=>selectedPeer.Length==0||item.PeerId==selectedPeer).ToArray())" />
+    }
+    else if(DisplaySnapshot is {} snapshot)
+    {
+        @if(!Compact){<small>@snapshot.PeerId · @FormatTime(snapshot.CapturedAt)</small><small title="@snapshot.Revision">@Ui["Captured revision"]: @snapshot.Revision[..Math.Min(12,snapshot.Revision.Length)] · @snapshot.Length.ToString("N0",CultureInfo.CurrentCulture) B</small>}
+        @if(snapshot.Problem is {} captureProblem){<p class="notice warn">@Ui[captureProblem]</p>}
+        else if(snapshot.MediaType=="text/plain")
+        {
+            @if(Node.Type=="control.progress"){<ProgressDisplay Value="@ReadProgress()" />}else{<pre class="preview-text">@textRead.Text</pre>}
+            @if(snapshot.Truncated){<small>@Ui["Preview text was truncated"]</small>}
+        }
+        else
+        {
+            <button type="button" disabled="@busy" @onclick="LoadMediaAsync">@Ui[busy?"Loading preview":"Load latest media"]</button>
+            <small>@snapshot.MediaType</small>
+        }
+    }
+    else if(!RuntimeOnly)
+    {
+        var staticPreview=Presentation.Preview(Model.Draft);
+        var value=staticPreview.Input(Node,"value");
+        @if(Node.Type=="control.progress"){<small>@Ui["Static preview · not executed"]</small><ProgressDisplay Value="@ProgressValue.Read(staticPreview.Input(Node,"total"),staticPreview.Input(Node,"current"))" />}
+        else if(value is not null){<small>@Ui["Static preview · not executed"]</small><pre class="preview-text">@(value.GetString()??value.Json.GetRawText())</pre>}
+        else{<p class="small">@Ui["Run the workflow to capture a preview"]</p>}
+    }
+    else{<p class="small">@Ui[Node.Type=="control.progress"?"progress.noActiveExecutions":"Run the workflow to capture a preview"]</p>}
+    @if(Previews.Unavailable){<small class="error">@Ui["Some preview peers are unavailable"]</small>}
+    @if(problem is not null){<p class="small error">@Ui[problem]</p>}
+    @if(textRead.Problem is not null){<p class="small error">@Ui[textRead.Problem] <button type="button" @onclick="()=>OnParametersSetAsync()">@Ui["preview.retry"]</button></p>}
+    @if(loaded is {} shown){<small>@Ui["Loaded media"]: @shown.PeerId · @FormatTime(shown.CapturedAt) <button type="button" @onclick="ClearMediaAsync">@Ui["Close"]</button></small>}
+    <div @ref="mediaRoot" class="preview-media"><div data-preview-content></div><small class="error" data-preview-error></small></div>
+</section>

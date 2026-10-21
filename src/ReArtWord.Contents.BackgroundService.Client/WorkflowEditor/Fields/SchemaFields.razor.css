@@ -1,0 +1,11 @@
+.type-preview {
+    max-height: 200px;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.node-inline-empty {
+    height: 24px;
+    display: block;
+}

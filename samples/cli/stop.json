@@ -1,0 +1,7 @@
+{
+  "workflowId": "your-workflow",
+  "nodeId": "your-source",
+  "cancel": false,
+  "sourceId": "00000000-0000-0000-0000-000000000000",
+  "peerInstanceId": "00000000-0000-0000-0000-000000000000"
+}

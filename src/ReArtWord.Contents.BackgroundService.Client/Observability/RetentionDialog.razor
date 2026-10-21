@@ -1,0 +1,44 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Observability
+@using ReArtWord.Contents.BackgroundService.Contracts.Management
+<button @onclick="OpenAsync" disabled="@Disabled">@Ui["Retention settings"]</button>
+<span>@(message?.Invoke())</span>
+<Modal Open="open" Title="@Ui["Log and history retention"]" Close="()=>open=false">
+<p>@Ui["Logs and completed history are compressed after the raw period and deleted after the total period. Current state, unresolved operations and explicitly permanent snapshots are protected."]</p>
+<label>@Ui["Common raw retention days"]<input type="text" inputmode="numeric" @bind="defaultRaw" @bind:event="oninput" /></label>
+<label>@Ui["Common total retention days"]<input type="text" inputmode="numeric" @bind="defaultTotal" @bind:event="oninput" disabled="@defaultUnlimited" /></label>
+<label><input type="checkbox" @bind="defaultUnlimited" />@Ui["Keep compressed history indefinitely"]</label>
+<label>@Ui["Rolling time (HH:mm)"]<input @bind="rollingTime" /></label>
+<label>@Ui["Rolling time zone"]<input @bind="timeZone" /></label>
+<label>@Ui["Checkpoint after committed changes"]<input type="text" inputmode="numeric" @bind="checkpointEvents" @bind:event="oninput" /></label>
+<label>@Ui["Checkpoint after days with changes"]<input type="text" inputmode="numeric" @bind="checkpointDays" @bind:event="oninput" /></label>
+<p>@Ui["A checkpoint is captured when either threshold is reached. No extra checkpoint is created without changes."]</p>
+@foreach(var row in rows){<section class="card section">
+<h3>@Ui[row.Level]</h3>
+<label><input type="checkbox" @bind="row.Override" />@Ui["Use a separate period for this category"]</label>
+@if(row.Override){
+<label>@Ui["Raw retention days"]<input type="text" inputmode="numeric" @bind="row.RawDays" @bind:event="oninput" />
+</label>
+<label>@Ui["Total retention days"]<input type="text" inputmode="numeric" @bind="row.TotalDays" @bind:event="oninput" disabled="@row.Unlimited" />
+</label>
+<label>
+<input type="checkbox" @bind="row.Unlimited" />@Ui["Keep compressed history indefinitely"]</label>
+}
+</section>}
+<label>
+<input type="checkbox" @bind="applyExisting" />@Ui["Apply shorter deletion periods to existing logs and history (otherwise new records only)"]</label>
+<label>
+<input type="checkbox" @bind="expand" />@Ui["Expand existing zstd logs within an extended raw period (otherwise keep compressed)"]</label>
+<JsonDetails Value="options" Title="@Ui["Current settings (exact)"]" />
+<p>@Ui["Saved revision"]: @shared?.Configuration.Saved?.Revision</p>
+<p>@Ui["Effective revision"]: @shared?.Configuration.Effective?.Revision</p>
+<label>@Ui["Inspect retention on peer"]<select value="@statusPeer" @onchange="args=>InspectPeerAsync(args,UiCancellation)">@foreach(var peer in Connection.Current?.Peers??[]){<option value="@peer.PeerId">@peer.PeerId</option>}</select></label>
+@if(observed?.Local is { } local){<p>@Ui["Applied retention hash"]: @local.AppliedHash</p><p>@Ui["Maintenance held"]: @local.MaintenanceHeld · @local.Problem</p><JsonDetails Value="observed" Title="@Ui["Peer retention state"]" />}else{<p class="notice">@Ui["The peer retention state could not be confirmed."]</p>}
+<button @onclick="SaveAsync">@Ui["Update retention settings"]</button>
+@if(historyStatus is not null){<JsonDetails Value="historyStatus" Title="@Ui["History storage state"]" />}
+@if(checkpoints.Count!=0){
+<h3>@Ui["Automatic checkpoints"]</h3>
+<table><thead><tr><th>@Ui["Captured at"]</th><th>@Ui["Committed event position"]</th><th>@Ui["Stored bytes"]</th><th>@Ui["Compressed"]</th></tr></thead>
+<tbody>@foreach(var point in checkpoints){<tr><td>@FormatTime(point.CreatedAt)</td><td>@point.Sequence</td><td>@point.StoredBytes</td><td>@point.Compressed</td></tr>}</tbody></table>
+}
+<p class="notice">@(message?.Invoke())</p>
+</Modal>

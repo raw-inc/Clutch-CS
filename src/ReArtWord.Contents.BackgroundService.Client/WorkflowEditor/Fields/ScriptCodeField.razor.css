@@ -1,0 +1,101 @@
+
+.code-input {
+    position: relative;
+    min-width: 0;
+    height: 240px;
+    min-height: 120px;
+    resize: vertical;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--paper);
+}
+
+.code-input > pre,
+.code-input > textarea {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 8px;
+    border: 0;
+    border-radius: 0;
+    font: 12px/1.6 Consolas, monospace;
+    letter-spacing: normal;
+    white-space: pre;
+    tab-size: 4;
+    box-sizing: border-box;
+    background: transparent;
+}
+
+.code-input > pre {
+    pointer-events: none;
+    overflow: hidden;
+    color: var(--ink);
+}
+
+.code-input > textarea {
+    resize: none;
+    overflow: auto;
+    color: var(--ink);
+    caret-color: var(--ink);
+    min-height: 0;
+}
+
+.code-input[data-highlight-ready="true"] > textarea {
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+}
+
+.code-input > textarea::selection {
+    background: #628cc366;
+}
+
+.code-input:focus-within {
+    border-color: var(--accent);
+}
+
+.code-input ::deep .code-keyword,
+.code-input ::deep .code-literal,
+.code-input ::deep [class~="code-built_in"] {
+    color: #a8bced;
+}
+
+.code-input ::deep .code-string,
+.code-input ::deep .code-regexp {
+    color: #b5c99d;
+}
+
+.code-input ::deep .code-number {
+    color: #dab98c;
+}
+
+.code-input ::deep .code-comment {
+    color: #7f9095;
+}
+
+.code-input ::deep .code-attr,
+.code-input ::deep .code-attribute,
+.code-input ::deep .code-property,
+.code-input ::deep .code-title,
+.code-input ::deep .code-section {
+    color: #8db5cf;
+}
+
+.code-input ::deep .code-variable,
+.code-input ::deep .code-symbol,
+.code-input ::deep .code-meta,
+.code-input ::deep .code-bullet {
+    color: #c8abc9;
+}
+
+.code-input-inline {
+    resize: none;
+    min-height: 32px;
+    height: 100%;
+}
+
+.script-package-reference {
+    overflow-wrap: anywhere;
+}

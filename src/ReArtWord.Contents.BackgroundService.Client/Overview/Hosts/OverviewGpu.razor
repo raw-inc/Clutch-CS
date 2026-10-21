@@ -1,0 +1,7 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Resources
+<div class="gpu" title="@Gpu.Target">
+    <div class="gpu-heading"><span title="@Gpu.Label">@(Gpu.Label ?? Gpu.Target)</span><b title="@Gpu.Reason">@(Valid(Gpu.Value) ? Gpu.Value!.Value.ToString("0.0",CultureInfo.CurrentCulture)+" %" : Ui["Not measured"])</b></div>
+    <div class="gpu-memory" title='@Ui["OS-reported dedicated GPU memory. On integrated GPUs this can be reserved system RAM; shared memory is shown separately."]'><span>@Ui["Dedicated GPU memory"]</span><b>@Bytes(Value("gpu.memory.used")) / @Bytes(Value("gpu.memory.total"))</b><small>@MemoryPercent("gpu.memory.used","gpu.memory.total")</small></div>
+    <div class="gpu-memory" title='@Ui["Shared system RAM in use / OS sharing limit. This is not additional dedicated VRAM."]'><span>@Ui["Shared system memory"]</span><b>@Bytes(Value("gpu.memory.shared.used")) / @Bytes(Value("gpu.memory.shared.limit"))</b><small>@MemoryPercent("gpu.memory.shared.used","gpu.memory.shared.limit")</small></div>
+    @if(Value("gpu.memory.used") is null || Value("gpu.memory.total") is null){<small class="unavailable">@Ui["GPU memory measurement unavailable"]</small>}
+</div>

@@ -1,0 +1,15 @@
+{
+  "editor.navigation.label": "ワークフロー内の移動",
+  "editor.navigation.map": "全体マップ",
+  "editor.navigation.mapShortcut": "全体マップを切替（空のキャンバスでM）",
+  "editor.navigation.mapHelp": "全体マップ：クリック・ドラッグで移動、Shift＋ドラッグで選択範囲を表示",
+  "editor.navigation.findShortcut": "ノードを検索（Ctrl+F）",
+  "editor.navigation.findPlaceholder": "ノード名・入力値を検索",
+  "editor.navigation.previous": "前の一致（Shift+Enter）",
+  "editor.navigation.next": "次の一致（Enter）",
+  "editor.navigation.nodeMissing": "現在のワークフローに対象ノードがありません。",
+  "editor.navigation.noErrors": "移動先のエラーノードはありません。",
+  "editor.navigation.errorShortcut": "エラーノードへ移動（Ctrl+B／WFタブをダブルクリック）",
+  "editor.navigation.logHint": "ダブルクリックでWFと記録されたノードを開きます",
+  "editor.navigation.openLog": "WF・ノードを開く"
+}

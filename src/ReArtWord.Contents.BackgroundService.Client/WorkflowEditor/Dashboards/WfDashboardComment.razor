@@ -1,0 +1,12 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Workflow.Dashboards
+<div class="dashboard-comment">
+    @if(editing)
+    {
+        <textarea @ref="input" rows="4" maxlength="@WfDashboardLayout.MaximumCommentLength" aria-label="@Ui["Dashboard comment"]" value="@text" @oninput="e=>text=e.Value?.ToString()??string.Empty" @onblur="Apply" @onkeydown="Key"></textarea>
+        <small class="muted">@Ui["Leave the field to apply; Escape cancels. Save the dashboard to share the comment."]</small>
+    }
+    else
+    {
+        <button @ref="label" type="button" class="comment-text @(string.IsNullOrEmpty(Text)?"empty":null)" disabled="@ReadOnly" aria-label="@Ui["Edit dashboard comment"]" @onclick="Begin">@(string.IsNullOrEmpty(Text)?Ui["Click to enter a comment"]:Text)</button>
+    }
+</div>

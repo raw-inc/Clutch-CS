@@ -1,0 +1,21 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Configuration
+<section>
+    <p>@Ui["Compare the saved and effective definitions with the implementation on this peer. Validate unsaved editor changes separately."]</p>
+    <button disabled="@busy" @onclick="()=>LoadAsync(null,UiCancellation)">@Ui["Check compatibility"]</button>
+    @if(problem is not null){<p class="notice error">@problem()</p>}
+    @if(report is not null)
+    {
+        <p class="small">@report.PeerId · @report.WorkflowId</p>
+        <p class="small">@Ui.Format("Saved: {0}; effective: {1}; snapshots inspected on this page: {2}.", report.SavedRevision, report.EffectiveRevision, report.InspectedSnapshots)</p>
+        @if(report.Issues.Count==0 && !report.IssuesOmitted){<p class="notice">@Ui["No incompatibilities were found in the definitions and snapshot page inspected here."]</p>}
+        @if(report.IssuesOmitted){<p class="notice error">@Ui["Some issue details were omitted. Inspect the affected definition and validate it in the editor."]</p>}
+        <div class="table-wrap"><table><thead><tr><th>@Ui["Scope"]</th><th>@Ui["Node"]</th><th>@Ui["Behavior contract"]</th><th>@Ui["Settings to check"]</th><th>@Ui["Reason"]</th></tr></thead><tbody>
+        @foreach(var item in report.Issues)
+        {
+            <tr><td>@Ui[item.Area]<p class="mono small">@item.SnapshotId</p></td><td>@item.NodeId<p class="small">@item.NodeType</p></td><td>@item.ExpectedVersion → @item.ImplementationVersion</td><td>@string.Join(", ",item.SettingNames)</td><td>@item.Issue.Message<p class="mono small">@item.Issue.Code · @item.Issue.Path</p></td></tr>
+        }
+        </tbody></table></div>
+        @if(report.NextSnapshot is string next){<button disabled="@busy" @onclick="()=>LoadAsync(next,UiCancellation)">@Ui["Inspect next snapshot page"]</button>}
+        <p class="footer-note">@Ui["This inspection does not change settings or restore snapshots. Snapshot results apply to this peer; select another peer to inspect its implementation and snapshots."]</p>
+    }
+</section>

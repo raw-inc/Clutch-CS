@@ -1,0 +1,130 @@
+[
+  {
+    "url": "https://raw.githubusercontent.com/AvaloniaUI/Avalonia/2d79ba55fae1b1e71c69f93a668080c9029e6a31/licence.md",
+    "sha256": "213814D306090074D234D760239FF0F67EB9B8D20EEFB4D5631BB39DBE0B769B",
+    "file": "Avalonia.txt"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/JoshClose/CsvHelper/5dad8b8b1d8b074f8353cfd482e939db788a8927/LICENSE.txt",
+    "sha256": "8444A77D74BD5E4F607222BE36FB68B47986C73F318D374695A1055737A2F3C0",
+    "file": "CsvHelper.txt"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/kekekeks/MicroCom/76785efcafd91b5902fd19dd11145f6dd655b7b4/LICENSE",
+    "sha256": "6EE769C9AC4DAC9ABB16B98B1341E9528FF9F4AB685481410D3376D14148F3A9",
+    "file": "MicroCom.txt"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/tmds/Tmds.DBus/b4a7fed0b878f74cb54f7cca84d2889af4e596ba/COPYING",
+    "sha256": "ACA3B49277ABCC7886CCB2F115603A9F5B15FC3F96019A10C00F2974098B210C",
+    "file": "Tmds.DBus.txt"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/xoofx/Tomlyn/6cc82dd23a2c0aefb858f92a51c1b184e2812103/license.txt",
+    "sha256": "48466291C29A20294CBC70944DED1C6C623640BEF82C563026E6E86F620DDDDB",
+    "file": "Tomlyn.txt"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/aaubry/YamlDotNet/748334a8fa7c227740018b284b71ad95cc6b7fc7/LICENSE.txt",
+    "sha256": "DAEA8B7F1B2BAB48EA12AD50B0CE91634669D99D7DD0CB64AED8DFFEEEF69ED3",
+    "file": "YamlDotNet.txt"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/aaubry/YamlDotNet/748334a8fa7c227740018b284b71ad95cc6b7fc7/LICENSE-libyaml",
+    "sha256": "CB65F46DF0D9125BA60862117200EC6631FEF3A8169CD0B4513FFCAD4EF5CB9B",
+    "file": "libyaml.txt"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/oleg-st/ZstdSharp/2cd0c019693bc786a5fe5c3be94e107b24e7267e/LICENSE",
+    "sha256": "9A6A7216E532C4EE4F78881D31FB641C27148EB01B2D0E8E3235FFE9A70A662C",
+    "file": "ZstdSharp.txt"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/facebook/zstd/v1.5.7/LICENSE",
+    "sha256": "7055266497633C9025B777C78EB7235AF13922117480ED5C674677ADC381C9D8",
+    "file": "Zstandard.txt"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/ericsink/SQLitePCL.raw/v2.1.12/LICENSE.TXT",
+    "sha256": "CFC7749B96F63BD31C3C42B5C471BF756814053E847C10F3EB003417BC523D30",
+    "file": "SQLitePCLRaw.txt"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/ericsink/SQLitePCL.raw/v2.1.12/NOTICE.TXT",
+    "sha256": "485B276B3D2BFAA26DF348E1E5C84DF3648981E09B88531A6A53006F0705C24B",
+    "file": "SQLitePCLRaw-notices.txt"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/dotnet/runtime/v10.0.0/LICENSE.TXT",
+    "sha256": "CFC21F5E8BD655AE997EEC916138B707B1D290B83272C02A95C9F821B8C87310",
+    "file": "dotnet.txt"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/mono/skia/7dbfc07dd33181f84e0958afb7ee805c6c769f0b/LICENSE",
+    "sha256": "5F787C1DEE3C56547F09CCC2906AB5F5293C4D8DD6C8654E573216C38E908DBD",
+    "file": "Skia.txt"
+  },
+  {
+    "url": "https://raw.githubusercontent.com/harfbuzz/harfbuzz/8.3.1/COPYING",
+    "sha256": "BA8F810F2455C2F08E2D56BB49B72F37FCF68F1F4FADE38977CFD7372050AD64",
+    "file": "HarfBuzz.txt"
+  },
+  {
+    "sha256": "31B15DE82AA19A845156169A17A5488BF597E561B2C318D159ED583139B25E87",
+    "file": "Skia-expat-expat-COPYING.txt",
+    "url": "https://chromium.googlesource.com/external/github.com/libexpat/libexpat.git/+/f31adfd584b7f6c50bbf4d22eb928538ffc9145a/expat/COPYING?format=TEXT"
+  },
+  {
+    "sha256": "60C756742DB3AD1913304E8B13F0E86E22E51ADB50CC0B3333C163F7E45CEEC1",
+    "file": "Skia-libjpeg-turbo-LICENSE-md.txt",
+    "url": "https://chromium.googlesource.com/chromium/deps/libjpeg_turbo.git/+/927aabfcd26897abb9776ecf2a6c38ea5bb52ab6/LICENSE.md?format=TEXT"
+  },
+  {
+    "sha256": "4B7B9F8C03BB8D60270DFD12684E70AB21E4ABFD27E73905CD1A7C4CAE6F5CDB",
+    "file": "Skia-libjpeg-turbo-README-ijg.txt",
+    "url": "https://chromium.googlesource.com/chromium/deps/libjpeg_turbo.git/+/927aabfcd26897abb9776ecf2a6c38ea5bb52ab6/README.ijg?format=TEXT"
+  },
+  {
+    "sha256": "BDB0A645EA18C60507D0368379B1AC5474B92255FCC2D115E07486A7672BA526",
+    "file": "Skia-libpng-LICENSE.txt",
+    "url": "https://skia.googlesource.com/third_party/libpng.git/+/3061454d980de7d53608f594194cfac722721d2a/LICENSE?format=TEXT"
+  },
+  {
+    "sha256": "5AEC868F669E384A22372A4E8A1A6CD7D44C64CD451F960CA69CC170D1E13ACF",
+    "file": "Skia-libwebp-COPYING.txt",
+    "url": "https://chromium.googlesource.com/webm/libwebp.git/+/4fa21912338357f89e4fd51cf2368325b59e9bd9/COPYING?format=TEXT"
+  },
+  {
+    "sha256": "CC3273E0694EA5896145E0677699B53471B03EA43021DDC50E7923FBB9F5023C",
+    "file": "Skia-libwebp-PATENTS.txt",
+    "url": "https://chromium.googlesource.com/webm/libwebp.git/+/4fa21912338357f89e4fd51cf2368325b59e9bd9/PATENTS?format=TEXT"
+  },
+  {
+    "sha256": "CFC7749B96F63BD31C3C42B5C471BF756814053E847C10F3EB003417BC523D30",
+    "file": "Skia-wuffs-LICENSE.txt",
+    "url": "https://skia.googlesource.com/external/github.com/google/wuffs-mirror-release-c.git/+/e3f919ccfe3ef542cfc983a82146070258fb57f8/LICENSE?format=TEXT"
+  },
+  {
+    "sha256": "E1CFCC55C325B3F78CF55DF9664ABAA066E2271DFFE8213347D9FCCDFBAC8F2C",
+    "file": "Skia-zlib-LICENSE.txt",
+    "url": "https://chromium.googlesource.com/chromium/src/third_party/zlib/+/e432200a7931de1b0b1b50201aac8a46d9380cb2/LICENSE?format=TEXT"
+  },
+  {
+    "sha256": "3D180008E36922A4E8DAEC11C34C7AF264FED5962D07924AEA928C38E8663C94",
+    "file": "Skia-brotli-LICENSE.txt",
+    "url": "https://skia.googlesource.com/external/github.com/google/brotli.git/+/028fb5a23661f123017c060daa546b55cf4bde29/LICENSE?format=TEXT"
+  },
+  {
+    "sha256": "08C135755DD589039470F1FDBB400DAAABAAA50D0B366D19CEBFF4D22986BAA1",
+    "file": "Skia-freetype-docs-FTL-TXT.txt",
+    "url": "https://chromium.googlesource.com/chromium/src/third_party/freetype2.git/+/83af801b552111e37d9466a887e1783a0fb5f196/docs/FTL.TXT?format=TEXT"
+  },
+  {
+    "file": "Roslyn-notices.txt",
+    "sha256": "6CE5A21F79FC669F789892100325C47F708B4B7641219D277121921647A168C7",
+    "url": "https://www.nuget.org/packages/Microsoft.CodeAnalysis.CSharp/5.0.0",
+    "sourceFile": "ThirdPartyNotices.rtf",
+    "sourceSha256": "EF4678850E7E3AAF9297F07E5C4060D477854E545CCF8E2EF8452D65A7B2EFAF",
+    "conversion": "Plain-text transcription preserving the original notice text and capitalization."
+  }
+]

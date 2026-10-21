@@ -1,0 +1,14 @@
+@if(visible)
+{
+    <div class="graph-menu-shade" @onclick="Close" @oncontextmenu="Close" @oncontextmenu:preventDefault="true"></div>
+    <div @ref="menu" class="graph-context-menu" @oncontextmenu:preventDefault="true" role="menu" tabindex="-1" style="@Style" @onkeydown="Key" @onclick:stopPropagation="true">
+        @if(wire is null)
+        {
+            <button role="menuitem" disabled="@(!Current||selection.Count==0)" @onclick="CopyAsync">@Ui["Copy"]</button>
+            <button role="menuitem" disabled="@(!Current||!Model.Selection.Clipboard.HasContent||Model.Locks.Whole(Model.Draft.Document.Id))" @onclick="PasteAsync">@Ui["Paste"]</button>
+            <button role="menuitem" disabled="@(!Current||selection.Count==0||Model.Locks.Whole(Model.Draft.Document.Id))" @onclick="ExtractAsync">@Ui["Extract SubWorkflow"]</button>
+        }
+        <button role="menuitem" disabled="@(!CanDelete)" @onclick="DeleteAsync">@Ui[wire is null?"Delete node":"Delete connection"] <kbd>Delete</kbd></button>
+        @if(!Current){<small>@Ui["The workflow changed after this menu was opened. Close it and select the item again."]</small>}
+    </div>
+}

@@ -1,0 +1,5 @@
+{
+  "fleet.footer.updating": "更新中",
+  "fleet.footer.unconfirmed": "更新状況を確認中",
+  "fleet.footer.context": "サービスを更新中です。接続が一時的に再接続する場合があります。"
+}

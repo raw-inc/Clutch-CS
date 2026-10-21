@@ -1,0 +1,47 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Updates
+@using ReArtWord.Contents.BackgroundService.Contracts.Execution
+<section class="card" aria-label='@Ui["Update all discovered peers"]'>
+    <h2>@Ui["Update all discovered peers"]</h2>
+    <p>@Ui["Update different PCs and clusters concurrently, confirming recovery before reusing each slot."]</p>
+    <p>@Ui["The release must declare compatibility. Clusters with at least three peers must retain a Ready majority; smaller single-host clusters may disconnect temporarily."]</p>
+    <div class="maintenance-form">
+    <label>@Ui["Manifest or release-bundle.json"]<InputFile OnChange="ReadManifestAsync" accept=".json" disabled="@busy" /></label>
+    <label>@Ui["Absolute payload path on this ClientHost"]<input @bind="payloadRoot" @bind:event="oninput" @bind:after="InvalidatePlan" disabled="@busy" /></label>
+    <label><input type="checkbox" @bind="allowActive" @bind:after="InvalidatePlan" disabled="@busy" />@Ui["Explicitly allow updates while running"]</label>
+    <label>@Ui["Maximum attempts per peer (including the first)"]<select @bind="maximumAttempts" @bind:after="InvalidatePlan" disabled="@busy"><option value="3">3</option><option value="2">2</option><option value="1">1</option></select></label>
+    <label>@Ui["Maximum parallel peer updates"]<select @bind="maximumParallelism" @bind:after="InvalidatePlan" disabled="@busy"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
+    <label>@Ui["Confirmation timeout per peer (seconds)"]<input @bind="timeoutSeconds" @bind:after="InvalidatePlan" inputmode="numeric" disabled="@busy" /></label>
+    </div>
+    <button @onclick="PreviewAsync" disabled="@(busy || manifest is null)">@Ui["Preview update plan"]</button>
+    <p class="notice" role="status">@(message?.Invoke())</p>
+    @if(plan is not null)
+    {
+        <section class="card" aria-label='@Ui["Fixed update plan"]'>
+            <h3>@Ui["Fixed update plan"] · @plan.Release.Manifest.ReleaseId</h3>
+            <p>@Ui["Absolute payload path on this ClientHost"]: @plan.Release.PayloadRoot</p>
+            @if(plan.Release.Client is not null){<p class="notice">@Ui["ClientHost will update and restart last, preserving its installed path and startup registration. Open desktop and terminal connections will disconnect."]</p>}
+            <p>@Ui.Format("{0} hosts · {1} peers · up to {2} attempts per peer", plan.Targets.Select(target=>target.Peer.HostId).Distinct().Count(), plan.Targets.Count, plan.Release.MaximumAttempts)</p>
+            <p>@Ui.Format("Up to {0} peers concurrently; PC, cluster and Ready constraints may reduce concurrency.", plan.Release.MaximumParallelism)</p>
+            <ol>@foreach(var host in plan.Targets.GroupBy(target=>target.Peer.HostId)){<li><strong>@host.Key</strong><ul>@foreach(var target in host){<li>@target.ClusterId / @target.Peer.PeerId @if(plan.Targets.Count(other=>other.ClusterId==target.ClusterId)<3 && plan.Targets.Where(other=>other.ClusterId==target.ClusterId).Select(other=>other.Peer.HostId).Distinct().Count()==1){<span class="badge warn">@Ui["Temporary disconnection allowed: single-host cluster"]</span>}</li>}</ul></li>}</ol>
+            <p>@Ui["Starting uses this fixed plan. Preview again after changing the release, policy or discovered peers."]</p>
+            <button @onclick="StartAsync" disabled="@busy">@Ui["Start this update"]</button>
+        </section>
+    }
+    <h3>@Ui["Release update progress"]</h3>
+    @if(ProgressUnavailable){<p class="notice" role="status">@Ui["Release update progress could not be read."]</p>}
+    <p>@Ui["Updates continue after navigation or reload. This ClientHost keeps the operation IDs and the latest 20 operations are shown."]</p>
+    @foreach(var update in Updates)
+    {
+        <section class="card" @key="update.OperationId">
+            <h4>@update.ReleaseId · @(update.Completed ? Ui[update.Outcome.ToString()] : Ui["Running"])</h4>
+            <p class="small muted" role="status">@Ui.Format("{0}/{1} peers completed", update.Peers.Count(peer=>peer.State=="Completed"), update.Peers.Count)</p>
+            <p>@Ui.Format("Up to {0} peers concurrently; PC, cluster and Ready constraints may reduce concurrency.", update.MaximumParallelism)</p>
+            <small>@update.OperationId · @FormatTime(update.UpdatedAt)</small>
+            @if(update.Client is {} client){<p>@Ui["ClientHost update"]: @Ui[client.State] @if(client.Reason is not null){<span>@Ui[client.Reason]</span>}</p>}
+            @if(update.Reason is not null){<p class="notice">@Ui[update.Reason]</p>}
+            <table><thead><tr><th>@Ui["PC"]</th><th>@Ui["Cluster"] / @Ui["Peer"]</th><th>@Ui["Status"]</th><th>@Ui["Attempts"]</th></tr></thead>
+            <tbody>@foreach(var progress in update.Peers.GroupBy(peer=>peer.Target.Peer.HostId,StringComparer.Ordinal).SelectMany(host=>host)){<tr><td>@progress.Target.Peer.HostId</td><td>@progress.Target.ClusterId / @progress.Target.Peer.PeerId</td><td>@Ui[progress.State] @if(progress.Reason is not null){<p>@Ui[progress.Reason]</p>}</td><td>@progress.Attempts.Count / @update.MaximumAttempts @foreach(var attempt in progress.Attempts){<details><summary>@attempt.OperationId</summary>@if(attempt.Problem is {} diagnostic){<p class="small mono">@diagnostic</p>}@if(attempt.Result is {} result){<p>@Ui[result.Phase.ToString()] · @Ui[result.Outcome.ToString()]</p><p>@result.Reason</p>}</details>}</td></tr>}</tbody></table>
+            @if(update.Completed && update.Outcome==EOutcome.Unknown){<button @onclick="()=>ReconcileAsync(update.OperationId)" disabled="@busy">@Ui["Recheck saved updater results"]</button>}
+        </section>
+    }
+</section>

@@ -1,0 +1,8 @@
+{
+  "node.control.if.name": "If",
+  "node.control.if.description": "Evaluate the condition once and emit only the matching True or False start signal. Also output the boolean value. Strings, numbers and null are not converted to booleans.",
+  "port.control.if.in.condition": "Condition (boolean)",
+  "port.control.if.out.trueStart": "True start signal",
+  "port.control.if.out.falseStart": "False start signal",
+  "port.control.if.out.value": "Condition value"
+}

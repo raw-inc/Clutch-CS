@@ -1,0 +1,17 @@
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Documents
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Graph
+@using ReArtWord.Contents.BackgroundService.Contracts.Nodes
+@inject EditorDocument Model
+<fieldset disabled="@ReadOnly">
+    @if(ReadOnly){<small title="@Ui["The selected restore scope is read-only"]">@Ui["Restoring · read-only"]</small>}
+    @if(GraphPresentation.SettingsCount(Descriptor)>0)
+    {
+        <div class="node-inline-group">@Ui["Settings"]</div>
+        <SchemaFields NodeId="@Node.Id" Inline="true" Schema="Descriptor.SettingsSchema" Inputs="Descriptor.Inputs" Settings="Node.Settings" SettingsChanged="value=>Model.ChangeNode(Node.Id,current=>current with{Settings=value})" />
+    }
+    @if(Descriptor.Inputs.Count>0)
+    {
+        <div class="node-inline-group">@Ui[EventMergePorts.IsNode(Node.Type)?"Event inputs":"Constant inputs"]</div>
+        <NodeInputFields Node="Node" Ports="Descriptor.Inputs" Inline="true" />
+    }
+</fieldset>

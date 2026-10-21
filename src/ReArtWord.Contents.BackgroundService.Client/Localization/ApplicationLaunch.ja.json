@@ -1,0 +1,13 @@
+{
+  "Application launch session": "起動アカウント・セッション",
+  "Logged-in desktop on Windows (current environment on other OS)": "Windows: ログインユーザーのデスクトップ（他OS: 現在の環境）",
+  "Core account and session": "Coreの実行アカウント・セッション",
+  "Application window mode": "ウィンドウ表示",
+  "Default window display": "既定（通常表示）",
+  "No window": "ウィンドウなし",
+  "Windows services need the logged-in desktop to show an application. If no user is logged in, startup is rejected. No window suppresses the console and requests a hidden initial window; the application can create its own windows later.": "Windowsサービスから画面アプリを表示するにはログインユーザーのデスクトップを選択してください。未ログインの場合は起動しません。「ウィンドウなし」はコンソールを作らず初期表示を抑制しますが、アプリ自身が後から作るウィンドウは制御しません。",
+  "process.launchRejected": "アプリケーションを開始する前に起動が拒否されました。",
+  "process.interactiveUserUnavailable": "対象PCのログインユーザーを取得できません。ログイン状態とCoreの実行アカウントを確認してください。",
+  "process.interactiveLaunchRejected": "ログインユーザーのデスクトップで起動できません。実行ファイル・作業フォルダーの権限や起動引数を確認してください。アプリケーションは開始していません。",
+  "process.interactiveLaunchUnavailable": "この実行環境ではWindowsのログインユーザー起動を利用できません。"
+}

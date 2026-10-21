@@ -1,0 +1,13 @@
+.state-value {
+    padding: 14px;
+    overflow-wrap: anywhere;
+}
+
+.state-value pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-height: 240px;
+    overflow: auto;
+    font-size: 13px;
+    margin: 10px 0 0;
+}

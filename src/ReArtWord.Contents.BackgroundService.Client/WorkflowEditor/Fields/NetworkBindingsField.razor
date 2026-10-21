@@ -1,0 +1,60 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Nodes
+<div class="network-bindings-field">
+    <button type="button" disabled="@Disabled" @onclick="()=>OpenAsync(UiCancellation)">@Ui.Format("Configure network per PC ({0})",SavedCount)</button>
+    @if(!Inline){<small>@Ui["Each execution PC uses its own adapter and IPv4. Unassigned PCs do not start."]</small>}
+</div>
+<Modal Open="open" Wide="true" Title="@Ui["Network assignments by execution PC"]" Close="()=>open=false">
+    <div class="network-bindings-editor">
+        <p>@Ui["Select the adapter and IPv4 reported by each PC. Assignments are kept when a PC is offline or removed from the current selection."]</p>
+        <button type="button" disabled="@loading" @onclick="()=>RefreshAsync(UiCancellation)">@Ui["Refresh choices"]</button>
+        @if(problem is not null){<p class="error">@Ui[problem]</p>}
+        <fieldset disabled="@(!CanEdit || loading)">
+            @foreach(var row in rows)
+            {
+                <div class="network-binding-row" @key="row.HostId" data-network-host="@row.HostId">
+                    <label class="network-binding-host"><input type="checkbox" checked="@row.Assigned" @onchange="e=>row.Assigned=e.Value is true" />@row.HostId</label>
+                    <label>@Ui["Network adapter"]
+                        @if(row.Manual)
+                        {
+                            <input aria-label="@Ui.Format("Network adapter on {0}",row.HostId)" value="@row.InterfaceId" @oninput="e=>row.InterfaceId=e.Value?.ToString()??string.Empty" disabled="@(!row.Assigned)" />
+                        }
+                        else
+                        {
+                            <select aria-label="@Ui.Format("Network adapter on {0}",row.HostId)" value="@row.InterfaceId" @onchange="e=>SelectInterface(row,e.Value?.ToString()??string.Empty)" disabled="@(!row.Assigned)">
+                                <option value="" selected="@(row.InterfaceId.Length==0)">@Ui["Not set"]</option>
+                                @if(row.InterfaceId.Length!=0 && !row.Choices.Interfaces.Any(item=>item.Id==row.InterfaceId)){<option value="@row.InterfaceId" selected>@row.InterfaceId — @Ui["Unverified saved value"]</option>}
+                                @foreach(var network in row.Choices.Interfaces){<option value="@network.Id" selected="@(network.Id==row.InterfaceId)">@network.DisplayName(Ui)</option>}
+                            </select>
+                        }
+                    </label>
+                    <label>@Ui["Local IPv4"]
+                        @if(row.Manual)
+                        {
+                            <input aria-label="@Ui.Format("Local IPv4 on {0}",row.HostId)" value="@row.LocalAddress" @oninput="e=>row.LocalAddress=e.Value?.ToString()??string.Empty" disabled="@(!row.Assigned)" />
+                        }
+                        else
+                        {
+                            var addresses=row.Choices.Interfaces.FirstOrDefault(item=>item.Id==row.InterfaceId)?.Addresses??[];
+                            <select aria-label="@Ui.Format("Local IPv4 on {0}",row.HostId)" value="@row.LocalAddress" @onchange="e=>row.LocalAddress=e.Value?.ToString()??string.Empty" disabled="@(!row.Assigned)">
+                                <option value="" selected="@(row.LocalAddress.Length==0)">@Ui["Not set"]</option>
+                                @if(row.LocalAddress.Length!=0 && !addresses.Contains(row.LocalAddress,StringComparer.Ordinal)){<option value="@row.LocalAddress" selected>@row.LocalAddress — @Ui["Unverified saved value"]</option>}
+                                @foreach(var address in addresses){<option value="@address" selected="@(address==row.LocalAddress)">@address</option>}
+                            </select>
+                        }
+                    </label>
+                    <label><input type="checkbox" checked="@row.Manual" @onchange="e=>row.Manual=e.Value is true" />@Ui["Enter adapter ID and IPv4 manually"]</label>
+                    @if(row.Choices.Problem is not null){<small class="notice">@Ui["This PC's network could not be verified. Saved values are retained."]</small>}
+                    @if(row.Assigned && row.Choices.Interfaces.Any(item=>item.Id==row.InterfaceId && item.Unavailable)){<small class="error">@Ui["The selected network adapter is not up. Requests cannot start until it is available; choose an active adapter and its IPv4."]</small>}
+                </div>
+            }
+            <div class="network-binding-add">
+                <label>@Ui["Execution PC ID"]<input value="@additionalHost" @oninput="e=>additionalHost=e.Value?.ToString()??string.Empty" /></label>
+                <button type="button" @onclick="()=>AddHostAsync(UiCancellation)">@Ui["Add PC assignment"]</button>
+            </div>
+        </fieldset>
+        <div class="network-binding-actions">
+            <button type="button" disabled="@(!CanEdit || loading || invalidSaved)" @onclick="()=>ApplyAsync(UiCancellation)">@Ui["Apply assignments"]</button>
+            <button type="button" @onclick="()=>open=false">@Ui["Cancel"]</button>
+        </div>
+    </div>
+</Modal>

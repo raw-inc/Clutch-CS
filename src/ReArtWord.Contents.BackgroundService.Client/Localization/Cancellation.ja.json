@@ -1,0 +1,21 @@
+{
+  "Cancelled": "取消済み",
+  "Running workflows": "実行中のワークフロー",
+  "Executions accepted by the selected peer. Cancellation targets the original execution; it does not undo completed effects.": "選択中のPeerが受け付けた実行を表示します。取消は元の実行だけを対象とし、完了済みの処理の効果は元に戻しません。",
+  "Check execution result": "実行結果を確認",
+  "Original execution result": "元の実行の結果",
+  "No running workflows were found on this peer.": "このPeerで実行中のワークフローはありません。",
+  "The running workflow list could not be retrieved.": "実行中のワークフローを取得できません。",
+  "The original execution result could not be confirmed.": "元の実行結果を確認できません。",
+  "Cancellation request: {0}. {1}": "取消要求の結果: {0}。{1}",
+  "Cancel execution": "実行の取消",
+  "Cancel this execution": "この実行を取り消す",
+  "Cancellation requested": "取消要求済み",
+  "The cancellation request was processed. Check the original execution for its actual result.": "取消要求を処理しました。実際の終了状態は、元の実行結果で確認してください。",
+  "Cancellation is unconfirmed. The original cancellation ID is retained in operation history.": "取消結果を確認できません。操作履歴に保持した元の取消IDで照会してください。",
+  "run.cancellationRequested": "元の実行に取消を要求しました。",
+  "run.cancelUnconfirmed": "元の実行への取消を確認できません。",
+  "run.cancelOwnerMismatch": "元の実行を追跡するPeer実体が一致しません。",
+  "run.alreadyFinished": "元の実行は終了しています。",
+  "run.cancellationUnavailable": "元の実行を現在の実体で追跡できないため、取消を開始しません。"
+}

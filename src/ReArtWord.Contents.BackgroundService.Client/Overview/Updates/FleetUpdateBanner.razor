@@ -1,0 +1,17 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@using ReArtWord.Contents.BackgroundService.Contracts.Updates
+@foreach(var update in Updates.Where(item=>!item.Completed))
+{
+    var progress = update;var unavailable=Unavailable||StaleOperations.Contains(update.OperationId);
+    <section class="fleet-progress" aria-label='@Ui["Fleet update in progress"]' @key="update.OperationId">
+        <header><div class="fleet-heading"><UiIcon Name="refresh" /><h2>@Ui["Fleet update in progress"]</h2><span class="fleet-release">@update.ReleaseId</span></div>@if(OwnedOperations.Contains(update.OperationId)){<button class="quiet" @onclick="ShowDetails">@Ui["View update details"]</button>}</header>
+        <div class="fleet-status" role="status"><span class="@(unavailable || progress.Attention>0 ? "attention" : null)">@(unavailable ? Ui["Release update progress could not be read."] : Ui.Format("{0} of {1} updates confirmed", progress.Confirmed, progress.Total))</span><span class="fleet-percent">@progress.Percent%</span></div>
+        <progress max="@Math.Max(1, progress.Total)" value="@progress.Confirmed" aria-label='@Ui["Confirmed update progress"]' aria-valuetext='@Ui.Format("{0} of {1} updates confirmed", progress.Confirmed, progress.Total)'></progress>
+        <div class="fleet-context">
+            @if(progress.Current.Count!=0){@foreach(var peer in progress.Current){<span class="fleet-target">@peer.HostId <span class="muted">· @peer.ClusterId / @peer.PeerId · @Ui[peer.State]</span></span>}}
+            else if(update.ClientState is {} client){<span>@Ui["ClientHost update"]</span><span>@Ui[client]</span>}
+            else{<span>@Ui["Waiting for the next update confirmation"]</span>}
+            @if(progress.Attention>0){<span class="attention">@Ui.Format("{0} updates need attention", progress.Attention)</span>}
+        </div>
+    </section>
+}

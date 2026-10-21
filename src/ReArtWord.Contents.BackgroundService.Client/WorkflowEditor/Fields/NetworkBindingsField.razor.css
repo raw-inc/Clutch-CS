@@ -1,0 +1,59 @@
+.network-bindings-field,
+.network-bindings-editor {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.network-bindings-editor fieldset {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+}
+
+.network-binding-row {
+    display: grid;
+    grid-template-columns: minmax(120px, 0.7fr) minmax(180px, 1.5fr) minmax(150px, 1fr);
+    align-items: start;
+    gap: 8px 12px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+}
+
+.network-binding-row label,
+.network-binding-row input,
+.network-binding-row select {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.network-binding-host {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.network-binding-row input[type="checkbox"] {
+    width: auto;
+}
+
+.network-binding-row > small {
+    grid-column: 1 / -1;
+}
+
+.network-binding-add,
+.network-binding-actions {
+    display: flex;
+    align-items: end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 720px) {
+    .network-binding-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

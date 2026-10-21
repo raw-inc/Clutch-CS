@@ -1,0 +1,104 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Processes
+<div class="application-editor">
+    <p class="application-owner"><strong>@Owner</strong><br /><span class="small muted">@Ui["This application is registered on this host and cluster peer only."]</span></p>
+    @if(problem is not null){<p class="notice error" role="alert">@problem()</p>}
+    <fieldset disabled="@Busy">
+        <div class="application-fields">
+            <label>@Ui["Application name"]<input @bind="draft.Name" @bind:event="oninput" maxlength="160" /></label>
+            <label>@Ui["Management mode"]<select @bind="draft.Mode"><option value="Managed">@Ui["Managed"]</option><option value="ObserveOnly">@Ui["ObserveOnly"]</option></select></label>
+            <div class="wide executable-field"><label>@Ui["Absolute executable path"]<input @bind="draft.Executable" @bind:event="oninput" placeholder="C:\Apps\Player.exe" /></label><button type="button" class="quiet" disabled="@(string.IsNullOrWhiteSpace(ClusterId)||string.IsNullOrWhiteSpace(PeerId))" @onclick="()=>browsing=true"><UiIcon Name="folder" />@Ui["Browse executable"]</button></div>
+            <label class="wide">@Ui["Working directory"]<input @bind="draft.Directory" @bind:event="oninput" placeholder="C:\Apps" /></label>
+            @if(draft.Mode==EProcessMode.Managed)
+            {
+                <label>@Ui["Application launch session"]<select @bind="draft.LaunchSession"><option value="Automatic">@Ui["Logged-in desktop on Windows (current environment on other OS)"]</option><option value="CoreAccount">@Ui["Core account and session"]</option></select></label>
+                <label>@Ui["Application window mode"]<select @bind="draft.WindowMode"><option value="Default">@Ui["Default window display"]</option><option value="NoWindow">@Ui["No window"]</option></select></label>
+                <p class="small muted wide">@Ui["Windows services need the logged-in desktop to show an application. If no user is logged in, startup is rejected. No window suppresses the console and requests a hidden initial window; the application can create its own windows later."]</p>
+            }
+        </div>
+        <section class="application-section">
+            <h3>@Ui["Launch arguments"]</h3>
+            <p class="small muted">@Ui["One field is one argument. Spaces and quotes are passed literally. Leave the list empty for no arguments."]</p>
+            @foreach(var argument in draft.Arguments)
+            {
+                <div class="argument-row" @key="argument.EditorId"><input aria-label='@Ui["Argument"]' @bind="argument.Value" @bind:event="oninput" /><button type="button" class="quiet" @onclick="()=>draft.Arguments.Remove(argument)">@Ui["Remove"]</button></div>
+            }
+            <button type="button" class="quiet" @onclick='()=>draft.Arguments.Add(new(string.Empty))'><UiIcon Name="add" />@Ui["Add argument"]</button>
+        </section>
+        <section class="application-section">
+            <h3>@Ui["Automatic monitoring"]</h3>
+            <label class="check-row"><input type="checkbox" @bind="draft.Automatic" />@Ui["Monitor automatically while Core is running"]</label>
+            <p class="small muted">@Ui["Monitoring continues without an open browser or workflow. Existing applications are reattached after Core restarts; events missed while Core was stopped are not replayed."]</p>
+            <div class="application-fields">
+                <label>@Ui["Self-restart confirmation timeout (ms)"]<input type="number" min="0" max="3600000" @bind="draft.RestartWait" @bind:event="oninput" /></label>
+                <label>@Ui["Successor process matching"]<select @bind="draft.RestartMatch"><option value="ExecutableAndArguments">@Ui["Executable and arguments"]</option><option value="ExecutableOnly">@Ui["Executable only (allow changed arguments)"]</option></select></label>
+            </div>
+            <p class="small muted">@Ui["0 confirms exits immediately. Otherwise, wait for a unique successor before emitting a stopped signal or restarting. Ambiguous or unverifiable matches inhibit automatic recovery."]</p>
+            @if(draft.Mode==EProcessMode.Managed)
+            {
+                <div class="application-fields">
+                    <label class="check-row"><input type="checkbox" @bind="draft.NormalExit" />@Ui["Restart after normal exit (code 0)"]</label>
+                    <label class="check-row"><input type="checkbox" @bind="draft.AbnormalExit" />@Ui["Restart after abnormal exit"]</label>
+                    <label>@Ui["Restart delay (ms)"]<input type="number" min="0" @bind="draft.Delay" @bind:event="oninput" placeholder='@Ui["Core default"]' /></label>
+                    <label>@Ui["Maximum restart attempts"]<input type="number" min="0" @bind="draft.Attempts" @bind:event="oninput" disabled="@draft.Unlimited" placeholder='@Ui["Core default"]' /></label>
+                    <label class="check-row"><input type="checkbox" @bind="draft.Unlimited" />@Ui["Unlimited restart attempts"]</label>
+                </div>
+                <p class="small muted">@Ui["The delay applies before the first restart too. Attempts persist across Core restarts until stability is signalled or recovery is confirmed manually. A manual stop inhibits automatic recovery."]</p>
+                <details class="secondary-details"><summary>@Ui["Advanced recovery conditions"]</summary>
+                    <label class="check-row"><input type="checkbox" @bind="draft.UnknownExit" />@Ui["Restart an observed exit when its exit code is unavailable"]</label>
+                    <label class="check-row"><input type="checkbox" @bind="draft.Unhealthy" />@Ui["Recover after an explicit unhealthy signal"]</label>
+                    @if(draft.Unhealthy)
+                    {
+                        <label>@Ui["Stop policy"]<select @bind="draft.StopPolicy"><option value="">@Ui["Not set"]</option><option value="WaitForManual">@Ui["Wait for manual action if it does not exit"]</option><option value="Force">@Ui["Force termination if it does not exit"]</option></select></label>
+                        <label>@Ui["Graceful stop timeout (ms)"]<input type="number" min="1" max="3600000" @bind="draft.StopTimeout" @bind:event="oninput" /></label>
+                    }
+                </details>
+            }
+        </section>
+        <section class="application-section">
+            <h3>@Ui["Scheduled starts"]</h3>
+            <p class="small muted">@Ui["Calendar schedules use the selected time zone and skip missed occurrences. PC startup schedules run once per OS boot. Observation-only mode never starts or stops applications."]</p>
+            @foreach(var schedule in draft.Schedules)
+            {
+                <div class="application-schedule" @key="schedule.EditorId">
+                    <div class="toolbar"><label class="check-row"><input type="checkbox" @bind="schedule.Enabled" />@Ui["Enabled"]</label><button type="button" class="quiet" @onclick="()=>draft.Schedules.Remove(schedule)">@Ui["Remove"]</button></div>
+                    <div class="application-fields">
+                        <label>@Ui["Schedule"]<select @bind="schedule.Mode"><option value="once">@Ui["Once"]</option><option value="daily">@Ui["Daily"]</option><option value="weekdays">@Ui["Selected weekdays"]</option><option value="boot">@Ui["At PC startup"]</option></select></label>
+                        @if(schedule.Mode=="boot")
+                        {
+                            <label>@Ui["Delay after PC startup (ms)"]<input type="number" min="0" max="86400000" @bind="schedule.BootDelay" @bind:event="oninput" /></label>
+                            <label class="wide">@Ui["If no user is logged in"]<select value='@(schedule.WaitForLogin?"wait":"skip")' @onchange='e=>schedule.WaitForLogin=string.Equals(e.Value?.ToString(),"wait",StringComparison.Ordinal)'><option value="wait">@Ui["Wait for login"]</option><option value="skip">@Ui["Skip this startup"]</option></select></label>
+                            <p class="small muted wide">@Ui["Zero starts when Core is ready. New, changed or re-enabled boot schedules apply from the next PC startup. Core restarts do not repeat them. The login policy only applies to the logged-in desktop."]</p>
+                        }
+                        else
+                        {
+                            <label>@Ui["Time zone"]<input @bind="schedule.Zone" @bind:event="oninput" placeholder="UTC" /></label>
+                            @if(schedule.Mode=="once"){<label class="wide">@Ui["Date and time"]<input @bind="schedule.At" @bind:event="oninput" placeholder="2026-10-20T09:00:00" /></label>}
+                            else{<label>@Ui["Time"]<input type="time" step="1" value="@schedule.Time" @oninput="e=>schedule.Time=e.Value?.ToString()??string.Empty" /></label>}
+                        }
+                        @if(schedule.Mode=="weekdays")
+                        {
+                            <div class="weekday-row wide">@foreach(var day in Enumerable.Range(0,7)){var current=day;<label class="check-row"><input type="checkbox" checked="@schedule.Days.Contains(current)" @onchange="e=>SetDay(schedule,current,e.Value is true)" />@Ui[DayName(current)]</label>}</div>
+                        }
+                        <label class="wide">@Ui["If already running"]<select @bind="schedule.Running"><option value="Skip">@Ui["Skip"]</option><option value="Restart">@Ui["Restart"]</option></select></label>
+                        @if(schedule.Running==EProcessRunningPolicy.Restart)
+                        {
+                            <label>@Ui["Stop policy"]<select @bind="schedule.StopPolicy"><option value="WaitForManual">@Ui["Wait for manual action if it does not exit"]</option><option value="Force">@Ui["Force termination if it does not exit"]</option></select></label>
+                            <label>@Ui["Graceful stop timeout (ms)"]<input type="number" min="1" max="3600000" @bind="schedule.StopTimeout" @bind:event="oninput" /></label>
+                        }
+                    </div>
+                </div>
+            }
+            <button type="button" class="quiet" disabled="@(32<=draft.Schedules.Count)" @onclick="()=>draft.Schedules.Add(new())"><UiIcon Name="add" />@Ui["Add schedule"]</button>
+        </section>
+        <details class="secondary-details" open="@(draft.Mode==EProcessMode.ObserveOnly)"><summary>@Ui["Existing process and registration ID"]</summary>
+            <p class="small muted">@Ui["Registration ID"]: <code>@draft.Id</code></p>
+            <label>@Ui["Existing process PID (optional)"]<input type="number" min="1" @bind="draft.Pid" @bind:event="oninput" /></label>
+            <label>@Ui["OS start time (include time zone and original precision)"]<input @bind="draft.StartedAt" @bind:event="oninput" placeholder="2026-10-12T09:00:00.0000000+09:00" /></label>
+        </details>
+        <div class="toolbar section"><button type="button" @onclick="()=>SaveAsync(UiCancellation)">@Ui["Save registration"]</button><button type="button" class="quiet" @onclick="Cancel">@Ui["Cancel"]</button></div>
+    </fieldset>
+</div>
+@if(browsing)
+{
+    <ReArtWord.Contents.BackgroundService.Client.Components.Files.HostFilePicker @key="(ClusterId,PeerId)" ClusterId="@ClusterId" PeerId="@PeerId" Owner="@Owner" InitialPath="@draft.Executable" Picked="ChooseExecutable" Close="()=>browsing=false" />
+}

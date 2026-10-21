@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReArtWord.Contents.BackgroundService.Installer.ViewModels"
+             x:Class="ReArtWord.Contents.BackgroundService.Installer.Views.AppearancePreview"
+             x:DataType="vm:AppearanceViewModel" x:CompileBindings="True">
+  <Border BorderBrush="#414D60" BorderThickness="1" CornerRadius="4" ClipToBounds="True">
+    <Grid RowDefinitions="Auto,Auto">
+      <Border Background="#292B30" Padding="10,4">
+        <Grid ColumnDefinitions="16,*" ColumnSpacing="8">
+          <Grid Width="16" Height="16">
+            <Border x:Name="DefaultTabIcon" Background="#303845" BorderBrush="#414D60" BorderThickness="1" CornerRadius="4">
+              <Viewbox Margin="2"><Canvas Width="24" Height="24"><Path Data="{StaticResource ClutchBrandGeometry}" Stroke="#AECBF1" StrokeThickness="1.6" StrokeLineCap="Round" StrokeJoin="Round" /></Canvas></Viewbox>
+            </Border>
+            <Image x:Name="TabImage" Stretch="Uniform" />
+          </Grid>
+          <TextBlock x:Name="PreviewTabTitle" Grid.Column="1" Text="Clutch-CS" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+        </Grid>
+      </Border>
+      <Border Grid.Row="1" Background="#202125" Padding="12,10">
+        <Grid ColumnDefinitions="30,*" ColumnSpacing="11">
+          <Border Width="30" Height="30" Background="#303845" BorderBrush="#414D60" BorderThickness="1" CornerRadius="7" VerticalAlignment="Center">
+            <Grid>
+              <Viewbox x:Name="DefaultHeaderIcon" Width="19" Height="19"><Canvas Width="24" Height="24"><Path Data="{StaticResource ClutchBrandGeometry}" Stroke="#AECBF1" StrokeThickness="1.6" StrokeLineCap="Round" StrokeJoin="Round" /></Canvas></Viewbox>
+              <Image x:Name="HeaderImage" Width="28" Height="28" Stretch="Uniform" />
+            </Grid>
+          </Border>
+          <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+            <TextBlock x:Name="PreviewTitle" Text="{Binding PreviewTitle}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+            <TextBlock x:Name="PreviewSubtitle" Text="{Binding PreviewSubtitle}" FontSize="10" Foreground="{DynamicResource InstallerHintForegroundBrush}" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>

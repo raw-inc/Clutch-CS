@@ -1,0 +1,17 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Cluster
+@using ReArtWord.Contents.BackgroundService.Contracts.Management
+<nav class="editor-cluster-tabs" aria-label="@Ui["Browse clusters"]">
+    @foreach(var cluster in Clusters)
+    {
+        var peer=Candidate(cluster);
+        <button @key="cluster.ClusterId" class="cluster-tab @(Api.SelectedClusterId==cluster.ClusterId?"selected":null) @(Diagnostics.ClusterHasErrors(cluster.ClusterId)?"has-error":null)" aria-pressed="@(Api.SelectedClusterId==cluster.ClusterId)" disabled="@(busy||peer is null)" @onclick="()=>SelectAsync(cluster.ClusterId,peer!)" title="@(peer is null?Ui["Select a peer using the header connection picker."]:$"{peer.PeerId} / {peer.Status} / {peer.InstanceId} · {Ui["Last received"]} {FormatTime(cluster.LastSeen)}")">
+            <span class="cluster-tab-name">@cluster.ClusterId @if(Diagnostics.ClusterHasErrors(cluster.ClusterId)){<span class="tab-error" role="img" aria-label="@Ui["Node errors"]" title="@Ui["Node errors"]">!</span>}</span><small>@Ui[observations?.Unavailable==true?"Last observation":peer?.Status.ToString()??"Select connection"]</small>
+        </button>
+    }
+    @if(Api.SelectedClusterId is {} current&&!Clusters.Any(item=>item.ClusterId==current))
+    {
+        <button class="cluster-tab selected @(Diagnostics.ClusterHasErrors(current)?"has-error":null)" disabled title="@Ui["The current selection and draft are retained"]">@current <small>@Ui["Not observed"]</small></button>
+    }
+    <div class="tabs-actions"><button class="quiet" disabled="@(busy||observations?.Refreshing==true)" @onclick="RefreshAsync" title="@Ui["Refresh clusters observed by ClientHost"]">@Ui["Refresh"]</button></div>
+</nav>
+@if(Clusters.Count==0){<p class="small muted">@Ui["Waiting for cluster announcements. Use the connection picker to select this PC’s interface and discovery range."]</p>}

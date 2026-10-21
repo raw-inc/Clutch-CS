@@ -1,0 +1,8 @@
+{
+  "footer.transfers.title": "ファイル転送の進捗",
+  "footer.transfers.unconfirmed": "一部の転送状態を確認できていません。最後に受信した値を表示しています。",
+  "footer.transfers.empty": "転送はまだ観測されていません。",
+  "footer.transfers.progress": "転送を確認したバイト数",
+  "footer.transfers.range": "進行中を優先して{0}件表示（全{1}件）",
+  "footer.version": "読み込まれているUIのバージョン"
+}

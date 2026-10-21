@@ -1,0 +1,18 @@
+{
+  "node.websocket.request.name": "WebSocket request",
+  "node.websocket.request.description": "Open one connection on the selected interface, optionally send a message and receive one reply. No automatic replay.",
+  "node.websocket.listen.name": "WebSocket listener",
+  "node.websocket.listen.description": "Receive text and binary messages across bounded concurrent connections. Reply with a fixed value or a downstream reply node.",
+  "node.websocket.reply.name": "WebSocket reply",
+  "node.websocket.reply.description": "Send one response on the original connection and source peer using the received request handle.",
+  "port.websocket.listen.out.value": "Received message",
+  "port.websocket.listen.out.request": "Reply handle",
+  "port.websocket.listen.out.messageType": "Message type",
+  "port.websocket.request.in.value": "Message to send",
+  "port.websocket.request.out.value": "Reply or send result",
+  "port.websocket.request.out.messageType": "Reply message type",
+  "port.websocket.reply.in.request": "Reply handle",
+  "port.websocket.reply.in.value": "Reply message",
+  "setting.maxConnections": "Concurrent connection limit",
+  "choice.replyMode.none": "Receive without replying"
+}

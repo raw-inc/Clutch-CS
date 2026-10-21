@@ -1,0 +1,145 @@
+:root {
+    color-scheme: dark;
+    font: 13px system-ui, sans-serif;
+    background: #111317;
+    color: #e5e8ed;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+}
+
+[hidden] {
+    /* 例外理由: hidden 属性による非表示を、個別の display 指定より優先します。 */
+    display: none !important;
+}
+
+.update-splash {
+    width: min(260px, calc(100vw - 64px));
+    text-align: center;
+}
+
+.update-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 28px;
+}
+
+.brand-mark {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    color: #a6c5ec;
+}
+
+.brand-mark svg,
+.brand-mark img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.brand-name {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    gap: 3px;
+}
+
+.brand-name strong {
+    font-size: 20px;
+    font-weight: 550;
+    letter-spacing: 0.025em;
+}
+
+.brand-name small {
+    font-size: 11px;
+    color: #8994a3;
+    letter-spacing: 0.055em;
+}
+
+.brand-name img {
+    max-width: 180px;
+    max-height: 38px;
+    object-fit: contain;
+}
+
+progress {
+    display: block;
+    width: 100%;
+    height: 3px;
+    border: 0;
+    border-radius: 3px;
+    overflow: hidden;
+    background: #242a33;
+    accent-color: #9cbbdf;
+}
+
+progress::-webkit-progress-bar {
+    background: #242a33;
+    border-radius: 3px;
+}
+
+progress::-webkit-progress-value {
+    background: #9cbbdf;
+    border-radius: 3px;
+    transition: width 0.18s ease-out;
+}
+
+progress::-moz-progress-bar {
+    background: #9cbbdf;
+    border-radius: 3px;
+}
+
+.update-status {
+    font-size: 11px;
+    color: #8994a3;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    margin-top: 14px;
+}
+
+.manual {
+    max-width: 46rem;
+    padding: 32px;
+    line-height: 1.8;
+}
+
+.manual h1 {
+    font-size: 20px;
+    font-weight: 550;
+}
+
+button,
+a {
+    font: inherit;
+    color: inherit;
+}
+
+button {
+    background: #314761;
+    border: 0;
+    border-radius: 5px;
+    padding: 0.7rem 1.4rem;
+    cursor: pointer;
+}
+
+button:disabled {
+    opacity: 0.5;
+}
+
+.manual .update-splash {
+    margin: 36px auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    progress::-webkit-progress-value {
+        transition: none;
+    }
+}

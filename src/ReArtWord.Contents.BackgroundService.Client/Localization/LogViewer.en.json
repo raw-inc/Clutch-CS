@@ -1,0 +1,23 @@
+{
+  "log.viewer.selectForSettings": "Search all observable clusters without selecting a connection. Select a connection to change trace or retention settings.",
+  "log.export.button": "Download ZIP",
+  "log.export.progress": "Streaming ZIP · {0} logs",
+  "log.export.complete": "Text and detailed JSON have been sent. Check your browser downloads.",
+  "log.export.partial": "Some sources or details are missing, or an export limit was reached. See summary.json and each log's omission in the ZIP.",
+  "log.export.failed": "Log export failed. Check the search conditions and connections, and retry after other exports finish.",
+  "log.export.cancelled": "Log export was cancelled or timed out.",
+  "log.viewer.scope": "Search scope",
+  "log.viewer.current": "Selected peer",
+  "log.viewer.all": "All observable clusters",
+  "log.viewer.recentOnly": "Search recent history only",
+  "log.viewer.recentHelp": "Search only logs retained without compression. Turn this off to include compressed history.",
+  "log.viewer.searchHint": "Choose the search scope and filters. Turn off “Search recent history only” to include older, compressed logs.",
+  "log.viewer.refresh": "Auto refresh",
+  "log.viewer.off": "Off",
+  "log.viewer.every": "Every {0} seconds",
+  "log.viewer.updated": "Last retrieved: {0}",
+  "log.viewer.settingsContext": "Trace settings, retention, and operation history apply to the selected cluster.",
+  "log.viewer.noSources": "No log sources are available in this scope.",
+  "log.viewer.unconfirmed": "Unconfirmed sources: {0}",
+  "log.viewer.nextPauses": "Opening the next page turns auto refresh off."
+}

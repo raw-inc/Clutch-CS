@@ -1,0 +1,60 @@
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Diagnostics
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Fields.Types
+@using ReArtWord.Contents.BackgroundService.Contracts.Nodes
+@using ReArtWord.Contents.BackgroundService.Contracts.Workflow
+@using ReArtWord.Contents.BackgroundService.Contracts.Values
+@inject EditorPresentationCache Presentation
+@{var preview=Presentation.Preview(Model.Draft);var configured=preview.Resolve(Node);}
+@foreach (var port in Ports)
+{
+    @if((EventMergePorts.IsNode(Node.Type)&&ConcatPorts.Index(port.Name)>0)||(IterationNodeTypes.IsEnd(Node.Type)&&IterationNodeTypes.IsControlPort(port.Name)))
+    {
+        <div class="@(Inline ? "node-inline-field" : null)"><strong>@Ui.PortName(Node.Type,port.Name,false)</strong><small>@Ui[ValueMergePorts.IsNode(Node.Type)?"Connect a value output; each arrival starts its own downstream execution.":"Connect a start signal; no constant value is required."]</small></div>
+        continue;
+    }
+    @if(port.ValueKind == EPortValueKind.PcSelection)
+    {
+        <div class="@(Inline ? "node-inline-field" : null)"><strong>@Ui["Execution PCs"]</strong><small>@Ui["Connect PC selection nodes; multiple connections are allowed."]</small></div>
+        continue;
+    }
+    var connected = Model.Draft.Document.Wires.Any(wire => wire.ToNode == Node.Id && wire.ToPort == port.Name);
+    var value = connected ? preview.Input(Node,port.Name) : Node.Inputs?.GetValueOrDefault(port.Name);
+    var binary = port.ValueKind == EPortValueKind.Binary || value?.Kind == EValueKind.Binary;
+    @if(port.IsLegacy)
+    {
+        <div class="small @(Inline ? "node-inline-legacy" : null)" title="@Ui["This existing input only keeps the start dependency; its value is not used. Use the trigger input for new connections."]">
+            <strong>@Ui.PortName(Node.Type,port.Name,false)</strong>
+            <small>@Ui["This existing input only keeps the start dependency; its value is not used. Use the trigger input for new connections."]</small>
+            @if(!Inline && value is not null && !connected){<button type="button" @onclick="()=>CommitAsync(port.Name,string.Empty,false,JsonValueKind.Undefined)">@Ui["Remove unused input"]</button>}
+        </div>
+        continue;
+    }
+    var actualKind = (Inline||connected) && !binary && value is not null ? value.Json.ValueKind : JsonValueKind.Undefined;
+    var expected=Contracts.Scripting.ScriptSettings.PortType(configured,port.Name,false)??OscPorts.PortType(configured,port.Name)??BuiltinInputTypes.Expected(Node.Type,port.Name)??value?.DataType;
+    var declaredKind=expected?.Type switch { "string" or "path"=>JsonValueKind.String,"integer" or "number" or "int64"=>JsonValueKind.Number,"boolean"=>JsonValueKind.True,_=>actualKind };
+    var kind = connected ? declaredKind : focusedKinds.GetValueOrDefault(port.Name,declaredKind);
+    var key = Node.Id + "/inputs/" + port.Name;
+    var raw = (connected?null:Model.ReadInput(key)) ?? (binary ? Convert.ToBase64String(value?.Binary.ToArray() ?? []) : kind == JsonValueKind.String && value?.Json.ValueKind==JsonValueKind.String ? value.Json.GetString() ?? string.Empty : value?.Json.GetRawText() ?? string.Empty);
+    var reason = connected ? Ui[value is null?"Connected value is not available without execution":"Connected value preview · read-only"] : Inline && binary ? Ui["Edit in inspector"] : null;
+    <label @key="port.Name" @onfocusin="()=>BeginInput(port.Name,kind)" @onfocusout="()=>EndInput(port.Name)" class="@(Inline ? "node-inline-field" : null)">
+        @Ui.PortName(Node.Type,port.Name,false) @(port.Required ? "*" : "")
+        @if(expected?.Type=="type definition")
+        {
+            <TypeInputField Value="value" Disabled="@(reason is not null)" ValueChanged='v=>CommitAsync(port.Name,v.ValueKind==JsonValueKind.Undefined?string.Empty:v.GetRawText(),false,JsonValueKind.Undefined)' InvalidChanged='raw=>TypeEditorBinding.InvalidAsync(Model,key,InvalidChanged,raw,UiCancellation)' />
+        }
+        else if(kind is JsonValueKind.True or JsonValueKind.False)
+        {
+            <select disabled="@(reason is not null)" value="@raw" @onchange="e=>CommitAsync(port.Name,e.Value?.ToString()??string.Empty,binary,kind)"><option value="">@Ui["Not set"]</option><option value="true">@Ui["true"]</option><option value="false">@Ui["false"]</option></select>
+        }
+        else if(kind is JsonValueKind.String or JsonValueKind.Number)
+        {
+            <input disabled="@(reason is not null)" type="text" inputmode="@(kind==JsonValueKind.Number?"decimal":"text")" value="@raw" @oninput="e=>CommitAsync(port.Name,e.Value?.ToString()??string.Empty,binary,kind)" />
+        }
+        else
+        {
+            <textarea disabled="@(reason is not null)" aria-label="@(Ui.PortName(Node.Type,port.Name,false)+Ui[" constant input"])" title="@(reason ?? Ui[binary ? "port.input.binaryFormat" : "port.input.format"])" value="@raw" @oninput="e=>CommitAsync(port.Name,e.Value?.ToString()??string.Empty,binary,kind)" />
+        }
+        @if (reason is not null) { <small class="node-inline-reason" title="@reason">@reason</small> }
+        @if (!connected && Model.ReadInput(key) is not null) { <small class="error">@(binary ? Ui["Enter valid Base64"] : Ui["Enter valid JSON"])</small> }
+    </label>
+}

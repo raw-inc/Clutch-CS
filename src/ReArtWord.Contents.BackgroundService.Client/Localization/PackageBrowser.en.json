@@ -1,0 +1,21 @@
+{
+  "Search packages": "Search packages",
+  "Package name or keyword": "Package name or keyword",
+  "Searching packages…": "Searching packages…",
+  "PyPI searches package names. The first search downloads the public name index.": "PyPI searches package names. The first search downloads the public name index.",
+  "No packages matched this search.": "No packages matched this search.",
+  "Loading package details…": "Loading package details…",
+  "Installed": "Installed",
+  "Downloads": "Downloads",
+  "View on package registry": "View on package registry",
+  "Version to install": "Version to install",
+  "Up to 500 versions are shown. Use exact package entry for another published version.": "Up to 500 versions are shown. Use exact package entry for another published version.",
+  "Select a package to choose its version and install it.": "Select a package to choose its version and install it.",
+  "Enter an exact package and version": "Enter an exact package and version",
+  "script.packages.searchInvalid": "Check the package source and search query.",
+  "script.packages.searchUnavailable": "The package registry search could not be completed. Check the connection and search again.",
+  "script.packages.detailsUnavailable": "Published versions could not be retrieved. Select the package again.",
+  "script.packages.pypiNameSearch": "PyPI project names are ranked by exact match, prefix, then substring.",
+  "script.packages.pypiCachedSearch": "The PyPI index could not be refreshed. Results use the previously downloaded name index.",
+  "Enter: auto-indent · Tab / Shift+Tab: indent · Ctrl+Space: suggestions · Escape then Tab: move focus": "Enter: auto-indent · Tab / Shift+Tab: indent · Ctrl+Space: suggestions · Escape then Tab: move focus"
+}

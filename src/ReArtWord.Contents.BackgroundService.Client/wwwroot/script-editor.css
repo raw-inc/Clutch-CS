@@ -1,0 +1,57 @@
+.script-editor-surface,
+.script-editor-surface .cm-editor {
+    height: 100%;
+    min-height: 0;
+}
+
+.script-editor-surface .cm-editor {
+    color: var(--ink);
+    background: var(--paper);
+    font: 12px/1.6 Consolas, monospace;
+}
+
+.script-editor-surface .cm-editor .cm-scroller {
+    font-family: inherit;
+    overflow: auto;
+}
+
+.script-editor-surface .cm-editor .cm-content {
+    caret-color: var(--ink);
+}
+
+.script-editor-surface .cm-editor .cm-gutters {
+    color: var(--muted);
+    background: var(--paper);
+    border-color: var(--line);
+}
+
+.script-editor-surface .cm-editor .cm-cursor {
+    border-left-color: var(--ink);
+}
+
+.script-editor-surface .cm-editor [class~="cm-selectionBackground"],
+.script-editor-surface .cm-focused [class~="cm-selectionBackground"] {
+    background: #628cc366;
+}
+
+.script-editor-surface .cm-editor [class~="cm-matchingBracket"] {
+    background: #628cc344;
+    outline: 1px solid var(--accent);
+}
+
+.contents-code-completion.cm-tooltip.cm-tooltip-autocomplete {
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    font: 12px/1.6 Consolas, monospace;
+    max-width: min(32rem, 90vw);
+}
+
+.contents-code-completion [class~="cm-completionLabel"] {
+    overflow-wrap: anywhere;
+}
+
+.contents-code-completion.cm-tooltip.cm-tooltip-autocomplete [aria-selected="true"] {
+    color: var(--ink);
+    background: #628cc366;
+}

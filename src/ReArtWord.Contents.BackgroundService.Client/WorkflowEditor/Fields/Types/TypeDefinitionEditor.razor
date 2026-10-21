@@ -1,0 +1,31 @@
+@{
+    var type=Read();
+    var name=type["keyType"] is not null && type["valueType"] is not null ? "dictionary" : type["type"]?.GetValue<string>()??"any";
+}
+<div class="type-definition-editor">
+    <div class="toolbar">
+        <label>@Ui["Value type"]<select disabled="@Disabled" aria-label="@Ui["Value type"]" value="@name" @onchange='e=>ChangeTypeAsync(e.Value?.ToString()??"any",UiCancellation)'>@foreach(var kind in Kinds){<option value="@kind">@Ui["port.type."+kind]</option>}</select></label>
+        @if(!DictionaryKeyOnly){<label><input type="checkbox" disabled="@Disabled" checked="@(type["optional"]?.GetValue<bool>()??false)" @onchange="e=>OptionalAsync((bool)e.Value!,UiCancellation)" />@Ui["Optional / nullable"]</label>}
+    </div>
+    @if(Depth<16 && name=="array")
+    {
+        <fieldset><legend>@Ui["Array element type"]</legend><TypeDefinitionEditor Value='@Element(type["elementType"])' Depth="@(Depth+1)" Disabled="Disabled" ValueChanged='v=>SetAsync("elementType",v,UiCancellation)' InvalidChanged="InvalidChanged" /></fieldset>
+    }
+    @if(Depth<16 && name=="object")
+    {
+        @foreach(var property in Properties(type))
+        {
+            <fieldset @key="property.Key">
+                <div class="toolbar"><label>@Ui["Property name"]<input disabled="@Disabled" aria-label="@Ui["Property name"]" value="@property.Key" @onchange="e=>RenameAsync(property.Key,e.Value?.ToString()??string.Empty,UiCancellation)" /></label><button type="button" disabled="@Disabled" @onclick="()=>RemoveAsync(property.Key,UiCancellation)">@Ui["Remove"]</button></div>
+                <TypeDefinitionEditor Value="@Element(property.Value)" Depth="@(Depth+1)" Disabled="Disabled" ValueChanged="v=>PropertyAsync(property.Key,v,UiCancellation)" InvalidChanged="InvalidChanged" />
+            </fieldset>
+        }
+        <button type="button" disabled="@(Disabled || Properties(type).Count>=128)" @onclick="()=>AddAsync(UiCancellation)">@Ui["Add property"]</button>
+    }
+    @if(Depth<16 && name=="dictionary")
+    {
+        <fieldset><legend>@Ui["Dictionary key type"]</legend><TypeDefinitionEditor Value='@Element(type["keyType"])' DictionaryKeyOnly="true" Depth="@(Depth+1)" Disabled="Disabled" ValueChanged='v=>SetAsync("keyType",v,UiCancellation)' InvalidChanged="InvalidChanged" /></fieldset>
+        <fieldset><legend>@Ui["Dictionary value type"]</legend><TypeDefinitionEditor Value='@Element(type["valueType"])' Depth="@(Depth+1)" Disabled="Disabled" ValueChanged='v=>SetAsync("valueType",v,UiCancellation)' InvalidChanged="InvalidChanged" /></fieldset>
+    }
+    @if(problem is not null){<p class="small error">@Ui[problem]</p>}
+</div>

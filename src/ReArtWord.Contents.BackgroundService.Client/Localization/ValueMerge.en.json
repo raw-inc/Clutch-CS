@@ -1,0 +1,6 @@
+{
+  "node.control.valueMerge.name": "Value merge",
+  "node.control.valueMerge.description": "Forward each arriving value and a start signal without waiting for other inputs. Equal values received separately remain separate events. Merge related fields as one packet or object, then extract them downstream. PC candidates are also accepted. The first signaled selection supplies its own candidates to that execution without combining other inputs.",
+  "port.control.valueMerge.out.value": "Received value",
+  "port.control.valueMerge.out.start": "Arrival signal"
+}

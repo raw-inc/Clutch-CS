@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <RunConfiguration>
+    <MaxCpuCount>1</MaxCpuCount>
+  </RunConfiguration>
+  <xUnit>
+    <DiagnosticMessages>true</DiagnosticMessages>
+    <ReporterSwitch>verbose</ReporterSwitch>
+    <StopOnFail>false</StopOnFail>
+    <ParallelizeTestCollections>false</ParallelizeTestCollections>
+    <LongRunningTestSeconds>60</LongRunningTestSeconds>
+    <ParallelAlgorithm>conservative</ParallelAlgorithm>
+  </xUnit>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="blame" enabled="True">
+        <Configuration>
+          <CollectDumpOnTestSessionHang TestTimeout="15m" HangDumpType="Mini" />
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

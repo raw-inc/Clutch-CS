@@ -1,0 +1,29 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Files.Transfers
+<div class="transfer-footer" @onmouseenter="OpenAsync" @onmouseleave="Leave" @onkeydown="KeyDown">
+    <button type="button" class="transfer-toggle" aria-expanded="@(open ? "true" : "false")" aria-controls="footer-transfers" @onclick="ToggleAsync">FileTransfer (@ActiveCount)</button>
+    @if(open)
+    {
+        <section id="footer-transfers" class="transfer-popup" role="region" aria-label="@Ui["footer.transfers.title"]" aria-busy="@(loading ? "true" : "false")">
+            <header><strong>@Ui["footer.transfers.title"]</strong><button type="button" class="quiet icon-button" aria-label="@Ui["Close"]" @onclick="Close"><UiIcon Name="close" /></button></header>
+            @if(unavailable || CountUnconfirmed || state?.UnconfirmedPeers>0){<p class="transfer-warning" role="status">@Ui["footer.transfers.unconfirmed"]</p>}
+            @if(state is null){<p>@Ui[loading ? "Loading…" : "footer.transfers.unconfirmed"]</p>}
+            else if(state.Jobs.Count==0){<p>@Ui["footer.transfers.empty"]</p>}
+            else
+            {
+                <div class="transfer-jobs">
+                    @foreach(var job in state.Jobs.Take(8))
+                    {
+                        <article class="transfer-job" @key="job.Request.Id">
+                            <div class="transfer-name"><strong title="@job.Request.SourcePath">@FileName(job.Request.SourcePath)</strong><span>@Ui[job.State]</span></div>
+                            <small>@job.Request.Source.PeerId → @job.Request.Destination.PeerId</small>
+                            <progress max="100" value="@Percent(job)" aria-label="@Ui["footer.transfers.progress"]"></progress>
+                            <div class="transfer-bytes"><span>@job.BytesCopied.ToString("N0",CultureInfo.CurrentCulture) / @job.TotalBytes.ToString("N0",CultureInfo.CurrentCulture) B</span><time title="@FormatTime(job.UpdatedAt)">@FormatTime(job.UpdatedAt,"HH:mm:ss")</time></div>
+                            @if(job.Problem is not null){<p class="transfer-warning">@Ui[job.Problem]</p>}
+                        </article>
+                    }
+                </div>
+                <p class="transfer-range">@Ui.Format("footer.transfers.range", Math.Min(state.Jobs.Count,8), state.TotalJobs)</p>
+            }
+        </section>
+    }
+</div>

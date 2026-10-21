@@ -1,0 +1,49 @@
+{
+  "id": "http-typed-input",
+  "name": "Typed HTTP parameters",
+  "enabled": false,
+  "nodes": [
+    { "id": "integer-type", "type": "value.type", "position": { "x": 60, "y": 80 }, "settings": { "type": "integer" } },
+    { "id": "string-type", "type": "value.type", "position": { "x": 60, "y": 800 }, "settings": { "type": "string" } },
+    { "id": "tags-type", "type": "value.type", "position": { "x": 460, "y": 800 }, "settings": { "type": "array", "optional": true } },
+    { "id": "age-field", "type": "value.keyValue", "position": { "x": 460, "y": 80 }, "settings": { "key": "age" } },
+    { "id": "tags-field", "type": "value.keyValue", "position": { "x": 860, "y": 80 }, "settings": { "key": "tags" } },
+    { "id": "query-type", "type": "value.type", "position": { "x": 1260, "y": 80 }, "settings": { "type": "object" } },
+    { "id": "method", "type": "http.method", "position": { "x": 1260, "y": 700 }, "settings": { "method": "GET" } },
+    { "id": "interface", "type": "value.interface", "position": { "x": 1260, "y": 1060 }, "settings": { "interfaceId": "REPLACE_INTERFACE_ID" } },
+    {
+      "id": "receive",
+      "type": "http.listen",
+      "position": { "x": 1660, "y": 80 },
+      "startOnLoad": true,
+      "target": { "scope": "One", "peers": ["REPLACE_PEER_ID"] },
+      "settings": {
+        "localAddress": "192.0.2.10",
+        "localPort": 9080,
+        "path": "/person",
+        "replyMode": "workflow"
+      }
+    },
+    { "id": "reply-body", "type": "value.keyValue", "position": { "x": 2060, "y": 800 }, "settings": { "key": "body" } },
+    {
+      "id": "reply",
+      "type": "http.reply",
+      "position": { "x": 2460, "y": 80 },
+      "target": { "scope": "One", "sourcePeer": true },
+      "settings": {}
+    }
+  ],
+  "wires": [
+    { "fromNode": "integer-type", "fromPort": "value", "toNode": "age-field", "toPort": "value" },
+    { "fromNode": "string-type", "fromPort": "value", "toNode": "tags-type", "toPort": "elementType" },
+    { "fromNode": "tags-type", "fromPort": "value", "toNode": "tags-field", "toPort": "value" },
+    { "fromNode": "age-field", "fromPort": "value", "toNode": "tags-field", "toPort": "base" },
+    { "fromNode": "tags-field", "fromPort": "value", "toNode": "query-type", "toPort": "properties" },
+    { "fromNode": "query-type", "fromPort": "value", "toNode": "receive", "toPort": "queryType" },
+    { "fromNode": "method", "fromPort": "value", "toNode": "receive", "toPort": "method" },
+    { "fromNode": "interface", "fromPort": "value", "toNode": "receive", "toPort": "$settings.interfaceId" },
+    { "fromNode": "receive", "fromPort": "query", "toNode": "reply-body", "toPort": "value" },
+    { "fromNode": "reply-body", "fromPort": "value", "toNode": "reply", "toPort": "value" },
+    { "fromNode": "receive", "fromPort": "request", "toNode": "reply", "toPort": "request" }
+  ]
+}

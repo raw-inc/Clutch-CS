@@ -1,0 +1,43 @@
+.node-name-content {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+.node-title {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 24px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: inherit;
+    user-select: none;
+}
+
+.node-title:focus-visible {
+    outline: 1px solid var(--accent);
+    outline-offset: -1px;
+}
+
+.node-title[aria-disabled="true"] {
+    cursor: default;
+}
+
+.node-name-input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    height: 24px;
+    margin: 0;
+    padding: 0 4px;
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    background: #20242a;
+    color: var(--ink);
+    font-size: 13px;
+}

@@ -1,0 +1,8 @@
+{
+  "node.control.if.name": "If",
+  "node.control.if.description": "条件を一度判定し、True側またはFalse側のどちらか一方だけに開始Signalを送ります。判定した真偽値も出力します。文字列・数値・nullを真偽値へ暗黙変換しません。",
+  "port.control.if.in.condition": "条件（真偽値）",
+  "port.control.if.out.trueStart": "True側 開始Signal",
+  "port.control.if.out.falseStart": "False側 開始Signal",
+  "port.control.if.out.value": "比較真偽値"
+}

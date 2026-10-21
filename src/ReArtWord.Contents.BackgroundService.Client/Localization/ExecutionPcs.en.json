@@ -1,0 +1,6 @@
+{
+  "setting.hostIds": "PCs",
+  "setting.resource": "Resource to compare",
+  "setting.measurement": "Comparison unit",
+  "setting.gpuId": "GPU identifier"
+}

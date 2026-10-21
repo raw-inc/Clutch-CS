@@ -1,0 +1,29 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+@using ReArtWord.Contents.BackgroundService.Contracts.Workflow
+@using ReArtWord.Contents.BackgroundService.Contracts.Execution
+<section class="card">
+<h2>@Ui["Temporary safety actions for nodes and groups"]</h2>
+<button @onclick="OpenAsync"><UiIcon Name="search" />@Ui["Review effective state and targets"]</button>
+<p class="small muted">@Ui["Acknowledgement applies to new-input decisions. Check the original result to confirm an already-started execution stopped."]</p>
+<p class="notice">@(message?.Invoke())</p>
+@if(lastOperation is Guid operation){<p>@Ui["Current operation"] @operation <button @onclick="ReadOperationAsync" disabled="@busy">@Ui["Query acceptance again"]</button></p>}
+</section>
+<Modal Open="open" Title="@Ui["Temporary safety targets"]" Close="()=>open=false">
+<WorkflowPagePicker Selected="LoadTargetsAsync" />
+<label>@Ui["Effective nodes and safety groups"]<select @bind="selected" disabled="@busy">@for(var i=0;i<targets.Count;i++){<option value="@i">@targets[i].Workflow / @targets[i].Scope</option>}</select></label>
+<p>@Ui["Current override"]: @(Current?.Stopped==true?Ui["New inputs stopped"]:Current?.Continued==true?Ui["Temporary continuation past an automatic stop"]:Ui["Normal decision"]) · @Ui["Reference revision"] @(Current?.Version??Ui["Not specified"]) @(Current?.LocalOnly==true?Ui["Local only"]:"")</p>
+<p>@Ui["Continuation requested"] @(Current?.RequestedContinued==true?Ui["Requested"]:Ui["None"]) / @Ui["Current effective decision"] @(Current?.Continued==true?Ui["Continue"]:Ui["Normal decision"]) · @Current?.ContinuationReason</p>
+<button @onclick="()=>ChangeAsync(true,false)" disabled="@busy">@Ui["Pause new inputs"]</button>
+<button @onclick="()=>ChangeAsync(false,true)" disabled="@busy">@Ui["Temporarily continue this target"]</button>
+<button @onclick="()=>ChangeAsync(false,false)" disabled="@busy">@Ui["Clear the override and return to normal decisions"]</button>
+<p>@Ui["Temporary continuation also clears the manual stop on the same target. It does not clear manual stops on other nodes or groups. Clearing the override restores the current normal safety decision."]</p>
+<p class="notice">@(message?.Invoke())</p>
+@if(preview is not null){<p>@preview.Impact</p><table><thead><tr><th>Node</th><th>@Ui["Effective stop"]</th><th>@Ui["Automatic stop"]</th><th>@Ui["Manual stop"]</th><th>@Ui["Temporary continuation"]</th></tr></thead><tbody>@foreach(var item in preview.Targets){<tr><td>@item.NodeId</td><td>@Ui[(item.Stopped).ToString() ?? "Unconfirmed"] · @(item.StopReason??Ui["Reason unconfirmed"])</td><td>@Ui[(item.AutomaticallyStopped).ToString() ?? "Unconfirmed"] · @(item.AutomaticStopReason??Ui["Reason unconfirmed"])</td><td>@Ui[(item.ManuallyStopped).ToString() ?? "Unconfirmed"]</td><td>@Ui[(item.Continued).ToString() ?? "Unconfirmed"]</td></tr>}</tbody></table>}
+<JsonDetails Value="result" Title="@Ui["Result of this operation"]" />
+</Modal>
+<Modal Open="confirmOpen" Title="@Ui["Review targets and impact"]" Close="CancelConfirmation">
+<p>@preview?.Impact</p>
+<p>@Ui["Target"] @pending?.WorkflowId / @pending?.Scope · @(pending?.Stopped==true?Ui["Temporary pause"]:pending?.Continued==true?Ui["Temporary continuation"]:Ui["Return to normal decisions"])</p>
+<JsonDetails Value="preview" Title="@Ui["Reviewed targets, effective stops and definition revision"]" />
+<button @onclick="ConfirmAsync" disabled="@busy">@Ui["Confirm these targets and impact, then apply"]</button><button @onclick="CancelConfirmation" disabled="@busy">@Ui["Cancel"]</button>
+</Modal>

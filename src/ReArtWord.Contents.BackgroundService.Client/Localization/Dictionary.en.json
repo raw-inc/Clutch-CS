@@ -1,0 +1,23 @@
+{
+  "node.value.dictionary.name": "Dictionary",
+  "Build dictionary": "Dictionary",
+  "Build a dictionary from Key and value nodes, an array of property maps, or an existing dictionary. Duplicate keys are rejected or replaced with the last value.": "Build a dictionary from Key and value nodes, an array of property maps, or an existing dictionary. Duplicate keys are rejected or replaced with the last value.",
+  "Reject duplicate keys, or replace with the last supplied value. Keys are case-sensitive.": "Reject duplicate keys, or replace with the last supplied value. Keys are case-sensitive.",
+  "port.type.dictionaryOf": "Dictionary<{0}, {1}>",
+  "port.type.dictionary": "Dictionary",
+  "Dictionary key type": "Dictionary key type",
+  "Dictionary value type": "Dictionary value type",
+  "ForEach requires an array or dictionary with at most 4096 elements.": "ForEach requires an array or dictionary with at most 4096 elements.",
+  "node.value.dictionary.description": "Build a dictionary from Key-Value arrays or an existing dictionary. Keys are case-sensitive; reject duplicates or replace with the last value.",
+  "port.value.dictionary.in.items": "Key-Value array / existing dictionary",
+  "port.value.dictionary.in.item": "Key-Value to add",
+  "port.value.dictionary.out.value": "Dictionary",
+  "node.data.keyValue.key.name": "Get key from Key-Value",
+  "node.data.keyValue.value.name": "Get value from Key-Value",
+  "node.data.keyValue.key.description": "Extract the typed key from exactly one Key-Value entry. Accepts dictionary iteration items. Empty or multiple entries fail.",
+  "node.data.keyValue.value.description": "Extract the value from exactly one Key-Value entry, preserving nested types and Path metadata. Empty or multiple entries fail.",
+  "port.data.keyValue.key.in.value": "Key-Value",
+  "port.data.keyValue.value.in.value": "Key-Value",
+  "port.data.keyValue.key.out.value": "Key",
+  "port.data.keyValue.value.out.value": "Value"
+}

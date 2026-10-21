@@ -1,0 +1,51 @@
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Diagnostics
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Graph
+@using ReArtWord.Contents.BackgroundService.Contracts.Workflow
+@using ReArtWord.Contents.BackgroundService.Contracts.Nodes
+<section class="recipe-preview" aria-label="@Ui["Read-only SubWorkflow preview"]">
+    <div class="toolbar"><strong>@Ui["Read-only SubWorkflow preview"]</strong><button disabled="@(history.Count==0||loading)" @onclick="BackAsync">@Ui["Back"]</button><label>@Ui["Zoom"]<input type="range" min="0.05" max="1.5" step="0.05" @bind="zoom" /></label></div>
+    @if(problem is not null){<p class="notice warn">@Ui[problem]</p>}
+    @if(view is {} current && inference is not null && observed is not null)
+    {
+        <p class="small">@current.Instance.Layout.Name · @current.Instance.NodeId · @current.Revision[..Math.Min(12,current.Revision.Length)]</p>
+        @if(!current.IsRuntime){<p class="notice">@Ui["Saved layout preview · live execution values are unavailable until this placement is activated."]</p>}
+        @if(current.Issues?.Count>0){<p class="notice error">@string.Join(" · ",current.Issues.Select(issue=>Ui[issue.Message]))</p>}
+        <div class="recipe-viewport">
+            <svg class="recipe-canvas" width="@(Width*zoom)" height="@(Height*zoom)" viewBox="@FormattableString.Invariant($"0 0 {Width} {Height}")">
+                @foreach(var wire in current.Instance.Layout.Wires)
+                {
+                    var from=Endpoint(wire.FromNode,wire.FromPort,true);var to=Endpoint(wire.ToNode,wire.ToPort,false);
+                    @if(from is not null && to is not null){<path class="recipe-wire" d="@GraphPresentation.Path(from,to,EGraphWireShape.Curve)" fill="none" />}
+                }
+                @foreach(var node in current.Instance.Layout.Nodes)
+                {
+                    var position=node.Position??new NodePosition(60,80);var descriptor=inference.Descriptor(node.Id);var inputs=Ports(node,false);var outputs=Ports(node,true);var size=Size(node);var running=activity.IsRunning(ClusterId,observed,node.Id);var nested=SubworkflowInterface.Target(node.Type) is not null;
+                    <g @key="node.Id" class="recipe-node @(running?"running":null)" data-node-id="@node.Id" transform="@FormattableString.Invariant($"translate({position.X} {position.Y})")" @ondblclick="()=>nested?OpenNestedAsync(node.Id):Task.CompletedTask">
+                        <rect width="@size.Width" height="@size.Height" rx="10" />
+                        <text x="12" y="24" class="recipe-title">@Short(Ui.NodeName(node,descriptor))<title>@Ui.NodeName(node,descriptor) · @Ui.NodeName(descriptor)</title></text>
+                        <text x="12" y="44" class="recipe-id">@LocalId(node.Id)</text>
+                        @for(var index=0;index<inputs.Count;index++){<g><circle cx="0" cy="@(68+index*26)" r="5" /><text x="12" y="@(72+index*26)">@Short(Ui.PortName(node.Type,inputs[index],false))</text></g>}
+                        @for(var index=0;index<outputs.Count;index++){<g><circle cx="@size.Width" cy="@(68+index*26)" r="5" /><text x="@(size.Width-12)" y="@(72+index*26)" text-anchor="end">@Short(Ui.PortName(node.Type,outputs[index],true))</text></g>}
+                        @{var top=90+Math.Max(inputs.Count,outputs.Count)*26;}
+                        <foreignObject x="12" y="@top" width="@(size.Width-24)" height="@(size.Height-top-12)">
+                            <div xmlns="http://www.w3.org/1999/xhtml" class="recipe-details" @ondblclick:stopPropagation="true">
+                                @if(node.Type is "control.preview" or "control.progress")
+                                {
+                                    <NodePreviewPanel Node="node" ClusterId="@ClusterId" WorkflowId="@WorkflowId" RuntimeOnly="true" Snapshots="@previews.Find(ClusterId,WorkflowId,node.Id)" />
+                                }
+                                else
+                                {
+                                    @if(nested){<button @onclick="()=>OpenNestedAsync(node.Id)">@Ui["View inside"]</button>}
+                                    @foreach(var property in node.Settings.EnumerateObject().Where(property=>!property.Name.StartsWith('$'))){<div><strong>@Ui.SettingName(property.Name)</strong><pre>@property.Value.ToString()</pre></div>}
+                                    @foreach(var input in node.Inputs??new Dictionary<string,NodeValue>()){<div><strong>@Ui.PortName(node.Type,input.Key,false)</strong><pre>@(input.Value.Kind==EValueKind.Binary?Ui["Binary"]:input.Value.Json.ToString())</pre></div>}
+                                }
+                            </div>
+                        </foreignObject>
+                    </g>
+                }
+            </svg>
+        </div>
+        @if(previews.Unavailable){<p class="small error">@Ui["Some preview peers are unavailable"]</p>}
+    }
+    else if(loading){<p>@Ui["Loading preview"]</p>}
+</section>

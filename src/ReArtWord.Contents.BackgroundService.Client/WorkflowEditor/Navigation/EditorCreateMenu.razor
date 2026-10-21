@@ -1,0 +1,9 @@
+<button class="quiet" type="button" disabled="@Busy" @onclick="New" @oncontextmenu="Show" @oncontextmenu:preventDefault="Experimental" title="@Ui[Experimental?"Right-click to create a Workflow or WFDashboard":"Retain this draft and create a workflow"]">@Ui["+ New"]</button>
+@if(open)
+{
+    <div class="creation-shade" @onclick="()=>open=false" @oncontextmenu="()=>open=false" @oncontextmenu:preventDefault="true"></div>
+    <div @ref="menu" class="creation-menu" role="menu" tabindex="-1" style="@MenuStyle" @onkeydown="Key" @oncontextmenu:preventDefault="true">
+        <button type="button" role="menuitem" disabled="@Busy" @onclick="()=>CreateAsync(false,UiCancellation)">@Ui["Create new Workflow"]</button>
+        <button type="button" role="menuitem" disabled="@Busy" @onclick="()=>CreateAsync(true,UiCancellation)">@Ui["Create new WFDashboard"]</button>
+    </div>
+}

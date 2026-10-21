@@ -1,0 +1,26 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Execution.Concurrency
+<section class="concurrency-queue @(Compact?"compact":null)" aria-label="@Ui["Concurrency queue"]">
+    @if(Snapshot is null || Snapshot.Problem is not null)
+    {
+        <p class="queue-unconfirmed" role="status">@Ui["Concurrency queue is unconfirmed."]</p>
+    }
+    else
+    {
+        <div class="queue-counts"><span>@Ui["Processing sessions"] <strong>@Snapshot.ActiveCount</strong></span><span>@Ui["Queued sessions"] <strong>@Snapshot.WaitingCount</strong></span></div>
+        @if(Snapshot.WaitingCount==0)
+        {
+            <p class="queue-empty">@Ui["No queued sessions"]</p>
+        }
+        else
+        {
+            <div class="queue-scroll" tabindex="0" aria-label="@Ui["Waiting sessions"]">
+                <table><thead><tr><th scope="col">#</th>@if(!Compact){<th scope="col">@Ui["Queue session"]</th>}<th scope="col">@Ui["Source peer"]</th><th scope="col">@Ui["Waited"]</th>@if(!Compact){<th scope="col">@Ui["Remaining"]</th>}</tr></thead>
+                <tbody>@foreach(var item in Snapshot.Waiting.Select((value,index)=>(value,index)))
+                {
+                    <tr @key="item.value.TicketId" title="@(item.value.RunId+" · "+item.value.TicketId)"><td>@(item.index+1)</td>@if(!Compact){<td class="queue-run">@item.value.TicketId.ToString("N")[..8]</td>}<td class="queue-peer" title="@item.value.OwnerPeerId">@item.value.OwnerPeerId</td><td>@Duration(Snapshot.ObservedAt-item.value.QueuedAt)</td>@if(!Compact){<td title="@Ui[item.value.ProceedOnTimeout?"Proceed after timeout":"Fail after timeout"]">@(item.value.Deadline is {} deadline?Duration(deadline-Snapshot.ObservedAt):"∞")</td>}</tr>
+                }</tbody></table>
+            </div>
+            @if(Snapshot.Waiting.Count<Snapshot.WaitingCount){<small>@Ui.Format("Showing first {0} of {1} waiting sessions",Snapshot.Waiting.Count,Snapshot.WaitingCount)</small>}
+        }
+    }
+</section>

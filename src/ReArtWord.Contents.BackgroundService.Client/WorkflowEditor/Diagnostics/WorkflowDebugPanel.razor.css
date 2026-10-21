@@ -1,0 +1,21 @@
+.workflow-debug {
+    min-width: 0;
+}
+
+.debug-table {
+    max-height: 60vh;
+    overflow: auto;
+}
+
+.debug-table td {
+    vertical-align: top;
+}
+
+.debug-table code {
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.debug-table dd {
+    margin: 0 0 0.5rem;
+}

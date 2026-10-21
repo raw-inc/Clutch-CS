@@ -1,0 +1,274 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ReArtWord.Contents.BackgroundService.Installer.ViewModels"
+        xmlns:models="using:ReArtWord.Contents.BackgroundService.Installer.Models"
+        xmlns:installation="using:ReArtWord.Contents.BackgroundService.Contracts.Installation"
+        xmlns:management="using:ReArtWord.Contents.BackgroundService.Contracts.Management"
+        xmlns:views="using:ReArtWord.Contents.BackgroundService.Installer.Views"
+        x:Class="ReArtWord.Contents.BackgroundService.Installer.Views.InstallerWindow"
+        x:DataType="vm:WizardViewModel" x:CompileBindings="True"
+        Title="Clutch-CS Setup" Icon="/Assets/Clutch-CS.ico" Width="1024" Height="768" MinWidth="680" MinHeight="520"
+        WindowStartupLocation="CenterScreen" RequestedThemeVariant="Dark">
+  <Grid RowDefinitions="Auto,*">
+    <Border Background="#202125" BorderBrush="#2C3037" BorderThickness="0,0,0,1" Padding="24,18">
+      <StackPanel Spacing="8">
+        <StackPanel Orientation="Horizontal" Spacing="11">
+          <Border Width="30" Height="30" Background="#303845" BorderBrush="#414D60" BorderThickness="1" CornerRadius="7">
+            <Viewbox Width="19" Height="19"><Canvas Width="24" Height="24"><Path Data="{StaticResource ClutchBrandGeometry}" Stroke="#AECBF1" StrokeThickness="1.6" StrokeLineCap="Round" StrokeJoin="Round" /></Canvas></Viewbox>
+          </Border>
+          <TextBlock Text="Clutch-CS" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+    <Grid x:Name="WizardContent" Grid.Row="1" Margin="24,20" RowDefinitions="Auto,*,Auto,Auto" IsVisible="{Binding !Settings.Licenses.IsOpen}">
+      <StackPanel Spacing="8" Margin="0,0,0,24">
+        <TextBlock x:Name="PageHeading" Text="{Binding Heading}" FontSize="22" FontWeight="SemiBold" />
+      </StackPanel>
+      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding !IsLicense}">
+        <StackPanel IsEnabled="{Binding Idle}">
+          <StackPanel Classes="form" IsVisible="{Binding IsLanguage}">
+            <TextBlock Classes="label" Text="{Binding Text[Language]}" />
+            <ComboBox SelectedIndex="{Binding LanguageIndex}"><ComboBoxItem Content="English" /><ComboBoxItem Content="日本語" /></ComboBox>
+            <TextBlock Classes="note" Text="{Binding Text[LanguageHelp]}" />
+          </StackPanel>
+          <StackPanel Classes="form" IsVisible="{Binding IsOperation}">
+            <RadioButton IsChecked="{Binding IsInstall, Mode=OneWay}" Command="{Binding ChooseOperationCommand}" CommandParameter="{x:Static models:EInstallerOperation.Install}">
+              <StackPanel Spacing="4"><TextBlock Text="{Binding Text[Install]}" FontWeight="SemiBold" /><TextBlock Classes="note" Text="{Binding Text[InstallDescription]}" /></StackPanel>
+            </RadioButton>
+            <RadioButton IsChecked="{Binding IsUpdate, Mode=OneWay}" Command="{Binding ChooseOperationCommand}" CommandParameter="{x:Static models:EInstallerOperation.Update}">
+              <StackPanel Spacing="4"><TextBlock Text="{Binding Text[Update]}" FontWeight="SemiBold" /><TextBlock Classes="note" Text="{Binding Text[UpdateDescription]}" /></StackPanel>
+            </RadioButton>
+            <RadioButton IsChecked="{Binding IsRepair, Mode=OneWay}" Command="{Binding ChooseOperationCommand}" CommandParameter="{x:Static models:EInstallerOperation.Repair}">
+              <StackPanel Spacing="4"><TextBlock Text="{Binding Text[Repair]}" FontWeight="SemiBold" /><TextBlock Classes="note" Text="{Binding Text[RepairDescription]}" /></StackPanel>
+            </RadioButton>
+            <RadioButton IsChecked="{Binding IsUninstall, Mode=OneWay}" Command="{Binding ChooseOperationCommand}" CommandParameter="{x:Static models:EInstallerOperation.Uninstall}">
+              <StackPanel Spacing="4"><TextBlock Text="{Binding Text[Uninstall]}" FontWeight="SemiBold" /><TextBlock Classes="note" Text="{Binding Text[UninstallDescription]}" /></StackPanel>
+            </RadioButton>
+          </StackPanel>
+          <StackPanel Classes="form" IsVisible="{Binding IsComponents}">
+            <CheckBox x:Name="RemoveService" Content="{Binding Text[ServiceComponent]}" IsChecked="{Binding Settings.Components.RemoveService}" />
+            <CheckBox x:Name="RemoveWebClient" Content="{Binding Text[WebClientComponent]}" IsChecked="{Binding Settings.Components.RemoveWebClient}" IsEnabled="{Binding Settings.Components.HasExisting}" />
+          </StackPanel>
+          <StackPanel Classes="form" IsVisible="{Binding IsNetwork}">
+            <TextBlock Classes="note" Text="{Binding Text[ChooseNetwork]}" />
+            <ComboBox x:Name="NetworkSelector" ItemsSource="{Binding Discovery.Networks}" SelectedItem="{Binding Discovery.SelectedNetwork}" PlaceholderText="{Binding Text[SelectNetwork]}">
+              <ComboBox.ItemTemplate><DataTemplate x:DataType="models:NetworkChoice"><TextBlock Text="{Binding Label}" TextWrapping="Wrap" /></DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock Classes="note" Text="{Binding Text[ClusterNetworkHelp]}" />
+          </StackPanel>
+          <StackPanel Classes="form" IsVisible="{Binding IsTargets}">
+            <TextBlock Classes="note" Text="{Binding Discovery.SelectedNetwork.Label}" />
+            <Button Content="{Binding Text[Scan]}" Command="{Binding ScanCommand}" />
+            <StackPanel Classes="form" IsVisible="{Binding IsInstall}">
+              <TextBlock Classes="note" Text="{Binding Text[NoClusters]}" IsVisible="{Binding !Discovery.HasClusters}" />
+              <RadioButton x:Name="JoinClusterOption" IsChecked="{Binding !Settings.NewCluster, Mode=OneWay}" Content="{Binding Text[JoinCluster]}" IsEnabled="{Binding Discovery.HasClusters}" Command="{Binding Settings.ChooseClusterModeCommand}">
+                <RadioButton.CommandParameter><x:Boolean>False</x:Boolean></RadioButton.CommandParameter>
+              </RadioButton>
+              <ComboBox x:Name="JoinClusterSelector" IsVisible="{Binding !Settings.NewCluster}" ItemsSource="{Binding Discovery.Clusters}" SelectedItem="{Binding Discovery.SelectedCluster}" Margin="24,0,0,0">
+                <ComboBox.ItemTemplate><DataTemplate x:DataType="models:ClusterChoice"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
+              </ComboBox>
+              <RadioButton x:Name="NewClusterOption" IsChecked="{Binding Settings.NewCluster, Mode=OneWay}" Content="{Binding Text[NewCluster]}" Command="{Binding Settings.ChooseClusterModeCommand}">
+                <RadioButton.CommandParameter><x:Boolean>True</x:Boolean></RadioButton.CommandParameter>
+              </RadioButton>
+              <StackPanel Classes="form" IsVisible="{Binding Settings.NewCluster}" Margin="24,0,0,0">
+                <TextBlock Classes="label" Text="{Binding Text[ClusterName]}" />
+                <TextBox x:Name="NewClusterName" Text="{Binding Settings.Cluster}" />
+                <TextBlock Classes="label" Text="{Binding Text[Port]}" />
+                <NumericUpDown x:Name="NewClusterPort" Value="{Binding Settings.Port}" Minimum="1" Maximum="65535" FormatString="0" />
+              </StackPanel>
+            </StackPanel>
+            <StackPanel Classes="form" IsVisible="{Binding !IsInstall}">
+              <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="{Binding Text[ScanCount]}" /><TextBlock Text="{Binding Discovery.Count}" /></StackPanel>
+              <TextBlock Classes="label" Text="{Binding Text[Scope]}" />
+              <ComboBox SelectedIndex="{Binding Discovery.Scope}"><ComboBoxItem Content="{Binding Text[All]}" /><ComboBoxItem Content="{Binding Text[Cluster]}" /><ComboBoxItem Content="{Binding Text[Peers]}" /></ComboBox>
+              <ComboBox IsVisible="{Binding Discovery.IsClusterScope}" ItemsSource="{Binding Discovery.Clusters}" SelectedItem="{Binding Discovery.SelectedCluster}">
+                <ComboBox.ItemTemplate><DataTemplate x:DataType="models:ClusterChoice"><TextBlock Text="{Binding Label}" /></DataTemplate></ComboBox.ItemTemplate>
+              </ComboBox>
+              <ItemsControl ItemsSource="{Binding Discovery.Targets}" IsEnabled="{Binding Discovery.IsPeerScope}">
+                <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:TargetChoiceViewModel"><CheckBox IsChecked="{Binding Selected}"><TextBlock Classes="note" Text="{Binding Label}" /></CheckBox></DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Button Content="{Binding Text[Local]}" Command="{Binding AddLocalCommand}" IsVisible="{Binding !IsUpdate}" />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Classes="form" IsVisible="{Binding IsIdentity}">
+            <TextBlock Classes="label" Text="{Binding Text[Host]}" /><TextBox Text="{Binding Settings.Host}" />
+            <TextBlock Classes="label" Text="{Binding Text[Peer]}" /><TextBox Text="{Binding Settings.Peer}" />
+            <CheckBox Content="{Binding Text[AutoPriority]}" IsChecked="{Binding Settings.AutomaticPriority}" />
+            <StackPanel Classes="form" IsVisible="{Binding !Settings.AutomaticPriority}">
+            <TextBlock Classes="label" Text="{Binding Text[Priority]}" />
+            <NumericUpDown Value="{Binding Settings.Priority}" IsEnabled="{Binding !Settings.AutomaticPriority}" Minimum="-2147483648" Maximum="2147483647" FormatString="0" />
+            <TextBlock Classes="note" Text="{Binding Text[PriorityHelp]}" />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Classes="form" IsVisible="{Binding IsOptions}">
+            <CheckBox x:Name="InstallWebClient" Content="{Binding Text[InstallWebClient]}" IsChecked="{Binding Settings.Components.Install}" IsEnabled="{Binding !Settings.Components.HasExisting}" />
+            <TextBlock Classes="note" Text="{Binding Text[WebClientInstalled]}" IsVisible="{Binding Settings.Components.HasExisting}" />
+            <StackPanel Classes="form" IsVisible="{Binding Settings.Components.Install}" Margin="24,0,0,12">
+              <TextBlock Classes="label" Text="{Binding Text[WebClientPort]}" />
+              <NumericUpDown x:Name="WebClientPort" Value="{Binding Settings.Components.Port}" Minimum="1" Maximum="65535" FormatString="0" />
+            </StackPanel>
+            <TextBlock Classes="label" Text="{Binding Text[OtherSettings]}" />
+            <RadioButton x:Name="RecommendedSettingsOption" Content="{Binding Text[Recommended]}" IsChecked="{Binding !Settings.Advanced, Mode=OneWay}" Command="{Binding ChooseSettingsModeCommand}">
+              <RadioButton.CommandParameter><x:Boolean>False</x:Boolean></RadioButton.CommandParameter>
+            </RadioButton>
+            <RadioButton x:Name="AdvancedSettingsOption" Content="{Binding Text[Advanced]}" IsChecked="{Binding Settings.Advanced, Mode=OneWay}" Command="{Binding ChooseSettingsModeCommand}">
+              <RadioButton.CommandParameter><x:Boolean>True</x:Boolean></RadioButton.CommandParameter>
+            </RadioButton>
+          </StackPanel>
+          <StackPanel Classes="form" IsVisible="{Binding IsAdvanced}">
+            <CheckBox Content="{Binding Text[PerUser]}" IsChecked="{Binding Settings.PerUser}" />
+            <TextBlock Classes="note" Text="{Binding Text[PrivilegeHelp]}" />
+            <StackPanel Classes="form" IsVisible="{Binding Settings.Components.Install}">
+              <TextBlock Classes="label" Text="{Binding Text[WebClientStartup]}" />
+              <CheckBox x:Name="WebClientServiceStartup" Content="{Binding Text[WebClientServiceStartup]}" IsChecked="{Binding Settings.Components.RunAsService}" />
+              <TextBlock Classes="note" Text="{Binding Text[WebClientStartupHelp]}" />
+            </StackPanel>
+            <TextBlock Classes="label" Text="{Binding Text[Destination]}" />
+            <Grid Classes="path-picker" ColumnDefinitions="*,Auto">
+              <TextBox Text="{Binding Settings.Root}" />
+              <Button Grid.Column="1" Content="{Binding Text[Browse]}" Command="{Binding BrowseCommand}" CommandParameter="Root" />
+            </Grid>
+          </StackPanel>
+          <StackPanel Classes="form" IsVisible="{Binding IsAppearance}" Spacing="12">
+            <TextBlock Classes="note" Text="{Binding Text[AppearanceHelp]}" />
+            <TextBlock Classes="label" Text="{Binding Text[Title]}" /><TextBox x:Name="ClientTitleField" Text="{Binding Settings.Appearance.Title}" MaxLength="{x:Static management:ClientBranding.MaximumTextLength}" PlaceholderText="{x:Static installation:ClientAppearance.DefaultTitle}" />
+            <TextBlock Classes="label" Text="{Binding Text[SubTitle]}" /><TextBox x:Name="ClientSubtitleField" Text="{Binding Settings.Appearance.Subtitle}" MaxLength="{x:Static management:ClientBranding.MaximumTextLength}" PlaceholderText="{x:Static installation:ClientAppearance.DefaultSubtitle}" />
+            <TextBlock Classes="label" Text="{Binding Text[Icon]}" />
+            <Grid Classes="path-picker" ColumnDefinitions="*,Auto">
+              <TextBox x:Name="ClientIconField" Text="{Binding Settings.Appearance.Icon}" PlaceholderText="{Binding Text[DefaultIcon]}" />
+              <Button Grid.Column="1" Content="{Binding Text[Browse]}" Command="{Binding BrowseCommand}" CommandParameter="Icon" />
+            </Grid>
+            <TextBlock Classes="label" Text="{Binding Text[Favicon]}" />
+            <Grid Classes="path-picker" ColumnDefinitions="*,Auto">
+              <TextBox x:Name="ClientFaviconField" Text="{Binding Settings.Appearance.Favicon}" PlaceholderText="{Binding Text[DefaultIcon]}" />
+              <Button Grid.Column="1" Content="{Binding Text[Browse]}" Command="{Binding BrowseCommand}" CommandParameter="Favicon" />
+            </Grid>
+          </StackPanel>
+          <StackPanel Classes="form" IsVisible="{Binding IsMaintenance}">
+            <StackPanel Classes="form" IsVisible="{Binding IsUpdate}">
+              <CheckBox IsChecked="{Binding Settings.AllowActive}"><TextBlock Classes="note" Text="{Binding Text[Active]}" /></CheckBox>
+            </StackPanel>
+            <StackPanel Classes="form" IsVisible="{Binding IsRepair}">
+              <RadioButton Content="{Binding Text[AutoRepair]}" IsChecked="{Binding !Settings.Reinstall, Mode=OneWay}" Command="{Binding Settings.ChooseRepairModeCommand}">
+                <RadioButton.CommandParameter><x:Boolean>False</x:Boolean></RadioButton.CommandParameter>
+              </RadioButton>
+              <RadioButton Content="{Binding Text[Reinstall]}" IsChecked="{Binding Settings.Reinstall, Mode=OneWay}" Command="{Binding Settings.ChooseRepairModeCommand}">
+                <RadioButton.CommandParameter><x:Boolean>True</x:Boolean></RadioButton.CommandParameter>
+              </RadioButton>
+              <StackPanel Classes="form" IsVisible="{Binding Settings.Reinstall}" Margin="24,0,0,0">
+                <RadioButton Content="{Binding Text[KeepDb]}" IsChecked="{Binding Settings.KeepDatabase, Mode=OneWay}" Command="{Binding Settings.ChooseDatabaseRetentionCommand}">
+                  <RadioButton.CommandParameter><x:Boolean>True</x:Boolean></RadioButton.CommandParameter>
+                </RadioButton>
+                <RadioButton Content="{Binding Text[Resync]}" IsChecked="{Binding !Settings.KeepDatabase, Mode=OneWay}" Command="{Binding Settings.ChooseDatabaseRetentionCommand}">
+                  <RadioButton.CommandParameter><x:Boolean>False</x:Boolean></RadioButton.CommandParameter>
+                </RadioButton>
+              </StackPanel>
+            </StackPanel>
+            <StackPanel Classes="form" IsVisible="{Binding IsUninstall}">
+              <CheckBox Content="{Binding Text[KeepDb]}" IsChecked="{Binding Settings.KeepDatabase}" IsVisible="{Binding Settings.Components.RemoveService}" />
+              <CheckBox Content="{Binding Text[KeepConfig]}" IsChecked="{Binding Settings.KeepConfiguration}" />
+              <TextBlock Classes="note" Text="{Binding Text[RemoveHelp]}" />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Classes="form" IsVisible="{Binding IsResult}">
+            <TextBlock Classes="note" Text="{Binding Results}" />
+            <Expander Header="{Binding Text[Details]}" HorizontalAlignment="Stretch">
+              <TextBox Text="{Binding ResultDetails}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="180" />
+            </Expander>
+            <StackPanel Classes="form" IsVisible="{Binding Installed}">
+              <StackPanel Classes="form" IsVisible="{Binding Settings.Components.HasInstalledClient}">
+                <TextBlock Classes="label" Text="{Binding Text[WebClientUrl]}" />
+                <TextBox x:Name="CompletedClientUrl" Text="{Binding Settings.Components.ClientUrl}" IsReadOnly="True" SelectionForegroundBrush="{DynamicResource InstallerOnAccentBrush}" />
+                <Button x:Name="OpenClientButton" Content="{Binding Text[OpenClient]}" Command="{Binding OpenClientCommand}" />
+              </StackPanel>
+              <TextBlock Classes="note" Text="{Binding Text[RestartHelp]}" />
+              <CheckBox x:Name="RestartConsent" IsChecked="{Binding RestartConfirmed}"><TextBlock Classes="note" Text="{Binding Text[RestartConfirm]}" /></CheckBox>
+              <Button x:Name="RestartNowButton" Content="{Binding Text[Restart]}" Command="{Binding RestartCommand}" IsEnabled="{Binding RestartConfirmed}" />
+            </StackPanel>
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
+      <Grid Grid.Row="1" RowDefinitions="*,Auto,Auto" RowSpacing="16" IsVisible="{Binding IsReview}" IsEnabled="{Binding Idle}">
+        <TextBox x:Name="ReviewContent" Text="{Binding ReviewText}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
+        <Border Grid.Row="1" IsVisible="{Binding IsUninstall}" Background="#402423" Padding="16" CornerRadius="8"><TextBlock Classes="note" Text="{Binding Text[Warning]}" /></Border>
+        <CheckBox x:Name="ReviewConsent" Grid.Row="2" IsChecked="{Binding Settings.Confirmed}"><TextBlock Classes="note" Text="{Binding Text[Confirm]}" /></CheckBox>
+      </Grid>
+      <Grid Grid.Row="1" RowDefinitions="*,Auto" RowSpacing="16" IsVisible="{Binding IsLicense}" IsEnabled="{Binding Idle}">
+        <Border BorderBrush="#414D60" BorderThickness="1" CornerRadius="4">
+          <ScrollViewer x:Name="LicenseScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Visible"
+                        ScrollChanged="OnLicenseScrollChanged" Padding="16">
+            <StackPanel Spacing="24">
+              <SelectableTextBlock Text="{x:Static models:InstallerLicense.Text}" TextWrapping="Wrap" LineHeight="23" />
+              <Border Background="#202125" Padding="16" CornerRadius="4">
+                <StackPanel Spacing="12">
+                  <TextBlock Text="{Binding Text[LicenseReminderHeading]}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding Text[TermsBody]}" TextWrapping="Wrap" LineHeight="23" />
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </ScrollViewer>
+        </Border>
+        <StackPanel Grid.Row="1" Spacing="8">
+          <TextBlock Classes="note" Text="{Binding Text[ReadToEnd]}" IsVisible="{Binding !Settings.LicenseRead}" />
+          <CheckBox x:Name="LicenseConsent" Content="{Binding Text[Accept]}" IsChecked="{Binding Settings.Accepted}" IsEnabled="{Binding Settings.LicenseRead}" />
+        </StackPanel>
+      </Grid>
+      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding IsExecuting}">
+        <StackPanel x:Name="ExecutionPage" Spacing="16">
+          <TextBlock Text="{Binding Execution.Stage}" FontWeight="SemiBold" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Execution.Current.Target}" Classes="note" />
+          <ProgressBar x:Name="ExecutionBar" Minimum="0" Maximum="{Binding Execution.Current.TotalSteps}" Value="{Binding Execution.Current.CompletedSteps}" IsIndeterminate="{Binding Execution.Indeterminate}" />
+          <TextBlock Text="{Binding Execution.Steps}" IsVisible="{Binding !Execution.Indeterminate}" />
+          <StackPanel Spacing="8" IsVisible="{Binding Execution.HasTransfer}">
+            <TextBlock Text="{Binding Execution.Transfer}" Classes="note" />
+            <ProgressBar x:Name="TransferBar" Minimum="0" Maximum="{Binding Execution.Current.TotalBytes}" Value="{Binding Execution.Current.CompletedBytes}" />
+          </StackPanel>
+          <Expander x:Name="ExecutionDetails" Header="{Binding Text[Details]}" IsExpanded="False" HorizontalAlignment="Stretch">
+            <ScrollViewer MaxHeight="260" HorizontalScrollBarVisibility="Disabled">
+              <ItemsControl ItemsSource="{Binding Execution.Details}">
+                <ItemsControl.ItemTemplate><DataTemplate x:DataType="x:String"><TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,0,0,8" /></DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Expander>
+        </StackPanel>
+      </ScrollViewer>
+      <StackPanel Grid.Row="2" Margin="0,16" Spacing="8">
+        <Button x:Name="ThirdPartyLink" Classes="link" IsVisible="{Binding IsLanguage}" Command="{Binding Settings.Licenses.OpenCommand}">
+          <TextBlock Text="Third-party licenses">
+            <TextBlock.TextDecorations>
+              <TextDecorationCollection><TextDecoration Location="Underline" /></TextDecorationCollection>
+            </TextBlock.TextDecorations>
+          </TextBlock>
+        </Button>
+        <StackPanel IsVisible="{Binding IsAppearance}" Spacing="8">
+          <TextBlock Text="{Binding Text[Preview]}" FontWeight="SemiBold" />
+          <views:AppearancePreview x:Name="DisplayPreview" DataContext="{Binding Settings.Appearance}" />
+        </StackPanel>
+        <StackPanel IsVisible="{Binding !IsExecuting}" Spacing="8">
+          <ProgressBar IsVisible="{Binding Busy}" IsIndeterminate="True" />
+          <TextBlock IsVisible="{Binding Busy}" Classes="note" Text="{Binding Progress}" />
+        </StackPanel>
+        <TextBlock Text="{Binding Error}" TextWrapping="Wrap" Foreground="#F3A49C" />
+      </StackPanel>
+      <Border Grid.Row="3" BorderBrush="#2C3037" BorderThickness="0,1,0,0" Padding="0,16,0,0">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" IsVisible="{Binding !IsExecuting}">
+          <Button Content="{Binding Text[Back]}" Command="{Binding BackCommand}" IsEnabled="{Binding CanBack}" MinWidth="90" />
+          <Button x:Name="NextButton" Content="{Binding NextLabel}" Command="{Binding NextCommand}" Classes="accent" Classes.license="{Binding IsLicense}" Classes.network="{Binding IsNetwork}" Classes.targets="{Binding IsTargets}" Classes.components="{Binding IsComponents}" Classes.review="{Binding IsReview}" MinWidth="90">
+            <Button.Styles>
+              <Style Selector="Button.license"><Setter Property="IsEnabled" Value="{Binding Settings.LicenseConfirmed}" /></Style>
+              <Style Selector="Button.network"><Setter Property="IsEnabled" Value="{Binding Discovery.HasSelectedNetwork}" /></Style>
+              <Style Selector="Button.targets"><Setter Property="IsEnabled" Value="{Binding Discovery.SearchCompleted}" /></Style>
+              <Style Selector="Button.components"><Setter Property="IsEnabled" Value="{Binding Settings.Components.CanUninstall}" /></Style>
+              <Style Selector="Button.review"><Setter Property="IsEnabled" Value="{Binding Settings.Confirmed}" /></Style>
+            </Button.Styles>
+          </Button>
+          <Button Content="{Binding Text[Cancel]}" Command="{Binding CloseCommand}" IsVisible="{Binding !IsResult}" Margin="12,0,0,0" MinWidth="90" />
+        </StackPanel>
+      </Border>
+    </Grid>
+    <Border Grid.Row="1" IsVisible="{Binding Settings.Licenses.IsOpen}">
+      <views:ThirdPartyLicensesView x:Name="ThirdPartyPage" DataContext="{Binding Settings.Licenses}" />
+    </Border>
+  </Grid>
+</Window>

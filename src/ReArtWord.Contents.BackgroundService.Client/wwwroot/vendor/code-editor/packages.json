@@ -1,0 +1,149 @@
+[
+  {
+    "name": "@codemirror/autocomplete",
+    "version": "6.20.3",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke",
+    "project": ""
+  },
+  {
+    "name": "@codemirror/commands",
+    "version": "6.11.1",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke",
+    "project": ""
+  },
+  {
+    "name": "@codemirror/lang-javascript",
+    "version": "6.2.5",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke",
+    "project": ""
+  },
+  {
+    "name": "@codemirror/lang-json",
+    "version": "6.0.2",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke",
+    "project": ""
+  },
+  {
+    "name": "@codemirror/lang-python",
+    "version": "6.2.1",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke",
+    "project": ""
+  },
+  {
+    "name": "@codemirror/lang-yaml",
+    "version": "6.1.3",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke",
+    "project": ""
+  },
+  {
+    "name": "@codemirror/language",
+    "version": "6.12.4",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke",
+    "project": ""
+  },
+  {
+    "name": "@codemirror/legacy-modes",
+    "version": "6.5.4",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke",
+    "project": ""
+  },
+  {
+    "name": "@codemirror/state",
+    "version": "6.7.6",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke",
+    "project": ""
+  },
+  {
+    "name": "@codemirror/view",
+    "version": "6.43.13",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke",
+    "project": ""
+  },
+  {
+    "name": "@lezer/common",
+    "version": "1.5.3",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke <marijn@haverbeke.berlin>",
+    "project": ""
+  },
+  {
+    "name": "@lezer/highlight",
+    "version": "1.2.5",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke <marijn@haverbeke.berlin>",
+    "project": ""
+  },
+  {
+    "name": "@lezer/javascript",
+    "version": "1.5.5",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke <marijn@haverbeke.berlin>",
+    "project": ""
+  },
+  {
+    "name": "@lezer/json",
+    "version": "1.0.3",
+    "license": "MIT",
+    "authors": "Arun Srinivasan <rulfzid@gmail.com>",
+    "project": ""
+  },
+  {
+    "name": "@lezer/lr",
+    "version": "1.4.10",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke <marijn@haverbeke.berlin>",
+    "project": ""
+  },
+  {
+    "name": "@lezer/python",
+    "version": "1.1.19",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke <marijn@haverbeke.berlin>",
+    "project": ""
+  },
+  {
+    "name": "@lezer/yaml",
+    "version": "1.0.4",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke <marijnh@gmail.com>",
+    "project": ""
+  },
+  {
+    "name": "@marijn/find-cluster-break",
+    "version": "1.0.4",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke <marijn@haverbeke.berlin>",
+    "project": "https://code.haverbeke.berlin/marijn/find-cluster-break"
+  },
+  {
+    "name": "crelt",
+    "version": "1.0.7",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke <marijn@haverbeke.berlin>",
+    "project": "https://code.haverbeke.berlin/marijn/crelt"
+  },
+  {
+    "name": "style-mod",
+    "version": "4.1.4",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke <marijn@haverbeke.berlin>",
+    "project": "https://code.haverbeke.berlin/marijn/style-mod"
+  },
+  {
+    "name": "w3c-keyname",
+    "version": "2.2.8",
+    "license": "MIT",
+    "authors": "Marijn Haverbeke <marijn@haverbeke.berlin>",
+    "project": "https://github.com/marijnh/w3c-keyname#readme"
+  }
+]

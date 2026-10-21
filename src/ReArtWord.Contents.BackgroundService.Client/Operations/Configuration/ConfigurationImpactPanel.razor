@@ -1,0 +1,20 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Configuration
+<section>
+    <p class="notice">@(problem?.Invoke())</p>
+    <button disabled="@busy" @onclick="()=>LoadAsync(UiCancellation)">@Ui["Refresh impact comparison"]</button>
+    @if(report is not null)
+    {
+        @if(report.UnsavedCandidate){<p class="notice">@Ui["This candidate is not durably saved or shared."]</p>}
+        <p>@Ui["Saved revision"]: <code>@report.SavedRevision</code></p>
+        <p>@Ui["Effective revision"]: <code>@(report.EffectiveRevision??Ui["None"])</code></p>
+        <div class="table-wrap"><table><thead><tr><th>@Ui["Changed field"]</th><th>@Ui["Effective value"]</th><th>@Ui["Saved value"]</th></tr></thead><tbody>
+            @foreach(var change in report.Differences)
+            {
+                <tr><td>@change.Path @if(change.Omitted){<span class="badge warn">@Ui["Value omitted or shortened"]</span>}</td><td><code>@(change.Before??Ui["Missing"])</code></td><td><code>@(change.After??Ui["Missing"])</code></td></tr>
+            }
+        </tbody></table></div>
+        @if(report.Truncated){<p class="notice">@Ui["The comparison is limited. Review the full saved and effective definitions before applying."]</p>}
+        @foreach(var known in report.KnownImpacts){<p>@Ui[known]</p>}
+        @foreach(var unknown in report.UnknownImpacts){<p class="notice">@Ui[unknown]</p>}
+    }
+</section>

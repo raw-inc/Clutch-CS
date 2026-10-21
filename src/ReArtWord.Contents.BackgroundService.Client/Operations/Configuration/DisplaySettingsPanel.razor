@@ -1,0 +1,11 @@
+<section class="card section">
+    <h2>@Ui["display.settings.title"]</h2>
+    <p class="small muted">@Ui["display.timezone.help"]</p>
+    <label>@Ui["display.timezone.label"]<select @bind="zoneId" disabled="@saving">
+        <option value="UTC">UTC</option>
+        @foreach(var zone in zones){<option value="@zone">@zone</option>}
+    </select></label>
+    <p class="small">@Ui.Format("display.timezone.current", Preferences.Zone.Id, TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Preferences.Zone).ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.CurrentCulture))</p>
+    <button type="button" @onclick="SaveAsync" disabled="@saving">@Ui["display.settings.save"]</button>
+    @if(message is not null || Preferences.Problem is not null){<p class="notice" role="status">@Ui[Preferences.Problem??message!]</p>}
+</section>

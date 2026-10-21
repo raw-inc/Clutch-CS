@@ -1,0 +1,8 @@
+{
+  "Time zone for this schedule, for example UTC or Asia/Tokyo. Blank or omitted keeps the shared time zone; new nodes default to UTC.": "この予定のタイムゾーンを指定します。例: UTC、Asia/Tokyo。空欄・未指定はクラスタ共通設定を引き継ぎ、新規配置はUTCが既定です。",
+  "node.scheduling.now.name": "現在の日付・時刻を取得",
+  "node.scheduling.now.description": "実行時の現在時刻を、指定タイムゾーンと書式の文字列として返します。既定の基準はUTCです。",
+  "port.scheduling.now.out.value": "日時文字列",
+  "Time zone for the result, for example UTC, Asia/Tokyo or Tokyo Standard Time. Defaults to UTC independently of the PC and cluster settings. Daylight saving rules use the execution PC's time zone data.": "日時のタイムゾーンを指定します。例: UTC、Asia/Tokyo、Tokyo Standard Time。PC・クラスタ設定にかかわらず既定はUTCです。夏時間は実行PCのタイムゾーン定義に従います。",
+  "Date/time format, for example HH:mm:ss.fff-YYYY/MM/DD. Uses .NET date/time formats with invariant culture; YYYY, YY and DD also mean yyyy, yy and dd outside quoted or escaped literals. MM is month, mm is minute. Use quotes for literal text.": "例: HH:mm:ss.fff-YYYY/MM/DD。地域設定に依存しない.NET日時書式を使用します。引用・エスケープ外のYYYY・YY・DDはyyyy・yy・ddとしても使えます。MMは月、mmは分です。固定文字列は引用符で囲みます。"
+}

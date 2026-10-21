@@ -1,0 +1,2 @@
+<button class="quiet" disabled="@(busy||submitted||OwnerInstanceId==Guid.Empty||PeerId is null||ClusterId is null)" @onclick="()=>CancelAsync(UiCancellation)">@Ui[submitted?"Cancellation requested":"Cancel this execution"]</button>
+@if(message is not null){<p class="small notice">@message()</p>}

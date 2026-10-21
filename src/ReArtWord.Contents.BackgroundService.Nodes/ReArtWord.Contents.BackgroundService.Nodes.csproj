@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ReArtWord.Contents.BackgroundService.Unit.Tests" />
+    <ProjectReference Include="../ReArtWord.Contents.BackgroundService.Runtime/ReArtWord.Contents.BackgroundService.Runtime.csproj" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="YamlDotNet" />
+    <PackageReference Include="Tomlyn" />
+    <PackageReference Include="CsvHelper" />
+    <PackageReference Include="JsonSchema.Net" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="NuGet.Commands" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="5.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Scripting/PythonScriptHost.py" LogicalName="Contents.PythonScriptHost.py" />
+    <EmbeddedResource Include="Scripting/JavaScript/*.mjs" LogicalName="Contents.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Scripting/JavaScript/vendor/acorn.mjs" LogicalName="Contents.acorn.mjs" />
+    <EmbeddedResource Include="$(MSBuildSDKsPath)/../PortableRuntimeIdentifierGraph.json" LogicalName="Contents.ScriptRuntimeIdentifiers.json" />
+  </ItemGroup>
+</Project>

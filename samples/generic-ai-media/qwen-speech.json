@@ -1,0 +1,25 @@
+{
+  "id": "qwen-speech",
+  "name": "Qwen3-TTS-VC speech",
+  "enabled": false,
+  "nodes": [
+    {
+      "id": "speech",
+      "type": "ai.audio.qwen.generate",
+      "settings": {
+        "model": "qwen3-tts-vc-2026-01-22",
+        "region": "singapore",
+        "languageType": "Japanese",
+        "voice": "CONFIGURE_REGISTERED_VOICE_ID",
+        "secretRef": "ai/qwen",
+        "interfaceId": "CONFIGURE_OS_NIC_ID",
+        "localAddress": "192.0.2.10",
+        "outputPath": "C:/Clutch-CS/content/generated.wav"
+      },
+      "inputs": { "value": { "kind": "json", "json": "こんにちは。これは音声合成のサンプルです。", "binary": "" } },
+      "target": { "scope": "one", "peers": ["peer-a"] },
+      "position": { "x": 60, "y": 80 }
+    }
+  ],
+  "wires": []
+}

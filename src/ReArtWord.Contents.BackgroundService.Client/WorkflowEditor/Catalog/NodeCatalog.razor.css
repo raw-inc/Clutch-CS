@@ -1,0 +1,387 @@
+
+.catalog-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 17px 16px 11px;
+}
+
+.catalog-heading h2 {
+    font-size: 13px;
+    margin: 0;
+}
+
+.catalog-heading p {
+    font-size: 10px;
+    margin: 5px 0 0;
+}
+
+.catalog-filters {
+    padding: 0 12px 10px;
+    border-bottom: 1px solid var(--line);
+}
+
+.catalog-filters select {
+    width: 100%;
+    font-size: 11px;
+    background: var(--paper);
+    border-color: #3b3e46;
+    margin-top: 8px;
+    padding: 6px 8px;
+}
+
+.catalog-list {
+    flex: 1;
+    min-height: 80px;
+    overflow: auto;
+    padding: 0 8px 12px;
+}
+
+.catalog-category {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 9px 5px;
+    font-size: 10px;
+    color: #929cae;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.catalog-category span {
+    color: #626b79;
+    letter-spacing: 0;
+}
+
+.catalog-item {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+    gap: 9px;
+    padding: 9px 8px;
+    text-align: left;
+    white-space: normal;
+    border: 1px solid transparent;
+    background: transparent;
+    margin: 2px 0;
+    border-radius: 4px;
+}
+
+.catalog-item:hover {
+    background: var(--raised);
+    border-color: transparent;
+}
+
+.catalog-item.selected {
+    background: #2c3747;
+    border-color: #425a79;
+}
+
+.catalog-item > span:nth-child(2) {
+    flex: 1;
+    min-width: 0;
+}
+
+.catalog-item strong {
+    font-size: 11px;
+    font-weight: 500;
+    display: block;
+}
+
+.catalog-item small {
+    font-size: 9px;
+    color: var(--muted);
+    display: block;
+    margin-top: 2px;
+}
+
+.catalog-kind {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 28px;
+    background: #303844;
+    color: #9ebbe4;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.catalog-kind.source {
+    background: #313c36;
+    color: #a6c7af;
+}
+
+.catalog-kind ::deep  .ui-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.catalog-item-arrow {
+    color: #697789;
+    font-size: 17px;
+}
+
+.catalog-preview > p {
+    color: var(--muted);
+    line-height: 1.7;
+}
+
+.catalog-preview > h3 {
+    font-size: 13px;
+    margin: 10px 0 7px;
+}
+
+.catalog-preview dl {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 5px;
+    margin: 12px 0 0;
+    font-size: 10px;
+}
+
+.catalog-preview dt {
+    color: var(--muted);
+}
+
+.catalog-preview dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: #bcc5d3;
+}
+
+.catalog-preview ::deep > .ui-icon {
+    color: #8090a6;
+}
+
+.catalog-preview > .small {
+    font-size: 9px;
+}
+
+.catalog-preview {
+    border-top: 1px solid var(--line);
+    background: var(--panel);
+    padding: 14px 16px;
+    font-size: 11px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+    max-height: 45%;
+}
+
+.catalog-preview-description {
+    min-height: 0;
+    overflow: auto;
+}
+
+.catalog-preview-description > h3 {
+    font-size: 13px;
+    margin: 10px 0 7px;
+}
+
+.catalog-preview > button {
+    width: 100%;
+    margin-top: 9px;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.studio .catalog-heading {
+    height: 46px;
+    padding: 8px 12px;
+    align-items: center;
+    gap: 8px;
+}
+
+.studio .catalog-heading h2 {
+    font-size: 12px;
+    flex: 1;
+}
+
+.studio .catalog-heading .count {
+    font-size: 10px;
+    min-width: 20px;
+    background: transparent;
+    padding: 0;
+}
+
+.studio .catalog-heading button {
+    min-width: 25px;
+    padding: 3px;
+}
+
+.studio .catalog-heading ::deep  .ui-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.studio .catalog-filters {
+    padding-bottom: 8px;
+}
+
+.studio .catalog-list {
+    padding: 3px 7px 12px;
+}
+
+.studio .catalog-category {
+    justify-content: flex-start;
+    gap: 7px;
+    letter-spacing: 0;
+    text-transform: none;
+    padding-top: 11px;
+}
+
+.studio .catalog-category .category-count {
+    margin-left: auto;
+    color: var(--muted);
+}
+
+.studio .catalog-item {
+    min-height: 33px;
+    padding: 5px 7px;
+    margin: 0;
+    gap: 8px;
+}
+
+.studio .catalog-item strong {
+    font-size: 11px;
+}
+
+.studio .catalog-kind {
+    width: 23px;
+    height: 23px;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--category-color) 11%, var(--panel));
+    color: var(--category-color);
+}
+
+.studio .catalog-kind ::deep  .ui-icon {
+    width: 13px;
+    height: 13px;
+}
+
+.studio .catalog-item.selected {
+    border-color: color-mix(in srgb, var(--category-color) 45%, #34363c);
+    background: color-mix(in srgb, var(--category-color) 10%, var(--panel));
+}
+
+.studio .catalog-preview {
+    padding: 12px;
+    max-height: 44%;
+    font-size: 11px;
+}
+
+.catalog-preview-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 3px;
+}
+
+.catalog-preview-title strong {
+    font-weight: 500;
+    font-size: 12px;
+}
+
+.catalog-preview-description > p {
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.6;
+    margin: 8px 0;
+}
+
+.catalog-port-list {
+    display: grid;
+    gap: 4px;
+    margin: 10px 0 0;
+}
+
+.catalog-port-list > div {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 10px;
+}
+
+.catalog-port-list > div > span {
+    color: var(--muted);
+    font-size: 9px;
+}
+
+.catalog-port-list strong {
+    font-weight: 400;
+    flex: 1;
+}
+
+.catalog-port-list code {
+    color: var(--port-color);
+    font: 9px Consolas, monospace;
+}
+
+.studio .catalog-preview > button {
+    height: 29px;
+    padding: 4px;
+    margin-top: 11px;
+}
+
+.catalog-item[draggable="true"] {
+    cursor: grab;
+}
+
+.catalog-item[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.catalog-view {
+    display: flex;
+    gap: 3px;
+    padding: 0 10px 8px;
+}
+
+.catalog-view button {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 5px;
+    font-size: 10px;
+    line-height: 16px;
+    border: 0;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+.catalog-view button.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.catalog-fold {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    border-radius: 0;
+    cursor: pointer;
+}
+
+.catalog-fold:disabled {
+    opacity: 1;
+    cursor: default;
+}
+
+.catalog-fold .category-count {
+    margin-left: auto;
+}
+
+.fold-chevron {
+    font-size: 11px;
+    width: 9px;
+    flex: none;
+}
+
+.studio .search-field {
+    background: var(--paper);
+}

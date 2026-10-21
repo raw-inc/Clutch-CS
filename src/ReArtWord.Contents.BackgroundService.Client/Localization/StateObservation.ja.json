@@ -1,0 +1,14 @@
+{
+  "Add State": "Stateを追加",
+  "Select a workflow": "ワークフローを選択",
+  "Refresh workflows": "ワークフローを再取得",
+  "Shows persisted state. Updates when the value changes.": "永続化されたStateを表示し、値の変更時に更新します。",
+  "Waiting for state…": "Stateを確認中…",
+  "State key does not exist": "指定されたKeyは存在しません",
+  "State observation disconnected": "Stateの接続が切れています。表示値は最終受信時点のものです。",
+  "State observation unavailable": "Stateの変更を観測できません",
+  "Display truncated": "表示上限により省略",
+  "Select a state scope, workflow and key.": "Stateの保存範囲、ワークフロー、Keyを指定してください。",
+  "node.state.changed.name": "State変更待ち受け",
+  "node.state.changed.description": "永続化されたStateの値が変わるたび、変更時点の値と開始Signalを送ります。開始時の既存値では発火しません。"
+}

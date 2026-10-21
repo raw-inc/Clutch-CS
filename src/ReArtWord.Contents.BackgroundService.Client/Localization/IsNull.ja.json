@@ -1,0 +1,6 @@
+{
+  "node.data.isNull.name": "IsNull",
+  "node.data.isNull.description": "入力値がnullの場合だけtrueを返します。空文字列・false・0・配列・辞書・バイナリはfalseです。未到着や入力元の失敗をnullとして扱いません。",
+  "port.data.isNull.in.value": "入力値",
+  "port.data.isNull.out.value": "null判定"
+}

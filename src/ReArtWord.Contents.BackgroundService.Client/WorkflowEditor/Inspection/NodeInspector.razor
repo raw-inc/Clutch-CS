@@ -1,0 +1,105 @@
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Diagnostics
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Fields
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Graph
+@using ReArtWord.Contents.BackgroundService.Contracts.Execution.Safety
+@inject EditorPresentationCache Presentation
+@using ReArtWord.Contents.BackgroundService.Contracts.Nodes
+@using ReArtWord.Contents.BackgroundService.Contracts.Workflow
+@using ReArtWord.Contents.BackgroundService.Contracts.Targets
+@using ReArtWord.Contents.BackgroundService.Contracts.Execution
+@if(Visible && Node is not null)
+{
+    <fieldset disabled="@Model.Locks.Node(Model.Draft.Document.Id,Node.Id)">
+    <div class="node-summary" data-category="@GraphPresentation.CategoryKey(Descriptor?.Category??string.Empty)"><span class="category-dot"></span>@Ui[GraphPresentation.CategoryName(Descriptor?.Category??string.Empty)]<span class="kind-caption">@(Descriptor?.Kind==ENodeKind.Source?Ui["Source"]:Ui["Action"])</span></div>
+    <h3>@Ui.NodeName(Node,Descriptor)</h3><code class="node-identifier">@Node.Id</code>
+    @if(Node.Type is "control.button" or "control.toggleButton"){<ButtonNodeControl Node="Node" Pressed="ButtonPressed" ToggleState="ToggleState" />}
+    @foreach(var issue in Diagnostics.Issues(Model.ClusterId,Model.Draft.Document.Id).Where(issue=>issue.NodeId==Node.Id))
+    {
+        <p class="node-diagnostic" role="status">@Ui[issue.Message]</p>
+    }
+    <details class="inspector-section"><summary>@Ui["Node information"]</summary><strong>@Ui.NodeName(Descriptor)</strong><code class="node-identifier">@Node.Type</code><p class="small muted">@Ui.NodeDescription(Descriptor)</p></details>
+    <details class="inspector-section"><summary>@Ui["Behavior contract"]</summary>
+        <p class="small">@Ui.Format("Expected contract: {0}; installed implementation: {1}.", NodeBehaviorContracts.Expected(Node), Descriptor?.ContractVersion)</p>
+        @if(Descriptor is not null && NodeBehaviorContracts.Validate(Node,Descriptor) is {} contractIssue){<p class="notice error">@contractIssue.Message</p>}
+        <label>@Ui["Required contract version"]<select value="@Node.ContractVersion" @onchange="ContractChanged">
+            <option value="">@Ui["1 · legacy definition"]</option>
+            @foreach(var version in ContractVersions){<option value="@version">@version</option>}
+        </select></label>
+        <p class="footer-note">@Ui["Changing the contract version does not convert settings. Check the affected settings and connections, then validate and apply the definition."]</p>
+        @if(!string.IsNullOrWhiteSpace(Descriptor?.ContractNotes)){<p>@Descriptor.ContractNotes</p>}
+    </details>
+    <details class="inspector-section" open><summary>@Ui["Execution"]</summary>
+    @if(Descriptor?.Kind==ENodeKind.Source){<label>
+<input type="checkbox" checked="@Node.StartOnLoad" @onchange="e=>Update(n=>n with{StartOnLoad=(bool)e.Value!})" />@Ui["Start automatically on activation or restart"]</label>
+        <p class="small muted">@Ui["When enabled, start automatically after activation or restart if the workflow is enabled and startup inputs are ready. When disabled, start through a StartSignal or an explicit node run. Changing this option does not stop an existing listener."]</p>}
+    @if(Descriptor?.Kind==ENodeKind.Source)
+    {
+        <label>@Ui["Stop listening after (ms, optional)"]<input type="number" min="1" max="2147483647" value="@(Model.ReadInput(Node.Id+"/listenDurationMs")??Node.ListenDurationMs?.ToString(CultureInfo.InvariantCulture))" placeholder="@Ui["Continuous listening"]" @onchange="ListenDurationChanged" /></label>
+        <p class="small">@Ui["Leave empty to listen continuously. This timer starts with this source and ends reception normally. Accepted work may finish; its per-item timeout is separate."]</p>
+        @if(Model.ReadInput(Node.Id+"/listenDurationMs") is not null){<p class="error">@Ui["Enter a positive duration in milliseconds, or leave empty for continuous listening."]</p>}
+    }
+<label>@Ui["Execution target"]<select value="@TargetMode" @onchange="TargetChanged">
+<option value="coordinator">@Ui["Highest priority / connected PC selection"]</option>
+<option value="one">@Ui["One specified peer"]</option>
+<option value="any">@Ui["Any peer in the selection"]</option>
+<option value="all">@Ui["All selected peers"]</option>
+<option value="source">@Ui["Peer that received the input"]</option>
+</select>
+</label>
+    @if(Node.Target is null && Descriptor?.CanEvaluateStatically != true)
+    {
+        <label>@Ui["Execution count"]<select value="@Node.PcExecution" @onchange="e=>Update(n=>n with{PcExecution=Enum.Parse<EPcExecutionMode>(e.Value!.ToString()!)})"><option value="@EPcExecutionMode.One">@Ui["Run on one PC"]</option><option value="@EPcExecutionMode.All">@Ui["Run on every selected PC"]</option></select></label>
+        <p class="small muted">@Ui["Connect PC selection nodes to the execution PC input. All-PC execution requires an explicit selection."]</p>
+    }
+    @if(Node.Target is not null&&!Node.Target.SourcePeer)
+    {
+        <label>@Ui["Select by"]<select value="@(Node.Target.Groups is null?"peers":"groups")" @onchange="TargetKindChanged">
+<option value="peers">@Ui["Peer ID"]</option>
+<option value="groups">@Ui["Host Group"]</option>
+</select>
+</label>
+        <label>@Ui["Targets (comma-separated)"]<input value="@string.Join(", ",Node.Target.Groups??Node.Target.Peers??[])" @oninput="TargetsChanged" />
+</label>
+    }
+    @if(Descriptor?.Kind == ENodeKind.Action)
+    {
+    <label>@Ui["When a previous run is active"]<select value="@Node.Overlap" @onchange="e=>Update(n=>n with{Overlap=Enum.Parse<EOverlapPolicy>(e.Value!.ToString()!)})">@foreach(var policy in Enum.GetValues<EOverlapPolicy>()){<option value="@policy">@Ui[policy.ToString()]</option>}</select></label>
+    }
+    </details>
+    <details class="inspector-section"><summary>@Ui["Settings"]</summary>
+    @if(Descriptor is not null){<SchemaFields @key="Node.Id" NodeId="@Node.Id" Schema="Descriptor.SettingsSchema" Inputs="Descriptor.Inputs" Settings="Node.Settings" SettingsChanged="value=>Update(n=>n with{Settings=value})" InvalidChanged="InvalidChanged" />}
+    </details>
+    @if(Descriptor?.Inputs.Count>0)
+    {
+        <details class="inspector-section"><summary>@Ui["Inputs"]</summary>
+        <NodeInputFields Node="Node" Ports="Descriptor.Inputs" InvalidChanged="InvalidChanged" />
+        </details>
+    }
+    @if(Node.Type is "control.preview" or "control.progress"){@if(SubworkflowInterface.IsSubworkflow(Model.Draft.Document)){<p class="small">@Ui["Open a placed recipe to see live previews."]</p>}else{<NodePreviewPanel @key="Node.Id" Node="Node" />}}
+    <details class="inspector-section"><summary>@Ui["Safety controls"]</summary>
+<label>
+<input type="checkbox" checked="@(Node.Safety is not null)" @onchange="e=>Update(n=>n with{Safety=(bool)e.Value!?new NodeSafetyPolicy():null})" />@Ui["Override safety policy for this node"]</label>
+    @if(Node.Safety is { } safety)
+    {
+        <label>@Ui["Confirmation for temporary overrides"]<select value="@safety.Confirmation?.ToString()" @onchange="e=>Update(n=>n with{Safety=n.Safety! with{Confirmation=string.IsNullOrEmpty(e.Value?.ToString())?null:Enum.Parse<ESafetyConfirmation>(e.Value!.ToString()!)}})"><option value="">@Ui["Use shared settings"]</option><option value="@ESafetyConfirmation.None">@Ui["No extra confirmation"]</option><option value="@ESafetyConfirmation.Continue">@Ui["Confirm temporary continuation"]</option><option value="@ESafetyConfirmation.Always">@Ui["Confirm stop and continuation"]</option></select></label>
+        <label>@Ui["When only one peer remains"]<select value="@NullableBoolean(safety.StopWhenSingleton)" @onchange="e=>Update(n=>n with{Safety=n.Safety! with{StopWhenSingleton=ReadBoolean(e)}})">
+<option value="">@Ui["Use shared default"]</option>
+<option value="true">@Ui["Stop"]</option>
+<option value="false">@Ui["Continue"]</option>
+</select>
+</label>
+        <label>@Ui["When degraded with multiple peers remaining"]<select value="@NullableBoolean(safety.StopWhenDegraded)" @onchange="e=>Update(n=>n with{Safety=n.Safety! with{StopWhenDegraded=ReadBoolean(e)}})">
+<option value="">@Ui["Use shared default"]</option>
+<option value="true">@Ui["Stop"]</option>
+<option value="false">@Ui["Continue"]</option>
+</select>
+</label>
+        <label>@Ui["Inputs received while stopped"]<select value="@safety.Inputs" @onchange="e=>Update(n=>n with{Safety=n.Safety! with{Inputs=Enum.Parse<EStoppedInputPolicy>(e.Value!.ToString()!)}})">@foreach(var policy in Enum.GetValues<EStoppedInputPolicy>()){<option value="@policy">@Ui[StoppedInputLabel(policy)]</option>}</select>
+</label>
+        <label>@Ui["Safety group"]<input value="@safety.Group" @oninput="e=>Update(n=>n with{Safety=n.Safety! with{Group=e.Value?.ToString()}})" />
+</label>
+    }
+    </details>
+    <button class="danger quiet" @onclick="Remove">@Ui["Delete node"]</button>
+    </fieldset>
+}

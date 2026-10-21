@@ -1,0 +1,9 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)eng/analyzers/source-quality-core/SourceQualityAnalyzer.Repository.targets" />
+
+  <!-- solution restoreでは、各projectごとではなくsolution入口で一度だけ同期します。 -->
+  <Target Name="SyncContentsSourceQualityAnalyzerForSolution"
+          BeforeTargets="Restore"
+          Condition="'$(ContentsCurrentBuildIsSourceQualityAnalyzerRepository)' != 'True'"
+          DependsOnTargets="SyncContentsSourceQualityAnalyzerRepository" />
+</Project>

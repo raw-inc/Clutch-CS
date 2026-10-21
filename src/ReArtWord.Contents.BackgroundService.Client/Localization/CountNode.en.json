@@ -1,0 +1,6 @@
+{
+  "node.data.count.name": "Count array or dictionary items",
+  "node.data.count.description": "Count the immediate items in an array or dictionary. Empty collections return zero; null and nested values each count as one item. Other inputs fail.",
+  "port.data.count.in.value": "Array / dictionary to count",
+  "port.data.count.out.value": "Item count"
+}

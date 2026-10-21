@@ -1,0 +1,15 @@
+{
+  "preview.view.label": "Preview display",
+  "preview.view.latest": "Latest",
+  "preview.view.history": "History",
+  "preview.history.title": "Preview history",
+  "preview.history.scope": "Latest 50 captures · {0}",
+  "preview.history.retention": "Latest 50 captures within 5 minutes. Indices are per peer; times use the selected display time zone. Long text is abbreviated; media is summarized by format and size.",
+  "preview.history.unavailable": "Some preview history could not be retrieved.",
+  "preview.history.empty": "No captured history is available.",
+  "preview.history.number": "Index",
+  "preview.history.time": "Time",
+  "preview.history.value": "Value",
+  "preview.history.allPeers": "All peers",
+  "preview.retry": "Retry"
+}

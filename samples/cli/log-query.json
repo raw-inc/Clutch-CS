@@ -1,0 +1,4 @@
+{
+  "levels": ["WARN", "ERROR", "FATAL"],
+  "limit": 100
+}

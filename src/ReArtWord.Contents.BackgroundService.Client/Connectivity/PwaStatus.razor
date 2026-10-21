@@ -1,0 +1,8 @@
+@if(state?.Waiting==true)
+{
+    <a class="pwa-state update-available" href="/ui-update.html" target="_top" title="@Ui["A new UI version is waiting. Save or export drafts, close all pages for this ClientHost, then reopen. The version does not switch while you edit."]"><span class="client-led" aria-hidden="true"></span>@Ui["Client: Update available"]</a>
+}
+else
+{
+    <span class="pwa-state @(state?.Ready==true?"ready":"unconfirmed")" role="status" title="@(message?.Invoke())"><span class="client-led" aria-hidden="true"></span>@Ui[state?.Ready==true?"Client: Ready":state is null?"Client: Checking":"Client: Unconfirmed"]</span>
+}

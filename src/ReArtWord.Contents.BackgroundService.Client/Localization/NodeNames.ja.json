@@ -1,0 +1,6 @@
+{
+  "Logical name": "論理名",
+  "Edit logical name: {0}": "論理名を編集: {0}",
+  "Double-click to edit the logical name.": "ダブルクリックで論理名を編集します。",
+  "Enter to apply; Escape to cancel. Leave empty to use the node type name.": "Enterで確定、Escapeで取消。空欄にするとノード種類名を表示します。"
+}

@@ -1,0 +1,7 @@
+.port-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    border-bottom: 1px solid var(--line);
+    padding: 6px 0;
+}

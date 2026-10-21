@@ -1,0 +1,6 @@
+@using System.Globalization
+@Ui[State]
+@if (string.Equals(State, "Ready", StringComparison.Ordinal) && History is { Pending: > 0 } history)
+{
+    <span class="background-sync" role="progressbar" aria-label='@Ui["Background Sync"]' aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Percent" title="@Description"> · @Ui["Background Sync"] @Percent%@if(history.Problem is not null){<span> · @Ui["Waiting"]</span>}</span>
+}

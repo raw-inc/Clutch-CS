@@ -1,0 +1,18 @@
+{
+  "Display settings": "画面設定",
+  "Language": "表示言語",
+  "Close": "閉じる",
+  "Cancel": "キャンセル",
+  "Save": "保存",
+  "Refresh": "更新",
+  "Apply": "適用",
+  "Search": "検索",
+  "Next page": "次のページ",
+  "Previous page": "前のページ",
+  "The saved language could not be read. English is being used.": "保存した表示言語を読み込めなかったため、英語で表示しています。",
+  "The language was changed for this session, but could not be saved.": "この画面の表示言語は変更しましたが、端末に設定を保存できませんでした。",
+  "Peers": "ピア",
+  "Coordinator": "調整役のピア",
+  "History unconfirmed": "履歴保存は未確認",
+  "Last 15 minutes": "直近15分"
+}

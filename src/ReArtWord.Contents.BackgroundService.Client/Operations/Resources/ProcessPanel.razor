@@ -1,0 +1,73 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Processes
+<section class="applications-panel">
+    <div class="section-heading"><h2>@Ui["Applications"]</h2><div class="toolbar"><button class="quiet" disabled="@busy" @onclick="()=>RefreshAsync(UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh"]</button><button disabled="@(busy||target is null)" @onclick="()=>Edit(null)"><UiIcon Name="add" />@Ui["Register application"]</button></div></div>
+    <div class="application-target card">
+        <label>@Ui["Application host"]<select value="@peer" disabled="@(busy||refreshing||registrationOpen||selected is not null)" @onchange="e=>SelectPeerAsync(e.Value?.ToString(),UiCancellation)">
+            @foreach(var item in (Connection.Current?.Peers??[]).OrderBy(item=>item.HostId,StringComparer.CurrentCulture))
+            {
+                <option value="@item.PeerId">@item.HostId · @item.PeerId</option>
+            }
+        </select></label>
+        <div><strong>@Owner</strong><p class="small muted">@Ui["This application is registered on this host and cluster peer only."]</p></div>
+    </div>
+    @if(message is not null){<p class="notice" role="status">@message()</p>}
+    <div class="table-wrap"><table><thead><tr><th>@Ui["Application name"]</th><th>@Ui["Observed state"]</th><th>@Ui["Automatic monitoring"]</th><th>@Ui["Scheduled starts"]</th><th>@Ui["Actions"]</th></tr></thead>
+        <tbody>@foreach(var item in processes){<tr @key="item.Definition.Id">
+            <td><strong>@item.Definition.DisplayName</strong><div class="small muted application-path" title="@item.Definition.ExecutablePath">@item.Definition.ExecutablePath</div></td>
+            <td><span class="badge @(item.Observed.Status?.Running is true?"good":"muted")">@Ui[State(item)]</span>@if(item.Observed.Status?.Identity is {} identity){<div class="small muted">PID @identity.ProcessId</div>}</td>
+            <td>@Ui[item.Definition.AutomaticMonitoring?"Enabled":"Disabled"]<div class="small muted">@Ui[item.Definition.Mode.ToString()]</div>@if(item.Observed.Status?.RecoveryExhausted is true){<span class="small error">@Ui["Restart limit reached"]</span>}@if(item.Observed.Status?.RecoverySuppressed is true){<span class="small muted">@Ui["Recovery suppressed"]</span>}</td>
+            <td>@((item.Definition.Schedules??[]).Count(schedule=>schedule.Enabled))@foreach(var schedule in (item.Schedules??[]).Where(schedule=>schedule.NextAt is not null).Take(1)){<div class="small muted">@FormatTime(schedule.NextAt)</div>}</td>
+            <td><button disabled="@(busy||target is null)" @onclick="()=>selected=item">@Ui["Details and actions"]</button><button class="quiet" disabled="@(busy||target is null)" @onclick="()=>Edit(item)">@Ui["Edit"]</button></td>
+        </tr>}</tbody></table>
+        @if(processes.Count==0){<div class="empty">@Ui["No applications registered on this host."]</div>}
+    </div>
+</section>
+<Modal Open="@(selected is not null&&!registrationOpen)" Title='@(selected?.Definition.DisplayName??Ui["Application state"])' Close="()=>selected=null">
+    @if(selected is {} item)
+    {
+        <p class="small muted">@Owner</p>
+        @if(message is not null){<p class="notice" role="status">@message()</p>}
+        <dl class="application-state"><dt>@Ui["Observed state"]</dt><dd>@Ui[State(item)]</dd><dt>PID</dt><dd>@(item.Observed.Status?.Identity?.ProcessId.ToString(CultureInfo.InvariantCulture)??"—")</dd><dt>@Ui["Exit code"]</dt><dd>@(item.Observed.Status?.ExitCode?.ToString(CultureInfo.InvariantCulture)??"—")</dd><dt>@Ui["Restart attempts"]</dt><dd>@item.Observed.Status?.RecoveryAttempts</dd><dt>@Ui["Next restart"]</dt><dd>@FormatTime(item.Observed.Status?.NextRecoveryAt)</dd></dl>
+        @if(item.Observed.Status?.RecoveryExhausted is true){<p class="notice">@Ui["Restart limit reached"]</p>}
+        @if(item.Observed.Status?.ReplacementDeadline is {} deadline){<p class="notice">@Ui["Self-restart confirmation deadline"]: @FormatTime(deadline) @item.Observed.Status.ReplacementProblem</p>}
+        @if(item.Observed.Status?.ExitUnobserved is true){<p class="notice">@Ui["This process exited while it was not being observed. No exit signal or automatic restart was replayed."]</p>}
+        @foreach(var schedule in item.Schedules??[]){<p class="small">@Ui["Next scheduled start"]: @FormatTime(schedule.NextAt) · @Ui["Last result"]: @schedule.Outcome @Ui[schedule.Reason??string.Empty]</p>}
+        @if(item.Definition.Mode==EProcessMode.Managed)
+        {
+            <fieldset disabled="@(busy||target is null)"><div class="toolbar">
+                <button @onclick='()=>CommandAsync("process.start",new{processId=item.Definition.Id},UiCancellation)'><UiIcon Name="play" />@Ui["Start"]</button>
+                <button @onclick="()=>{restarting=false;stopOpen=true;}">@Ui["Stop"]</button>
+                <button @onclick="()=>{restarting=true;stopOpen=true;}">@Ui["Restart"]</button>
+            </div><div class="toolbar section">
+                <button class="quiet" @onclick='()=>CommandAsync("process.recoverySuppression",new{processId=item.Definition.Id,suppressed=!(item.Observed.Status?.RecoverySuppressed??false)},UiCancellation)'>@Ui[item.Observed.Status?.RecoverySuppressed is true?"Resume automatic recovery":"Suppress automatic recovery"]</button>
+                <button class="quiet" @onclick='()=>CommandAsync("process.confirmRecovery",new{processId=item.Definition.Id},UiCancellation)'>@Ui["Confirm recovery manually"]</button>
+                <button class="quiet" @onclick="()=>resolveOpen=true">@Ui["Resolve an unknown launch"]</button>
+            </div></fieldset>
+        }
+        <button class="section quiet" disabled="@busy" @onclick="()=>Edit(item)">@Ui["Edit registration"]</button>
+        @if(result is not null){<JsonDetails Value="result" Title='@Ui["Actual operation result"]' />}
+    }
+</Modal>
+<Modal Open="stopOpen" Title='@Ui[restarting?"Restart application":"Stop application"]' Close="()=>stopOpen=false">
+    <p>@Owner · <strong>@selected?.Definition.DisplayName</strong></p>
+    @if(message is not null){<p class="notice">@message()</p>}
+    <fieldset disabled="@(busy||target is null)"><label>@Ui["Graceful stop timeout (seconds)"]<input type="number" min="1" max="3600" @bind="gracefulSeconds" @bind:event="oninput" /></label>
+    <p class="small muted">@Ui["A restart only starts a new process after the old process has been confirmed stopped."]</p>
+    <div class="toolbar"><button @onclick='()=>StopAsync("waitForManual",UiCancellation)'>@Ui["Wait for manual action if it does not exit"]</button><button @onclick='()=>StopAsync("force",UiCancellation)'>@Ui["Force termination if it does not exit"]</button></div></fieldset>
+</Modal>
+<Modal Open="resolveOpen" Title='@Ui["Confirm the actual launch result"]' Close="()=>resolveOpen=false">
+    <p>@Owner · @selected?.Definition.DisplayName</p>
+    @if(message is not null){<p class="notice">@message()</p>}
+    <p>@Ui["Identify the actual OS process without restarting it automatically."]</p>
+    <fieldset disabled="@(busy||target is null)"><select @bind="resolveMode"><option value="">@Ui["Select the observed result"]</option><option value="running">@Ui["I confirmed the running process"]</option><option value="notStarted">@Ui["I confirmed it did not start"]</option></select>
+    <label>PID<input type="number" min="1" @bind="pid" @bind:event="oninput" disabled='@(resolveMode!="running")' /></label>
+    <label>@Ui["OS start time (include time zone and original precision)"]<input @bind="startedAt" @bind:event="oninput" disabled='@(resolveMode!="running")' /></label>
+    <button @onclick="()=>ResolveAsync(UiCancellation)">@Ui["Record the observed result"]</button></fieldset>
+</Modal>
+<Modal Wide="true" Open="registrationOpen" Title='@Ui["Register application"]' Close="()=>registrationOpen=false">
+    @if(registrationOpen)
+    {
+        @if(message is not null){<p class="notice" role="status">@message()</p>}
+        <ApplicationRegistrationEditor Definition="editing" Owner="@Owner" ClusterId="@(cluster??string.Empty)" PeerId="@(peer??string.Empty)" Busy="@(busy||target is null)" Save="definition=>RegisterAsync(definition,UiCancellation)" Cancel="()=>registrationOpen=false" />
+    }
+</Modal>

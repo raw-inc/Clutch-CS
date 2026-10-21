@@ -1,0 +1,44 @@
+.wire-inspector-summary {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    color: var(--port-color);
+    margin: 4px 0 15px;
+}
+
+.wire-inspector-summary > span {
+    color: var(--muted);
+}
+
+.wire-endpoints {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+}
+
+.wire-endpoints dt {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 8px;
+}
+
+.wire-endpoints dd {
+    margin: 0;
+}
+
+.wire-endpoints strong {
+    font-weight: 500;
+    display: block;
+    font-size: 12px;
+}
+
+.wire-endpoints code {
+    display: block;
+    font-size: 10px;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+
+.wire-inspector-summary code {
+    color: var(--port-color);
+}

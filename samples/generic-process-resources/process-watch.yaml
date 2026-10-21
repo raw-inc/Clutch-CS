@@ -1,0 +1,39 @@
+id: generic-process-start-and-watch
+name: 登録アプリケーションの起動と状態監視
+enabled: false
+nodes:
+  - id: start
+    type: process.start
+    position: { x: 60, y: 80 }
+    target:
+      scope: one
+      peers: [configured-peer]
+    settings:
+      processId: renderer
+  - id: watch
+    type: process.watch
+    position: { x: 460, y: 80 }
+    target:
+      scope: one
+      peers: [configured-peer]
+    settings:
+      processId: renderer
+      autoRecover: true
+      intervalMs: 250
+  - id: log
+    type: control.log
+    position: { x: 860, y: 80 }
+    settings:
+      level: INFO
+      message: 登録アプリケーションの状態が変わりました
+wires:
+  - fromNode: start
+    fromPort: value
+    when: success
+    toNode: watch
+    toPort: value
+  - fromNode: watch
+    fromPort: value
+    when: success
+    toNode: log
+    toPort: value

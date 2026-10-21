@@ -1,0 +1,6 @@
+{
+  "node.data.count.name": "配列・辞書の要素数（Count）",
+  "node.data.count.description": "配列の要素数または辞書の項目数を整数で返します。空の場合は0、nullや入れ子の値もそれぞれ1要素として数えます。それ以外の入力は失敗します。",
+  "port.data.count.in.value": "数える配列／辞書",
+  "port.data.count.out.value": "要素数"
+}

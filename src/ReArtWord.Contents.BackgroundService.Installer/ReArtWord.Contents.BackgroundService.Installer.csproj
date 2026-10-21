@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets/Clutch-CS.ico</ApplicationIcon>
+    <Product>Clutch-CS</Product>
+    <ThirdPartyCatalogPath Condition="'$(ThirdPartyCatalogPath)' == ''">$(MSBuildProjectDirectory)/ThirdParty/catalog.json</ThirdPartyCatalogPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <ProjectReference Include="$(ContentsSourceQualityAnalyzerRepositoryPath)/src/ReArtWord.CSharp.SourceCodeQuality.MVVM.Analyzers/ReArtWord.CSharp.SourceCodeQuality.MVVM.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../ReArtWord.Contents.BackgroundService.Infrastructure/ReArtWord.Contents.BackgroundService.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Localization/*.json" />
+    <EmbeddedResource Include="../../LICENSE" LogicalName="Clutch-CS.License" />
+    <EmbeddedResource Include="$(ThirdPartyCatalogPath)" LogicalName="Clutch-CS.ThirdPartyLicenses" />
+    <AvaloniaResource Include="Assets/*" />
+  </ItemGroup>
+  <!-- 配布時だけ、直下のEXEからfiles内の本体を相対パスで起動します。 -->
+  <Target Name="CreateSetupLauncher" AfterTargets="Publish" Condition="'$(SetupLauncherPath)' != ''">
+    <Error Condition="'$(SelfContained)' != 'true' or !$(RuntimeIdentifier.StartsWith('win-'))"
+           Text="SetupLauncherPath requires a self-contained Windows publish." />
+    <CreateAppHost AppHostSourcePath="$(AppHostSourcePath)"
+                   AppHostDestinationPath="$(SetupLauncherPath)"
+                   AppBinaryName="files/$(AssemblyName)$(TargetExt)"
+                   IntermediateAssembly="@(IntermediateAssembly->'%(FullPath)')"
+                   WindowsGraphicalUserInterface="true" />
+  </Target>
+</Project>

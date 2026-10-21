@@ -1,0 +1,13 @@
+{
+  "setting.authentication": "認証",
+  "choice.http.request.authentication.auto": "自動（秘密情報の指定がなければ認証なし）",
+  "choice.http.request.authentication.none": "認証なし",
+  "choice.http.request.authentication.secret": "保存済み秘密情報を使用",
+  "Saved authentication key name (optional in automatic mode)": "認証用の保存済みキー名（自動では任意）",
+  "No key is needed for an unauthenticated endpoint. Select None under Authentication, or leave this name empty in Automatic mode. A saved name is required only when using secret authentication.": "認証不要の接続先ではキーは不要です。「認証なし」を選ぶか、自動のままキー名を空欄にしてください。「保存済み秘密情報を使用」の場合だけキー名が必要です。",
+  "None sends no authentication header and does not read saved secrets. Automatic preserves existing settings: authenticate only when a saved key name is supplied. Saved secret requires a key name; use Authorization/Bearer or your API's header name and an empty prefix.": "「認証なし」では認証ヘッダーを送らず、保存済みキーも読みません。「自動」は既存設定を維持し、キー名がある場合だけ認証します。「保存済み秘密情報を使用」はキー名が必須です。Authorization／Bearer、またはAPI指定のヘッダー名と空の接頭辞を設定できます。",
+  "Network status unverified": "状態未確認",
+  "Network adapter unavailable": "停止中・利用不可",
+  "Network adapter up": "稼働中",
+  "The selected network adapter is not up. Requests cannot start until it is available; choose an active adapter and its IPv4.": "選択したNICは稼働していません。復旧するまで通信を開始できません。稼働中のNICと、そのNICのIPv4を選択してください。"
+}

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>Clutch-CS.CoreService</AssemblyName>
+    <RootNamespace>ReArtWord.Contents.BackgroundService.CoreService</RootNamespace>
+    <!-- LibraryImportの生成するネイティブ呼出しスタブで使用します。 -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <OutputType>Exe</OutputType>
+    <PublishReadyToRun Condition="'$(RuntimeIdentifier)' != ''">true</PublishReadyToRun>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Concentus" />
+    <None Update="licenses/Concentus.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <PackageReference Include="Porta.Pty" />
+    <ProjectReference Include="../ReArtWord.Contents.BackgroundService.Infrastructure/ReArtWord.Contents.BackgroundService.Infrastructure.csproj" />
+    <ProjectReference Include="../ReArtWord.Contents.BackgroundService.Nodes/ReArtWord.Contents.BackgroundService.Nodes.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" />
+  </ItemGroup>
+</Project>

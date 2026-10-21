@@ -1,0 +1,50 @@
+.peer-identity strong {
+    font-weight: 500;
+}
+
+.peer-identity small {
+    display: block;
+    color: var(--muted);
+    margin-top: 3px;
+}
+
+.peer-list {
+    color: var(--ink);
+}
+
+tbody th {
+    background: transparent;
+    color: var(--ink);
+    font-size: 12px;
+}
+
+td,
+th {
+    white-space: nowrap;
+}
+
+.version {
+    font: 11px Consolas, monospace;
+    max-width: 420px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.peer-list-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.peer-list-footer .footer-note {
+    max-width: 75%;
+}
+
+.health-indicator .health-label {
+    max-width: none;
+    opacity: 1;
+    transform: translateX(0);
+    margin-left: 8px;
+    transition: none;
+}

@@ -1,0 +1,10 @@
+{
+  "packageVersion": "3.119.4",
+  "repository": "https://github.com/mono/skia.git",
+  "commit": "7dbfc07dd33181f84e0958afb7ee805c6c769f0b",
+  "skiaSharpCommit": "f568ac94dd768ef9a2f593537cfde2dd0d348ef5",
+  "excludedDependencies": [
+    "third_party/externals/dng_sdk",
+    "third_party/externals/piex"
+  ]
+}

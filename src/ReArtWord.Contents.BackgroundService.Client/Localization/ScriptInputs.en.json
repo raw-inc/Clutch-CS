@@ -1,0 +1,10 @@
+{
+  "Script argument inputs": "Script argument inputs",
+  "Individual arguments": "Individual arguments",
+  "Named JSON object": "Named JSON object",
+  "Argument names and types become input ports after analysis. Unknown types accept any JSON value.": "Argument names and types become input ports after analysis. Unknown types accept any JSON value.",
+  "Disconnect argument wires before changing the input mode. Constant values are preserved.": "Disconnect argument wires before changing the input mode. Constant values are preserved.",
+  "C#: public static Run(...). Python: def run(...).": "C#: public static Run(...). Python: def run(...).",
+  "JavaScript: export function run(...) or export async function run(...). Import npm packages as ES Modules.": "JavaScript: export function run(...) or export async function run(...). Import npm packages as ES Modules.",
+  "Statically inferred types take precedence. Unknown types use any; optionally choose a more specific type and analyze again.": "Statically inferred types take precedence. Unknown types use any; optionally choose a more specific type and analyze again."
+}

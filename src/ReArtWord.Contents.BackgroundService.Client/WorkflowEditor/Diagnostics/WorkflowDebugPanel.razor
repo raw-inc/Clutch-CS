@@ -1,0 +1,46 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Observability.Debugging
+<section class="workflow-debug">
+    <p>@Ui["Capture the next workflow input once, including merged and repeated downstream work. Arming does not run the workflow."]</p>
+    <p class="muted small">@Ui["Disabled by default. The reservation expires after 10 minutes; temporary records expire 30 minutes after arming or when their owner restarts. Binary bodies are omitted and recognized authentication fields are redacted."]</p>
+    <div class="toolbar">
+        <button class="primary" disabled="@(busy||Active)" @onclick="()=>ArmAsync(UiCancellation)">@Ui["Capture next input"]</button>
+        <button disabled="@(busy||!Active)" @onclick="()=>StopAsync(UiCancellation)">@Ui["Stop capture only"]</button>
+        <button disabled="@busy" @onclick="()=>RefreshAsync(UiCancellation)">@Ui["Refresh"]</button>
+        <button disabled="@(busy||state?.Nodes is null)" @onclick="()=>ExportAsync(UiCancellation)">@Ui["Download debug JSON"]</button>
+    </div>
+    @if(problem is not null){<p class="notice error" role="status">@Ui[problem]</p>}
+    @if(state is null)
+    {
+        <p class="muted">@Ui["No debug capture is reserved or retained on this connection."]</p>
+    }
+    else
+    {
+        <p role="status"><strong>@Ui["Debug state "+state.State]</strong>@if(state.Outcome is not null){<span> · @Ui[state.Outcome.ToString()!]</span>} · <code>@state.Arm.Id</code> · @state.Reason</p>
+        <p class="small">@Ui["Capture owner"]: @state.CapturePeerId · @Ui["Execution"]: <code>@state.ExecutionId</code> · @Ui["Revision"]: <code>@state.Revision</code></p>
+        @if(state.Truncated){<p class="notice warn">@Ui["The capture limit was reached. This is a partial record; the workflow was not stopped."]</p>}
+        <p class="muted small">@Ui["Values, connections and collections are summarized with size limits. Unexecuted branches are included; summary rows describe aggregate results."]</p>
+        <div class="debug-table">
+            <table>
+                <thead><tr><th>@Ui["Order"]</th><th>@Ui["Node"]</th><th>@Ui["Result"]</th><th>@Ui["Path and value summaries"]</th></tr></thead>
+                <tbody>
+                @foreach(var node in state.Nodes??[])
+                {
+                    <tr @key="node.InvocationId">
+                        <td>@node.Sequence</td>
+                        <td><code>@node.NodeId</code><br />@node.NodeType<br /><span class="muted small">@node.Stage</span></td>
+                        <td>@Ui[node.Outcome?.ToString()??"Running"]<br /><code>@node.Reason</code><br /><span class="small">@FormatTime(node.StartedAt,"HH:mm:ss.fff")</span></td>
+                        <td><details><summary>@Ui.Format("{0} inputs / {1} outputs / {2} connections",node.Inputs.Count,node.Outputs.Count,node.Connections.Count)</summary>
+                            <p class="small">@Ui["Execution"]: <code>@node.ExecutionId</code><br />@Ui["Parent execution"]: <code>@node.ParentExecutionId</code></p>
+                            <h3>@Ui["Connections"]</h3>
+                            @foreach(var edge in node.Connections){<p class="small"><code>@edge.FromNode.@edge.FromPort → @edge.ToPort @edge.Path</code> · @Ui[edge.Available?"Value available":"No value on this route"] · @edge.Route @if(edge.Inherited){<span> · @Ui["Inherited from this request"]</span>}</p>}
+                            <h3>@Ui["Inputs"]</h3><dl>@foreach(var pair in node.Inputs){<dt>@pair.Key</dt><dd><code>@pair.Value</code></dd>}</dl>
+                            <h3>@Ui["Outputs"]</h3><dl>@foreach(var pair in node.Outputs){<dt>@pair.Key</dt><dd><code>@pair.Value</code></dd>}</dl>
+                        </details></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="toolbar"><button disabled="@(busy||previous.Count==0)" @onclick="()=>PreviousAsync(UiCancellation)">@Ui["Previous page"]</button><button disabled="@(busy||state.NextOffset is null)" @onclick="()=>NextAsync(UiCancellation)">@Ui["Next page"]</button><span>@Ui.Format("{0} captured evaluations",state.TotalNodes)</span></div>
+    }
+</section>

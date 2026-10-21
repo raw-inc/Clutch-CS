@@ -1,0 +1,17 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Resources
+<div class="trend" title='@Ui["Actual samples from the last 5 minutes in this view. Gaps are not connected."]'>
+    <svg @ref="chart" viewBox="0 -2 300 104" preserveAspectRatio="none" role="img" aria-label="@Label">
+        <defs>
+            <linearGradient id="@gradient" x1="0" y1="100" x2="0" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#68bba2" /><stop offset="55%" stop-color="#aac67b" /><stop offset="80%" stop-color="#e3b268" /><stop offset="100%" stop-color="#e57878" /></linearGradient>
+            <path id="@(gradient+"-band")" class="area-band" data-shadow-band />
+            <clipPath id="@(gradient+"-clip")" clipPathUnits="userSpaceOnUse"><path class="area-clip" data-area-clip /></clipPath>
+            <filter id="@(gradient+"-shadow")" filterUnits="userSpaceOnUse" x="-70" y="-12" width="380" height="126" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="0.5" data-shadow-blur /></filter>
+        </defs>
+        <path d="M0,100 H300 M0,50 H300 M0,0 H300" class="baseline" />
+        <g data-series>
+            <g aria-hidden="true" clip-path="@($"url(#{gradient}-clip)")"><g filter="@($"url(#{gradient}-shadow)")">@for(var layer=0;layer<ShadowLayers;layer++){<use href="@($"#{gradient}-band")" fill="@($"url(#{gradient})")" data-shadow-layer opacity="@((1.0-(layer+0.5)/ShadowLayers).ToString("0.###",CultureInfo.InvariantCulture))" />}</g></g>
+            <path id="@(gradient+"-line")" stroke="@($"url(#{gradient})")" />
+        </g>
+    </svg>
+    @if (string.IsNullOrEmpty(path)){<span>@Ui["Collecting measured samples"]</span>}
+</div>

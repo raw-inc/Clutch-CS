@@ -1,0 +1,124 @@
+.activity-ring {
+    display: inline-block;
+    flex: none;
+    vertical-align: middle;
+    color: inherit;
+}
+
+.activity-ring circle {
+    fill: none;
+    stroke: currentcolor;
+    stroke-width: 3.888;
+}
+
+.ring-track {
+    opacity: 0.16;
+}
+
+.ring-access {
+    stroke-dasharray: 72 28;
+    stroke-linecap: round;
+    opacity: 0.9;
+}
+
+.ring-motion {
+    transform-origin: 12px 12px;
+    animation: disk-access 3.8s linear infinite;
+    animation-delay: var(--access-delay, 0ms);
+}
+
+/* Counter the parent's rotation during each shard's lifetime so debris stays where it broke off. */
+.ring-fragment {
+    transform-origin: 12px 12px;
+    animation: crystal-release 1.05s linear infinite;
+}
+
+.ring-shard {
+    fill: currentcolor;
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: crystal-dissolve 1.05s ease-out infinite;
+}
+
+.ring-fragment,
+.ring-shard {
+    animation-delay: calc(var(--access-delay, 0ms) + var(--fragment-delay));
+}
+
+.fragment-one {
+    --fragment-delay: 0ms;
+    --fragment-x: -0.2px;
+    --fragment-y: -0.65px;
+}
+
+.fragment-two {
+    --fragment-delay: -262.5ms;
+    --fragment-x: 0.3px;
+    --fragment-y: 1px;
+}
+
+.fragment-three {
+    --fragment-delay: -525ms;
+    --fragment-x: -0.45px;
+    --fragment-y: 0.2px;
+}
+
+.fragment-four {
+    --fragment-delay: -787.5ms;
+    --fragment-x: 0.5px;
+    --fragment-y: 0.65px;
+}
+
+.stopped .ring-motion {
+    animation: none;
+    opacity: 0.35;
+}
+
+.stopped .ring-fragments {
+    display: none;
+}
+
+@keyframes disk-access {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes crystal-release {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(-99.473684deg);
+    }
+}
+
+@keyframes crystal-dissolve {
+    0% {
+        opacity: 0.38;
+        transform: translate(0, 0) scale(1);
+    }
+
+    65% {
+        opacity: 0.12;
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate(var(--fragment-x), var(--fragment-y)) scale(0.08);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ring-motion,
+    .ring-fragment,
+    .ring-shard {
+        animation: none;
+    }
+
+    .ring-fragments {
+        display: none;
+    }
+}

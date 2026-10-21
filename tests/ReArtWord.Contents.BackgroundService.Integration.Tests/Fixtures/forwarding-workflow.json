@@ -1,0 +1,1046 @@
+{
+  "id": "forwarding-latency",
+  "name": "OSC forwarding latency",
+  "nodes": [
+    {
+      "type": "control.forEach.end",
+      "settings": {},
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "loop-end"
+    },
+    {
+      "type": "control.ifStart",
+      "settings": {},
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "numeric-if"
+    },
+    {
+      "type": "control.ifStart",
+      "settings": {},
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "all-if"
+    },
+    {
+      "type": "control.parallelForEach",
+      "settings": {
+        "maxConcurrency": 4,
+        "elementMode": "auto"
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "fan-out"
+    },
+    {
+      "type": "control.pass",
+      "settings": {},
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "packet-pass"
+    },
+    {
+      "type": "control.preview",
+      "settings": {
+        "mediaType": "auto"
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "before-preview"
+    },
+    {
+      "type": "control.preview",
+      "settings": {
+        "mediaType": "auto"
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "packet-preview"
+    },
+    {
+      "type": "control.preview",
+      "settings": {
+        "mediaType": "auto"
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "constructed-preview"
+    },
+    {
+      "type": "control.preview",
+      "settings": {
+        "mediaType": "auto"
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "after-preview"
+    },
+    {
+      "type": "control.preview",
+      "settings": {
+        "mediaType": "auto"
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "loop-preview"
+    },
+    {
+      "type": "data.concat",
+      "settings": {},
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "single-host"
+    },
+    {
+      "type": "data.concat",
+      "settings": {},
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "many-hosts"
+    },
+    {
+      "type": "data.concat",
+      "settings": {},
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "message-path"
+    },
+    {
+      "type": "data.convert",
+      "settings": {
+        "targetType": "string"
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "host-text"
+    },
+    {
+      "type": "data.convert",
+      "settings": {
+        "targetType": "number"
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "numeric-id"
+    },
+    {
+      "type": "data.convert",
+      "settings": {
+        "targetType": "string"
+      },
+      "inputs": {
+        "format": {
+          "kind": "json",
+          "json": "00",
+          "binary": ""
+        }
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "item-text"
+    },
+    {
+      "type": "data.convert",
+      "settings": {
+        "targetType": "string"
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "id-text"
+    },
+    {
+      "type": "data.convert",
+      "settings": {
+        "targetType": "string"
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "single-host-text"
+    },
+    {
+      "type": "execution.pc.select",
+      "settings": {
+        "mode": "selected",
+        "hostIds": [
+          "host-a"
+        ]
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "script-pc"
+    },
+    {
+      "type": "execution.pc.select",
+      "settings": {
+        "mode": "selected",
+        "hostIds": [
+          "host-a"
+        ]
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "source-pc"
+    },
+    {
+      "type": "execution.pc.select",
+      "settings": {
+        "mode": "selected",
+        "hostIds": [
+          "host-b"
+        ]
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "send-pc"
+    },
+    {
+      "type": "math.add",
+      "settings": {},
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "single-offset"
+    },
+    {
+      "type": "math.multiply",
+      "settings": {},
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "source-port-operation"
+    },
+    {
+      "type": "math.add",
+      "settings": {},
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "many-offset"
+    },
+    {
+      "type": "osc.packet",
+      "settings": {},
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "packet"
+    },
+    {
+      "type": "osc.udp.receive",
+      "settings": {
+        "localPort": 0,
+        "count": 0,
+        "maxBytes": 65507,
+        "interfaceId": "loopback",
+        "localAddress": "127.0.0.1"
+      },
+      "startOnLoad": true,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "receiver"
+    },
+    {
+      "type": "osc.udp.send",
+      "settings": {
+        "timeoutMs": 500,
+        "maxBytes": 65507,
+        "interfaceId": "loopback",
+        "localAddress": "127.0.0.1",
+        "remotePort": 1,
+        "localPort": 0,
+        "remoteAddress": "127.0.0.1"
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "single-send"
+    },
+    {
+      "type": "osc.udp.send",
+      "settings": {
+        "localPort": 0,
+        "timeoutMs": 100,
+        "maxBytes": 65507,
+        "interfaceId": "loopback",
+        "localAddress": "127.0.0.1",
+        "broadcast": false,
+        "remoteAddress": "127.0.0.1",
+        "remotePort": 1
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "many-send"
+    },
+    {
+      "type": "script.csharp",
+      "settings": {
+        "timeoutMs": 30000,
+        "maxBytes": 1048576,
+        "maxMemoryMb": 256,
+        "code": "public static string Run() => DateTime.Now.ToString(\"HH:mm:ss.fff\");"
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "before-script"
+    },
+    {
+      "type": "script.csharp",
+      "settings": {
+        "timeoutMs": 30000,
+        "maxBytes": 1048576,
+        "maxMemoryMb": 256,
+        "code": "public static string Run() => DateTime.Now.ToString(\"HH:mm:ss.fff\");"
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "after-script"
+    },
+    {
+      "type": "text.match",
+      "settings": {
+        "ignoreCase": false,
+        "multiline": false,
+        "singleline": false,
+        "timeoutMilliseconds": 1000
+      },
+      "inputs": {
+        "pattern": {
+          "kind": "json",
+          "json": "^[0-9]+$",
+          "binary": ""
+        }
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "numeric-match"
+    },
+    {
+      "type": "text.match",
+      "settings": {
+        "ignoreCase": false,
+        "multiline": false,
+        "singleline": false,
+        "timeoutMilliseconds": 1000
+      },
+      "inputs": {
+        "pattern": {
+          "kind": "json",
+          "json": "^all$",
+          "binary": ""
+        }
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "all-match"
+    },
+    {
+      "type": "text.regex",
+      "settings": {
+        "ignoreCase": true,
+        "multiline": false,
+        "singleline": false,
+        "timeoutMilliseconds": 1000,
+        "mode": "first"
+      },
+      "inputs": {
+        "pattern": {
+          "kind": "json",
+          "json": "^/(?<Id>.+?)\\/(?<Message>.+)$",
+          "binary": ""
+        }
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "split-address"
+    },
+    {
+      "type": "value.array",
+      "settings": {
+        "elementMode": "auto"
+      },
+      "inputs": {
+        "items": {
+          "kind": "json",
+          "json": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+          ],
+          "binary": ""
+        }
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "items"
+    },
+    {
+      "type": "value.comment",
+      "settings": {},
+      "inputs": {
+        "displayName": {
+          "kind": "json",
+          "json": "label",
+          "binary": ""
+        }
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "item-label"
+    },
+    {
+      "type": "value.comment",
+      "settings": {},
+      "inputs": {
+        "displayName": {
+          "kind": "json",
+          "json": "label",
+          "binary": ""
+        }
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "port-label"
+    },
+    {
+      "type": "value.comment",
+      "settings": {},
+      "inputs": {
+        "displayName": {
+          "kind": "json",
+          "json": "label",
+          "binary": ""
+        }
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "prefix-label"
+    },
+    {
+      "type": "value.comment",
+      "settings": {},
+      "inputs": {
+        "displayName": {
+          "kind": "json",
+          "json": "label",
+          "binary": ""
+        }
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "host-label"
+    },
+    {
+      "type": "value.comment",
+      "settings": {},
+      "inputs": {
+        "displayName": {
+          "kind": "json",
+          "json": "label",
+          "binary": ""
+        }
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "offset-label"
+    },
+    {
+      "type": "value.comment",
+      "settings": {},
+      "inputs": {
+        "displayName": {
+          "kind": "json",
+          "json": "label",
+          "binary": ""
+        }
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "source-port-label"
+    },
+    {
+      "type": "value.constant",
+      "settings": {
+        "type": "integer",
+        "text": "40"
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "host-offset"
+    },
+    {
+      "type": "value.constant",
+      "settings": {
+        "text": "0",
+        "type": "integer"
+      },
+      "inputs": {},
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "source-port"
+    },
+    {
+      "type": "value.constant",
+      "settings": {
+        "text": "/",
+        "type": "string"
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "separator"
+    },
+    {
+      "type": "value.constant",
+      "settings": {
+        "type": "integer",
+        "text": "1"
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "remote-port"
+    },
+    {
+      "type": "value.constant",
+      "settings": {
+        "text": "12",
+        "type": "integer"
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "parallelism"
+    },
+    {
+      "type": "value.constant",
+      "settings": {
+        "text": "127.0.0."
+      },
+      "startOnLoad": false,
+      "overlap": "parallel",
+      "contractVersion": 1,
+      "id": "prefix"
+    }
+  ],
+  "wires": [
+    {
+      "fromNode": "loop-end",
+      "fromPort": "value",
+      "toNode": "loop-preview",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "loop-end",
+      "fromPort": "value",
+      "toNode": "after-script",
+      "toPort": "trigger",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "numeric-if",
+      "fromPort": "start",
+      "toNode": "numeric-id",
+      "toPort": "trigger",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "all-if",
+      "fromPort": "start",
+      "toNode": "fan-out",
+      "toPort": "trigger",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "fan-out",
+      "fromPort": "index",
+      "toNode": "source-port-operation",
+      "toPort": "right",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "fan-out",
+      "fromPort": "item",
+      "toNode": "item-text",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "fan-out",
+      "fromPort": "item",
+      "toNode": "many-offset",
+      "toPort": "left",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "fan-out",
+      "fromPort": "loop",
+      "toNode": "loop-end",
+      "toPort": "loop",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "packet-pass",
+      "fromPort": "value",
+      "toNode": "packet-preview",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "packet-pass",
+      "fromPort": "value",
+      "toNode": "packet",
+      "toPort": "packet",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "packet-pass",
+      "fromPort": "value",
+      "toNode": "single-send",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "single-host",
+      "fromPort": "value",
+      "toNode": "single-send",
+      "toPort": "$settings.remoteAddress",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "many-hosts",
+      "fromPort": "value",
+      "toNode": "many-send",
+      "toPort": "$settings.remoteAddress",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "message-path",
+      "fromPort": "value",
+      "toNode": "packet",
+      "toPort": "address",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "host-text",
+      "fromPort": "value",
+      "toNode": "host-label",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "numeric-id",
+      "fromPort": "value",
+      "toNode": "single-offset",
+      "toPort": "left",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "item-text",
+      "fromPort": "value",
+      "toNode": "item-label",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "id-text",
+      "fromPort": "value",
+      "toNode": "numeric-id",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "id-text",
+      "fromPort": "value",
+      "toNode": "numeric-match",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "id-text",
+      "fromPort": "value",
+      "toNode": "all-match",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "single-host-text",
+      "fromPort": "value",
+      "toNode": "single-host",
+      "toPort": "input2",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "script-pc",
+      "fromPort": "value",
+      "toNode": "before-script",
+      "toPort": "$execution.pc",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "script-pc",
+      "fromPort": "value",
+      "toNode": "after-script",
+      "toPort": "$execution.pc",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "source-pc",
+      "fromPort": "value",
+      "toNode": "receiver",
+      "toPort": "$execution.pc",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "send-pc",
+      "fromPort": "value",
+      "toNode": "single-send",
+      "toPort": "$execution.pc",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "send-pc",
+      "fromPort": "value",
+      "toNode": "many-send",
+      "toPort": "$execution.pc",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "single-offset",
+      "fromPort": "value",
+      "toNode": "single-host-text",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "source-port-operation",
+      "fromPort": "value",
+      "toNode": "source-port-label",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "many-offset",
+      "fromPort": "value",
+      "toNode": "host-text",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "packet",
+      "fromPort": "value",
+      "toNode": "constructed-preview",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "packet",
+      "fromPort": "value",
+      "toNode": "many-send",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "receiver",
+      "fromPort": "address",
+      "toNode": "split-address",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "receiver",
+      "fromPort": "value",
+      "toNode": "packet-pass",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "receiver",
+      "fromPort": "value",
+      "toNode": "before-script",
+      "toPort": "trigger",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "many-send",
+      "fromPort": "$completed",
+      "toNode": "loop-end",
+      "toPort": "trigger",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "many-send",
+      "fromPort": "$succeeded",
+      "toNode": "loop-end",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "before-script",
+      "fromPort": "value",
+      "toNode": "before-preview",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "after-script",
+      "fromPort": "value",
+      "toNode": "after-preview",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "numeric-match",
+      "fromPort": "value",
+      "toNode": "numeric-if",
+      "toPort": "condition",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "all-match",
+      "fromPort": "value",
+      "toNode": "all-if",
+      "toPort": "condition",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "split-address",
+      "fromPort": "value/Id",
+      "toNode": "id-text",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "split-address",
+      "fromPort": "value/Message",
+      "toNode": "message-path",
+      "toPort": "input4",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "items",
+      "fromPort": "value",
+      "toNode": "fan-out",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "item-label",
+      "fromPort": "value",
+      "toNode": "message-path",
+      "toPort": "input2",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "port-label",
+      "fromPort": "value",
+      "toNode": "single-send",
+      "toPort": "$settings.remotePort",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "port-label",
+      "fromPort": "value",
+      "toNode": "many-send",
+      "toPort": "$settings.remotePort",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "prefix-label",
+      "fromPort": "value",
+      "toNode": "single-host",
+      "toPort": "input1",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "prefix-label",
+      "fromPort": "value",
+      "toNode": "many-hosts",
+      "toPort": "input1",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "host-label",
+      "fromPort": "value",
+      "toNode": "many-hosts",
+      "toPort": "input2",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "offset-label",
+      "fromPort": "value",
+      "toNode": "single-offset",
+      "toPort": "right",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "offset-label",
+      "fromPort": "value",
+      "toNode": "many-offset",
+      "toPort": "right",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "source-port-label",
+      "fromPort": "value",
+      "toNode": "many-send",
+      "toPort": "$settings.localPort",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "host-offset",
+      "fromPort": "value",
+      "toNode": "offset-label",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "source-port",
+      "fromPort": "value",
+      "toNode": "source-port-operation",
+      "toPort": "left",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "separator",
+      "fromPort": "value",
+      "toNode": "message-path",
+      "toPort": "input1",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "separator",
+      "fromPort": "value",
+      "toNode": "message-path",
+      "toPort": "input3",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "remote-port",
+      "fromPort": "value",
+      "toNode": "port-label",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "parallelism",
+      "fromPort": "value",
+      "toNode": "fan-out",
+      "toPort": "$settings.maxConcurrency",
+      "when": "success",
+      "path": null
+    },
+    {
+      "fromNode": "prefix",
+      "fromPort": "value",
+      "toNode": "prefix-label",
+      "toPort": "value",
+      "when": "success",
+      "path": null
+    }
+  ],
+  "enabled": true
+}

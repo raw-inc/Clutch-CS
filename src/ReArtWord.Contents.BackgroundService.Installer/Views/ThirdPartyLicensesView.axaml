@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ReArtWord.Contents.BackgroundService.Installer.ViewModels"
+             x:Class="ReArtWord.Contents.BackgroundService.Installer.Views.ThirdPartyLicensesView"
+             x:DataType="vm:LicensesViewModel" x:CompileBindings="True">
+  <Grid Margin="24,20" RowDefinitions="Auto,*,Auto" RowSpacing="24">
+    <TextBlock Text="{Binding Text[ThirdPartyLicenses]}" FontSize="22" FontWeight="SemiBold" />
+    <TabControl x:Name="LicenseTabs" Grid.Row="1" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+      <TabItem Header="{Binding Text[InstallerTab]}">
+        <TextBox x:Name="InstallerLicenses" Text="{Binding InstallerNotices}" Margin="0,12,0,0" Padding="16"
+                 IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
+      </TabItem>
+      <TabItem Header="Clutch-CS">
+        <TextBox x:Name="ClutchCsLicenses" Text="{Binding ClutchCsNotices}" Margin="0,12,0,0" Padding="16"
+                 IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" />
+      </TabItem>
+    </TabControl>
+    <Border Grid.Row="2" BorderBrush="#2C3037" BorderThickness="0,1,0,0" Padding="0,16,0,0">
+      <Button x:Name="LicensesBackButton" Content="{Binding Text[Back]}" Command="{Binding CloseCommand}" MinWidth="90" HorizontalAlignment="Right" />
+    </Border>
+  </Grid>
+</UserControl>

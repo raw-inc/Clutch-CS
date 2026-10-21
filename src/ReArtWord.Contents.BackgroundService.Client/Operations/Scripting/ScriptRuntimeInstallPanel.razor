@@ -1,0 +1,32 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Scripting.Runtimes
+<button type="button" disabled="@(PeerId is null||ClusterId is null||Disabled)" @onclick="()=>OpenAsync(UiCancellation)"><UiIcon Name="download" />@Ui.Format("Install {0} runtime",Language=="python"?"Python":"Node.js")</button>
+@if(open)
+{
+    <Modal Open="true" Title="Install script runtime" Close="()=>open=false">
+        <p class="footer-note">@Ui.Format("Package destination: {0} / {1}",ClusterId,PeerId)</p>
+        <p>@Ui["Install an official runtime in the logged-in user's home. Existing versions are kept. A successful installation becomes this peer's default."]</p>
+        @if(catalog?.InstallDirectory is {} directory){<p class="mono small runtime-path">@directory</p>}
+        @if(catalog?.InstallProblem is {} unavailable){<p class="error">@Ui[unavailable]</p>}
+        <div class="toolbar">
+            <label>@Ui["Runtime version"]<select aria-label="@Ui["Runtime version"]" disabled="@(busy||status?.Busy==true)" @bind="version">
+                @foreach(var release in releases){<option value="@release.Version">@release.Version@(release.LongTermSupport?" · LTS":string.Empty) · @release.Platform</option>}
+            </select></label>
+            <button class="primary" type="button" disabled="@(busy||status?.Busy==true||catalog?.InstallDirectory is null||version.Length==0)" @onclick="()=>InstallAsync(UiCancellation)">@Ui["Install and use as default"]</button>
+            <button type="button" disabled="@busy" @onclick="()=>RefreshAsync(UiCancellation)">@Ui["Refresh"]</button>
+        </div>
+        @if(problem is not null){<p class="notice" role="status">@Ui[problem]</p>}
+        @if(status is not null)
+        {
+            <div class="table-wrap"><table>
+                <thead><tr><th>@Ui["Runtime version"]</th><th>@Ui["State"]</th><th>@Ui["Reason"]</th></tr></thead>
+                <tbody>@foreach(var operation in status.Operations.Where(item=>item.Request.Language==Language))
+                {
+                    <tr><td>@operation.Request.Version</td><td>@Ui["script.runtime.phase."+operation.Phase]
+                        @if(!operation.Completed && operation.TotalBytes is >0){<progress value="@operation.DownloadedBytes" max="@operation.TotalBytes" aria-label="@Ui["Download progress"]"></progress>}
+                        @if(operation.DefaultApplied){<small>@Ui["Default runtime updated"]</small>}
+                    </td><td>@(operation.Reason is null?string.Empty:Ui[operation.Reason])<details><summary>@Ui["Operation ID"]</summary><span class="mono">@operation.Request.OperationId</span><p class="runtime-path">@operation.ExecutablePath</p></details></td></tr>
+                }</tbody>
+            </table></div>
+        }
+    </Modal>
+}

@@ -1,0 +1,36 @@
+.pwa-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: var(--muted);
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.client-led {
+    width: 6px;
+    height: 6px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--muted);
+}
+
+.ready .client-led {
+    background: var(--green);
+    box-shadow: 0 0 5px color-mix(in srgb, var(--green) 40%, transparent);
+}
+
+.update-available {
+    color: var(--warn);
+}
+
+.update-available .client-led {
+    background: var(--warn);
+    box-shadow: 0 0 5px color-mix(in srgb, var(--warn) 40%, transparent);
+}
+
+.update-available:hover {
+    color: var(--ink);
+    text-decoration: underline;
+}

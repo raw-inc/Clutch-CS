@@ -1,0 +1,308 @@
+
+.log-search {
+    padding: 16px;
+    background: #22242a;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    margin-bottom: 20px;
+}
+
+.log-search-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.log-search-main .search-field {
+    flex: 1;
+}
+
+.log-search-main select {
+    width: 130px;
+    font-size: 12px;
+}
+
+.log-search-main input {
+    font-size: 12px;
+}
+
+.log-observation-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 10px 16px;
+    margin-top: 12px;
+}
+
+.log-observation-controls label {
+    margin: 0;
+    font-size: 12px;
+}
+
+.log-observation-controls select {
+    min-width: 130px;
+    font-size: 12px;
+}
+
+.log-observation-controls > span {
+    padding-bottom: 8px;
+    color: var(--muted);
+}
+
+.log-search details {
+    margin-top: 9px;
+}
+
+.log-search details > summary {
+    font-size: 11px;
+    color: var(--muted);
+    padding: 4px 0;
+}
+
+.log-filters {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px 20px;
+    padding-top: 8px;
+}
+
+.log-filters label {
+    margin: 0;
+}
+
+.log-results {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+}
+
+.log-results.has-selection {
+    grid-template-columns: minmax(0, 1fr) 330px;
+}
+
+.log-detail {
+    padding: 16px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    min-width: 0;
+}
+
+.log-detail .detail {
+    max-height: 600px;
+}
+
+.log-table td {
+    vertical-align: top;
+    padding-top: 15px;
+    padding-bottom: 15px;
+}
+
+.log-time {
+    white-space: nowrap;
+}
+
+.log-time small {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.log-id {
+    font-size: 10px;
+    font-family: Consolas, monospace;
+    display: block;
+    margin-top: 5px;
+    color: #7e93af;
+}
+
+.log-level {
+    font: 10px/1.4 Consolas, monospace;
+    letter-spacing: 0.3px;
+}
+
+.log-health {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin: 12px 0;
+    font-size: 10px;
+    color: var(--muted);
+}
+
+.log-health strong {
+    color: #b9c4d4;
+    font-weight: 500;
+    margin-left: 4px;
+}
+
+@media (max-width: 1100px) {
+    .log-results.has-selection {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .log-detail {
+        margin-top: 0;
+    }
+}
+
+@media (max-width: 750px) {
+    .log-filters {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .log-search-main {
+        flex-wrap: wrap;
+    }
+
+    .log-search-main .search-field {
+        flex-basis: 100%;
+    }
+
+    .log-health {
+        flex-wrap: wrap;
+        gap: 6px 14px;
+    }
+}
+
+.log-page .page-title h1 {
+    margin: 0;
+}
+
+.log-page .log-search {
+    padding: 14px;
+    margin-bottom: 18px;
+}
+
+.log-page .log-search,
+.log-page .table-wrap,
+.log-page .log-detail,
+.log-page .secondary-details {
+    background: color-mix(in srgb, var(--panel) 70%, transparent);
+}
+
+.log-page .log-search .search-field,
+.log-page .log-search select,
+.log-page .log-filters input {
+    background: var(--paper);
+}
+
+.log-page .log-search-main select {
+    width: 155px;
+}
+
+.log-page .log-table td {
+    padding-top: 11px;
+    padding-bottom: 11px;
+}
+
+.log-page .log-table th {
+    background: var(--panel);
+    white-space: nowrap;
+}
+
+.log-page .selected-log {
+    background: var(--accent-soft);
+}
+
+.log-origin {
+    overflow-wrap: anywhere;
+    min-width: 95px;
+}
+
+.log-origin small {
+    display: block;
+    margin-top: 3px;
+    color: var(--muted);
+}
+
+.log-entry-message {
+    min-width: 230px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.65;
+}
+
+.log-detail-message {
+    margin: 8px 0 20px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.7;
+}
+
+.log-facts {
+    display: grid;
+    grid-template-columns: 94px minmax(0, 1fr);
+    gap: 9px 12px;
+    margin: 14px 0;
+    font-size: 12px;
+}
+
+.log-facts dt {
+    color: var(--muted);
+}
+
+.log-facts dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.log-related {
+    padding: 4px 0 15px;
+}
+
+.log-related-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    margin: 10px 0;
+    padding: 2px 6px 2px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.log-technical {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+}
+
+.log-technical > summary {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.log-missing {
+    overflow-wrap: anywhere;
+}
+
+.log-page .log-health {
+    font-size: 12px;
+    flex-wrap: wrap;
+}
+
+@media (min-width: 1101px) {
+    .log-page .log-results.has-selection {
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 370px);
+        gap: 16px;
+    }
+
+    .log-page .log-detail {
+        align-self: start;
+        position: sticky;
+        top: 16px;
+    }
+}
+
+@media (max-width: 600px) {
+    .log-page .log-filters {
+        grid-template-columns: 1fr;
+    }
+
+    .log-facts {
+        grid-template-columns: 85px minmax(0, 1fr);
+    }
+}

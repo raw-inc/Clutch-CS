@@ -1,0 +1,19 @@
+{
+  "node.value.constant.name": "値",
+  "node.value.constant.description": "入力内容を自動解釈するか、型を指定して値を作ります。型が接続されている場合は接続側を優先します。整数とdecimalは対応する精度を保って変換します。",
+  "node.value.type.name": "型定義を作成",
+  "node.value.type.description": "値の型を定義します。配列には要素の型、オブジェクトにはKey-Valueで組んだ項目の型を接続します。値の作成やHTTPパラメータの検証に使用できます。",
+  "node.value.array.name": "配列",
+  "node.value.array.description": "配列を作るか、既存の配列に1要素を追加します。要素型を指定した場合は全要素を検証します。入れ子の配列や型定義も値として格納できます。 要素型は自動推測・JSONスキーマ・手動設定から選択できます。指定した型は処理前に検証します。",
+  "node.value.keyValue.name": "Key-Value",
+  "node.value.keyValue.description": "キーと値から項目を作り、必要に応じて既存オブジェクトへ追加します。実データと型定義のどちらも格納できます。重複キーは、置換を選んだ場合だけ上書きします。",
+  "node.http.method.name": "HTTPメソッド",
+  "node.http.method.description": "HTTPメソッドを選び、HTTPリクエストやサーバーへ接続します。選択したメソッド名を出力します。",
+  "setting.type": "型",
+  "setting.text": "値",
+  "setting.optional": "null・省略を許可",
+  "setting.duplicate": "キーが重複したとき",
+  "auto": "自動解釈",
+  "reject": "拒否",
+  "replace": "置換"
+}

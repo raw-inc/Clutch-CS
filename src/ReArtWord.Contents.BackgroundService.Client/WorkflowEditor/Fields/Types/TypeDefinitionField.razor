@@ -1,0 +1,6 @@
+@using ReArtWord.Contents.BackgroundService.Client.Components
+<button type="button"  @onclick="()=>open=true">@Ui[Disabled?"View type and properties":"Edit type and properties"]</button>
+<Modal Open="open" Title="@Ui["Type and properties"]" Close="()=>open=false">
+    <TypeDefinitionEditor IncludeRuntimeTypes="IncludeRuntimeTypes" Value="Value" Disabled="Disabled" ValueChanged="ValueChanged" InvalidChanged="InvalidChanged" />
+    <p class="small">@Ui["Changing a property name or type may invalidate existing connections. Validate after editing."]</p>
+</Modal>

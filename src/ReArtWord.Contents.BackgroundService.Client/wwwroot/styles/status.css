@@ -1,0 +1,84 @@
+
+.health-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    flex: none;
+    min-height: 24px;
+    padding: 4px;
+    color: var(--muted);
+    background: transparent;
+    border: 0;
+}
+
+.health-indicator.good {
+    color: var(--green);
+}
+
+.health-indicator.warn {
+    color: var(--warn);
+}
+
+.health-indicator.good .activity-ring,
+.power-syncing.confirmed .activity-ring {
+    color: color-mix(in srgb, var(--green) 92%, #111317);
+}
+
+.health-indicator .dot {
+    width: 6px;
+    height: 6px;
+}
+
+.health-label {
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transform: translateX(-6px);
+    font-size: 11px;
+    transition: max-width 0.24s ease, opacity 0.18s ease, transform 0.24s ease, margin 0.24s ease;
+}
+
+.health-indicator:hover .health-label,
+.health-indicator:focus .health-label {
+    max-width: 230px;
+    opacity: 1;
+    transform: translateX(0);
+    margin-left: 8px;
+}
+
+.health-indicator:focus-visible {
+    outline: 1px solid var(--accent);
+    outline-offset: 3px;
+}
+
+.health-indicator.good:not(:hover, :focus) .health-label {
+    transition-delay: 0.25s;
+}
+
+.health-indicator:not(.good) .health-label {
+    max-width: 230px;
+    opacity: 1;
+    transform: translateX(0);
+    margin-left: 8px;
+    transition-delay: 0s;
+}
+
+.health-indicator.history-sync {
+    max-width: 100%;
+}
+
+.health-indicator.history-sync .health-label {
+    max-width: none;
+    opacity: 1;
+    transform: translateX(0);
+    margin-left: 8px;
+    transition-delay: 0s;
+    white-space: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .health-label {
+        transition: none;
+    }
+}

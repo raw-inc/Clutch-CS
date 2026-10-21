@@ -1,0 +1,5 @@
+{
+  "node.scheduling.now.name": "Current date and time",
+  "node.scheduling.now.description": "Read the current time when executed and format it in the selected time zone. The default time zone is UTC.",
+  "port.scheduling.now.out.value": "Date/time text"
+}
