@@ -4,6 +4,7 @@ import { createReadStream } from 'node:fs';
 import { appendFile, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { releaseNotes } from './release-notes.mjs';
 
 // PRの統合方法によらず、版名と統合後のコミットを固定する。
 export function planRelease(event) {
@@ -47,7 +48,7 @@ export async function releaseAssets(directory, tag) {
 }
 
 // 完了済みReleaseは変更せず、同じコミットの未完了draftだけを再開する。
-export async function publishRelease(api, upload, repository, plan, assets) {
+export async function publishRelease(api, upload, repository, plan, assets, validation = {}) {
     const root = `/repos/${repository}`;
     const reference = await api('GET', `${root}/git/ref/tags/${encodeURIComponent(plan.tag)}`);
     if (reference) {
@@ -77,19 +78,19 @@ export async function publishRelease(api, upload, repository, plan, assets) {
     if (release && release.target_commitish !== plan.sha) {
         throw new Error('The draft release belongs to a different commit.');
     }
+    const notes = await api('POST', `${root}/releases/generate-notes`, {
+        tag_name: plan.tag, target_commitish: plan.sha,
+    });
+    const body = releaseNotes(plan, notes.body, validation);
     if (!release) {
-        const notes = await api('POST', `${root}/releases/generate-notes`, {
-            tag_name: plan.tag, target_commitish: plan.sha,
-        });
         release = await api('POST', `${root}/releases`, {
             tag_name: plan.tag, target_commitish: plan.sha, name: `Clutch-CS ${plan.tag}`,
-            body: `${notes.body}\n\nCorresponding source and build instructions: Clutch-CS-Source-${plan.tag}.zip. Distribute this archive together with the installer.`,
-            draft: true, prerelease: plan.prerelease,
+            body, draft: true, prerelease: plan.prerelease,
         });
     }
     await upload(plan.tag, assets, repository);
     const published = await api('PATCH', `${root}/releases/${release.id}`, {
-        draft: false, prerelease: plan.prerelease, make_latest: plan.prerelease ? 'false' : 'legacy',
+        body, draft: false, prerelease: plan.prerelease, make_latest: plan.prerelease ? 'false' : 'legacy',
     });
     return { url: published.html_url, alreadyPublished: false };
 }
@@ -122,9 +123,13 @@ async function main() {
     if (process.argv[2] !== 'publish' || !plan) throw new Error('A merged release/vx.y.z[-suffix] branch is required.');
     if (!process.env.GH_TOKEN) throw new Error('GH_TOKEN is required to publish a release.');
     const assets = await releaseAssets(process.argv[3], plan.tag);
+    const validation = {
+        outcomes: JSON.parse(process.env.RELEASE_TEST_RESULTS || '{}'),
+        runUrl: `${process.env.GITHUB_SERVER_URL}/${event.repository.full_name}/actions/runs/${process.env.GITHUB_RUN_ID}`,
+    };
     const result = await publishRelease(githubApi, async (tag, files, repository) => {
         execFileSync('gh', ['release', 'upload', tag, ...files, '--repo', repository, '--clobber'], { stdio: 'inherit' });
-    }, event.repository.full_name, plan, assets);
+    }, event.repository.full_name, plan, assets, validation);
     await appendFile(process.env.GITHUB_STEP_SUMMARY, `${result.alreadyPublished ? 'Already published' : 'Published'}: [Clutch-CS ${plan.tag}](${result.url})\n`);
 }
 
