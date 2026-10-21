@@ -6,13 +6,13 @@ const testGroups = [
     { name: 'スクリプト・検証環境の確認', stages: ['release_rules', 'platform_tests', 'media_tools'] },
 ];
 
-const outcomeLabels = {
-    success: '✅ 通過',
-    failure: '❌ 失敗あり',
-    cancelled: '⏹️ 中断',
-    skipped: '➖ 未実行',
-    partial: '⚠️ 一部未実行',
-    unknown: '❔ 未確認',
+const outcomeIcons = {
+    success: '✅',
+    failure: '❌',
+    cancelled: '⏹️',
+    skipped: '➖',
+    partial: '⚠️',
+    unknown: '❔',
 };
 
 // 一部の成功だけで区分全体を通過扱いにしません。
@@ -37,7 +37,7 @@ export function releaseNotes(plan, generatedNotes, validation = {}) {
         lines.push('このバージョンは開発中のプレリリースです。導入前に、以下のテスト結果と変更内容を確認してください。', '');
     }
     lines.push('## テスト結果', '', '| 種類 | 結果 |', '| --- | --- |',
-        ...results.map(result => `| ${result.name} | ${outcomeLabels[result.outcome]} |`), '');
+        ...results.map(result => `| ${result.name} | ${outcomeIcons[result.outcome]} |`), '');
     if (results.some(result => result.outcome !== 'success')) {
         lines.push('すべての検証の通過は確認できていません。失敗・中断・未実行などの詳細を確認してから、利用を判断してください。', '');
     }

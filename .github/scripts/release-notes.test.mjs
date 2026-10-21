@@ -36,8 +36,8 @@ test('release notes show actual outcomes, matching downloads, CI details and gen
     const notes = releaseNotes(plan, 'Generated changes\n\n- A change', {
         outcomes: { ...passed, integration_tests: 'failure', performance_tests: 'skipped' }, runUrl,
     });
-    assert.match(notes, /\| 結合テスト \| ❌ 失敗あり \|/u);
-    assert.match(notes, /\| パフォーマンステスト \| ➖ 未実行 \|/u);
+    assert.match(notes, /\| 結合テスト \| ❌ \|/u);
+    assert.match(notes, /\| パフォーマンステスト \| ➖ \|/u);
     assert.ok(notes.includes(runUrl));
     assert.ok(notes.includes(`Clutch-CS-Setup-${plan.tag}-win-x64.zip`));
     assert.ok(notes.includes(`Clutch-CS-Source-${plan.tag}.zip`));
@@ -47,7 +47,7 @@ test('release notes show actual outcomes, matching downloads, CI details and gen
 test('missing results stay unconfirmed and prereleases are identified', () => {
     const notes = releaseNotes({ tag: 'v1.2.3-alpha', prerelease: true }, 'Changes');
     assert.match(notes, /プレリリース/u);
-    assert.match(notes, /❔ 未確認/u);
-    assert.doesNotMatch(notes, /✅ 通過/u);
+    assert.match(notes, /\| ❔ \|/u);
+    assert.doesNotMatch(notes, /✅/u);
     assert.doesNotMatch(releaseNotes(plan, 'Changes', { outcomes: passed }), /プレリリース/u);
 });
