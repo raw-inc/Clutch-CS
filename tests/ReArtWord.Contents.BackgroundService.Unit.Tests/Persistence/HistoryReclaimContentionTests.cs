@@ -10,6 +10,7 @@ using Xunit;
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Persistence;
 
 /// <summary>空き領域の回収を通常アクセスより優先せず、延期後にも整合した回収を続けます。</summary>
+[Collection("TimingSensitive")]
 public sealed class HistoryReclaimContentionTests
 {
     /// <summary>読取りまたは書込み中のDBを長時間塞がず、保持値を残して後から縮小します。</summary>

@@ -46,6 +46,8 @@ dotnet test tests/ReArtWord.Contents.BackgroundService.Installer.Tests -c Releas
 変更した機能と障害時の動作に対応する試験を選択してください。対象を絞る場合は `--filter 'FullyQualifiedName~テストクラス名'` を追加できます。
 実通信を使う試験群は、ポートや計算資源を競合させないよう順番に実行してください。
 
+切断・再試行の期限や応答時間を実時間で検証する単体試験は、`TimingSensitive` コレクションに置いてください。このコレクションは他の試験と並列実行されません。通知回数などを確認する場合は、固定時間の待機ではなく対象の処理完了を待ってください。
+
 FFmpeg を使う映像・音声試験では、実行ファイルの絶対パスを設定してください。
 
 ~~~powershell

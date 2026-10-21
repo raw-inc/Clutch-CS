@@ -6,6 +6,7 @@ using Xunit;
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Updates;
 
 /// <summary>実ファイルの共有・アクセス拒否と、進捗保存の中止境界を検証します。</summary>
+[Collection("TimingSensitive")]
 public sealed class UpdateProgressFileTests : IDisposable
 {
     private readonly string directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "contents-progress-" + Guid.NewGuid().ToString("N"))).FullName;

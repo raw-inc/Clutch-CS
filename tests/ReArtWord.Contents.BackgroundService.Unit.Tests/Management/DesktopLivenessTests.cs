@@ -9,6 +9,7 @@ using Xunit;
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
 
 /// <summary>通信断で入力と映像の所有者が残らないことを実streamで確認します。</summary>
+[Collection("TimingSensitive")]
 public sealed class DesktopLivenessTests
 {
     /// <summary>生存通知は入力へ流さず、通知停止で両方向を閉じます。</summary>

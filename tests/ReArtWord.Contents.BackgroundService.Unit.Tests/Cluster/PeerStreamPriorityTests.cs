@@ -14,6 +14,7 @@ using Xunit;
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Cluster;
 
 /// <summary>実TCPの処理枠を埋めても、保存段階と元結果の照会を進められることを確認します。</summary>
+[Collection("TimingSensitive")]
 public sealed class PeerStreamPriorityTests
 {
     /// <summary>二つの送信元が長い処理を16件開始しても、開始済み結果の照会を失いません。</summary>
