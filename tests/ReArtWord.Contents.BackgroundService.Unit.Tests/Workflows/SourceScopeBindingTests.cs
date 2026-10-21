@@ -13,6 +13,7 @@ using Xunit;
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Workflows;
 
 /// <summary>実通信とSQLiteを使用し、所有元・版互換・照会の非永続性を確認します。</summary>
+[Collection("TimingSensitive")]
 public sealed class SourceScopeBindingTests
 {
     /// <summary>未対応先への配送を拒否し、対応後の継続確認では保存台帳を増やしません。</summary>

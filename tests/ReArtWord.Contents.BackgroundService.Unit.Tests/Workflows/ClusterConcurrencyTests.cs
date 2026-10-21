@@ -13,6 +13,7 @@ using Xunit;
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Workflows;
 
 /// <summary>異なる受信Peerが実通信で同じ枠と待機順を共有することを確認します。</summary>
+[Collection("TimingSensitive")]
 public sealed class ClusterConcurrencyTests
 {
     /// <summary>別PCからの待機が同じ一覧に現れ、前の区間が終わるまで開始しません。</summary>
