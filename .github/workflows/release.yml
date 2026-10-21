@@ -43,8 +43,23 @@ jobs:
       version: ${{ needs.version.outputs.version }}
       sha: ${{ needs.version.outputs.sha }}
 
+  test-results:
+    name: Report test failures
+    needs: windows
+    if: needs.windows.outputs.tests_failed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Report unsuccessful validation
+        run: |
+          echo '::error::Validation stages failed. Review the Windows job summary and test-results artifact. Publishing depends on the build and package results.'
+          exit 1
+
   publish:
     needs: [version, windows]
+    if: >-
+      !cancelled() && needs.version.result == 'success' &&
+      needs.windows.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
