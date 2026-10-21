@@ -28,7 +28,8 @@ export function validationReport(steps) {
 
 async function main() {
     const report = validationReport(JSON.parse(process.env.VALIDATION_STEPS));
-    await appendFile(process.env.GITHUB_OUTPUT, `tests_failed=${report.failed}\n`);
+    const outcomes = Object.fromEntries(report.results.map(result => [result.id, result.outcome]));
+    await appendFile(process.env.GITHUB_OUTPUT, `tests_failed=${report.failed}\ntest_results=${JSON.stringify(outcomes)}\n`);
     const summary = ['### Test results', '', '| Stage | Result |', '| --- | --- |',
         ...report.results.map(result => `| ${result.name} | ${result.outcome} |`), ''];
     await appendFile(process.env.GITHUB_STEP_SUMMARY, summary.join('\n'));

@@ -48,6 +48,9 @@ on:
       tests_failed:
         description: 'Whether any validation stage failed'
         value: ${{ jobs.windows.outputs.tests_failed }}
+      test_results:
+        description: 'Validation stage outcomes for release notes'
+        value: ${{ jobs.windows.outputs.test_results }}
     inputs:
       tag:
         required: true
@@ -72,6 +75,7 @@ jobs:
     timeout-minutes: 210
     outputs:
       tests_failed: ${{ steps.validation_summary.outputs.tests_failed }}
+      test_results: ${{ steps.validation_summary.outputs.test_results }}
     env:
       ContinuousIntegrationBuild: 'true'
       RELEASE_TAG: ${{ inputs.tag }}

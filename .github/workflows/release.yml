@@ -76,4 +76,5 @@ jobs:
       - name: Publish completed assets
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TEST_RESULTS: ${{ needs.windows.outputs.test_results }}
         run: node .github/scripts/release.mjs publish artifacts/release

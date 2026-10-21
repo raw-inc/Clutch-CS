@@ -37,6 +37,13 @@ test('report command exposes failures without preventing artifact generation', a
         env: { ...process.env, VALIDATION_STEPS: JSON.stringify({ unit_tests: { outcome: 'failure', conclusion: 'success' } }),
             GITHUB_OUTPUT: output, GITHUB_STEP_SUMMARY: summary },
     });
-    assert.equal((await readFile(output, 'utf8')).trim(), 'tests_failed=true');
+    const outputs = Object.fromEntries((await readFile(output, 'utf8')).trim().split('\n').map(line => {
+        const separator = line.indexOf('=');
+        return [line.slice(0, separator), line.slice(separator + 1)];
+    }));
+    assert.equal(outputs.tests_failed, 'true');
+    const outcomes = JSON.parse(outputs.test_results);
+    assert.equal(outcomes.unit_tests, 'failure');
+    assert.equal(outcomes.integration_tests, 'skipped');
     assert.ok((await readFile(summary, 'utf8')).length > 0);
 });
