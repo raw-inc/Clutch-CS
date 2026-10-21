@@ -15,11 +15,11 @@ Windows では、このフォルダーの一つ上にある **Clutch-CS-Setup.ex
 
 ## 手順と設定
 
-- [インストールガイド](https://github.com/kabayaki-sauce/ReArtWord.Contents.BackgroundService/blob/develop/docs/guides/install.md)
-- [管理画面の使い方](https://github.com/kabayaki-sauce/ReArtWord.Contents.BackgroundService/blob/develop/docs/guides/web-client.md)
-- [更新・修復・アンインストール](https://github.com/kabayaki-sauce/ReArtWord.Contents.BackgroundService/blob/develop/docs/guides/maintenance.md)
-- [設定ファイルとスクリプトによる導入](https://github.com/kabayaki-sauce/ReArtWord.Contents.BackgroundService/blob/develop/docs/guides/manual-install.md)
-- [ドキュメント一覧](https://github.com/kabayaki-sauce/ReArtWord.Contents.BackgroundService/blob/develop/docs/README.md)
+- [インストールガイド](https://github.com/raw-inc/Clutch-CS/blob/main/docs/guides/install.md)
+- [管理画面の使い方](https://github.com/raw-inc/Clutch-CS/blob/main/docs/guides/web-client.md)
+- [更新・修復・アンインストール](https://github.com/raw-inc/Clutch-CS/blob/main/docs/guides/maintenance.md)
+- [設定ファイルとスクリプトによる導入](https://github.com/raw-inc/Clutch-CS/blob/main/docs/guides/manual-install.md)
+- [ドキュメント一覧](https://github.com/raw-inc/Clutch-CS/blob/main/docs/README.md)
 
 配布版と同じ版の資料は、対応するソース ZIP に含まれています。
 
