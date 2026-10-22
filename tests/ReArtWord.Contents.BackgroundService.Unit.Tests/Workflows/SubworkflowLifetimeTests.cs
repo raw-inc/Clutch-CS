@@ -81,8 +81,10 @@ public sealed class SubworkflowLifetimeTests
 
     /// <summary>親の取消を待機中の子へ伝え、親の完了後に子を残しません。</summary>
     /// <returns>親子とも所有一覧から解放される確認です。</returns>
-    [Fact]
-    public async Task ParentCancellationStopsTheChild()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ParentCancellationStopsTheChild(bool beforeAdmission)
     {
         WorkflowFixture fixture = SubworkflowTests.Create();
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = fixture.ConfigureAwait(true);
@@ -91,10 +93,16 @@ public sealed class SubworkflowLifetimeTests
         await fixture.Sources.ApplyAsync(SubworkflowTests.Compile(fixture, child));
         NodeDefinition node = new("call", SubworkflowInterface.CallType(child.Id), JsonSerializer.SerializeToElement(new { }));
         TaskCompletionSource started = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         fixture.Dispatcher.Handler = async (request, token) =>
         {
-            Task<NodeResult> execution = fixture.Executor.ExecuteAsync(request, token);
             string delayId = RecipeNodeIdentity.Child("call", "delay");
+            if (beforeAdmission && string.Equals(request.Node.Id, delayId, StringComparison.Ordinal))
+            {
+                started.TrySetResult();
+                await release.Task.ConfigureAwait(false);
+            }
+            Task<NodeResult> execution = fixture.Executor.ExecuteAsync(request, token);
             if (string.Equals(request.Node.Id, delayId, StringComparison.Ordinal))
             {
                 started.TrySetResult();
@@ -110,10 +118,17 @@ public sealed class SubworkflowLifetimeTests
         }
         finally
         {
-            await cancelled.CancelAsync();
+            try
+            {
+                await cancelled.CancelAsync();
+            }
+            finally
+            {
+                release.TrySetResult();
+            }
         }
         ExecutionReport result = await running.WaitAsync(TimeSpan.FromSeconds(5));
-        Assert.NotEqual(EOutcome.Succeeded, result.Outcome);
+        Assert.True(result.Outcome != EOutcome.Succeeded, JsonSerializer.Serialize(result));
         Assert.Empty(fixture.Engine.Active());
         Assert.Empty(fixture.Executor.Running);
     }

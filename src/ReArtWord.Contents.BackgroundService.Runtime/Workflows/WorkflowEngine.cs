@@ -312,7 +312,7 @@ public sealed class WorkflowEngine
             throw;
         }
         EOutcome outcome = ExecutionOutcomes.AggregateWorkflow(frames);
-        if (outcome == EOutcome.Succeeded && ownership.Find(id)?.PreventedExecution(frames) == true)
+        if (outcome == EOutcome.Succeeded && ownership.Find(id)?.PreventedExecution(frames, execution.IsCancellationRequested) == true)
         {
             outcome = EOutcome.Cancelled;
         }

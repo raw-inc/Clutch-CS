@@ -60,13 +60,13 @@ internal sealed class WorkflowExecutionCancellation(Func<RemoteExecutionRequest,
         }
     }
 
-    /// <summary>明示取消により開始できなかった処理を成功へ集約しません。</summary>
+    /// <summary>実行側または呼出元の取消で開始できなかった処理を成功へ集約しません。</summary>
     /// <returns>取消による未実行が含まれるか。</returns>
-    internal bool PreventedExecution(IEnumerable<ExecutionFrame> frames)
+    internal bool PreventedExecution(IEnumerable<ExecutionFrame> frames, bool callerCancelled)
     {
         using (gate.EnterScope())
         {
-            if (!cancelled)
+            if (!cancelled && !callerCancelled)
             {
                 return false;
             }
