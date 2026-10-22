@@ -23,12 +23,11 @@ public sealed class WebClientUpdateExecutor(IInstallationPlatform platform)
         string workspace = InstallationFiles.Root(directory);
         Directory.CreateDirectory(workspace);
         SetupOperationJournal journal = new(owned.OperationId, workspace, previous.Root);
-        SetupResult? saved = await journal.ExistingAsync(owned, cancellationToken).ConfigureAwait(false);
+        SetupResult? saved = await journal.BeginAsync(owned, cancellationToken).ConfigureAwait(false);
         if (saved is not null)
         {
             return saved;
         }
-        await journal.BeginAsync(owned, cancellationToken).ConfigureAwait(false);
         SetupResult result;
         try
         {

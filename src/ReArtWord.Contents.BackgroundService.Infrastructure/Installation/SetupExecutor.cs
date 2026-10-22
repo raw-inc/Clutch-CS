@@ -31,7 +31,7 @@ public sealed class SetupExecutor
         string journal = InstallationFiles.Root(journalDirectory);
         Directory.CreateDirectory(journal);
         SetupOperationJournal operation = new(owned.OperationId, journal, owned.Settings.Root);
-        SetupResult? previous = await operation.ExistingAsync(owned, cancellationToken).ConfigureAwait(false);
+        SetupResult? previous = await operation.BeginAsync(owned, cancellationToken).ConfigureAwait(false);
         if (previous is not null)
         {
             return previous;
@@ -46,7 +46,6 @@ public sealed class SetupExecutor
             {
                 throw new InvalidDataException("The operation journal must be outside the installation.");
             }
-            await operation.BeginAsync(owned, cancellationToken).ConfigureAwait(false);
             if (!Enum.IsDefined(owned.Action))
             {
                 throw new InvalidDataException("Unsupported setup action.");
