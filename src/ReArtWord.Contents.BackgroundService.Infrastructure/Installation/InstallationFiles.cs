@@ -52,11 +52,24 @@ public static class InstallationFiles
 
     /// <summary>同じdirectory内の原子的置換で結果を保存します。</summary>
     /// <returns>保存完了です。</returns>
-    public static async Task WriteAsync<T>(string path, T value, CancellationToken cancellationToken = default)
+    public static Task WriteAsync<T>(string path, T value, CancellationToken cancellationToken = default)
+        => WriteTextAsync(path, JsonSerializer.Serialize(value, ContractJson.Options), cancellationToken);
+
+    /// <summary>停止要求などの本文を、書込み完了後に同じディレクトリ内で公開します。</summary>
+    /// <returns>本文の原子的置換の完了です。</returns>
+    public static async Task WriteTextAsync(string path, string value, CancellationToken cancellationToken = default)
     {
         string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(value, ContractJson.Options), cancellationToken).ConfigureAwait(false);
-        File.Move(temporary, path, true);
+        await File.WriteAllTextAsync(temporary, value, cancellationToken).ConfigureAwait(false);
+        if (File.Exists(path))
+        {
+            // Windowsでも共有削除を許可した読取りを維持できるよう、既存ファイルは置換します。
+            File.Replace(temporary, path, null);
+        }
+        else
+        {
+            File.Move(temporary, path);
+        }
     }
 
     /// <summary>既存の所有記録を上書きせず初回だけ保存します。</summary>
