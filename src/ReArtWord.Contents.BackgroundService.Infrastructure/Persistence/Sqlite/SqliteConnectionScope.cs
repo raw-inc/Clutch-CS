@@ -24,7 +24,7 @@ internal sealed class SqliteConnectionScope : IDisposable
     private static SqliteConnectionScope? Current => current.Value is { } scope && Volatile.Read(ref scope.disposed) == 0 ? scope
                                                                                                                           : null;
 
-    /// <summary>業務処理前のメタデータ読取りで、一時的なWindowsの共有メモリ障害だけを回復します。</summary>
+    /// <summary>Windowsの切り詰めエラー時に、業務処理前の接続確認を一度だけ再試行します。</summary>
     /// <returns>呼出し元が破棄する接続です。</returns>
     internal static SqliteConnection Open(string path, SqliteOpenMode mode, bool usePooling = true)
     {
@@ -34,7 +34,11 @@ internal sealed class SqliteConnectionScope : IDisposable
         }
         catch (SqliteException error) when (OperatingSystem.IsWindows() && error.SqliteExtendedErrorCode == SQLitePCL.raw.SQLITE_IOERR_TRUNCATE)
         {
-            // WAL初期化時に残ったマッピングの解放を確認するため、接続を一度だけ作り直します。
+            // WindowsのWAL復旧では、旧接続が -shm のマッピングを保持していると切り詰めに失敗する場合があります。
+            // 上流の修正: https://github.com/sqlite/sqlite/commit/5ee733befea5
+            // OpenCoreで失敗接続の再利用を止めて破棄した後、業務SQL開始前の確認だけを一度やり直します。
+            // 他プロセスのマッピングなどが残って再失敗した場合は例外を返し、取引や書込み全体は再実行しません。
+            // 同梱するネイティブ版SQLiteへの修正取り込みと、残存マッピングを伴う強制終了後の復旧を確認してから撤去を判断します。
             return OpenCore(path, mode, usePooling);
         }
     }
@@ -54,6 +58,8 @@ internal sealed class SqliteConnectionScope : IDisposable
             try
             {
                 connection.Open();
+
+                // WAL復旧が最初の読取りまで遅れる場合に備え、再試行できる区間内でメタデータを読みます。
                 using SqliteCommand schema = connection.CreateCommand();
                 schema.CommandText = "PRAGMA schema_version";
                 schema.ExecuteNonQuery();
@@ -70,6 +76,7 @@ internal sealed class SqliteConnectionScope : IDisposable
         {
             if (connection is not null)
             {
+                // 失敗した接続を再利用しないよう、破棄の前に該当プールをクリアします。
                 SqliteConnection.ClearPool(connection);
             }
             using SqliteConnection? abandoned = connection;
