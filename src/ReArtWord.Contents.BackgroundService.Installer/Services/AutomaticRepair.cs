@@ -42,7 +42,9 @@ internal static class AutomaticRepair
         {
             ManagementReply detailed = await observer.SendAsync(peer.PeerId, peer.InstanceId, "conflicts.detail", UpdateObserver.Payload(new ConflictDetailRequest(summary.Id)), true, cancellationToken).ConfigureAwait(false);
             StateConflict? conflict = Read<ConflictDetail>(detailed).Conflict;
-            if (conflict is null || conflict.ValuesHidden || !conflict.Resolvable || conflict.Candidates.Count == 0 || conflict.Candidates.Select(candidate => ContractJson.Hash(candidate.Value?.Json)).Distinct(StringComparer.Ordinal).Count() != 1)
+
+            // JSON本文だけではBinary・型情報・削除を区別できないため、候補値全体を比較します。
+            if (conflict is null || conflict.ValuesHidden || !conflict.Resolvable || conflict.Candidates.Count == 0 || conflict.Candidates.Select(candidate => ContractJson.Hash(candidate.Value)).Distinct(StringComparer.Ordinal).Count() != 1)
             {
                 unresolved++;
                 continue;
