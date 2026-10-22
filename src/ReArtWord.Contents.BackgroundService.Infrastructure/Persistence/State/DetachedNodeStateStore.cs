@@ -91,7 +91,7 @@ internal sealed class DetachedNodeStateStore(IDurableRepository repository, Peer
                 continue;
             }
             Guid operation = Guid.Parse(branch.Current.Version);
-            DurableReceipt owned = await repository.ApplyBatchAsync(WorkflowStore.PhaseId(operation, "detached.state.submit"),
+            DurableReceipt owned = await repository.ApplyBatchAsync(Guid.CreateVersion7(),
                 [new(Scope, row.Key, row.Version, NodeValue.FromObject(branch with { Submitted = true }))], cancellationToken).ConfigureAwait(false);
             if (owned.Outcome != EOutcome.Succeeded)
             {
@@ -100,7 +100,13 @@ internal sealed class DetachedNodeStateStore(IDurableRepository repository, Peer
             DurableMutation mutation = new(branch.Current.Scope, branch.Current.Key, branch.Base?.Version, branch.Current.Value);
             if (string.Equals(shared?.Version, branch.Base?.Version, StringComparison.Ordinal))
             {
-                await cluster.ReplicateAsync(operation, [mutation], cancellationToken).ConfigureAwait(false);
+                DurableReceipt result = await cluster.ReplicateAsync(operation, [mutation], cancellationToken).ConfigureAwait(false);
+                if (result.Outcome == EOutcome.NotExecuted)
+                {
+                    // 共有側が未開始と確認した場合だけ意図を戻します。受付済み・結果不明は再送しません。
+                    await repository.ApplyBatchAsync(Guid.CreateVersion7(),
+                        [new(Scope, row.Key, owned.Entries.Single().Version, NodeValue.FromObject(branch))], cancellationToken).ConfigureAwait(false);
+                }
             }
             else
             {

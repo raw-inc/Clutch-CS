@@ -20,11 +20,12 @@ using ReArtWord.Contents.BackgroundService.Runtime.Workflows;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Compilation;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Execution;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.State;
 
 /// <summary>離脱側のstate/dedupeを共有正本から分離し、元版から再参加統合します。</summary>
-public sealed class DetachedStateTests
+public sealed class DetachedStateTests(ITestOutputHelper output)
 {
     /// <summary>未変更側は共有確認後に統合し、両側更新は候補を保持して明示解消します。</summary>
     /// <returns>実UDP二PeerのローカルCASと再参加後の結果です。</returns>
@@ -74,13 +75,22 @@ public sealed class DetachedStateTests
             Assert.Equal(EOutcome.Succeeded, (await firstConflicts.ResolveAsync(new(Guid.NewGuid(), conflict.Id, conflict.Candidates.Select(candidate => candidate.Version).ToArray(), selected))).Shared.Outcome);
         }
         await first.ReconcileDetachedAsync();
-        Assert.False((await first.ReadAsync(scope, "key"))!.LocalOnly);
+        VersionedState? firstState = await first.ReadAsync(scope, "key");
+        VersionedState? secondState = await second.ReadAsync(scope, "key");
+        output.WriteLine(JsonSerializer.Serialize(new
+        {
+            Branches = await fixture.Repositories["a"].ListAsync("peer:a:detached-state"),
+            Receipt = await fixture.Peers["a"].GetOperationAsync(Guid.Parse(local.Current.Version)),
+            First = firstState, Second = secondState,
+            Peers = fixture.Peers.Values.Select(peer => peer.GetPeers()).ToArray(),
+        }, Contracts.Serialization.ContractJson.Options));
+        Assert.False(firstState!.LocalOnly);
         int expected = 2;
         if (concurrent)
         {
             expected = 3;
         }
-        Assert.Equal(expected, (await second.ReadAsync(scope, "key"))!.Value.Json.GetInt32());
+        Assert.Equal(expected, secondState!.Value.Json.GetInt32());
     }
 
     /// <summary>実状態用途の依存分類を各Peerへ登録します。</summary>

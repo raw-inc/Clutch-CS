@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
@@ -114,7 +115,7 @@ public sealed class ObserverTests
         SqliteRepository firstStore = Repository();
         SqliteRepository secondStore = Repository();
         int effects = 0;
-        int notifications = 0;
+        ConcurrentDictionary<Guid, byte> notifications = new();
         Task<ManagementReply> Handler(ManagementCommand command, CancellationToken token)
         {
             string write = "write";
@@ -125,7 +126,7 @@ public sealed class ObserverTests
             string presence = "presence";
             if (string.Equals(command.Operation, presence, StringComparison.Ordinal))
             {
-                Interlocked.Increment(ref notifications);
+                _ = notifications.TryAdd(command.RequestId, 0);
             }
             return Task.FromResult(new ManagementReply(EOutcome.Succeeded, command.Payload));
         }
@@ -148,11 +149,16 @@ public sealed class ObserverTests
             Assert.Equal(EOutcome.Succeeded, (await observer.InspectAsync(read with { RequestId = Guid.NewGuid() })).Outcome);
         }
         Assert.Equal(before, (await firstStore.ListAsync("receipts:one")).Count);
-        for (int index = 0; index < 20; index++)
+        ManagementCommand[] notices = Enumerable.Range(0, 20).Select(_ => read with { RequestId = Guid.NewGuid(), Operation = "presence" }).ToArray();
+        foreach (ManagementCommand notice in notices)
         {
-            Assert.Equal(EOutcome.Succeeded, (await observer.NotifyAsync(read with { RequestId = Guid.NewGuid(), Operation = "presence" })).Outcome);
+            Assert.Equal(EOutcome.Succeeded, (await observer.NotifyAsync(notice)).Outcome);
         }
-        Assert.Equal(20, notifications);
+
+        // 通知はUDP再送で重複するため、要求ごとの到着と操作記録の非永続性を確認します。
+        Assert.Equal(EOutcome.Succeeded, (await observer.NotifyAsync(notices[0])).Outcome);
+        Assert.Equal(notices.Length, notifications.Count);
+        Assert.All(notices, notice => Assert.True(notifications.ContainsKey(notice.RequestId)));
         Assert.Equal(before, (await firstStore.ListAsync("receipts:one")).Count);
         Assert.Equal(EOutcome.NotExecuted, (await observer.NotifyAsync(read with { Operation = "write" })).Outcome);
         Assert.Equal(EOutcome.NotExecuted, (await observer.InspectAsync(read with { Operation = "presence" })).Outcome);
