@@ -120,7 +120,7 @@ public sealed class SetupExecutor
                 await progress.BeginAsync("stop", cancellationToken).ConfigureAwait(false);
                 if (owned.ServeResult)
                 {
-                    await File.WriteAllTextAsync(Path.Combine(journal, "stop.request"), Contracts.Serialization.ContractJson.Hash(owned), cancellationToken).ConfigureAwait(false);
+                    await InstallationFiles.WriteTextAsync(Path.Combine(journal, "stop.request"), Contracts.Serialization.ContractJson.Hash(owned), cancellationToken).ConfigureAwait(false);
                 }
                 await platform.StopAsync(record, owned.PreviousProcess, cancellationToken).ConfigureAwait(false);
                 if (owned.Action == ESetupAction.Uninstall)
