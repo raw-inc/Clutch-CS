@@ -78,6 +78,7 @@
               </StackPanel>
             </StackPanel>
             <StackPanel Classes="form" IsVisible="{Binding !IsInstall}">
+              <TextBlock Classes="label" Text="CoreService" IsVisible="{Binding IsUpdate}" />
               <StackPanel Orientation="Horizontal" Spacing="8"><TextBlock Text="{Binding Text[ScanCount]}" /><TextBlock Text="{Binding Discovery.Count}" /></StackPanel>
               <TextBlock Classes="label" Text="{Binding Text[Scope]}" />
               <ComboBox SelectedIndex="{Binding Discovery.Scope}"><ComboBoxItem Content="{Binding Text[All]}" /><ComboBoxItem Content="{Binding Text[Cluster]}" /><ComboBoxItem Content="{Binding Text[Peers]}" /></ComboBox>
@@ -88,6 +89,13 @@
                 <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:TargetChoiceViewModel"><CheckBox IsChecked="{Binding Selected}"><TextBlock Classes="note" Text="{Binding Label}" /></CheckBox></DataTemplate></ItemsControl.ItemTemplate>
               </ItemsControl>
               <Button Content="{Binding Text[Local]}" Command="{Binding AddLocalCommand}" IsVisible="{Binding !IsUpdate}" />
+              <StackPanel Classes="form" IsVisible="{Binding IsUpdate}">
+                <TextBlock Classes="label" Text="WebClient" />
+                <TextBlock Classes="note" Text="{Binding Text[WebClientUpdateHelp]}" />
+                <ItemsControl ItemsSource="{Binding Discovery.WebClients}">
+                  <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:WebClientChoiceViewModel"><CheckBox IsChecked="{Binding Selected}"><TextBlock Classes="note" Text="{Binding Label}" /></CheckBox></DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
             </StackPanel>
           </StackPanel>
           <StackPanel Classes="form" IsVisible="{Binding IsIdentity}">

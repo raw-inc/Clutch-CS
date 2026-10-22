@@ -83,7 +83,7 @@ internal sealed class ManagementRegistry
             }
             return new(outcome, Reason: "Management.AccessDenied");
         }
-        catch (Exception exception) when (exception is ArgumentException or JsonException or FormatException or KeyNotFoundException or InvalidOperationException or IOException)
+        catch (Exception exception) when (exception is ArgumentException or JsonException or FormatException or KeyNotFoundException or InvalidOperationException or IOException or HttpRequestException)
         {
             return new(EOutcome.Unknown, Reason: "Management.ResultUnconfirmed");
         }

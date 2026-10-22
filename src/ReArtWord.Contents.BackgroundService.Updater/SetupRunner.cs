@@ -9,6 +9,17 @@ namespace ReArtWord.Contents.BackgroundService.Updater;
 /// <summary>サービス自身を含む配置の変更を独立processで完了します。</summary>
 internal static class SetupRunner
 {
+    /// <summary>Webクライアントと同じ利用者で、固定された一回の更新を実行します。</summary>
+    /// <returns>成功0、失敗1、結果不明3です。</returns>
+    public static async Task<int> UpdateClientAsync(string path, CancellationToken cancellationToken = default)
+    {
+        WebClientUpdateJob job = JsonSerializer.Deserialize<WebClientUpdateJob>(await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false), ContractJson.Options)
+            ?? throw new InvalidDataException("Missing web client update.");
+        SetupResult result = await new WebClientUpdateExecutor(new InstallationPlatform()).ExecuteAsync(job, Path.GetDirectoryName(path)!, cancellationToken).ConfigureAwait(false);
+        await Console.Out.WriteLineAsync(JsonSerializer.Serialize(result, ContractJson.Options)).ConfigureAwait(false);
+        return result.Outcome switch { EOutcome.Succeeded => 0, EOutcome.Unknown => 3, _ => 1 };
+    }
+
     /// <summary>Coreとは別の権限でクライアントだけを導入します。</summary>
     /// <returns>成功0、失敗1です。</returns>
     public static async Task<int> InstallClientAsync(string path, CancellationToken cancellationToken = default)

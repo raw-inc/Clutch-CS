@@ -6,6 +6,13 @@ namespace ReArtWord.Contents.BackgroundService.CoreService.Windows;
 /// <summary>Windowsのユーザー権限とプロセス起動の共通APIです。</summary>
 internal static partial class WindowsProcessNative
 {
+    /// <summary>確認済みのプロセスが持つユーザートークンを取得します。</summary>
+    /// <returns>取得成功です。</returns>
+    [LibraryImport("advapi32.dll", SetLastError = true)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool OpenProcessToken(SafeProcessHandle process, uint access, out SafeAccessTokenHandle token);
+
     /// <summary>自身のトークンをOSのLUA規則で通常ユーザーへ制限します。</summary>
     /// <returns>呼出元が解放する制限付きトークンを作成できたかです。</returns>
     [LibraryImport("advapi32.dll", SetLastError = true)]

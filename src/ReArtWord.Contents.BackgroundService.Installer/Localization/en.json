@@ -68,6 +68,7 @@
   "Restarting": "Requesting a restart…",
   "OpenClient": "Open Clutch-CS",
   "WebClientUrl": "Web client URL",
+  "WebClientUpdateHelp": "Select the web clients to update. Remote clients are listed when associated with an observed CoreService. Select the CoreService too when upgrading an older Core. To update only web clients, choose individual peers for the CoreService scope and clear their checkboxes.",
   "Back": "< Back",
   "Next": "Next >",
   "Run": "Run",

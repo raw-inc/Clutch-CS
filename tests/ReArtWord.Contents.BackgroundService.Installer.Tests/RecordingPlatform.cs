@@ -42,7 +42,41 @@ internal sealed class RecordingPlatform : IInstallationPlatform
     public Task StopWebClientAsync(WebClientInstallation client, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        ClientStops++;
         return Task.CompletedTask;
+    }
+
+    /// <summary>Webクライアントの停止要求数です。</summary>
+    public int ClientStops
+    {
+        get; private set;
+    }
+
+    /// <summary>試験が観測するWebクライアントの実体です。</summary>
+    public ProcessIdentity ClientProcess
+    {
+        get; set;
+    } = new(17, DateTimeOffset.UnixEpoch);
+
+    /// <summary>配置されたマニフェストと試験用の実体を返します。</summary>
+    /// <returns>試験内の起動確認です。</returns>
+    public async Task<WebClientUpdateInfo> InspectWebClientAsync(WebClientInstallation client, CancellationToken cancellationToken = default)
+    {
+        Contracts.Updates.Releases.ReleaseManifest manifest = await Infrastructure.Updates.Local.LocalUpdateExecutor.ReadManifestAsync(WebClientCatalog.ProgramRoot(client), cancellationToken).ConfigureAwait(false);
+        return new(client, new(ClientProcess, manifest.ExpectedBuildVersion ?? "fixture"));
+    }
+
+    /// <summary>OSの起動を行わず、版ごとの失敗と新実体を模擬します。</summary>
+    /// <returns>試験内の開始です。</returns>
+    public async Task StartWebClientAsync(WebClientInstallation client, CancellationToken cancellationToken = default)
+    {
+        await RegisterWebClientAsync(client, cancellationToken).ConfigureAwait(false);
+        ClientCalls.Add("start");
+        if (StageBehavior is not null)
+        {
+            await StageBehavior("client-start").ConfigureAwait(false);
+        }
+        ClientProcess = new(ClientProcess.ProcessId + 1, ClientProcess.StartedAt.AddSeconds(1));
     }
 
     /// <summary>この試験内で登録されたclientだけを返します。</summary>

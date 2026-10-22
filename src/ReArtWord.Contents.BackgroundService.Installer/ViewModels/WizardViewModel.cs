@@ -291,7 +291,7 @@ internal sealed partial class WizardViewModel : ObservableObject
         {
             await action(cancellationToken).ConfigureAwait(true);
         }
-        catch (Exception exception) when (exception is IOException or InvalidDataException or ArgumentException or InvalidOperationException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or System.Text.Json.JsonException or FormatException or OperationCanceledException)
+        catch (Exception exception) when (exception is IOException or HttpRequestException or InvalidDataException or ArgumentException or InvalidOperationException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or System.Text.Json.JsonException or FormatException or OperationCanceledException)
         {
             Error = exception.Message;
             if (IsExecuting)

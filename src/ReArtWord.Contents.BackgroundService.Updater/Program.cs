@@ -26,7 +26,7 @@ internal static class Program
     private static async Task<int> Main(string[] args)
     {
         string option = "--job";
-        string[] setupOptions = ["--setup-job", "--setup-web-client", "--remove-web-client", "--secure-install"];
+        string[] setupOptions = ["--setup-job", "--setup-web-client", "--update-web-client", "--remove-web-client", "--secure-install"];
         string clusterOption = "--cluster-job";
         string installOption = "--verify-install";
         string restorationOption = "--confirm-restoration";
@@ -42,6 +42,7 @@ internal static class Program
             {
                 case "--setup-job": return await SetupRunner.RunAsync(args[1]).ConfigureAwait(false);
                 case "--setup-web-client": return await SetupRunner.InstallClientAsync(args[1]).ConfigureAwait(false);
+                case "--update-web-client": return await SetupRunner.UpdateClientAsync(args[1]).ConfigureAwait(false);
                 case "--remove-web-client": return await SetupRunner.RemoveClientAsync(args[1]).ConfigureAwait(false);
                 case "--secure-install": return await InstallSecurity.RunAsync(args[1]).ConfigureAwait(false);
             }

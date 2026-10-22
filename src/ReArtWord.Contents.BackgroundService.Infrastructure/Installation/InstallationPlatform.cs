@@ -46,6 +46,22 @@ public sealed class InstallationPlatform : IInstallationPlatform
         return WebClientStartup.StopAsync(client, cancellationToken);
     }
 
+    /// <summary>OS実体とHTTP応答を導入記録に照合します。</summary>
+    /// <returns>現在動作している対象です。</returns>
+    public Task<WebClientUpdateInfo> InspectWebClientAsync(WebClientInstallation client, CancellationToken cancellationToken = default)
+        => WebClientUpdateProbe.ReadAsync(client, cancellationToken);
+
+    /// <summary>この利用者の登録を更新し、元の起動方式で開始します。</summary>
+    /// <returns>起動とHTTP応答確認です。</returns>
+    public async Task StartWebClientAsync(WebClientInstallation client, CancellationToken cancellationToken = default)
+    {
+        await RegisterWebClientAsync(client, cancellationToken).ConfigureAwait(false);
+        if (!client.RunAsService)
+        {
+            await WebClientStartup.RegisterAsync(client, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
     /// <summary>クライアントの独立した導入を記録します。</summary>
     /// <returns>導入記録と自動起動の登録です。</returns>
     public async Task RegisterWebClientAsync(WebClientInstallation client, CancellationToken cancellationToken = default)

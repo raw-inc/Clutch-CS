@@ -68,6 +68,7 @@
   "Restarting": "再起動を要求しています…",
   "OpenClient": "Clutch-CSを開く",
   "WebClientUrl": "Web クライアントのURL",
+  "WebClientUpdateHelp": "更新するWebクライアントを選択してください。接続先はCoreServiceに関連付けられたものが表示されます。旧版CoreServiceをご利用の場合は、CoreServiceも選択してください。Webクライアントだけを更新する場合は、CoreServiceの対象範囲を「ピア」にしてチェックを外してください。",
   "Back": "＜ 戻る",
   "Next": "次へ ＞",
   "Run": "実行",

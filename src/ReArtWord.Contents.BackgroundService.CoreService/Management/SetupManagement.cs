@@ -34,7 +34,7 @@ internal sealed class SetupManagement : Microsoft.Extensions.Hosting.BackgroundS
 
     /// <summary>配置記録と現在Peerの一致を検証します。</summary>
     /// <returns>このPeerの導入記録です。</returns>
-    private async Task<InstallationRecord> ReadAsync(CancellationToken cancellationToken = default)
+    internal async Task<InstallationRecord> ReadAsync(CancellationToken cancellationToken = default)
     {
         string installation = runtime.Configuration.Updates.InstallationRoot ?? throw new InvalidDataException("This peer has no managed installation.");
         InstallationRecord record = await InstallationFiles.ReadAsync(Path.GetDirectoryName(installation)!, cancellationToken).ConfigureAwait(false);
