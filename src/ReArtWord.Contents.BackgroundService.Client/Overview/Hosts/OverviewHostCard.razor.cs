@@ -223,9 +223,9 @@ public sealed partial class OverviewHostCard
                                                                : "—";
 
     /// <summary>取得したバイト数をGiBの表示へ変換します。</summary>
-    /// <returns>小数点以下2桁のGiB表示、未計測ならダッシュと単位です。</returns>
-    private static string GiB(double? value) => value is >= 0 ? (value.Value / 1073741824).ToString("0.00", CultureInfo.CurrentCulture) + " GiB"
-                                                              : "— GiB";
+    /// <returns>小数点以下2桁の数値、未計測ならダッシュです。単位は描画側で添えます。</returns>
+    private static string GiB(double? value) => value is >= 0 ? (value.Value / 1073741824).ToString("0.00", CultureInfo.CurrentCulture)
+                                                              : "—";
 
     /// <summary>温度の未計測を区別して摂氏表示を作ります。</summary>
     /// <returns>摂氏温度と単位、または未計測の表示です。</returns>
