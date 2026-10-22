@@ -23,7 +23,7 @@ public sealed class WebClientRemoval(IInstallationPlatform platform)
         string journalRoot = InstallationFiles.Root(directory);
         Directory.CreateDirectory(journalRoot);
         SetupOperationJournal journal = new(owned.OperationId, journalRoot, owned.Installation.Root);
-        SetupResult? previous = await journal.ExistingAsync(owned, cancellationToken).ConfigureAwait(false);
+        SetupResult? previous = await journal.BeginAsync(owned, cancellationToken).ConfigureAwait(false);
         if (previous is not null)
         {
             return previous;
@@ -36,7 +36,6 @@ public sealed class WebClientRemoval(IInstallationPlatform platform)
             {
                 throw new InvalidDataException("The operation journal must be outside the web client.");
             }
-            await journal.BeginAsync(owned, cancellationToken).ConfigureAwait(false);
             await progress.BeginAsync("validate", cancellationToken).ConfigureAwait(false);
             using FileStream clientLock = WebClientCatalog.AcquireLock(owned.Installation.Root);
             WebClientInstallation client = await WebClientCatalog.ReadAsync(owned.Installation.Root, false, cancellationToken).ConfigureAwait(false);
