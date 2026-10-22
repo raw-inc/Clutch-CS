@@ -12,12 +12,12 @@ namespace ReArtWord.Contents.BackgroundService.Installer.Tests;
 /// <summary>クライアント更新のファイル境界、復帰と一回限りの実行を検証します。</summary>
 public sealed class WebClientUpdateTests
 {
-    /// <summary>旧実行ファイル名も更新し、設定・導入ID・起動方法を保持します。</summary>
+    /// <summary>公開版と同じ実行ファイル名で更新し、設定・導入ID・起動方法を保持します。</summary>
     /// <returns>更新と二重実行防止の確認です。</returns>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task UpdatesLegacyEntryPointWithoutChangingSettings(bool service)
+    public async Task UpdatesReleasedLayoutWithoutChangingSettings(bool service)
     {
         using SetupFixture fixture = new();
         WebClientUpdateJob job = await PrepareAsync(fixture, service);
@@ -31,8 +31,8 @@ public sealed class WebClientUpdateTests
         Assert.Equal(job.Installation with { EntryPoint = job.Manifest.EntryPoint }, updated);
         Assert.Equal(updated, await WebClientCatalog.ReadAsync(updated.Root));
         Assert.Equal("retained configuration", await File.ReadAllTextAsync(configuration));
-        Assert.False(File.Exists(Path.Combine(WebClientCatalog.ProgramRoot(updated), job.Installation.EntryPoint)));
-        Assert.True(File.Exists(Path.Combine(WebClientCatalog.ProgramRoot(updated), job.Manifest.EntryPoint)));
+        Assert.Equal(job.Installation.EntryPoint, job.Manifest.EntryPoint);
+        Assert.Equal("new client release", await File.ReadAllTextAsync(Path.Combine(WebClientCatalog.ProgramRoot(updated), job.Manifest.EntryPoint)));
         Assert.Equal(result, await updater.ExecuteAsync(job, journal));
         Assert.Equal(1, fixture.Platform.ClientStops);
         Assert.Single(fixture.Platform.ClientCalls, call => string.Equals(call, "start", StringComparison.Ordinal));
@@ -62,6 +62,7 @@ public sealed class WebClientUpdateTests
         Assert.Equal(job.Installation, result.WebClient);
         Assert.Equal(job.Installation, await WebClientCatalog.ReadAsync(job.Installation.Root));
         Assert.Equal("fixture-v1", (await LocalUpdateExecutor.ReadManifestAsync(WebClientCatalog.ProgramRoot(job.Installation))).ExpectedBuildVersion);
+        Assert.Equal("fixture:client", await File.ReadAllTextAsync(Path.Combine(WebClientCatalog.ProgramRoot(job.Installation), job.Installation.EntryPoint)));
         Assert.Equal(2, starts);
     }
 
@@ -105,21 +106,25 @@ public sealed class WebClientUpdateTests
         Assert.Equal("restore", result.Stage);
     }
 
-    /// <summary>旧名の配置と、別の現行名ペイロードを実ファイルで用意します。</summary>
+    /// <summary>v0.1.1-alpha以降と同じ実行ファイル名で、内容と版の異なる更新を用意します。</summary>
     /// <returns>固定した更新入力です。</returns>
     private static async Task<WebClientUpdateJob> PrepareAsync(SetupFixture fixture, bool service = false, CancellationToken cancellationToken = default)
     {
         await fixture.InitializeAsync(cancellationToken).ConfigureAwait(false);
-        InstallationSettings settings = fixture.Settings with { WebClient = new(true, 55300, RunAsService: service) };
-        InstallationRecord record = new(Guid.NewGuid(), settings, "fixture", "unused-core", "unused-updater", "unused-client", DateTimeOffset.UtcNow);
-        WebClientInstallation client = (await new WebClientInstaller(fixture.Platform).InstallAsync(record, cancellationToken).ConfigureAwait(false))!;
-        string payload = Path.Combine(fixture.Root, "next-client");
-        Directory.CreateDirectory(payload);
         string entry = "Clutch-CS.ClientHost";
         if (OperatingSystem.IsWindows())
         {
             entry += ".exe";
         }
+        string originalPayload = Path.Combine(fixture.Settings.PackageRoot, "client");
+        ReleaseManifest original = await LocalUpdateExecutor.ReadManifestAsync(originalPayload, cancellationToken).ConfigureAwait(false);
+        File.Move(Path.Combine(originalPayload, original.EntryPoint), Path.Combine(originalPayload, entry));
+        await LocalUpdateExecutor.WriteManifestAsync(original with { EntryPoint = entry, Files = [original.Files.Single() with { Path = entry }] }, originalPayload, cancellationToken).ConfigureAwait(false);
+        InstallationSettings settings = fixture.Settings with { WebClient = new(true, 55300, RunAsService: service) };
+        InstallationRecord record = new(Guid.NewGuid(), settings, "fixture", "unused-core", "unused-updater", "unused-client", DateTimeOffset.UtcNow);
+        WebClientInstallation client = (await new WebClientInstaller(fixture.Platform).InstallAsync(record, cancellationToken).ConfigureAwait(false))!;
+        string payload = Path.Combine(fixture.Root, "next-client");
+        Directory.CreateDirectory(payload);
         byte[] bytes = "new client release"u8.ToArray();
         await File.WriteAllBytesAsync(Path.Combine(payload, entry), bytes, cancellationToken).ConfigureAwait(false);
         ReleaseManifest manifest = new("fixture-v2", RuntimeInformation.RuntimeIdentifier, entry,

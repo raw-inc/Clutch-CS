@@ -16,10 +16,12 @@ internal sealed class RealInstallationFactAttribute : FactAttribute
         }
         if (OperatingSystem.IsWindows() && interactive)
         {
+            // ユーザーのログオンタスクを実際に登録・起動する試験はSession 0では検証できません。
+            // 配布物生成後にも対象に含め、未実施の理由をTRXとCIサマリーに残します。
             using System.Diagnostics.Process process = System.Diagnostics.Process.GetCurrentProcess();
             if (process.SessionId == 0)
             {
-                Skip = "The user-startup test requires a signed-in Windows session.";
+                Skip = "Not verified: user logon-task startup requires a signed-in Windows session; the test process is in Session 0.";
             }
         }
     }

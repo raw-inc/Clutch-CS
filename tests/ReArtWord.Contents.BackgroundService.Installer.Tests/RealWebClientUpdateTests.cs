@@ -16,12 +16,12 @@ namespace ReArtWord.Contents.BackgroundService.Installer.Tests;
 /// <summary>試験専用のClientHost、CoreとUpdaterでWebクライアント更新を確認します。</summary>
 public sealed class RealWebClientUpdateTests
 {
-    /// <summary>旧実行ファイル名の配置を、現在のユーザーのUpdaterで更新します。</summary>
+    /// <summary>公開版の配置を、現在のユーザーのUpdaterで更新します。</summary>
     /// <returns>実HTTP、タスク登録と設定保持の検証です。</returns>
     [RealInstallationFact(interactive: true)]
     public async Task LocalUpdaterPreservesClientProfile() => await RunAsync(false).ConfigureAwait(true);
 
-    /// <summary>実CoreへUDPで要求し、TCP転送後に独立Updaterが旧名の配置を更新します。</summary>
+    /// <summary>実CoreへUDPで要求し、TCP転送後に独立Updaterが公開版の配置を更新します。</summary>
     /// <returns>Coreを停止しないWebクライアント更新の検証です。</returns>
     [RealInstallationFact(interactive: true)]
     public async Task RemoteUpdaterPreservesClientProfile() => await RunAsync(true).ConfigureAwait(true);
@@ -46,20 +46,7 @@ public sealed class RealWebClientUpdateTests
         WebClientInstallation client = (await new WebClientInstaller(fixture.Platform).InstallAsync(owner, cancellationToken).ConfigureAwait(true))!;
         string program = WebClientCatalog.ProgramRoot(client);
         ReleaseManifest previous = await LocalUpdateExecutor.ReadManifestAsync(program, cancellationToken).ConfigureAwait(true);
-        const string legacyEntry = "ReArtWord.Contents.BackgroundService.ClientHost.exe";
-        File.Move(Path.Combine(program, previous.EntryPoint), Path.Combine(program, legacyEntry));
-        ReleaseManifest legacy = previous with { EntryPoint = legacyEntry, Files = previous.Files.Select(file =>
-        {
-            if (string.Equals(file.Path, previous.EntryPoint, StringComparison.Ordinal))
-            {
-                return file with { Path = legacyEntry };
-            }
-            return file;
-        }).ToArray() };
-        await LocalUpdateExecutor.WriteManifestAsync(legacy, program, cancellationToken).ConfigureAwait(true);
-        client = client with { EntryPoint = legacyEntry };
-        await InstallationFiles.WriteAsync(Path.Combine(client.Root, WebClientCatalog.RecordName), client, cancellationToken).ConfigureAwait(true);
-        await ClientLaunchFiles.WriteClientAsync(client, cancellationToken).ConfigureAwait(true);
+        Assert.Equal("Clutch-CS.ClientHost.exe", previous.EntryPoint);
         Process? core = null;
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromMinutes(4));

@@ -46,6 +46,15 @@ dotnet test tests/ReArtWord.Contents.BackgroundService.Installer.Tests -c Releas
 変更した機能と障害時の動作に対応する試験を選択してください。対象を絞る場合は `--filter 'Category!=Performance&FullyQualifiedName~テストクラス名'` のように条件を組み合わせてください。
 実通信を使う試験群は、ポートや計算資源を競合させないよう順番に実行してください。
 
+Installerの実配置試験は、[生成した配布物](distribution.md)の `files` フォルダーを指定して実行してください。ローカル／接続先WebClientの更新とユーザー自動起動の試験には、サインイン中のWindowsセッションが必要です。
+
+~~~powershell
+$env:CLUTCH_TEST_PACKAGE = (Resolve-Path artifacts/package/files).Path
+dotnet test tests/ReArtWord.Contents.BackgroundService.Installer.Tests -c Release --no-build --no-restore --filter 'FullyQualifiedName~RealInstallationTests|FullyQualifiedName~RealWebClientTests|FullyQualifiedName~RealWebClientUpdateTests'
+~~~
+
+CIでも配布物生成後に同じ試験を選択します。Session 0ではユーザー自動起動を伴う試験がスキップされ、未確認の試験名と理由がTRXと「Installation coverage」サマリーに表示されます。
+
 CIの結合・性能試験では、リリースと同じReadyToRun方式で発行したCoreServiceを使用します。Windowsで同じ起動条件を確認する場合は、次を実行してから対象の試験を選択してください。通常のビルド出力へ戻す場合は `CONTENTS_TEST_CORE` を解除してください。
 
 ~~~powershell
