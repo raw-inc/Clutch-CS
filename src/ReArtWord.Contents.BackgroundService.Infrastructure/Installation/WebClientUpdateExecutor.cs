@@ -32,6 +32,8 @@ public sealed class WebClientUpdateExecutor(IInstallationPlatform platform)
         try
         {
             using FileStream clientLock = WebClientCatalog.AcquireLock(previous.Root);
+            await InstallationFiles.WriteAsync(Path.Combine(workspace, "writer.json"),
+                new WebClientUpdateWriter(owned.OperationId, ContractJson.Hash(owned), Processes.ProcessOs.CurrentIdentity()), cancellationToken).ConfigureAwait(false);
             result = await UpdateAsync(owned, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is IOException or HttpRequestException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException or ArgumentException or System.Text.Json.JsonException or System.ComponentModel.Win32Exception or OperationCanceledException)
