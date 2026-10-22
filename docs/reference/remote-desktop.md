@@ -134,6 +134,8 @@ CoreServiceの対話ワーカーが[GetCursorInfo](https://learn.microsoft.com/e
 
 接続先のCoreServiceには、`gdigrab`、可能なら`ddagrab`、VP9 エンコーダーを含むFFmpegを導入してください。`[media] ffmpegPath = "C:/tools/ffmpeg/bin/ffmpeg.exe"`で絶対パスを指定できます。FFmpegバイナリは同梱していません。ブラウザーにはWebCodecsによるVP9の復号、Web Audio、AudioWorkletが必要です。
 
+`ffmpegPath`を省略した場合は、CoreServiceの実行環境のPATHから`ffmpeg.exe`を検索します。サービスとログオン中のユーザーでPATHが異なる場合は、`ffmpegPath`に絶対パスを指定してください。
+
 ClientHostの既定URLである`http://127.0.0.1:5081/`はsecure contextとして使用できます。
 
 各画面で1フレームを実際に符号化し、利用できるエンコーダーを選びます。既定のVP9ではIntel QSV、libvpxの順に試します。`experimental=true`で選べるH.264ではNVIDIA NVENC、AMD AMF、Intel QSV、x264、H.265ではNVENC、AMF、QSV、x265の順です。採用したエンコーダー名は接続画面に表示します。初期化できない候補だけを次へ進め、開始後にGPUや通信で障害が起きた場合は接続を閉じます。
