@@ -33,8 +33,10 @@ public sealed class DesktopSwitchTests
 
     /// <summary>起動desktopを明示した子processが、そのdesktop名を実際に報告します。</summary>
     /// <returns>非表示の試験desktopと子processの回収です。</returns>
-    [Fact]
-    public async Task CaptureProcessUsesTheSpecifiedDesktopWithoutChangingTheVisibleDesktopAsync()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CaptureProcessUsesTheSpecifiedDesktopWithoutChangingTheVisibleDesktopAsync(bool executableNameOnly)
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -48,6 +50,10 @@ public sealed class DesktopSwitchTests
         try
         {
             string shell = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe");
+            if (executableNameOnly)
+            {
+                shell = Path.GetFileNameWithoutExtension(shell);
+            }
             ProcessStartInfo info = new(shell);
             info.ArgumentList.Add("-NoProfile");
             info.ArgumentList.Add("-NonInteractive");

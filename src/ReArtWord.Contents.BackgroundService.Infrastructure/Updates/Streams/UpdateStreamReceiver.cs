@@ -12,7 +12,7 @@ namespace ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Streams;
 /// <summary>固定NIC上の一つのTCP転送をHost寿命内で所有します。</summary>
 public sealed class UpdateStreamReceiver
 {
-    private readonly Func<UpdatePeerAgent> agent;
+    private readonly Func<Guid, CancellationToken, Task<LocalUpdateJob>> readJob;
     private readonly Func<UpdatesOptions> options;
     private readonly Func<string, string?> sourceAddress;
     private readonly Guid instanceId;
@@ -22,11 +22,18 @@ public sealed class UpdateStreamReceiver
 
     /// <summary>bootstrapで確定する設定と、実観測した送信元を接続します。</summary>
     public UpdateStreamReceiver(Func<UpdatePeerAgent> agent, Func<UpdatesOptions> options, Func<string, string?> sourceAddress, Guid instanceId)
+        : this((operationId, token) => agent().ReadJobAsync(operationId, token), options, sourceAddress, instanceId)
     {
         ArgumentNullException.ThrowIfNull(agent);
+    }
+
+    /// <summary>転送対象ごとの固定ジョブを、同じ検証・保存処理へ接続します。</summary>
+    public UpdateStreamReceiver(Func<Guid, CancellationToken, Task<LocalUpdateJob>> readJob, Func<UpdatesOptions> options, Func<string, string?> sourceAddress, Guid instanceId)
+    {
+        ArgumentNullException.ThrowIfNull(readJob);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(sourceAddress);
-        this.agent = agent;
+        this.readJob = readJob;
         this.options = options;
         this.sourceAddress = sourceAddress;
         this.instanceId = instanceId;
@@ -62,7 +69,7 @@ public sealed class UpdateStreamReceiver
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(observedAddress);
         IPAddress source = IPAddress.Parse(observedAddress);
-        LocalUpdateJob job = await agent().ReadJobAsync(operationId, cancellationToken).ConfigureAwait(false);
+        LocalUpdateJob job = await readJob(operationId, cancellationToken).ConfigureAwait(false);
         if (job.PreviousInstanceId != instanceId || Volatile.Read(ref port) == 0)
         {
             throw new InvalidOperationException("転送先の実体または待受が変更されています。");
@@ -166,7 +173,7 @@ public sealed class UpdateStreamReceiver
                 active = session;
             }
             deadline.CancelAfter(TimeSpan.FromMinutes(15));
-            LocalUpdateJob job = await agent().ReadJobAsync(active.OperationId, deadline.Token).ConfigureAwait(false);
+            LocalUpdateJob job = await readJob(active.OperationId, deadline.Token).ConfigureAwait(false);
             if (job.PreviousInstanceId != instanceId)
             {
                 throw new InvalidDataException("転送先の準備実体が異なります。");

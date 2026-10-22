@@ -21,7 +21,7 @@ public sealed class DesktopProcessTests(Xunit.Abstractions.ITestOutputHelper out
     private bool opusAcknowledged;
     private bool cursorExpected;
 
-    /// <summary>選択したホストのH.264/H.265がClientHostへ中継され、切断でsessionが回収されます。</summary>
+    /// <summary>選択したホストの映像がClientHostへ中継され、切断でsessionが回収されます。</summary>
     /// <param name="codec">実際に取得・符号化する映像形式です。</param>
     /// <param name="opus">圧縮音声を選択するかです。</param>
     /// <param name="bFrames">-1は通常設定、それ以外は詳細設定の連続B上限です。</param>
@@ -29,7 +29,8 @@ public sealed class DesktopProcessTests(Xunit.Abstractions.ITestOutputHelper out
     /// <returns>実プロセスと実WebSocketによる確認です。</returns>
     [HostedDesktopTheory, InlineData(EDesktopVideoCodec.H264, false, -1, false), InlineData(EDesktopVideoCodec.H264, true, -1, false), InlineData(EDesktopVideoCodec.H265, false, -1, false),
      InlineData(EDesktopVideoCodec.H264, false, 0, false), InlineData(EDesktopVideoCodec.H264, false, 2, false), InlineData(EDesktopVideoCodec.H265, false, 2, false),
-     InlineData(EDesktopVideoCodec.H264, false, -1, true), InlineData(EDesktopVideoCodec.H265, false, -1, true)]
+     InlineData(EDesktopVideoCodec.H264, false, -1, true), InlineData(EDesktopVideoCodec.H265, false, -1, true),
+     InlineData(EDesktopVideoCodec.Vp9, false, -1, false), InlineData(EDesktopVideoCodec.Vp9, false, -1, true)]
     public async Task WindowsDesktopFlowsThroughClientHostAndDisconnectReclaimsSession(EDesktopVideoCodec codec, bool opus, int bFrames, bool variableBitrate)
     {
         if (!OperatingSystem.IsWindows())
@@ -43,7 +44,15 @@ public sealed class DesktopProcessTests(Xunit.Abstractions.ITestOutputHelper out
         string? ffmpeg = Environment.GetEnvironmentVariable("CONTENTS_TEST_FFMPEG");
         if (!string.IsNullOrWhiteSpace(ffmpeg))
         {
-            await File.AppendAllTextAsync(Path.Combine(core.DirectoryPath, "contents.toml"), "\n[media]\nffmpegPath = " + JsonSerializer.Serialize(ffmpeg.Replace('\\', '/')) + "\n").ConfigureAwait(true);
+            if (codec == EDesktopVideoCodec.Vp9)
+            {
+                // 既定の実行ファイル名でも、子CoreのPATHからencoderを起動できることを確認します。
+                core.StartEnvironment["PATH"] = Path.GetDirectoryName(Path.GetFullPath(ffmpeg)) + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH");
+            }
+            else
+            {
+                await File.AppendAllTextAsync(Path.Combine(core.DirectoryPath, "contents.toml"), "\n[media]\nffmpegPath = " + JsonSerializer.Serialize(ffmpeg.Replace('\\', '/')) + "\n").ConfigureAwait(true);
+            }
         }
         ClientHostProcess client = new(Path.Combine(core.DirectoryPath, "client"));
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable coreLifetime = ((IAsyncDisposable)core).ConfigureAwait(true);
@@ -132,6 +141,10 @@ public sealed class DesktopProcessTests(Xunit.Abstractions.ITestOutputHelper out
             {
                 supported = ["hevc_nvenc", "hevc_qsv", "hevc_amf", "libx265"];
             }
+            if (codec == EDesktopVideoCodec.Vp9)
+            {
+                supported = ["vp9_qsv", "libvpx-vp9"];
+            }
             Assert.Contains(encoders.RootElement[0].GetProperty("encoder").GetString(), supported);
             Assert.Equal(variableBitrate, encoders.RootElement[0].GetProperty("variableBitrate").GetBoolean());
             Assert.True(encoders.RootElement[0].GetProperty("cursorShapes").GetBoolean());
@@ -163,7 +176,14 @@ public sealed class DesktopProcessTests(Xunit.Abstractions.ITestOutputHelper out
         Assert.Equal(2, BinaryPrimitives.ReadInt32BigEndian(buffer));
         Assert.Equal(1, BinaryPrimitives.ReadInt32BigEndian(buffer.AsSpan(12)));
         Assert.Equal(count - DesktopWire.HeaderSize, DesktopWire.PayloadLength(buffer.AsSpan(0, DesktopWire.HeaderSize)));
-        Assert.Equal(new byte[] { 0, 0, 0, 1 }, buffer.AsSpan(DesktopWire.HeaderSize, 4).ToArray());
+        if (codec == EDesktopVideoCodec.Vp9)
+        {
+            Assert.Equal(0x80, buffer[DesktopWire.HeaderSize] & 0xc0);
+        }
+        else
+        {
+            Assert.Equal(new byte[] { 0, 0, 0, 1 }, buffer.AsSpan(DesktopWire.HeaderSize, 4).ToArray());
+        }
         BinaryPrimitives.WriteInt32BigEndian(selection.AsSpan(4), -1);
         BinaryPrimitives.WriteInt32BigEndian(selection.AsSpan(20), (30 << 20) | 6000 | 0x08000000);
         details.AsSpan(4).Clear();

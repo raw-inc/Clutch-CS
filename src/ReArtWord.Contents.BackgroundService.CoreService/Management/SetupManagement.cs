@@ -4,9 +4,11 @@ using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Installation;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
+using ReArtWord.Contents.BackgroundService.Contracts.Observability.Logging;
 using ReArtWord.Contents.BackgroundService.CoreService.Hosting;
 using ReArtWord.Contents.BackgroundService.CoreService.Hosting.Composition;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Installation;
+using ReArtWord.Contents.BackgroundService.Runtime.Observability;
 
 namespace ReArtWord.Contents.BackgroundService.CoreService.Management;
 
@@ -15,14 +17,17 @@ internal sealed class SetupManagement : Microsoft.Extensions.Hosting.BackgroundS
 {
     private readonly ServiceRuntime runtime;
     private readonly IHostApplicationLifetime lifetime;
+    private readonly IWorkflowLog log;
     private readonly SemaphoreSlim gate = new(1, 1);
     private SetupJob? pending;
+    private string? lastProblem;
 
     /// <summary>配置記録、明示保守開始と既存Hostの寿命を接続します。</summary>
-    public SetupManagement(ServiceRuntime runtime, IHostApplicationLifetime lifetime)
+    public SetupManagement(ServiceRuntime runtime, IHostApplicationLifetime lifetime, IWorkflowLog log)
     {
         this.runtime = runtime;
         this.lifetime = lifetime;
+        this.log = log;
     }
 
     /// <summary>この配置の照会と保守操作を管理経路へ登録します。</summary>
@@ -34,7 +39,7 @@ internal sealed class SetupManagement : Microsoft.Extensions.Hosting.BackgroundS
 
     /// <summary>配置記録と現在Peerの一致を検証します。</summary>
     /// <returns>このPeerの導入記録です。</returns>
-    private async Task<InstallationRecord> ReadAsync(CancellationToken cancellationToken = default)
+    internal async Task<InstallationRecord> ReadAsync(CancellationToken cancellationToken = default)
     {
         string installation = runtime.Configuration.Updates.InstallationRoot ?? throw new InvalidDataException("This peer has no managed installation.");
         InstallationRecord record = await InstallationFiles.ReadAsync(Path.GetDirectoryName(installation)!, cancellationToken).ConfigureAwait(false);
@@ -103,30 +108,127 @@ internal sealed class SetupManagement : Microsoft.Extensions.Hosting.BackgroundS
     /// <returns>確認完了です。</returns>
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
-        SetupJob? job = pending;
-        if (job is null)
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            return;
-        }
-        string signal = Path.Combine(SetupWorkspace.DirectoryFor(job.OperationId), "stop.request");
-        string resultPath = Path.Combine(SetupWorkspace.DirectoryFor(job.OperationId), "result.json");
-        if (!File.Exists(signal) && File.Exists(resultPath))
-        {
-            SetupResult? result = System.Text.Json.JsonSerializer.Deserialize<SetupResult>(await File.ReadAllTextAsync(resultPath, cancellationToken).ConfigureAwait(false), ContractJson.Options);
-            if (result?.OperationId == job.OperationId && result.Finished)
+            if (pending is { } job && await RefreshAsync(job, cancellationToken).ConfigureAwait(false))
             {
-                await runtime.Maintenance.ExitAsync(job.OperationId, cancellationToken).ConfigureAwait(false);
-                await runtime.Sources.ReconcileAsync(cancellationToken).ConfigureAwait(false);
                 pending = null;
             }
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    /// <summary>一操作の読取り失敗を隔離し、確認不能の間は所有する保守保留を維持します。</summary>
+    /// <returns>停止通知または最終結果を確認し、この操作の監視が完了したかです。</returns>
+    internal async Task<bool> RefreshAsync(SetupJob job, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        string directory = SetupWorkspace.DirectoryFor(job.OperationId);
+        string signal = Path.Combine(directory, "stop.request");
+        StringComparison pathComparison = StringComparison.Ordinal;
+        if (OperatingSystem.IsWindows())
+        {
+            pathComparison = StringComparison.OrdinalIgnoreCase;
+        }
+        try
+        {
+            string resultPath = Path.Combine(directory, "result.json");
+            string? resultText = await ReadTextAsync(resultPath, cancellationToken).ConfigureAwait(false);
+            if (resultText is not null)
+            {
+                SetupResult? result = System.Text.Json.JsonSerializer.Deserialize<SetupResult>(resultText, ContractJson.Options);
+                if (result is null || result.OperationId != job.OperationId || !Enum.IsDefined(result.Outcome)
+                    || !string.Equals(InstallationFiles.Root(result.Root), InstallationFiles.Root(job.Settings.Root), pathComparison))
+                {
+                    throw new InvalidDataException("The setup result does not belong to this operation.");
+                }
+                if (result.Finished)
+                {
+                    // 終了済みhelperの停止要求ではHostを止めません。結果不明は自動で保留解除しません。
+                    if (result.Outcome == EOutcome.Unknown)
+                    {
+                        await ReportAsync(job, "setup.resultUnconfirmed", result.Detail, cancellationToken).ConfigureAwait(false);
+                        return false;
+                    }
+                    if (!await ReleaseAsync(job, cancellationToken).ConfigureAwait(false))
+                    {
+                        return false;
+                    }
+                    await runtime.Sources.ReconcileAsync(cancellationToken).ConfigureAwait(false);
+                    lastProblem = null;
+                    return true;
+                }
+            }
+            string? signalText = await ReadTextAsync(signal, cancellationToken).ConfigureAwait(false);
+            if (signalText is not null)
+            {
+                if (!string.Equals(signalText, ContractJson.Hash(job), StringComparison.Ordinal))
+                {
+                    throw new InvalidDataException("The setup stop request does not match this operation.");
+                }
+                if (!await ReleaseAsync(job, cancellationToken).ConfigureAwait(false))
+                {
+                    return false;
+                }
+
+                // 再配置後の通常参加を保守保留だけで阻害しないよう、所有保留の解除後に停止します。
+                lifetime.StopApplication();
+                lastProblem = null;
+                return true;
+            }
+            lastProblem = null;
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException && (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested))
+        {
+            await ReportAsync(job, "setup.monitorUnconfirmed", exception.GetType().Name + ": " + exception.Message, cancellationToken).ConfigureAwait(false);
+        }
+        return false;
+    }
+
+    /// <summary>別操作が所有する保留を解除せず、停止も要求しません。</summary>
+    /// <returns>この操作による保留の解除を確認できたかです。</returns>
+    private async Task<bool> ReleaseAsync(SetupJob job, CancellationToken cancellationToken = default)
+    {
+        if (await runtime.Maintenance.ExitAsync(job.OperationId, cancellationToken).ConfigureAwait(false))
+        {
+            return true;
+        }
+        await ReportAsync(job, "setup.maintenanceOwnerChanged", "The maintenance owner could not be confirmed.", cancellationToken).ConfigureAwait(false);
+        return false;
+    }
+
+    /// <summary>書込み側の原子的置換を妨げず、公開された一つの本文を読みます。</summary>
+    /// <returns>読み取った本文、未公開ならnullです。読取り失敗は呼出元へ伝えます。</returns>
+    private static async Task<string?> ReadTextAsync(string path, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using StreamReader reader = new(stream);
+            return await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>同じ障害を毎回記録せず、診断の失敗もCoreの寿命へ波及させません。</summary>
+    /// <returns>診断の受付完了です。</returns>
+    private async Task ReportAsync(SetupJob job, string reason, string detail, CancellationToken cancellationToken = default)
+    {
+        string problem = job.OperationId.ToString("N") + ":" + reason + ":" + detail;
+        if (string.Equals(lastProblem, problem, StringComparison.Ordinal))
+        {
             return;
         }
-        if (File.Exists(signal) && string.Equals(await File.ReadAllTextAsync(signal, cancellationToken).ConfigureAwait(false), ContractJson.Hash(job), StringComparison.Ordinal))
-        {
-            // 再配置後の通常参加を保守保留だけで阻害しないよう、停止直前に所有保留を解放します。
-            await runtime.Maintenance.ExitAsync(job.OperationId, cancellationToken).ConfigureAwait(false);
-            lifetime.StopApplication();
-        }
+        lastProblem = problem;
+        await WorkflowLogBoundary.WriteAsync(log, new WorkflowLogEntry(Guid.NewGuid(), DateTimeOffset.UtcNow, "WARN", runtime.Cluster.LocalPeerId,
+            "セットアップの状態確認を保留し、次の監視で再確認します。", CausationId: job.OperationId, Data: ContractJson.ToValue(new { reason, detail })), cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>固定した保守要求の受付結果を、Hostの停止まで確認します。</summary>

@@ -16,7 +16,7 @@ public sealed class WebClientSetup(IInstallationPlatform platform)
         string journalRoot = InstallationFiles.Root(directory);
         Directory.CreateDirectory(journalRoot);
         SetupOperationJournal journal = new(owned.OperationId, journalRoot, owned.Settings.Root);
-        SetupResult? previous = await journal.ExistingAsync(owned, cancellationToken).ConfigureAwait(false);
+        SetupResult? previous = await journal.BeginAsync(owned, cancellationToken).ConfigureAwait(false);
         if (previous is not null)
         {
             return previous;
@@ -24,7 +24,6 @@ public sealed class WebClientSetup(IInstallationPlatform platform)
         SetupProgressJournal progress = SetupProgressJournal.ForWebClient(journalRoot);
         try
         {
-            await journal.BeginAsync(owned, cancellationToken).ConfigureAwait(false);
             await progress.BeginAsync("validate", cancellationToken).ConfigureAwait(false);
             ArgumentOutOfRangeException.ThrowIfEqual(owned.OperationId, Guid.Empty);
             if (!owned.Settings.LicenseAccepted || owned.Settings.WebClient is not { } choice || (!choice.Install && choice.ExistingRoot is null))

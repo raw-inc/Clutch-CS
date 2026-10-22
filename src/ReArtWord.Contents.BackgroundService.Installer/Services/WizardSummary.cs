@@ -78,6 +78,15 @@ internal static class WizardSummary
         }
         if (settings.Operation == EInstallerOperation.Update)
         {
+            foreach (ObservedWebClient client in settings.SelectedWebClients)
+            {
+                text.AppendLine(client.DisplayName(settings.Japanese));
+            }
+            if (settings.SelectedWebClients.Count != 0)
+            {
+                text.AppendLine(settings.Text("Web client settings and startup method are kept. The management page disconnects briefly during the update.",
+                    "Webクライアントの設定と起動方法は保持します。更新中は管理画面への接続が一時的に切れます。"));
+            }
             if (settings.AllowActive)
             {
                 text.AppendLine(labels["Active"]);

@@ -87,6 +87,7 @@ internal sealed class CorePeer : IAsyncDisposable
     /// <returns>Hostの起動確認です。</returns>
     // 抑制理由: 起動した子プロセスの標準error読み出しをフィールドで所有し、停止時に必ずawaitして保存します。
     [SuppressMessage("SourceQuality", "RAW511", Justification = "子processのstderrは起動確認またはStopAsyncでawaitし、所有processと同じ寿命で管理します。")]
+    [SuppressMessage("SourceQuality", "RAW330", Justification = "期限切れの診断を保存した後、元の中断理由とスタックを失わず試験へ返します。")]
     internal async Task StartAsync(CancellationToken cancellationToken = default)
     {
         Guid? previousInstance = FindLatestPeer()?.InstanceId;
@@ -103,27 +104,43 @@ internal sealed class CorePeer : IAsyncDisposable
         {
             errors = process.StandardError.ReadToEndAsync(CancellationToken.None);
         }
-        await WaitAsync(async token =>
+        JsonElement? lastHealth = null;
+        string? lastProblem = null;
+        try
         {
-            if (process.HasExited)
+            await WaitAsync(async token =>
             {
-                throw new IOException("試験用CoreServiceが起動中に終了しました。" + await errors.ConfigureAwait(false));
-            }
-            PeerInfo? observed = FindLatestPeer();
-            if (observed is null || observed.InstanceId == previousInstance)
+                if (process.HasExited)
+                {
+                    throw new IOException("試験用CoreServiceが起動中に終了しました。" + await errors.ConfigureAwait(false));
+                }
+                PeerInfo? observed = FindLatestPeer();
+                if (observed is null || observed.InstanceId == previousInstance)
+                {
+                    return false;
+                }
+                try
+                {
+                    JsonElement health = await GetAsync<JsonElement>("health", token).ConfigureAwait(false);
+                    lastHealth = health;
+                    return health.GetProperty("processId").GetInt32() == process.Id;
+                }
+                catch (InvalidOperationException exception)
+                {
+                    lastProblem = exception.Message;
+                    return false;
+                }
+            }, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            await File.WriteAllTextAsync(Path.Combine(DirectoryPath, "startup-failure.json"), JsonSerializer.Serialize(new
             {
-                return false;
-            }
-            try
-            {
-                JsonElement health = await GetAsync<JsonElement>("health", token).ConfigureAwait(false);
-                return health.GetProperty("processId").GetInt32() == process.Id;
-            }
-            catch (InvalidOperationException)
-            {
-                return false;
-            }
-        }, cancellationToken).ConfigureAwait(false);
+                expectedProcessId = process.Id, process.HasExited, previousInstance, lastHealth, lastProblem,
+                observed = observer.GetClusters(),
+            }, ContractJson.Options), CancellationToken.None).ConfigureAwait(false);
+            throw;
+        }
     }
 
     /// <summary>所有している実プロセスだけを終了して障害を再現します。</summary>

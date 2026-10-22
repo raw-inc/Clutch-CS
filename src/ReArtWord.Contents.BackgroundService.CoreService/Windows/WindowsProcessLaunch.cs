@@ -49,7 +49,13 @@ internal static class WindowsProcessLaunch
             bool created;
             if (token is null)
             {
-                created = WindowsProcessNative.CreateProcessW(executable, command, IntPtr.Zero, IntPtr.Zero, false, flags, IntPtr.Zero, directory, startup, out process);
+                // 実行ファイル名だけの指定は、Win32の拡張子補完とPATH検索を使います。
+                string? application = executable;
+                if (string.Equals(Path.GetFileName(executable), executable, StringComparison.Ordinal))
+                {
+                    application = null;
+                }
+                created = WindowsProcessNative.CreateProcessW(application, command, IntPtr.Zero, IntPtr.Zero, false, flags, IntPtr.Zero, directory, startup, out process);
             }
             else
             {

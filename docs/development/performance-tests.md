@@ -4,6 +4,8 @@ Clutch-CSの性能試験は、同じ結果を得られたことと資源使用�
 
 ## 実行
 
+CIと同じReadyToRun版CoreServiceで検証する場合は、[ビルド・テスト手順](build.md#変更に対応するテストを実行する)に従って発行し、`CONTENTS_TEST_CORE` を設定してください。
+
 ```powershell
 dotnet build Clutch-CS.slnx -c Release
 dotnet test tests/ReArtWord.Contents.BackgroundService.Integration.Tests -c Release --no-build --filter "Category=Performance" --logger "console;verbosity=detailed"
