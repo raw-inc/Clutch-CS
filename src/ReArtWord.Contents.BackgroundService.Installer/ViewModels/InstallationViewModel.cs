@@ -179,6 +179,12 @@ internal sealed partial class InstallationViewModel : CommunityToolkit.Mvvm.Comp
         get;
     } = [];
 
+    /// <summary>Coreとは別に選択したWebクライアントです。</summary>
+    public List<ObservedWebClient> SelectedWebClients
+    {
+        get;
+    } = [];
+
     /// <summary>全体・クラスタ・ピアの範囲です。</summary>
     [ObservableProperty]
     public partial int Scope

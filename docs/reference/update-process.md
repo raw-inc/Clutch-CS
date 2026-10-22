@@ -71,6 +71,16 @@ Updater の終了コード1は更新失敗と旧版復帰が確定した意味�
 
 ## 更新操作
 
+### セットアップからWebクライアントを更新する
+
+セットアップではCoreServiceとWebClientを別々に選択できます。このPCでは独立Updaterを直接起動し、接続先では関連するCoreServiceの `setup.client.*` 管理操作と、一回限りのTCP転送を使用します。WebClientだけの更新ではCoreServiceを停止しません。
+
+接続先のWebClientはCoreServiceの導入記録から特定し、導入ID、稼働中プロセスのPID・起動時刻・実行パスと版を照合します。WindowsサービスのCoreServiceは稼働中WebClientのユーザートークンを引き継いでUpdaterを起動します。ユーザー権限のCoreServiceは、同じユーザー・セッションで動作するWebClientを更新できます。異なるユーザーや管理者権限の対話Coreからの更新は受け付けません。
+
+管理対象は自動起動登録済みで、プログラムが `app` などの独立したサブフォルダーにある配置です。全ファイルの検証後にプログラムだけを入れ替え、設定とユーザープロファイルは保持します。実行ファイル名が旧名でも、現在の起動名へ導入記録と起動登録を更新します。起動確認に失敗した場合は元のファイルと登録へ戻し、復帰の確認に失敗した場合は結果不明とします。
+
+操作入力と結果はWebClientの配置先にある `update-staging/operations/<操作ID>` に保存します。元要求の受付後は自動再実行せず、保存結果だけを照会します。接続先の結果を確認できない場合は、そのPCの `result.json` と稼働状態を確認してください。
+
 ### 画面から全クラスターをホスト単位で更新する
 
 Dashboard の **Settings & maintenance → Update all discovered peers** は、接続先ピアを選択せずに使用できます。

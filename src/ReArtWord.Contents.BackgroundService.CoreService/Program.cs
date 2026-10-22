@@ -159,6 +159,8 @@ internal static class Program
             builder.Services.AddHostedService(provider => new DraftAutoApplyWorker(provider.GetRequiredService<DraftAutoApply>()));
             builder.Services.AddSingleton<SetupManagement>();
             builder.Services.AddHostedService(provider => provider.GetRequiredService<SetupManagement>());
+            builder.Services.AddSingleton<WebClientUpdateManagement>();
+            builder.Services.AddHostedService(provider => provider.GetRequiredService<WebClientUpdateManagement>());
             builder.Services.AddHostedService(provider => new RuntimeWorker(provider.GetRequiredService<ServiceRuntime>(), provider.GetRequiredService<ServiceBootstrap>(), provider.GetRequiredService<IHostApplicationLifetime>(), provider.GetRequiredService<IHostLifetime>(), log, provider.GetRequiredService<LogRetentionCoordinator>()));
             IHost app = builder.Build();
             await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable hostLifetime = ((IAsyncDisposable)app).ConfigureAwait(false);
@@ -188,6 +190,7 @@ internal static class Program
         management.AdmissionCheck = operation => DetachedManagementPolicy.GetProblem(operation, runtime.Cluster.IsDetached, runtime.Configuration.Detached);
         CoreManagement.Register(management, runtime, log);
         services.GetRequiredService<SetupManagement>().Register(management);
+        services.GetRequiredService<WebClientUpdateManagement>().Register(management);
         Management.DeviceManagement.Register(management, services.GetRequiredService<Infrastructure.DeviceManagement.DeviceManagementService>());
         Infrastructure.DeviceManagement.Power.Scheduling.HostPowerScheduleStore powerSchedules = services.GetRequiredService<Infrastructure.DeviceManagement.Power.Scheduling.HostPowerScheduleStore>();
         management.Read("host.power-schedules.read", async (body, cancellation) => await powerSchedules.ReadAsync(ManagementRegistry.Body<Contracts.DeviceManagement.PowerSchedules.HostPowerScheduleReadRequest>(body), cancellation).ConfigureAwait(false));

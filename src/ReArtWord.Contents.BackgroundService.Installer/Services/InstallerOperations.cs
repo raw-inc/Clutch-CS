@@ -34,7 +34,7 @@ internal static class InstallerOperations
         }
         progress?.Invoke(new("prepare-helper"));
         string helper = await SetupWorkspace.PrepareAsync(job.OperationId, job, updaterRoot, cancellationToken).ConfigureAwait(false);
-        SetupResult result = await RunHelperAsync(job.OperationId, job.Settings.Root, helper, OperatingSystem.IsWindows() && !perUser, "--setup-web-client", progress, cancellationToken).ConfigureAwait(false);
+        SetupResult result = await RunHelperAsync(job.OperationId, job.Settings.Root, helper, OperatingSystem.IsWindows() && !perUser, "--setup-web-client", progress, null, cancellationToken).ConfigureAwait(false);
         if (result.Outcome == EOutcome.Succeeded && result.WebClient is { RunAsService: false } client)
         {
             return await FinishClientAsync(result, client, cancellationToken).ConfigureAwait(false);
@@ -49,7 +49,7 @@ internal static class InstallerOperations
         ArgumentNullException.ThrowIfNull(job);
         progress?.Invoke(new("prepare-helper"));
         string helper = await SetupWorkspace.PrepareAsync(job, updaterRoot, cancellationToken).ConfigureAwait(false);
-        return await RunHelperAsync(job.OperationId, job.Settings.Root, helper, OperatingSystem.IsWindows() && !job.Settings.PerUser, "--setup-job", progress, cancellationToken).ConfigureAwait(false);
+        return await RunHelperAsync(job.OperationId, job.Settings.Root, helper, OperatingSystem.IsWindows() && !job.Settings.PerUser, "--setup-job", progress, null, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>このPCのクライアントだけを独立helperで削除します。</summary>
@@ -68,7 +68,7 @@ internal static class InstallerOperations
         {
             await WebClientStartup.UnregisterAsync(job.Installation, cancellationToken).ConfigureAwait(false);
         }
-        return await RunHelperAsync(job.OperationId, job.Installation.Root, helper, OperatingSystem.IsWindows() && !job.Installation.PerUser, "--remove-web-client", progress, cancellationToken).ConfigureAwait(false);
+        return await RunHelperAsync(job.OperationId, job.Installation.Root, helper, OperatingSystem.IsWindows() && !job.Installation.PerUser, "--remove-web-client", progress, null, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>利用者の起動登録まで確認してから、画面と保存結果を確定します。</summary>
@@ -89,9 +89,9 @@ internal static class InstallerOperations
 
     /// <summary>helperの進捗を読み、終了後に実結果だけを返します。</summary>
     /// <returns>確認できた最終結果です。</returns>
-    private static async Task<SetupResult> RunHelperAsync(Guid operationId, string root, string helper, bool elevate, string option, Action<OperationProgress>? progress, CancellationToken cancellationToken = default)
+    internal static async Task<SetupResult> RunHelperAsync(Guid operationId, string root, string helper, bool elevate, string option, Action<OperationProgress>? progress, string? preparedWorkspace = null, CancellationToken cancellationToken = default)
     {
-        string workspace = SetupWorkspace.DirectoryFor(operationId);
+        string workspace = preparedWorkspace ?? SetupWorkspace.DirectoryFor(operationId);
         progress?.Invoke(new("launch-helper"));
         using Process process = SetupWorkspace.Launch(helper, Path.Combine(workspace, "job.json"), elevate, option);
         while (!process.HasExited)

@@ -14,12 +14,15 @@ internal sealed partial class DiscoveryViewModel : ObservableObject
 {
     private readonly InstallationViewModel settings;
     private readonly Func<ClientNetworkBinding, CancellationToken, Task<IReadOnlyList<ObservedTarget>>> scan;
+    private readonly Func<CancellationToken, Task<Contracts.Installation.WebClientInstallation?>> findWebClient;
 
     /// <summary>実NICを列挙し、利用者の選択を待ちます。</summary>
-    public DiscoveryViewModel(InstallationViewModel settings, Func<ClientNetworkBinding, CancellationToken, Task<IReadOnlyList<ObservedTarget>>>? scan = null)
+    public DiscoveryViewModel(InstallationViewModel settings, Func<ClientNetworkBinding, CancellationToken, Task<IReadOnlyList<ObservedTarget>>>? scan = null,
+        Func<CancellationToken, Task<Contracts.Installation.WebClientInstallation?>>? findWebClient = null)
     {
         this.settings = settings;
-        this.scan = scan ?? InstallerDiscovery.ScanAsync;
+        this.scan = scan ?? ((binding, token) => InstallerDiscovery.ScanAsync(binding, settings.Operation == EInstallerOperation.Update, token));
+        this.findWebClient = findWebClient ?? (token => WebClientCatalog.FindAsync(false, token));
         foreach (ClientNetworkInterface network in ObserverNetwork.GetInterfaces().Where(network => network.Available))
         {
             foreach (ClientNetworkAddress address in network.Addresses)
@@ -37,6 +40,12 @@ internal sealed partial class DiscoveryViewModel : ObservableObject
 
     /// <summary>走査した対象です。</summary>
     public ObservableCollection<TargetChoiceViewModel> Targets
+    {
+        get;
+    } = [];
+
+    /// <summary>このPCと接続先で関連付けを確認できたWebクライアントです。</summary>
+    public ObservableCollection<WebClientChoiceViewModel> WebClients
     {
         get;
     } = [];
@@ -127,6 +136,11 @@ internal sealed partial class DiscoveryViewModel : ObservableObject
             Targets.Add(new(target, settings.Japanese));
             AddCluster(target);
         }
+        if (settings.Operation == EInstallerOperation.Update)
+        {
+            settings.Components.Existing = await findWebClient(cancellationToken).ConfigureAwait(true);
+            AddWebClients(observed);
+        }
         int previousScope = Scope;
         IEnumerable<string> localRoots = InstallationCatalog.GetRoots();
         if (settings.Operation is EInstallerOperation.Install or EInstallerOperation.Update)
@@ -211,6 +225,18 @@ internal sealed partial class DiscoveryViewModel : ObservableObject
         }
         settings.Selected.Clear();
         settings.Selected.AddRange(Targets.Where(item => item.Selected).Select(item => item.Target));
+        settings.SelectedWebClients.Clear();
+        foreach (WebClientChoiceViewModel item in WebClients.Where(item => item.Selected))
+        {
+            ObservedWebClient client = item.Target;
+            ObservedTarget? selectedCore = settings.Selected.FirstOrDefault(core => client.Core is not null
+                && string.Equals(core.Peer?.HostId, client.Core.Peer?.HostId, StringComparison.Ordinal) && core.Installation?.WebClient?.InstallationId == client.Installation.InstallationId);
+            if (selectedCore is not null)
+            {
+                client = client with { Core = selectedCore };
+            }
+            settings.SelectedWebClients.Add(client);
+        }
     }
 
     /// <summary>範囲が変わったときに対象を再選択します。</summary>
@@ -250,12 +276,40 @@ internal sealed partial class DiscoveryViewModel : ObservableObject
     {
         settings.Observed.Clear();
         settings.Selected.Clear();
+        settings.SelectedWebClients.Clear();
+        WebClients.Clear();
         SelectedCluster = null;
         Targets.Clear();
         Clusters.Clear();
         Count = 0;
         ClusterCount = 0;
         SearchCompleted = false;
+    }
+
+    /// <summary>同じPCで共有するクライアントを一度だけ表示します。</summary>
+    private void AddWebClients(IReadOnlyList<ObservedTarget> observed)
+    {
+        Contracts.Installation.WebClientInstallation? local = settings.Components.Existing;
+        if (local is not null)
+        {
+            WebClients.Add(new(new(local), settings.Japanese));
+        }
+        HashSet<(string Host, Guid Installation)> seen = [];
+        foreach (ObservedTarget target in observed)
+        {
+            if (target.Installation?.WebClient is not { } client || target.Peer is not { } peer)
+            {
+                continue;
+            }
+            if (local?.InstallationId == client.InstallationId && string.Equals(peer.Address, target.Binding.BindAddress, StringComparison.Ordinal))
+            {
+                continue;
+            }
+            if (seen.Add((peer.HostId, client.InstallationId)))
+            {
+                WebClients.Add(new(new(client, target), settings.Japanese));
+            }
+        }
     }
 
     /// <summary>クラスター名とportで候補を区別します。</summary>

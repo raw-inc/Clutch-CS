@@ -62,9 +62,20 @@ internal static class WizardExecution
                 throw new InvalidDataException(state.Text("The web client installation has changed. Select it again.", "Web クライアントの状態が変わりました。削除する項目を選び直してください。"));
             }
         }
-        if (state.Selected.Count == 0 && !removeClient)
+        if (state.Selected.Count == 0 && !removeClient && !(state.Operation == EInstallerOperation.Update && state.SelectedWebClients.Count != 0))
         {
             throw new InvalidDataException(state.Text("Select at least one target.", "対象を1つ以上選んでください。"));
+        }
+        if (state.Operation == EInstallerOperation.Update && state.SelectedWebClients.Count != 0)
+        {
+            string payload = Path.Combine(state.Package, "client");
+            Contracts.Updates.Releases.ReleaseManifest manifest = await Infrastructure.Updates.Local.LocalUpdateExecutor.ReadManifestAsync(payload, cancellationToken).ConfigureAwait(false);
+            Infrastructure.Updates.Client.ClientUpdateExecutor.ValidateRelease(manifest);
+            await Infrastructure.Updates.Releases.ReleaseVerifier.VerifyAsync(manifest, payload, cancellationToken).ConfigureAwait(false);
+            foreach (ObservedWebClient client in state.SelectedWebClients.Where(client => client.Core is null))
+            {
+                _ = await WebClientUpdateProbe.ReadAsync(client.Installation, cancellationToken).ConfigureAwait(false);
+            }
         }
         if (state.Operation == EInstallerOperation.Uninstall || (state.Operation == EInstallerOperation.Repair && state.Reinstall))
         {
@@ -121,6 +132,7 @@ internal static class WizardExecution
         ObservedTarget[] targets = state.Selected.ToArray();
         if (state.Operation == EInstallerOperation.Update)
         {
+            Dictionary<ObservedTarget, UpdatePeerResult> coreResults = [];
             IGrouping<(string ClusterId, Contracts.Management.Discovery.ClientNetworkBinding Binding), ObservedTarget>[] clusters = targets.GroupBy(target => (target.ClusterId, target.Binding)).ToArray();
             int index = 0;
             int completedSteps = 0;
@@ -151,6 +163,7 @@ internal static class WizardExecution
                     details.AppendLine(cluster.Key.ClusterId + " · " + result.Outcome + " · " + result.Reason);
                     foreach (Contracts.Updates.UpdatePeerResult peer in result.Peers)
                     {
+                        coreResults[cluster.Single(target => string.Equals(target.PeerId, peer.PeerId, StringComparison.Ordinal))] = peer;
                         report.AppendLine("  " + peer.PeerId + " · " + Outcome(state, peer.Outcome));
                         details.AppendLine("  " + peer.PeerId + " · " + peer.Outcome + " · " + peer.Phase + " · " + peer.Reason);
                     }
@@ -163,7 +176,8 @@ internal static class WizardExecution
                 completedSteps += currentSteps;
                 progress.Report(new("outcome-" + outcome, completedSteps, totalSteps, group));
             }
-            return new(report.ToString(), details.ToString());
+            WebClientInstallation? updatedClient = await UpdateClientsAsync(state, coreResults, report, details, progress, cancellationToken).ConfigureAwait(false);
+            return new(report.ToString(), details.ToString(), updatedClient);
         }
         int completed = 0;
         foreach (ObservedTarget target in targets)
@@ -228,6 +242,54 @@ internal static class WizardExecution
             }
         }
         return new(report.ToString(), details.ToString());
+    }
+
+    /// <summary>Webクライアントは個別に更新し、依存するCoreの成功だけを引き継ぎます。</summary>
+    /// <returns>このPCで更新できたクライアントです。</returns>
+    private static async Task<WebClientInstallation?> UpdateClientsAsync(InstallationViewModel state, Dictionary<ObservedTarget, UpdatePeerResult> cores,
+        StringBuilder report, StringBuilder details, IProgress<OperationProgress> progress, CancellationToken cancellationToken = default)
+    {
+        WebClientInstallation? local = null;
+        foreach (ObservedWebClient selected in state.SelectedWebClients)
+        {
+            ObservedWebClient target = selected;
+            string label = target.DisplayName(state.Japanese);
+            try
+            {
+                if (target.Core is { } core && state.Selected.Contains(core))
+                {
+                    if (!cores.TryGetValue(core, out UpdatePeerResult? updated) || updated.Outcome != EOutcome.Succeeded || updated.InstanceId is not { } instance)
+                    {
+                        report.AppendLine(label + Environment.NewLine + Outcome(state, EOutcome.NotExecuted));
+                        details.AppendLine(state.Text("The associated Core update was not confirmed. The web client was not changed.", "関連するCoreServiceの更新を確認できなかったため、Webクライアントは更新していません。"));
+                        continue;
+                    }
+                    target = target with { Core = core with { Peer = core.Peer! with { InstanceId = instance } } };
+                }
+                void Report(OperationProgress value) => progress.Report(value with { Target = label });
+                SetupResult result;
+                if (target.Core is null)
+                {
+                    result = await InstallerClientUpdates.LocalAsync(target.Installation, Path.Combine(state.Package, "client"), state.Networks.Single(), Report, cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    result = await InstallerClientUpdates.RemoteAsync(target, Path.Combine(state.Package, "client"), Report, cancellationToken).ConfigureAwait(false);
+                }
+                report.AppendLine(label + Environment.NewLine + Outcome(state, result.Outcome));
+                details.AppendLine(label + Environment.NewLine + Format(result));
+                if (target.Core is null && result.Outcome == EOutcome.Succeeded)
+                {
+                    local = result.WebClient;
+                }
+            }
+            catch (Exception exception) when (exception is IOException or HttpRequestException or InvalidOperationException or ArgumentException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or OperationCanceledException)
+            {
+                report.AppendLine(label + Environment.NewLine + Outcome(state, EOutcome.Unknown));
+                details.AppendLine(exception.Message);
+            }
+        }
+        return local;
     }
 
     /// <summary>一方だけ完了した場合も、確認済みのクライアントとサービスの結果を区別します。</summary>

@@ -21,6 +21,14 @@ public interface IInstallationPlatform
     /// <returns>停止確認の完了です。</returns>
     public Task StopWebClientAsync(WebClientInstallation client, CancellationToken cancellationToken = default);
 
+    /// <summary>導入記録と稼働実体が一致するクライアントを確認します。</summary>
+    /// <returns>更新前後の実体と版です。</returns>
+    public Task<WebClientUpdateInfo> InspectWebClientAsync(WebClientInstallation client, CancellationToken cancellationToken = default);
+
+    /// <summary>既存の起動方式を維持して登録と起動を確認します。</summary>
+    /// <returns>Webクライアントの起動確認です。</returns>
+    public Task StartWebClientAsync(WebClientInstallation client, CancellationToken cancellationToken = default);
+
     /// <summary>Webクライアントの独立した導入を記録します。</summary>
     /// <returns>自動起動の登録と起動確認です。</returns>
     public Task RegisterWebClientAsync(WebClientInstallation client, CancellationToken cancellationToken = default);
