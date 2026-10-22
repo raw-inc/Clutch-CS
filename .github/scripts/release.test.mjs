@@ -7,13 +7,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { planRelease, publishRelease, releaseAssets } from './release.mjs';
-import { validationReport } from './validation.mjs';
 
 const repository = 'owner/project';
 const sha = 'a'.repeat(40);
 const otherSha = 'b'.repeat(40);
 const plan = { tag: 'v1.2.3', version: '1.2.3', sha, prerelease: false };
-const passed = Object.fromEntries(validationReport({}).results.map(result => [result.id, 'success']));
+const runUrl = 'https://github.com/owner/project/actions/runs/12345';
 
 function event(branch = `release/${plan.tag}`) {
     return {
@@ -114,43 +113,31 @@ test('publishing creates a draft, uploads binary and source assets, then publish
     const result = await publishRelease(fixture.api, async (tag, assets, repo) => {
         assert.equal(fixture.current().draft, true);
         assert.equal(fixture.current().target_commitish, sha);
+        assert.equal(fixture.current().body, `Generated notes\n\n## Build Results\nCheck the CI results: ${runUrl}\n`);
         assert.equal(tag, plan.tag);
         assert.equal(repo, repository);
         assert.deepEqual(assets, files);
-    }, repository, plan, files);
+    }, repository, plan, files, runUrl);
     assert.equal(result.alreadyPublished, false);
     assert.equal(fixture.current().draft, false);
     assert.equal(fixture.current().make_latest, 'legacy');
-    assert.match(fixture.current().body, /Clutch-CS-Source-v1\.2\.3\.zip/);
+    assert.equal(fixture.current().prerelease, false);
+    assert.equal(fixture.current().body, `Generated notes\n\n## Build Results\nCheck the CI results: ${runUrl}\n`);
 });
 
 test('failed upload leaves a draft and rerunning resumes that same release', async () => {
     const fixture = githubFixture();
-    const previous = { outcomes: { ...passed, integration_tests: 'failure' }, runUrl: 'https://github.com/owner/project/actions/runs/100' };
-    const current = { outcomes: passed, runUrl: 'https://github.com/owner/project/actions/runs/101' };
+    const previous = 'https://github.com/owner/project/actions/runs/100';
+    const current = 'https://github.com/owner/project/actions/runs/101';
     await assert.rejects(publishRelease(fixture.api, async () => { throw new Error('Upload failed'); }, repository, plan, [], previous), /Upload failed/);
     assert.equal(fixture.current().draft, true);
-    assert.match(fixture.current().body, /\| 結合テスト \| ❌/u);
+    assert.ok(fixture.current().body.includes(previous));
     assert.equal(fixture.calls.some(call => call.method === 'PATCH'), false);
     await publishRelease(fixture.api, async () => {}, repository, plan, [], current);
     assert.equal(fixture.current().draft, false);
-    assert.match(fixture.current().body, /\| 結合テスト \| ✅/u);
-    assert.ok(fixture.current().body.includes(current.runUrl));
-    assert.ok(!fixture.current().body.includes(previous.runUrl));
+    assert.ok(fixture.current().body.includes(current));
+    assert.ok(!fixture.current().body.includes(previous));
     assert.equal(fixture.calls.filter(call => call.method === 'POST' && call.path.endsWith('/releases')).length, 1);
-});
-
-test('failed validation is visible in a published release without blocking verified assets', async () => {
-    const fixture = githubFixture();
-    const validation = {
-        outcomes: { ...passed, unit_tests: 'failure', performance_tests: 'skipped' },
-        runUrl: 'https://github.com/owner/project/actions/runs/102',
-    };
-    await publishRelease(fixture.api, async () => {}, repository, plan, [], validation);
-    assert.equal(fixture.current().draft, false);
-    assert.match(fixture.current().body, /\| 単体テスト[^\n]*❌/u);
-    assert.match(fixture.current().body, /\| パフォーマンステスト \| ➖/u);
-    assert.ok(fixture.current().body.includes(validation.runUrl));
 });
 
 test('a published version is not changed on rerun', async () => {
