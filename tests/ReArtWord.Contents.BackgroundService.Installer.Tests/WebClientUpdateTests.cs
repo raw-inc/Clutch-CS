@@ -1,9 +1,12 @@
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Installation;
+using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Contracts.Updates.Releases;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Installation;
+using ReArtWord.Contents.BackgroundService.Infrastructure.Processes;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Local;
 using Xunit;
 
@@ -27,6 +30,8 @@ public sealed class WebClientUpdateTests
         string journal = Path.Combine(fixture.Root, "update");
         SetupResult result = await updater.ExecuteAsync(job, journal);
         Assert.True(result.Outcome == EOutcome.Succeeded, result.Detail);
+        WebClientUpdateWriter? writer = JsonSerializer.Deserialize<WebClientUpdateWriter>(await File.ReadAllTextAsync(Path.Combine(journal, "writer.json")), ContractJson.Options);
+        Assert.Equal(new WebClientUpdateWriter(job.OperationId, ContractJson.Hash(job), ProcessOs.CurrentIdentity()), writer);
         WebClientInstallation updated = Assert.IsType<WebClientInstallation>(result.WebClient);
         Assert.Equal(job.Installation with { EntryPoint = job.Manifest.EntryPoint }, updated);
         Assert.Equal(updated, await WebClientCatalog.ReadAsync(updated.Root));

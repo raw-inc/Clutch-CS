@@ -32,6 +32,34 @@ public static class WebClientCatalog
         return program;
     }
 
+    /// <summary>実行中のプログラムを独立した子フォルダーに持つ、管理済みの導入だけを特定します。</summary>
+    /// <returns>実行物の配置が一致する導入、見つからなければnullです。</returns>
+    public static async Task<WebClientInstallation?> FindByProgramAsync(string program, CancellationToken cancellationToken = default)
+    {
+        string canonical = InstallationFiles.Root(program);
+        DirectoryInfo? parent = Directory.GetParent(canonical);
+        StringComparison comparison = StringComparison.Ordinal;
+        if (OperatingSystem.IsWindows())
+        {
+            comparison = StringComparison.OrdinalIgnoreCase;
+        }
+        while (parent is not null)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (File.Exists(Path.Combine(parent.FullName, RecordName)))
+            {
+                WebClientInstallation client = await ReadAsync(parent.FullName, cancellationToken).ConfigureAwait(false);
+                if (client.ProgramDirectory is not null && string.Equals(ProgramRoot(client), canonical, comparison))
+                {
+                    return client;
+                }
+                return null;
+            }
+            parent = parent.Parent;
+        }
+        return null;
+    }
+
     /// <summary>クラスターを削除しても残るクライアントの標準配置先です。</summary>
     /// <returns>PC共通またはユーザー単位の導入先です。</returns>
     public static string DefaultRoot(bool perUser)

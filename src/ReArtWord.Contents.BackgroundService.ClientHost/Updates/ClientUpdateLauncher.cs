@@ -28,6 +28,7 @@ internal sealed class ClientUpdateLauncher(ClientHostOptions options, IHostAppli
         }
         ReleaseManifest manifest = await LocalUpdateExecutor.ReadManifestAsync(installation, cancellationToken).ConfigureAwait(false);
         ClientUpdateExecutor.ValidateRelease(manifest);
+        await UpdateRetention.TrimManagedClientAsync(installation, cancellationToken).ConfigureAwait(false);
         await UpdateRetention.TrimClientAsync(new(Guid.NewGuid(), manifest, installation, options.StateDirectory, options.Listen, Health.Process), cancellationToken).ConfigureAwait(false);
     }
 
