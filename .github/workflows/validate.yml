@@ -228,6 +228,13 @@ jobs:
         continue-on-error: true
         if: github.event_name != 'workflow_dispatch' || !inputs.skip_installer
         run: dotnet test tests/ReArtWord.Contents.BackgroundService.Installer.Tests -c Release --no-build --no-restore --settings eng/testing/ci.runsettings --logger trx --logger 'console;verbosity=normal' --results-directory artifacts/TestResults/installer
+      - name: Publish the Core for process tests
+        if: github.event_name != 'workflow_dispatch' || !inputs.skip_integration || !inputs.skip_performance
+        run: |
+          dotnet publish src/ReArtWord.Contents.BackgroundService.CoreService/ReArtWord.Contents.BackgroundService.CoreService.csproj -c Release -r win-x64 --self-contained false -p:PublishReadyToRun=true -warnaserror "-p:Version=$env:RELEASE_VERSION" -o artifacts/test-core
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $core = (Resolve-Path artifacts/test-core/Clutch-CS.CoreService.exe).Path
+          "CONTENTS_TEST_CORE=$core" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Run integration regression tests
         id: integration_tests
         continue-on-error: true
