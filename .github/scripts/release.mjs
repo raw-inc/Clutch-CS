@@ -48,7 +48,7 @@ export async function releaseAssets(directory, tag) {
 }
 
 // 完了済みReleaseは変更せず、同じコミットの未完了draftだけを再開する。
-export async function publishRelease(api, upload, repository, plan, assets, validation = {}) {
+export async function publishRelease(api, upload, repository, plan, assets, runUrl) {
     const root = `/repos/${repository}`;
     const reference = await api('GET', `${root}/git/ref/tags/${encodeURIComponent(plan.tag)}`);
     if (reference) {
@@ -81,7 +81,7 @@ export async function publishRelease(api, upload, repository, plan, assets, vali
     const notes = await api('POST', `${root}/releases/generate-notes`, {
         tag_name: plan.tag, target_commitish: plan.sha,
     });
-    const body = releaseNotes(plan, notes.body, validation);
+    const body = releaseNotes(notes.body, runUrl);
     if (!release) {
         release = await api('POST', `${root}/releases`, {
             tag_name: plan.tag, target_commitish: plan.sha, name: `Clutch-CS ${plan.tag}`,
@@ -123,13 +123,10 @@ async function main() {
     if (process.argv[2] !== 'publish' || !plan) throw new Error('A merged release/vx.y.z[-suffix] branch is required.');
     if (!process.env.GH_TOKEN) throw new Error('GH_TOKEN is required to publish a release.');
     const assets = await releaseAssets(process.argv[3], plan.tag);
-    const validation = {
-        outcomes: JSON.parse(process.env.RELEASE_TEST_RESULTS || '{}'),
-        runUrl: `${process.env.GITHUB_SERVER_URL}/${event.repository.full_name}/actions/runs/${process.env.GITHUB_RUN_ID}`,
-    };
+    const runUrl = `${process.env.GITHUB_SERVER_URL}/${event.repository.full_name}/actions/runs/${process.env.GITHUB_RUN_ID}`;
     const result = await publishRelease(githubApi, async (tag, files, repository) => {
         execFileSync('gh', ['release', 'upload', tag, ...files, '--repo', repository, '--clobber'], { stdio: 'inherit' });
-    }, event.repository.full_name, plan, assets, validation);
+    }, event.repository.full_name, plan, assets, runUrl);
     await appendFile(process.env.GITHUB_STEP_SUMMARY, `${result.alreadyPublished ? 'Already published' : 'Published'}: [Clutch-CS ${plan.tag}](${result.url})\n`);
 }
 

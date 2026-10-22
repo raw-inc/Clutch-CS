@@ -1,53 +1,25 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { releaseNotes, summarizeTests } from './release-notes.mjs';
-import { validationReport } from './validation.mjs';
+import { releaseNotes } from './release-notes.mjs';
 
-const passed = Object.fromEntries(validationReport({}).results.map(result => [result.id, 'success']));
-const plan = { tag: 'v1.2.3', prerelease: false };
 const runUrl = 'https://github.com/owner/project/actions/runs/12345';
 
-test('a group passes only when every included stage succeeds', () => {
-    assert.ok(summarizeTests(passed).every(result => result.outcome === 'success'));
-    for (const stage of Object.keys(passed)) {
-        const results = summarizeTests({ ...passed, [stage]: 'failure' });
-        assert.ok(results.some(result => result.outcome === 'failure'), stage);
+test('generated changes, contributors and changelog are preserved before the CI results link', () => {
+    const generated = "## What's Changed\n* Fix an update by @contributor in https://github.com/owner/project/pull/12\n\n"
+        + '## New Contributors\n* @contributor made their first contribution in https://github.com/owner/project/pull/12\n\n'
+        + '**Full Changelog**: https://github.com/owner/project/compare/v1.2.2...v1.2.3';
+    assert.equal(releaseNotes(generated + '\n\n', runUrl), `${generated}\n\n## Build Results\nCheck the CI results: ${runUrl}\n`);
+});
+
+test('releases without new contributors retain only the sections returned by GitHub', () => {
+    const generated = "## What's Changed\n* Another change\n\n**Full Changelog**: https://github.com/owner/project/compare/v1.2.3...v1.2.4";
+    assert.equal(releaseNotes(generated, runUrl), `${generated}\n\n## Build Results\nCheck the CI results: ${runUrl}\n`);
+});
+
+test('absent notes or CI context do not introduce placeholder release content', () => {
+    for (const generated of [undefined, '', '  \n']) {
+        assert.equal(releaseNotes(generated, runUrl), `## Build Results\nCheck the CI results: ${runUrl}\n`);
     }
-});
-
-test('mixed, cancelled and incomplete results are never reported as passing', () => {
-    for (const [overrides, expected] of [
-        [{ client_tests: 'skipped' }, 'partial'],
-        [{ unit_tests: 'skipped', client_tests: 'skipped', installer_tests: 'skipped' }, 'skipped'],
-        [{ client_tests: 'cancelled' }, 'cancelled'],
-        [{ client_tests: undefined }, 'unknown'],
-        [{ client_tests: 'unrecognized' }, 'unknown'],
-        [{ unit_tests: 'failure', client_tests: 'skipped' }, 'failure'],
-        [{ unit_tests: 'failure', client_tests: 'cancelled' }, 'failure'],
-        [{ unit_tests: 'failure', client_tests: undefined }, 'failure'],
-    ]) {
-        assert.equal(summarizeTests({ ...passed, ...overrides })[0].outcome, expected);
-    }
-    assert.ok(summarizeTests().every(result => result.outcome === 'unknown'));
-    assert.ok(summarizeTests(null).every(result => result.outcome === 'unknown'));
-});
-
-test('release notes show actual outcomes, matching downloads, CI details and generated changes', () => {
-    const notes = releaseNotes(plan, 'Generated changes\n\n- A change', {
-        outcomes: { ...passed, integration_tests: 'failure', performance_tests: 'skipped' }, runUrl,
-    });
-    assert.match(notes, /\| 結合テスト \| ❌ \|/u);
-    assert.match(notes, /\| パフォーマンステスト \| ➖ \|/u);
-    assert.ok(notes.includes(runUrl));
-    assert.ok(notes.includes(`Clutch-CS-Setup-${plan.tag}-win-x64.zip`));
-    assert.ok(notes.includes(`Clutch-CS-Source-${plan.tag}.zip`));
-    assert.ok(notes.includes('Generated changes\n\n- A change'));
-});
-
-test('missing results stay unconfirmed and prereleases are identified', () => {
-    const notes = releaseNotes({ tag: 'v1.2.3-alpha', prerelease: true }, 'Changes');
-    assert.match(notes, /プレリリース/u);
-    assert.match(notes, /\| ❔ \|/u);
-    assert.doesNotMatch(notes, /✅/u);
-    assert.doesNotMatch(releaseNotes(plan, 'Changes', { outcomes: passed }), /プレリリース/u);
+    assert.equal(releaseNotes('Generated changes\n'), 'Generated changes\n');
+    assert.equal(releaseNotes(), '');
 });
