@@ -340,7 +340,26 @@ jobs:
         if: github.event_name != 'workflow_dispatch' || !inputs.skip_package
         run: |
           $env:CLUTCH_TEST_PACKAGE = Join-Path $PWD 'artifacts/package/files'
-          dotnet test tests/ReArtWord.Contents.BackgroundService.Installer.Tests/ReArtWord.Contents.BackgroundService.Installer.Tests.csproj -c Release --no-build --no-restore --filter 'FullyQualifiedName~WindowsTwoPeerLifecycle|FullyQualifiedName~WindowsStandaloneWebClient' --settings eng/testing/ci.runsettings --logger trx --logger 'console;verbosity=normal' --results-directory artifacts/InstallTestResults
+          dotnet test tests/ReArtWord.Contents.BackgroundService.Installer.Tests/ReArtWord.Contents.BackgroundService.Installer.Tests.csproj -c Release --no-build --no-restore --filter 'FullyQualifiedName~RealInstallationTests|FullyQualifiedName~RealWebClientTests|FullyQualifiedName~RealWebClientUpdateTests' --settings eng/testing/ci.runsettings --logger trx --logger 'console;verbosity=normal' --results-directory artifacts/InstallTestResults -- RunConfiguration.TreatNoTestsAsError=true
+      - name: Summarize installation coverage
+        if: always() && steps.install_tests.outcome != 'skipped' && steps.install_tests.outcome != ''
+        run: |
+          $results = @(Get-ChildItem artifacts/InstallTestResults -Filter *.trx -ErrorAction SilentlyContinue | ForEach-Object {
+            [xml]$report = Get-Content -LiteralPath $_.FullName -Raw
+            $report.TestRun.Results.UnitTestResult
+          })
+          $summary = @('### Installation coverage', '', '| Test | Result | Detail |', '| --- | --- | --- |')
+          foreach ($result in $results | Sort-Object testName) {
+            $icon = switch ($result.outcome) { 'Passed' { '✅' } 'Failed' { '❌' } 'NotExecuted' { '➖' } default { '❔' } }
+            $name = [Net.WebUtility]::HtmlEncode([string]$result.testName).Replace('|', '&#124;')
+            $detail = [Net.WebUtility]::HtmlEncode([string]$result.Output.ErrorInfo.Message).Replace('|', '&#124;') -replace '\r?\n', '<br>'
+            $summary += "| $name | $icon | $detail |"
+          }
+          if ($results.Count -eq 0) { $summary += '| No test results were produced | ❔ | Installation coverage is unconfirmed. |' }
+          if (@($results | Where-Object outcome -eq 'NotExecuted').Count -gt 0) {
+            $summary += @('', '➖: Not verified in this environment. See the reasons above.')
+          }
+          ($summary -join "`n") + "`n" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
       - name: Verify installation without AVX2 in isolated processes
         id: avx2_tests
         continue-on-error: true
