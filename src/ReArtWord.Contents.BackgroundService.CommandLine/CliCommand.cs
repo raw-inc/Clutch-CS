@@ -106,6 +106,11 @@ internal sealed record CliCommand(Uri BaseAddress, string Name, string Path, Htt
             "update schedule-cancel" => ("/api/updates/schedules/cancel", HttpMethod.Post, true, false, true),
             "update schedule-status" => ("/api/updates/schedules/" + OperationIdentifier(options), HttpMethod.Get, false, false, false),
             "update schedule-operation" => ("/api/updates/schedules/operations/" + OperationIdentifier(options), HttpMethod.Get, false, false, false),
+            "archive export" => ("/api/archive/export", HttpMethod.Post, false, false, false),
+            "archive preview" => ("/api/archive/preview", HttpMethod.Post, false, false, false),
+            "archive import" => ("/api/archive/import", HttpMethod.Post, false, false, true),
+            "archive status" => ("/api/archive/operations/" + OperationIdentifier(options), HttpMethod.Get, false, false, false),
+            "archive reconcile" => ("/api/archive/operations/" + OperationIdentifier(options) + "/reconcile", HttpMethod.Post, false, false, true),
             "fleet preview" => ("/client/updates/preview", HttpMethod.Post, false, false, false),
             "fleet start" => ("/client/updates", HttpMethod.Post, true, false, true),
             "fleet list" => ("/client/updates", HttpMethod.Get, false, false, false),
@@ -136,10 +141,22 @@ internal sealed record CliCommand(Uri BaseAddress, string Name, string Path, Htt
         {
             allowed.Add("--id");
         }
+        string archivePrefix = "archive ";
+        bool archive = name.StartsWith(archivePrefix, StringComparison.Ordinal);
+        if (archive)
+        {
+            switch (name)
+            {
+                case "archive export": allowed.UnionWith(["--file", "--logs", "--operation-id"]); break;
+                case "archive preview": allowed.UnionWith(["--file", "--mode", "--operation-id"]); break;
+                case "archive import": allowed.UnionWith(["--id", "--confirmation"]); _ = OperationIdentifier(options); break;
+                default: allowed.Add("--id"); break;
+            }
+        }
         string keyCluster = "cluster ";
         string fileRecover = "file recover";
         string fleetReconcile = "fleet reconcile";
-        if (method != HttpMethod.Get && !string.Equals(name, fileRecover, StringComparison.Ordinal) && !string.Equals(name, fleetReconcile, StringComparison.Ordinal) && !secret && !name.StartsWith(keyCluster, StringComparison.Ordinal))
+        if (!archive && method != HttpMethod.Get && !string.Equals(name, fileRecover, StringComparison.Ordinal) && !string.Equals(name, fleetReconcile, StringComparison.Ordinal) && !secret && !name.StartsWith(keyCluster, StringComparison.Ordinal))
         {
             allowed.Add("--body");
         }

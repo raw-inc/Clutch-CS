@@ -61,7 +61,22 @@ internal static class WizardSummary
         }
         if (settings.Operation == EInstallerOperation.Repair)
         {
-            if (settings.Reinstall)
+            if (settings.Repair.RestoreArchive)
+            {
+                text.AppendLine(labels["ArchiveRestore"]);
+                text.AppendLine(settings.Repair.Archive.Path);
+                if (settings.Repair.Archive.Preview is { } preview)
+                {
+                    text.AppendLine(labels["ArchiveSource"] + ": " + preview.SourceCluster + " / " + preview.SourcePeer);
+                    text.AppendLine(labels["ArchiveAdded"] + ": " + string.Join(", ", preview.Added));
+                    text.AppendLine(labels["ArchiveReplaced"] + ": " + string.Join(", ", preview.Replaced));
+                    text.AppendLine(labels["ArchiveDeleted"] + ": " + string.Join(", ", preview.Deleted));
+                    text.AppendLine(labels["ArchiveLogs"] + ": " + preview.LogEntries.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                    text.AppendLine(labels["ArchiveRestoreHelp"]);
+                }
+                return text.ToString();
+            }
+            if (settings.Repair.Reinstall)
             {
                 text.AppendLine(labels["Reinstall"]);
                 string data = labels["KeepDb"];

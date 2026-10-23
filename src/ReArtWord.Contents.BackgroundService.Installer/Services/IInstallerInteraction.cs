@@ -11,6 +11,10 @@ internal interface IInstallerInteraction
     /// <returns>選択した絶対pathまたはnullです。</returns>
     public Task<string?> PickImageAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>復元するアーカイブを選択します。</summary>
+    /// <returns>選択した絶対パスまたはnullです。</returns>
+    public Task<string?> PickArchiveAsync(CancellationToken cancellationToken = default);
+
     /// <summary>このPCの再起動を明示要求します。</summary>
     /// <returns>要求完了です。</returns>
     public Task RestartAsync(CancellationToken cancellationToken = default);

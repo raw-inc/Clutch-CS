@@ -12,6 +12,61 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.CommandLine;
 /// <summary>HTTPサーバーを使い、Fleet UpdateのCLIコマンドと終了コードを検証します。</summary>
 public sealed class FleetCommandLineTests
 {
+    /// <summary>アーカイブとFleetの引数制約を保ち、不適切な指定では管理要求を送らないことを確認します。</summary>
+    /// <returns>入力エラーと、HTTP要求が送られていないことの検証。</returns>
+    [Theory]
+    [InlineData("archive", "export", "--body", "-")]
+    [InlineData("archive", "preview", "--body", "-")]
+    [InlineData("archive", "import", "--body", "-")]
+    [InlineData("archive", "reconcile", "--body", "-")]
+    [InlineData("archive", "reconcile", "--operation-id", "11111111-1111-4111-8111-111111111111")]
+    [InlineData("fleet", "reconcile", "--body", "-")]
+    [InlineData("fleet", "reconcile", "--operation-id", "11111111-1111-4111-8111-111111111111")]
+    [InlineData("fleet", "preview", "--cluster", "studio")]
+    public async Task CommandOptionsAreRejectedBeforeSendingRequests(string family, string action, string option, string value)
+    {
+        WebApplicationBuilder builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.Logging.ClearProviders();
+        WebApplication app = builder.Build();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = app.ConfigureAwait(true);
+        int requests = 0;
+        app.MapFallback(() =>
+        {
+            Interlocked.Increment(ref requests);
+            return Results.BadRequest();
+        });
+        await app.StartAsync().ConfigureAwait(true);
+        List<string> arguments = [family, action];
+        string archive = "archive";
+        if (string.Equals(family, archive, StringComparison.Ordinal))
+        {
+            arguments.AddRange(["--cluster", "studio", "--peer", "screen-a"]);
+            switch (action)
+            {
+                case "export" or "preview": arguments.AddRange(["--file", "archive.zip"]); break;
+                case "import": arguments.AddRange(["--confirmation", "confirmed-preview"]); break;
+            }
+        }
+        else
+        {
+            string preview = "preview";
+            if (string.Equals(action, preview, StringComparison.Ordinal))
+            {
+                arguments.AddRange(["--body", "-"]);
+            }
+        }
+        string import = "import", reconcile = "reconcile";
+        if (string.Equals(action, import, StringComparison.Ordinal) || string.Equals(action, reconcile, StringComparison.Ordinal))
+        {
+            arguments.AddRange(["--id", Guid.NewGuid().ToString("D")]);
+        }
+        arguments.AddRange([option, value]);
+        (int code, _) = await RunAsync(app.Urls.Single(), arguments.ToArray(), "{}").ConfigureAwait(true);
+        Assert.Equal(2, code);
+        Assert.Equal(0, requests);
+    }
+
     /// <summary>Coreを個別に指定せずに計画を作成し、同じ操作IDで開始・照会できることを確認します。</summary>
     /// <returns>CLIの送信内容と終了コードの検証。</returns>
     [Fact]

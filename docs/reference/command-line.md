@@ -17,6 +17,8 @@ dotnet run --project src/ReArtWord.Contents.BackgroundService.CommandLine -- --u
 
 `--body -` は標準入力、`--body path.json` は UTF-8 ファイルを読みます。
 
+アーカイブの対象範囲、復元手順と結果不明時の確認方法は[クラスターの設定を保存・復元する](../guides/cluster-archive.md)を参照してください。
+
 | コマンド | 引数/本文 |
 |---|---|
 | `network get` | 自身のNIC/IPと全監視の待受状態。`bindings` に割当ごとの状態。クラスター・ピアの指定は不要 |
@@ -24,6 +26,10 @@ dotnet run --project src/ReArtWord.Contents.BackgroundService.CommandLine -- --u
 | `cluster list` | 受信したクラスター・ピアの候補。クラスター・ピアの指定は不要 |
 | `request status` | `--id request-guid`。ClientHost が保持する元の要求の結果。クラスター・ピアの指定は不要 |
 | `status`, `catalog` | 本文なし |
+| `archive export` | `--file path.zip`、任意の `--logs true`、`--operation-id`。完成したZIPを保存 |
+| `archive preview` | `--file path.zip`、`--mode merge\|replace`（省略時merge）、任意の `--operation-id`。追加・上書き・削除されるWFを確認 |
+| `archive import` | `--id operation-guid --confirmation token`。事前確認で返された操作IDと確認トークンを指定して復元 |
+| `archive status`, `archive reconcile` | `--id operation-guid`。復元の進捗・結果の表示／結果不明の操作の再確認 |
 | `workflow list` | 本文なし。軽量な最初のページ（entries,cursor） |
 | `workflow query` | `--body` にlimit/cursor/maximumBytes。次のページを明示取得 |
 | `workflow definition-chunk` | `--body` に `id`・`revision`・`effective`・`offset`・`length` を指定。最大65536 バイト断片 |

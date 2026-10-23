@@ -66,6 +66,11 @@ internal static class WizardExecution
         {
             throw new InvalidDataException(state.Text("Select at least one target.", "対象を1つ以上選んでください。"));
         }
+        if (state.Operation == EInstallerOperation.Repair && state.Repair.RestoreArchive)
+        {
+            await InstallerArchive.PrepareAsync(state, cancellationToken).ConfigureAwait(false);
+            return;
+        }
         if (state.Operation == EInstallerOperation.Update && state.SelectedWebClients.Count != 0)
         {
             string payload = Path.Combine(state.Package, "client");
@@ -77,7 +82,7 @@ internal static class WizardExecution
                 _ = await WebClientUpdateProbe.ReadAsync(client.Installation, cancellationToken).ConfigureAwait(false);
             }
         }
-        if (state.Operation == EInstallerOperation.Uninstall || (state.Operation == EInstallerOperation.Repair && state.Reinstall))
+        if (state.Operation == EInstallerOperation.Uninstall || (state.Operation == EInstallerOperation.Repair && state.Repair.Reinstall))
         {
             for (int index = 0; index < state.Selected.Count; index++)
             {
@@ -86,7 +91,7 @@ internal static class WizardExecution
                 state.Selected[index] = target with { Installation = record };
             }
         }
-        if (state.Operation == EInstallerOperation.Repair && state.Reinstall && !state.KeepDatabase)
+        if (state.Operation == EInstallerOperation.Repair && state.Repair.Reinstall && !state.KeepDatabase)
         {
             foreach (ObservedTarget target in state.Selected)
             {
@@ -106,6 +111,10 @@ internal static class WizardExecution
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(progress);
+        if (state.Operation == EInstallerOperation.Repair && state.Repair.RestoreArchive)
+        {
+            return await InstallerArchive.ExecuteAsync(state, progress, cancellationToken).ConfigureAwait(false);
+        }
         StringBuilder report = new();
         StringBuilder details = new();
         if (state.Operation == EInstallerOperation.Install)
@@ -141,7 +150,7 @@ internal static class WizardExecution
             try
             {
                 SetupResult result;
-                if (state.Operation == EInstallerOperation.Repair && !state.Reinstall)
+                if (state.Operation == EInstallerOperation.Repair && !state.Repair.Reinstall)
                 {
                     result = await AutomaticRepair.RunAsync(target, cancellationToken).ConfigureAwait(false);
                 }

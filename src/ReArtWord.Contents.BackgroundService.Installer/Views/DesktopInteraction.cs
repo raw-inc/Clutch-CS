@@ -40,6 +40,22 @@ internal sealed class DesktopInteraction : IInstallerInteraction
         return files[0].TryGetLocalPath();
     }
 
+    /// <summary>ZIP用の標準ファイル選択を開きます。</summary>
+    /// <returns>選択パスまたはnullです。</returns>
+    public async Task<string?> PickArchiveAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        IReadOnlyList<IStorageFile> files = await window.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            AllowMultiple = false, FileTypeFilter = [new FilePickerFileType("Clutch-CS archive (ZIP)") { Patterns = ["*.zip"] }],
+        }).ConfigureAwait(true);
+        if (files.Count == 0)
+        {
+            return null;
+        }
+        return files[0].TryGetLocalPath();
+    }
+
     /// <summary>明示確認後のWindows再起動を要求します。</summary>
     /// <returns>OSへの要求完了です。</returns>
     public async Task RestartAsync(CancellationToken cancellationToken = default)

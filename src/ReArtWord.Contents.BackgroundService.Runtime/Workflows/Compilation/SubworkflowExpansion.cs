@@ -8,7 +8,7 @@ using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 namespace ReArtWord.Contents.BackgroundService.Runtime.Workflows.Compilation;
 
 /// <summary>レシピを配置先のグラフへ展開し、別WF実行へ制御を移しません。</summary>
-internal sealed class SubworkflowExpansion(NodeRegistry registry, string workflowId)
+internal sealed class SubworkflowExpansion(NodeRegistry registry, string workflowId, IReadOnlyDictionary<string, WorkflowDefinition>? context = null)
 {
     private readonly List<NodeDefinition> nodes = [];
     private readonly List<WireDefinition> wires = [];
@@ -34,11 +34,11 @@ internal sealed class SubworkflowExpansion(NodeRegistry registry, string workflo
     /// <summary>公開契約と展開上限を確認してから通常のコンパイラーへ渡します。</summary>
     /// <returns>保存元と展開後を分離した不変の実行計画です。</returns>
     internal static CompilationResult Compile(WorkflowDefinition definition, NodeRegistry registry,
-        Func<WorkflowDefinition, IReadOnlyDictionary<string, IReadOnlyList<string>>, CompilationResult> compile)
+        Func<WorkflowDefinition, IReadOnlyDictionary<string, IReadOnlyList<string>>, CompilationResult> compile, IReadOnlyDictionary<string, WorkflowDefinition>? context = null)
     {
         try
         {
-            SubworkflowExpansion expansion = new(registry, definition.Id);
+            SubworkflowExpansion expansion = new(registry, definition.Id, context);
             expansion.Visit(definition, null, null);
             WorkflowDefinition expanded = definition with { Nodes = expansion.nodes.ToArray(), Wires = expansion.wires.ToArray(), ContainsPersonalData = definition.ContainsPersonalData || expansion.personal };
             if (1048576 < JsonSerializer.SerializeToUtf8Bytes(expanded, ContractJson.Options).Length)
@@ -151,7 +151,15 @@ internal sealed class SubworkflowExpansion(NodeRegistry registry, string workflo
         }
         if (!definitions.TryGetValue(target, out WorkflowDefinition? definition))
         {
-            definition = registry.Dynamic?.Definition(target) ?? throw new FormatException("Recipe is unavailable.");
+            definition = context?.GetValueOrDefault(target);
+            if (context is null)
+            {
+                definition = registry.Dynamic?.Definition(target);
+            }
+            if (definition is null)
+            {
+                throw new FormatException("Recipe is unavailable.");
+            }
             definitions[target] = ContractJson.Copy(definition);
         }
         return definitions[target];
