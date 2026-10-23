@@ -12,7 +12,7 @@ namespace ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Arch
 public static class ClusterArchiveFile
 {
     /// <summary>一回の転送と展開内容の上限です。</summary>
-    public static long MaximumBytes => 1073741824;
+    public static long MaximumBytes => ArchiveTransferLimits.MaximumBytes;
     private static int ConfigurationBytes => 16777216;
     private static int LogPartBytes => 1048576;
     private static int MaximumParts => 4096;

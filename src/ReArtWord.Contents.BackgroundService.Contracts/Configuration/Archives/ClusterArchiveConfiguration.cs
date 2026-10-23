@@ -12,5 +12,6 @@ namespace ReArtWord.Contents.BackgroundService.Contracts.Configuration.Archives;
 /// <param name="Operational">共通運用設定の保存版と有効版です。</param>
 /// <param name="Workflows">草稿と有効状態を区別したワークフローです。</param>
 /// <param name="IncludesLogs">保持中のログ本文・履歴を含むかです。</param>
+/// <param name="LogPeers">ログを取得した固定ピア集合です。</param>
 public sealed record ClusterArchiveConfiguration(int FormatVersion, DateTimeOffset CapturedAt, string ClusterId, string PeerId,
-    ClusterOperationalState Operational, IReadOnlyList<ArchivedWorkflow> Workflows, bool IncludesLogs);
+    ClusterOperationalState Operational, IReadOnlyList<ArchivedWorkflow> Workflows, bool IncludesLogs, IReadOnlyList<string>? LogPeers = null);

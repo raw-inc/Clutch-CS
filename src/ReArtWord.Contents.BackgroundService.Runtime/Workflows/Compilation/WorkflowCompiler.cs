@@ -50,6 +50,19 @@ public sealed class WorkflowCompiler
     public CompilationResult Compile(WorkflowDefinition definition)
         => Compile(definition, new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal));
 
+    /// <summary>一括取込み後の参照集合で検証し、稼働中のレシピカタログを変更しません。</summary>
+    /// <returns>指定した集合だけで解決した計画または問題です。</returns>
+    public CompilationResult CompileInContext(WorkflowDefinition definition, IReadOnlyDictionary<string, WorkflowDefinition>? definitions)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+        if (definitions is not null && definition.Nodes is not null && definition.Wires is not null
+            && definition.Nodes.Any(node => node?.Type is not null && SubworkflowInterface.Target(node.Type) is not null))
+        {
+            return SubworkflowExpansion.Compile(definition, registry, Compile, definitions);
+        }
+        return Compile(definition);
+    }
+
     /// <summary>展開した公開入力を反復内の配置へ引き継いで検証します。</summary>
     /// <returns>通常の配線とレシピの反復範囲を照合した計画です。</returns>
     private CompilationResult Compile(WorkflowDefinition definition, IReadOnlyDictionary<string, IReadOnlyList<string>> recipeInputs)

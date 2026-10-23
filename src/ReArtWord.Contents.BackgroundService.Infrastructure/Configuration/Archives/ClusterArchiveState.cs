@@ -27,7 +27,7 @@ internal sealed class ClusterArchiveState(PeerCluster cluster, WorkflowStore wor
 
     /// <summary>内容の版、適用方針、実有効版も含めて変更前に検証します。</summary>
     /// <returns>取り込みを妨げる問題です。</returns>
-    internal async Task<IReadOnlyList<ValidationIssue>> ValidateAsync(ClusterArchiveConfiguration configuration, CancellationToken cancellationToken = default)
+    internal async Task<IReadOnlyList<ValidationIssue>> ValidateAsync(ClusterArchiveConfiguration configuration, ClusterArchiveConfiguration? desired = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(configuration);
         List<ValidationIssue> issues = [];
@@ -36,8 +36,16 @@ internal sealed class ClusterArchiveState(PeerCluster cluster, WorkflowStore wor
             return [new("Archive.Format", "対応していない形式、または設定が欠けたアーカイブです。")];
         }
         issues.AddRange(await operational.SnapshotParticipant.ValidateAsync(Contracts.Nodes.NodeValue.FromObject(configuration.Operational), cancellationToken).ConfigureAwait(false));
+        if (configuration.Operational.Saved is null || configuration.Operational.Effective is null
+            || 0 < configuration.Operational.Saved.UnresolvedFields?.Count || 0 < configuration.Operational.Effective.UnresolvedFields?.Count)
+        {
+            issues.Add(new("Archive.OperationalUnconfirmed", "共通設定の保存版・有効版が未確認、または競合が残っています。"));
+        }
+        Dictionary<string, Contracts.Workflow.WorkflowDefinition> recipes = (desired ?? configuration).Workflows.Where(item => item?.Effective?.Nodes is not null)
+            .Select(item => item.Effective!).Where(Contracts.Workflow.SubworkflowInterface.IsSubworkflow).GroupBy(item => item.Id, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
         HashSet<string> ids = new(StringComparer.Ordinal);
-        foreach (ArchivedWorkflow item in configuration.Workflows)
+        foreach (ArchivedWorkflow item in (desired ?? configuration).Workflows)
         {
             if (item?.Saved?.Definition is null)
             {
@@ -51,14 +59,14 @@ internal sealed class ClusterArchiveState(PeerCluster cluster, WorkflowStore wor
             {
                 issues.Add(new("Archive.WorkflowIdentity", "ワークフローの識別子、版、保存状態が不正です。"));
             }
-            issues.AddRange(workflows.Validate(saved.Definition));
+            issues.AddRange(workflows.Validate(saved.Definition, recipes));
             if (item.Effective is not null)
             {
                 if (!string.Equals(saved.Definition.Id, item.Effective.Id, StringComparison.Ordinal))
                 {
                     issues.Add(new("Archive.EffectiveIdentity", "保存版と有効版のワークフロー識別子が一致しません。"));
                 }
-                issues.AddRange(workflows.Validate(item.Effective));
+                issues.AddRange(workflows.Validate(item.Effective, recipes));
             }
         }
         return issues;
@@ -73,6 +81,8 @@ internal sealed class ClusterArchiveState(PeerCluster cluster, WorkflowStore wor
         {
             Saved = configuration.Operational.Saved?.Settings,
             Effective = configuration.Operational.Effective?.Settings,
+            SavedUnresolved = configuration.Operational.Saved?.UnresolvedFields,
+            EffectiveUnresolved = configuration.Operational.Effective?.UnresolvedFields,
             configuration.Operational.SavedActivationPolicy,
             Workflows = configuration.Workflows.OrderBy(item => item.Saved.Definition.Id, StringComparer.Ordinal)
                 .Select(item => new { item.Saved.Definition, item.Saved.ActivationPolicy, item.Effective }),

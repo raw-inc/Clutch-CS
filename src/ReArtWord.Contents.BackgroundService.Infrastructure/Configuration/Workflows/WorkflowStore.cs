@@ -327,7 +327,7 @@ public sealed class WorkflowStore
 
     /// <summary>復元候補にも通常と同じ意味検証を適用します。</summary>
     /// <returns>設定・接続の検証指摘。</returns>
-    internal IReadOnlyList<ValidationIssue> Validate(WorkflowDefinition definition) => compiler.Compile(definition).Issues;
+    internal IReadOnlyList<ValidationIssue> Validate(WorkflowDefinition definition, IReadOnlyDictionary<string, WorkflowDefinition>? context = null) => compiler.CompileInContext(definition, context).Issues;
 
     /// <summary>同じスナップショット識別子を別種類の設定で使用させません。</summary>
     internal void ReserveConfigurationId(string id) => configurationIds.TryAdd(id, 0);
