@@ -165,7 +165,7 @@ internal sealed class MediaConverterNode : IFileFootprintNode
             started = true;
             stage = "conversion";
             _ = await MediaProcess.RunAsync(options, options.FfmpegPath, arguments, stage, linked.Token).ConfigureAwait(false);
-            stage = "output-validation";
+            stage = "output";
             return await MediaOutputFile.CommitAsync(options, context, temporary, output, MediaType(format), kind, "media", linked.Token).ConfigureAwait(false);
         }
         catch (ProcessStopUnconfirmedException exception)

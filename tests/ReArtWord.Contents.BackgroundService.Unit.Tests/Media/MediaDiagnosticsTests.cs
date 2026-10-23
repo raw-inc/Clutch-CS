@@ -60,6 +60,23 @@ public sealed class MediaDiagnosticsTests(ITestOutputHelper testOutput)
         Assert.False(File.Exists(Path.Combine(files.Root, "wrong.mp3")));
     }
 
+    /// <summary>生成物の検証後に保存先を失った場合は、検証失敗と区別して記録します。</summary>
+    /// <returns>確定時のファイル例外と、未確定の生成物を保持する確認です。</returns>
+    [Fact]
+    public async Task OutputCommitReportsFileFailureAsync()
+    {
+        using MediaTestFiles files = new(testOutput);
+        string wave = await files.CreateAsync("audio").ConfigureAwait(true);
+        List<string> reports = [];
+        MediaOptions options = Observe(files.Options, reports);
+        string output = Path.Combine(files.Root, "missing", "output.wav");
+        NodeExecutionContext context = NodeTestContext.Create(JsonSerializer.Serialize(new { outputPath = output }), NodeValue.FromObject(wave));
+        await Assert.ThrowsAsync<DirectoryNotFoundException>(() => MediaOutputFile.CommitAsync(options, context, wave, output, "audio/wav", "audio")).ConfigureAwait(true);
+        Assert.Contains(reports, report => report.StartsWith("[output-commit]", StringComparison.Ordinal) && report.Contains(nameof(DirectoryNotFoundException), StringComparison.Ordinal));
+        Assert.True(File.Exists(wave));
+        Assert.False(File.Exists(output));
+    }
+
     /// <summary>診断先が失敗しても、生成物の検証と確定を完了します。</summary>
     /// <returns>診断を任意に追加しても正常な変換が失敗しないことです。</returns>
     [Fact]
