@@ -8,6 +8,23 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Processes;
 /// <summary>実プロセスの標準pipeで文字境界、長い出力、無出力時の取消を確認します。</summary>
 public sealed class BoundedProcessRunnerTests
 {
+    /// <summary>診断追加前にコンパイルした呼出しが使う、七引数の構築と分解代入を維持します。</summary>
+    [Fact]
+    public void DiagnosticsPreserveCommandLimitsBinaryContract()
+    {
+        Type[] parameters = [typeof(int), typeof(bool), typeof(long?), typeof(string), typeof(string), typeof(System.Text.Encoding), typeof(IReadOnlyDictionary<string, string>)];
+        System.Reflection.ConstructorInfo? constructor = typeof(ProcessRunLimits).GetConstructor(parameters);
+        Assert.NotNull(constructor);
+        ProcessRunLimits limits = Assert.IsType<ProcessRunLimits>(constructor.Invoke([12345, true, null, null, null, null, null]));
+        System.Reflection.MethodInfo? deconstruct = typeof(ProcessRunLimits).GetMethod("Deconstruct", parameters.Select(parameter => parameter.MakeByRefType()).ToArray());
+        Assert.NotNull(deconstruct);
+        object?[] values = new object?[parameters.Length];
+        deconstruct.Invoke(limits, values);
+        Assert.Equal(12345, values[0]);
+        Assert.True(Assert.IsType<bool>(values[1]));
+        Assert.Null(limits.DiagnosticOutput);
+    }
+
     /// <summary>本体の正常終了後に子孫がpipeを保持していても、受信済みの出力を失いません。</summary>
     /// <returns>本体の終了と、pipeの読取り期限を別々に扱う確認です。</returns>
     [Theory]
@@ -32,7 +49,7 @@ public sealed class BoundedProcessRunnerTests
         await File.WriteAllTextAsync(config, mode).ConfigureAwait(true);
         using CancellationTokenSource cancellation = new(TimeSpan.FromSeconds(15));
         List<string> diagnostics = [];
-        Task<string> running = BoundedProcessRunner.RunAsync(Executable(), ["--config", config], new ProcessRunLimits(DiagnosticOutput: diagnostics.Add), cancellation.Token);
+        Task<string> running = BoundedProcessRunner.RunAsync(Executable(), ["--config", config], new ProcessRunLimits { DiagnosticOutput = diagnostics.Add }, cancellation.Token);
         Process? child = null;
         try
         {
@@ -82,7 +99,7 @@ public sealed class BoundedProcessRunnerTests
         await File.WriteAllTextAsync(config, failed ? "diagnostic-failure"
                                                     : "diagnostic-success").ConfigureAwait(true);
         List<string> diagnostics = [];
-        Task<string> running = BoundedProcessRunner.RunAsync(Executable(), ["--config", config], new ProcessRunLimits(DiagnosticOutput: diagnostics.Add));
+        Task<string> running = BoundedProcessRunner.RunAsync(Executable(), ["--config", config], new ProcessRunLimits { DiagnosticOutput = diagnostics.Add });
         if (failed)
         {
             await Assert.ThrowsAsync<InvalidDataException>(() => running).ConfigureAwait(true);
@@ -115,7 +132,7 @@ public sealed class BoundedProcessRunnerTests
         string config = Path.Combine(files.Root, "diagnostics.txt");
         await File.WriteAllTextAsync(config, failed ? "7"
                                                     : "0").ConfigureAwait(true);
-        Task<string> running = BoundedProcessRunner.RunAsync(Executable(), ["--config", config], new ProcessRunLimits(DiagnosticOutput: _ => throw new InvalidOperationException("diagnostic sink failed")));
+        Task<string> running = BoundedProcessRunner.RunAsync(Executable(), ["--config", config], new ProcessRunLimits { DiagnosticOutput = _ => throw new InvalidOperationException("diagnostic sink failed") });
         if (failed)
         {
             await Assert.ThrowsAsync<InvalidDataException>(() => running).ConfigureAwait(true);
@@ -133,7 +150,7 @@ public sealed class BoundedProcessRunnerTests
     {
         using MediaTestFiles files = new();
         List<string> diagnostics = [];
-        await Assert.ThrowsAsync<FileNotFoundException>(() => BoundedProcessRunner.RunAsync(Path.Combine(files.Root, "missing.exe"), [], new ProcessRunLimits(DiagnosticOutput: diagnostics.Add))).ConfigureAwait(true);
+        await Assert.ThrowsAsync<FileNotFoundException>(() => BoundedProcessRunner.RunAsync(Path.Combine(files.Root, "missing.exe"), [], new ProcessRunLimits { DiagnosticOutput = diagnostics.Add })).ConfigureAwait(true);
         string report = Assert.Single(diagnostics);
         Assert.Contains("exitCode=unavailable", report, StringComparison.Ordinal);
         Assert.Contains(nameof(FileNotFoundException), report, StringComparison.Ordinal);
@@ -177,7 +194,7 @@ public sealed class BoundedProcessRunnerTests
         await File.WriteAllTextAsync(config, "wait");
         using CancellationTokenSource cancellation = new(TimeSpan.FromSeconds(10));
         List<string> diagnostics = [];
-        Task<string> running = BoundedProcessRunner.RunAsync(Executable(), ["--config", config], new ProcessRunLimits(DiagnosticOutput: diagnostics.Add), cancellation.Token);
+        Task<string> running = BoundedProcessRunner.RunAsync(Executable(), ["--config", config], new ProcessRunLimits { DiagnosticOutput = diagnostics.Add }, cancellation.Token);
         Process? child = null;
         try
         {

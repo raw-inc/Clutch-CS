@@ -14,7 +14,7 @@ internal static class MediaProcess
         {
             return BoundedProcessRunner.RunAsync(executable, arguments, cancellationToken);
         }
-        return BoundedProcessRunner.RunAsync(executable, arguments, new ProcessRunLimits(DiagnosticOutput: message => Write(options, stage, message)), cancellationToken);
+        return BoundedProcessRunner.RunAsync(executable, arguments, new ProcessRunLimits { DiagnosticOutput = message => Write(options, stage, message) }, cancellationToken);
     }
 
     /// <summary>利用者向けの一般メッセージへ変換する前に、元の例外を診断先へ残します。</summary>
