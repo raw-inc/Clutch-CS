@@ -13,6 +13,35 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.CommandLine;
 /// <summary>実HTTP経由でCLIの送信と終了結果を確認します。</summary>
 public sealed class CommandLineTests
 {
+    /// <summary>不正なZIP断片で例外終了せず、保存途中のファイルを完成品として残しません。</summary>
+    /// <returns>全体ハッシュ不一致時の終了コードと後始末です。</returns>
+    [Fact]
+    public async Task ArchiveHashMismatchDoesNotLeaveACompletedFile()
+    {
+        WebApplication app = Create();
+        await using ConfiguredAsyncDisposable lifetime = app.ConfigureAwait(true);
+        Guid operation = Guid.NewGuid();
+        string hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(new byte[] { 1 }));
+        app.MapPost("/api/archive/export", () => Results.Ok(new { operationId = operation, stage = "completed", completed = true, outcome = "succeeded",
+            file = new { operationId = operation, length = 1, sha256 = hash } }));
+        app.MapPost("/api/archive/read", () => Results.Ok(new { operationId = operation, offset = 0, dataBase64 = "Ag==" }));
+        await app.StartAsync().ConfigureAwait(true);
+        string path = Path.Combine(Path.GetTempPath(), "ClutchArchive-" + operation.ToString("N") + ".zip");
+        try
+        {
+            (int code, _, string error) = await RunAsync(["--url", app.Urls.Single(), "archive", "export", "--file", path, "--operation-id", operation.ToString("D")]).ConfigureAwait(true);
+            Assert.Equal(2, code);
+            Assert.Contains(nameof(InvalidDataException), error, StringComparison.Ordinal);
+            Assert.False(File.Exists(path));
+            Assert.False(File.Exists(path + ".partial-" + operation.ToString("N")));
+        }
+        finally
+        {
+            File.Delete(path);
+            File.Delete(path + ".partial-" + operation.ToString("N"));
+        }
+    }
+
     /// <summary>接続先の状態取得と同一操作IDの本文・照会を確認します。</summary>
     /// <returns>試験が終了するまでの非同期処理。</returns>
     [Fact]

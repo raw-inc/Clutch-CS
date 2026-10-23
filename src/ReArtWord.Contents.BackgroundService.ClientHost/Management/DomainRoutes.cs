@@ -6,6 +6,14 @@ internal static class DomainRoutes
     /// <summary>HTTPはローカル画面の境界に限定し、CoreのHTTP待受を使用しません。</summary>
     public static void Map(WebApplication app)
     {
+        ManagementFacade.MapRoute(app, "POST", "/api/archive/export", "archive.export", body: true);
+        ManagementFacade.MapRoute(app, "POST", "/api/archive/upload/begin", "archive.upload.begin", body: true);
+        ManagementFacade.MapRoute(app, "POST", "/api/archive/upload/chunk", "archive.upload.chunk", body: true);
+        ManagementFacade.MapRoute(app, "POST", "/api/archive/preview", "archive.preview", body: true);
+        ManagementFacade.MapRoute(app, "POST", "/api/archive/import", "archive.import", body: true);
+        ManagementFacade.MapRoute(app, "GET", "/api/archive/operations/{id:guid}", "archive.operation", readOnly: true, id: "id");
+        ManagementFacade.MapRoute(app, "POST", "/api/archive/read", "archive.read", readOnly: true, body: true);
+        ManagementFacade.MapRoute(app, "POST", "/api/archive/operations/{id:guid}/reconcile", "archive.reconcile", id: "id");
         ManagementFacade.MapRoute(app, "POST", "/api/previews/list", "previews.list", readOnly: true, body: true);
         ManagementFacade.MapRoute(app, "POST", "/api/previews/history", "previews.history", readOnly: true, body: true);
         ManagementFacade.MapRoute(app, "POST", "/api/previews/chunk", "previews.chunk", readOnly: true, body: true);
