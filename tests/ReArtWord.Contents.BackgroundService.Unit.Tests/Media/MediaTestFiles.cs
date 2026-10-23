@@ -2,20 +2,30 @@ using System.Diagnostics;
 using ReArtWord.Contents.BackgroundService.Contracts.Files;
 using ReArtWord.Contents.BackgroundService.Nodes.Media;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 
 /// <summary>実ffmpegを使用する小さな媒体試験用の構成を管理します。</summary>
 internal sealed class MediaTestFiles : IDisposable
 {
+    private readonly ITestOutputHelper? testOutput;
+
     /// <summary>専用の一時rootと明示された実行物を用意します。</summary>
-    internal MediaTestFiles()
+    internal MediaTestFiles(ITestOutputHelper? output = null)
     {
+        testOutput = output;
         Root = Path.Combine(Path.GetTempPath(), "contents-media-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Root);
         string ffmpeg = Environment.GetEnvironmentVariable("CONTENTS_TEST_FFMPEG") ?? "C:/opt/ffmpeg/current/bin/ffmpeg.exe";
         string ffprobe = Environment.GetEnvironmentVariable("CONTENTS_TEST_FFPROBE") ?? "C:/opt/ffmpeg/current/bin/ffprobe.exe";
-        Options = new MediaOptions(ffmpeg, ffprobe, new FileSystemOptions([Root]));
+        Action<string>? diagnostic = null;
+        if (output is not null)
+        {
+            diagnostic = output.WriteLine;
+            output.WriteLine(FormattableString.Invariant($"[media-fixture] runtime={Environment.Version}; processors={Environment.ProcessorCount}"));
+        }
+        Options = new MediaOptions(ffmpeg, ffprobe, new FileSystemOptions([Root])) { DiagnosticOutput = diagnostic };
     }
 
     /// <summary>この試験用の構成だけの許可ルートです。</summary>
@@ -59,6 +69,7 @@ internal sealed class MediaTestFiles : IDisposable
         Assert.True(process.Start());
         string error = await process.StandardError.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
         await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        testOutput?.WriteLine(FormattableString.Invariant($"[fixture-generation]\nexecutable={Options.FfmpegPath}\nexitCode={process.ExitCode}\nstderr:\n{error[..Math.Min(error.Length, 16384)]}"));
         Assert.True(process.ExitCode == 0, error);
         return path;
     }

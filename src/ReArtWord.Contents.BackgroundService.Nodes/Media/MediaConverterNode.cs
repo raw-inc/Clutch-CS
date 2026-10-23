@@ -137,6 +137,7 @@ internal sealed class MediaConverterNode : IFileFootprintNode
         }
         string? temporary = null;
         bool started = false;
+        string stage = "prepare";
         try
         {
             NodeSettings settings = new(context.Settings);
@@ -155,22 +156,27 @@ internal sealed class MediaConverterNode : IFileFootprintNode
             temporary = MediaArtifact.TemporaryPath(options, output, allowExisting: true);
             using CancellationTokenSource timeout = new(TimeSpan.FromMilliseconds(settings.ReadInt32("timeoutMs", 300000)));
             using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, cancellationToken);
+            stage = "input-probe";
             _ = await MediaArtifact.ProbeAsync(options, input, kind, linked.Token).ConfigureAwait(false);
             string format = settings.ReadText("format")!;
             List<string> arguments = Arguments(input, temporary, settings, format);
             policy.ValidatePath(input);
             policy.ValidatePath(temporary);
             started = true;
-            _ = await BoundedProcessRunner.RunAsync(options.FfmpegPath, arguments, linked.Token).ConfigureAwait(false);
+            stage = "conversion";
+            _ = await MediaProcess.RunAsync(options, options.FfmpegPath, arguments, stage, linked.Token).ConfigureAwait(false);
+            stage = "output-validation";
             return await MediaOutputFile.CommitAsync(options, context, temporary, output, MediaType(format), kind, "media", linked.Token).ConfigureAwait(false);
         }
-        catch (ProcessStopUnconfirmedException)
+        catch (ProcessStopUnconfirmedException exception)
         {
+            MediaProcess.Failed(options, stage, exception);
             temporary = null;
             return NodeResult.Failure("media.stopUnconfirmed", "メディア処理の停止を確認できません。", EOutcome.Unknown);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException exception)
         {
+            MediaProcess.Failed(options, stage, exception);
             if (cancellationToken.IsCancellationRequested)
             {
                 return NodeResult.Failure("media.cancelled", "メディア処理を停止しました。", EOutcome.Cancelled);
@@ -179,6 +185,7 @@ internal sealed class MediaConverterNode : IFileFootprintNode
         }
         catch (Exception exception) when (exception is InvalidDataException or IOException or UnauthorizedAccessException or ArgumentException or JsonException or System.ComponentModel.Win32Exception)
         {
+            MediaProcess.Failed(options, stage, exception);
             EOutcome outcome = EOutcome.NotExecuted;
             if (started)
             {

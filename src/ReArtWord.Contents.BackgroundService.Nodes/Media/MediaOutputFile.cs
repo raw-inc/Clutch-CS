@@ -48,6 +48,7 @@ internal static class MediaOutputFile
         }
         catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException or NotSupportedException)
         {
+            MediaProcess.Failed(media, "output-prepare", error);
             return NodeResult.Failure(prefix + ".outputPathInvalid", "出力先の絶対パス・OSアクセス権・リンク境界を確認してください。", EOutcome.NotExecuted);
         }
     }
@@ -75,6 +76,7 @@ internal static class MediaOutputFile
         }
         catch (IOException error) when (FileOutputPolicy.IsLock(error))
         {
+            MediaProcess.Failed(media, "output-commit", error);
             return FileOutputPolicy.Locked(context, output, EOutcome.Failed, prefix);
         }
         catch (IOException) when (skip && File.Exists(output) && !Directory.Exists(output))

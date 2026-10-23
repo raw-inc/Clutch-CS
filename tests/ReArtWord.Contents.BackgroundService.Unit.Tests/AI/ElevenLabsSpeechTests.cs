@@ -9,17 +9,18 @@ using ReArtWord.Contents.BackgroundService.Unit.Tests.Data;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Workflows;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.AI;
 
 /// <summary>ElevenLabsの両モデル、認証、固定MP3および失敗境界を実HTTPで検証します。</summary>
-public sealed class ElevenLabsSpeechTests
+public sealed class ElevenLabsSpeechTests(ITestOutputHelper testOutput)
 {
     /// <summary>独立した音声生成ノードに二つの対応モデルだけを公開します。</summary>
     [Fact]
     public void CatalogExposesTwoModelsAndOnlyTheArtifactOutput()
     {
-        using MediaTestFiles files = new();
+        using MediaTestFiles files = new(testOutput);
         NodeDescriptor descriptor = Assert.Single(AiNodeRegistration.Create(new AiTestSecrets(), new(), files.Options), node => string.Equals(node.Descriptor.Type, "ai.audio.elevenlabs.generate", StringComparison.Ordinal)).Descriptor;
         Assert.Equal("AudioGeneration", descriptor.Category);
         Assert.Equal(EExecutionLocation.ExplicitPeer, descriptor.Location);
@@ -39,7 +40,7 @@ public sealed class ElevenLabsSpeechTests
     [InlineData("eleven_v3", 5000)]
     public async Task BothModelsProduceVerifiedMp3WithApiKeyAuthenticationAsync(string model, int maximumCharacters)
     {
-        using MediaTestFiles files = new();
+        using MediaTestFiles files = new(testOutput);
         byte[] mp3 = await CreateMp3Async(files).ConfigureAwait(true);
         AiWireFixture server;
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable serverLifetime = (server = new((_, _) => Task.FromResult(new AiWireResponse(200, "audio/mpeg", mp3)))).ConfigureAwait(true);
@@ -83,7 +84,7 @@ public sealed class ElevenLabsSpeechTests
     [InlineData("localAddress", "203.0.113.10")]
     public async Task InvalidSettingsDoNotDispatchAsync(string name, string? value)
     {
-        using MediaTestFiles files = new();
+        using MediaTestFiles files = new(testOutput);
         AiWireFixture server;
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable serverLifetime = (server = new((_, _) => Task.FromResult(AiWireResponse.Json("{}")))).ConfigureAwait(true);
         Dictionary<string, object> settings = Settings(Path.Combine(files.Root, "generated.mp3"));
@@ -108,7 +109,7 @@ public sealed class ElevenLabsSpeechTests
     [InlineData("eleven_v3", 5001)]
     public async Task TextAboveModelLimitDoesNotDispatchAsync(string model, int length)
     {
-        using MediaTestFiles files = new();
+        using MediaTestFiles files = new(testOutput);
         AiWireFixture server;
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable serverLifetime = (server = new((_, _) => Task.FromResult(AiWireResponse.Json("{}")))).ConfigureAwait(true);
         NodeResult result = await ExecuteAsync(server, files, Settings(Path.Combine(files.Root, "generated.mp3"), model), string.Concat(Enumerable.Repeat("😀", length))).ConfigureAwait(true);
@@ -127,7 +128,7 @@ public sealed class ElevenLabsSpeechTests
     [InlineData(500, EOutcome.Unknown)]
     public async Task HttpFailuresDoNotRetryOrExposeSecretsAsync(int status, EOutcome expected)
     {
-        using MediaTestFiles files = new();
+        using MediaTestFiles files = new(testOutput);
         AiWireFixture server;
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable serverLifetime = (server = new((_, _) => Task.FromResult(AiWireResponse.Json("""{"detail":"fixture-secret-not-valid"}""", status)))).ConfigureAwait(true);
         NodeResult result = await ExecuteAsync(server, files, Settings(Path.Combine(files.Root, "generated.mp3"))).ConfigureAwait(true);
@@ -144,7 +145,7 @@ public sealed class ElevenLabsSpeechTests
     [InlineData(true)]
     public async Task CompletedInvalidMediaFailsWithoutCommitAsync(bool validWave)
     {
-        using MediaTestFiles files = new();
+        using MediaTestFiles files = new(testOutput);
         byte[] bytes = "not an audio file"u8.ToArray();
         if (validWave)
         {
@@ -165,7 +166,7 @@ public sealed class ElevenLabsSpeechTests
     [Fact]
     public async Task OversizedBodyRemainsUnknownAndDoesNotCommitAsync()
     {
-        using MediaTestFiles files = new();
+        using MediaTestFiles files = new(testOutput);
         byte[] mp3 = await CreateMp3Async(files).ConfigureAwait(true);
         AiWireFixture server;
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable serverLifetime = (server = new((_, _) => Task.FromResult(new AiWireResponse(200, "audio/mpeg", mp3)))).ConfigureAwait(true);
@@ -184,7 +185,7 @@ public sealed class ElevenLabsSpeechTests
     [Fact]
     public async Task ExistingOutputAndMissingProbeDoNotDispatchAsync()
     {
-        using MediaTestFiles files = new();
+        using MediaTestFiles files = new(testOutput);
         AiWireFixture server;
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable serverLifetime = (server = new((_, _) => Task.FromResult(AiWireResponse.Json("{}")))).ConfigureAwait(true);
         string output = Path.Combine(files.Root, "existing.mp3");
@@ -209,7 +210,7 @@ public sealed class ElevenLabsSpeechTests
     [Fact]
     public async Task RedirectDoesNotForwardApiKeyAsync()
     {
-        using MediaTestFiles files = new();
+        using MediaTestFiles files = new(testOutput);
         AiWireFixture foreign;
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable foreignLifetime = (foreign = new((_, _) => Task.FromResult(AiWireResponse.Json("{}")))).ConfigureAwait(true);
         AiWireFixture server;
@@ -226,7 +227,7 @@ public sealed class ElevenLabsSpeechTests
     [Fact]
     public async Task TimeoutAfterDispatchRemainsUnknownAsync()
     {
-        using MediaTestFiles files = new();
+        using MediaTestFiles files = new(testOutput);
         IterationTestClock clock = new();
         using CancellationTokenSource deadline = new(TimeSpan.FromSeconds(5));
         AiWireFixture server;

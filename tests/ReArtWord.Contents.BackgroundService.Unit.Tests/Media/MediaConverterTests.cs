@@ -6,11 +6,12 @@ using ReArtWord.Contents.BackgroundService.Nodes.Media;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Data;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 
 /// <summary>実変換・出力検証・許可境界を観測します。</summary>
-public sealed class MediaConverterTests
+public sealed class MediaConverterTests(ITestOutputHelper testOutput)
 {
     /// <summary>三媒体を実変換し、実ファイルのハッシュとストリームを照合します。</summary>
     /// <returns>検証が終了するまでの非同期処理。</returns>
@@ -20,7 +21,7 @@ public sealed class MediaConverterTests
     [InlineData("picture", "png", "video")]
     public async Task ConversionProducesVerifiedArtifact(string kind, string format, string expectedStream)
     {
-        using MediaTestFiles files = new();
+        using MediaTestFiles files = new(testOutput);
         string input = await files.CreateAsync(kind).ConfigureAwait(true);
         string output = Path.Combine(files.Root, "converted." + format);
         IActionNode node = (IActionNode)Assert.Single(MediaNodeRegistration.Create(files.Options), item => string.Equals(item.Descriptor.Type, "media." + kind + ".convert", StringComparison.Ordinal));
@@ -43,7 +44,7 @@ public sealed class MediaConverterTests
     [Fact]
     public async Task MissingExecutableAndOutsidePathDoNotExecute()
     {
-        using MediaTestFiles files = new();
+        using MediaTestFiles files = new(testOutput);
         MediaOptions missing = files.Options with { FfmpegPath = Path.Combine(files.Root, "missing.exe") };
         IActionNode node = (IActionNode)MediaNodeRegistration.Create(missing)[0];
         NodeResult result = await node.ExecuteAsync(NodeTestContext.Create(JsonSerializer.Serialize(new { outputPath = Path.Combine(files.Root, "output.wav"), format = "wav" }), NodeValue.FromObject(Path.Combine(files.Root, "missing.wav"))));
@@ -57,7 +58,7 @@ public sealed class MediaConverterTests
     [Fact]
     public async Task CancellationStopsActualConversionBeforeCommit()
     {
-        using MediaTestFiles files = new();
+        using MediaTestFiles files = new(testOutput);
         string input = await files.CreateAsync("video", 20).ConfigureAwait(true);
         string output = Path.Combine(files.Root, "cancelled.webm");
         IActionNode node = (IActionNode)MediaNodeRegistration.Create(files.Options)[1];
@@ -82,7 +83,7 @@ public sealed class MediaConverterTests
     [Fact]
     public async Task CorruptInputIsNotACompletedConversion()
     {
-        using MediaTestFiles files = new();
+        using MediaTestFiles files = new(testOutput);
         string input = Path.Combine(files.Root, "broken.wav");
         await File.WriteAllTextAsync(input, "not audio").ConfigureAwait(true);
         string output = Path.Combine(files.Root, "result.wav");
