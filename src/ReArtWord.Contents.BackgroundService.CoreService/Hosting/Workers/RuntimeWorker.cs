@@ -104,7 +104,7 @@ internal sealed class RuntimeWorker : Microsoft.Extensions.Hosting.BackgroundSer
         {
             await runtime.ManualSafety.RefreshAsync(stoppingToken).ConfigureAwait(false);
             await runtime.Trace.RefreshAsync(stoppingToken).ConfigureAwait(false);
-            await runtime.Readiness.InitializeOperationalAsync(false, stoppingToken).ConfigureAwait(false);
+            await runtime.Readiness.InitializeOperationalAsync(false, cancellationToken: stoppingToken).ConfigureAwait(false);
             await runtime.Workflows.RestoreEffectiveAsync(stoppingToken).ConfigureAwait(false);
             await ReconcileAsync(stoppingToken).ConfigureAwait(false);
         }
@@ -174,7 +174,7 @@ internal sealed class RuntimeWorker : Microsoft.Extensions.Hosting.BackgroundSer
                 }
                 if (PeerStatusRules.CanParticipate(runtime.Status) && !runtime.Maintenance.IsClosed)
                 {
-                    ConfigurationPhaseResult operational = await runtime.Readiness.InitializeOperationalAsync(runtime.Configuration.Cluster.NewCluster, cancellationToken).ConfigureAwait(false);
+                    ConfigurationPhaseResult operational = await runtime.Readiness.InitializeOperationalAsync(runtime.Configuration.Cluster.NewCluster, reconcileOnly: initialized, cancellationToken: cancellationToken).ConfigureAwait(false);
                     if (!initialized && operational.Outcome == Contracts.Execution.EOutcome.Succeeded)
                     {
                         initialized = true;

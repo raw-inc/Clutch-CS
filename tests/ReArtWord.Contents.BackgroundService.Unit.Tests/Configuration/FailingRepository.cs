@@ -19,9 +19,19 @@ internal sealed class FailingRepository(IDurableRepository inner) : IDurableRepo
         get; set;
     }
 
+    /// <summary>試験対象の読取りだけに観測や障害を追加します。</summary>
+    internal Action<string, string>? Reading
+    {
+        get; set;
+    }
+
     /// <summary>対象値を読みます。</summary>
     /// <returns>現在値。</returns>
-    public ValueTask<DurableEntry?> ReadAsync(string scope, string key, CancellationToken cancellationToken = default) => inner.ReadAsync(scope, key, cancellationToken);
+    public ValueTask<DurableEntry?> ReadAsync(string scope, string key, CancellationToken cancellationToken = default)
+    {
+        Reading?.Invoke(scope, key);
+        return inner.ReadAsync(scope, key, cancellationToken);
+    }
 
     /// <summary>用途を列挙します。</summary>
     /// <returns>項目一覧。</returns>

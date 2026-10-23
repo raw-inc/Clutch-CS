@@ -29,16 +29,24 @@ internal sealed class ServiceReadiness(ServiceRuntime runtime) : IDisposable
         return null;
     }
 
-    /// <summary>初回seedの未確認を記録し、正常運用済みのローカル版は保持します。</summary>
+    /// <summary>初期設定の確認失敗を記録し、通常巡回の失敗では確認済みの有効版を保持します。</summary>
     /// <returns>初期化の確認結果です。</returns>
-    internal async Task<ConfigurationPhaseResult> InitializeOperationalAsync(bool allowSeed, CancellationToken cancellationToken = default)
+    internal async Task<ConfigurationPhaseResult> InitializeOperationalAsync(bool allowSeed, bool reconcileOnly = false, CancellationToken cancellationToken = default)
     {
-        ClusterOperationalSettings seed = new(runtime.Configuration.TimeZone.Id, runtime.Configuration.Files.ConflictPolicy,
-            runtime.Configuration.Files.InternalFailurePolicy, runtime.Configuration.HostGroups, runtime.Configuration.SafetyConfirmation,
-            Infrastructure.Observability.Logging.LogRetentionCoordinator.FromOptions(runtime.Configuration.Logs));
         try
         {
-            ConfigurationPhaseResult result = await runtime.Operational.InitializeAsync(seed, allowSeed, cancellationToken).ConfigureAwait(false);
+            ConfigurationPhaseResult result;
+            if (reconcileOnly)
+            {
+                result = await runtime.Operational.ReconcileAsync(cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                ClusterOperationalSettings seed = new(runtime.Configuration.TimeZone.Id, runtime.Configuration.Files.ConflictPolicy,
+                    runtime.Configuration.Files.InternalFailurePolicy, runtime.Configuration.HostGroups, runtime.Configuration.SafetyConfirmation,
+                    Infrastructure.Observability.Logging.LogRetentionCoordinator.FromOptions(runtime.Configuration.Logs));
+                result = await runtime.Operational.InitializeAsync(seed, allowSeed, cancellationToken).ConfigureAwait(false);
+            }
             if (allowSeed && result.Outcome != EOutcome.Succeeded && runtime.Operational.Capture() is null)
             {
                 RecordInitialFailure(result.Reason);

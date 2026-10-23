@@ -88,9 +88,10 @@ internal sealed class ClusterOperationalEffective(IDurableRepository repository,
     /// <returns>空と未確認を区別した準備結果です。</returns>
     public async Task<LocalPreparationResult> PrepareAsync(Func<string, CancellationToken, Task<bool>> hasSnapshot, CancellationToken cancellationToken = default)
     {
-        DurableEntry? saved = await repository.ReadAsync(ClusterConfigurationStore.SavedScope, ClusterConfigurationStore.Id, cancellationToken).ConfigureAwait(false);
         DurableEntry? marker = await repository.ReadAsync(ClusterConfigurationStore.ActivationScope, ClusterConfigurationStore.Id, cancellationToken).ConfigureAwait(false);
-        if (saved is null && marker is null)
+
+        // 保存候補は未作成の判定にだけ使い、反映希望がある通常巡回では読みません。
+        if (marker is null && await repository.ReadAsync(ClusterConfigurationStore.SavedScope, ClusterConfigurationStore.Id, cancellationToken).ConfigureAwait(false) is null)
         {
             return new(ELocalPreparationState.Empty, [], "ClusterConfiguration.Empty");
         }
@@ -134,8 +135,9 @@ internal sealed class ClusterOperationalEffective(IDurableRepository repository,
                 return new(ELocalPreparationState.Unavailable, [], "ClusterConfiguration.ConflictProjectionUnconfirmed");
             }
         }
-        if (string.Equals(Capture()?.Revision, candidate.Revision, StringComparison.Ordinal)
-            && string.Equals(ContractJson.Hash(Capture()?.UnresolvedFields), ContractJson.Hash(candidate.UnresolvedFields), StringComparison.Ordinal))
+        ClusterOperationalSnapshot? current = Capture();
+        if (string.Equals(current?.Revision, candidate.Revision, StringComparison.Ordinal)
+            && string.Equals(ContractJson.Hash(current?.UnresolvedFields), ContractJson.Hash(candidate.UnresolvedFields), StringComparison.Ordinal))
         {
             return new(ELocalPreparationState.Prepared, []);
         }
