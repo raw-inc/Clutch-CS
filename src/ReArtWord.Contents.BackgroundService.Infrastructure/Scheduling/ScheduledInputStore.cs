@@ -98,11 +98,11 @@ public sealed class ScheduledInputStore : IDisposable
     internal async ValueTask<(ScheduledInputIndex Index, DurableEntry? Entry)> IndexAsync(bool local, CancellationToken cancellationToken = default)
     {
         string scope = Scope(IndexScope, local);
-        if ((await repository.GetConflictsAsync(scope, cancellationToken).ConfigureAwait(false)).Count != 0)
+        (DurableEntry? entry, IReadOnlyList<DurableEntry> conflicts) = await repository.ReadWithConflictsAsync(scope, IndexKey, cancellationToken).ConfigureAwait(false);
+        if (conflicts.Count != 0)
         {
             throw new InvalidOperationException("予定入力の索引に未解消の競合があります。");
         }
-        DurableEntry? entry = await repository.ReadAsync(scope, IndexKey, cancellationToken).ConfigureAwait(false);
         if (entry?.Value is null)
         {
             return (new(Guid.Empty, [], []), entry);
@@ -122,11 +122,11 @@ public sealed class ScheduledInputStore : IDisposable
     {
         string scope = Scope(InputScope, local);
         string key = id.ToString("N");
-        if ((await repository.GetConflictsAsync(scope, cancellationToken).ConfigureAwait(false)).Any(entry => string.Equals(entry.Key, key, StringComparison.Ordinal)))
+        (DurableEntry? entry, IReadOnlyList<DurableEntry> conflicts) = await repository.ReadWithConflictsAsync(scope, key, cancellationToken).ConfigureAwait(false);
+        if (conflicts.Any(candidate => string.Equals(candidate.Key, key, StringComparison.Ordinal)))
         {
             return null;
         }
-        DurableEntry? entry = await repository.ReadAsync(scope, key, cancellationToken).ConfigureAwait(false);
         if (entry?.Value is null)
         {
             return null;

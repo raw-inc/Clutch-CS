@@ -38,6 +38,15 @@ public sealed class JsonFileRepository : DurableRepository, IRequestReceiptStore
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
     }
 
+    /// <summary>同じ保存文書から指定項目と競合を読み、ファイルの再取得を避けます。</summary>
+    /// <returns>削除履歴を含む項目と、その用途の競合候補です。</returns>
+    public override ValueTask<(DurableEntry? Entry, IReadOnlyList<DurableEntry> Conflicts)> ReadWithConflictsAsync(string scope, string key, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        string address = GetAddress(scope, key);
+        return ValueTask.FromResult(Access(document => (document.Entries.GetValueOrDefault(address) ?? JsonHistoryAccess.Read<DurableEntry>(document, "entry", address), (IReadOnlyList<DurableEntry>)RepositoryObservations.ReadConflicts(document, scope)), false));
+    }
+
     /// <summary>JSON本文と圧縮履歴を同じ原子的保存で保守します。</summary>
     /// <returns>削除した確定本文の件数です。</returns>
     internal int MaintainHistory(Contracts.Retention.DataRetentionSettings policy, DateTimeOffset now, int maximum)

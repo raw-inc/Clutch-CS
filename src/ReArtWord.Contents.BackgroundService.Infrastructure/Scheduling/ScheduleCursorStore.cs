@@ -91,11 +91,11 @@ public sealed class ScheduleCursorStore : ISourceScheduleStore
             return initial with { Outcome = EOutcome.NotExecuted, Reason = "schedule.ownerUnavailable" };
         }
         string scope = Scope(source, local);
-        if ((await repository.GetConflictsAsync(scope, cancellationToken).ConfigureAwait(false)).Any(entry => string.Equals(entry.Key, key, StringComparison.Ordinal)))
+        (DurableEntry? entry, IReadOnlyList<DurableEntry> conflicts) = await repository.ReadWithConflictsAsync(scope, key, cancellationToken).ConfigureAwait(false);
+        if (conflicts.Any(candidate => string.Equals(candidate.Key, key, StringComparison.Ordinal)))
         {
             return initial with { Outcome = EOutcome.Unknown, Reason = "schedule.cursorConflict" };
         }
-        DurableEntry? entry = await repository.ReadAsync(scope, key, cancellationToken).ConfigureAwait(false);
         if (entry?.Value is not null)
         {
             ScheduleProgressRecord? saved = entry.Value.Json.Deserialize<ScheduleProgressRecord>(ContractJson.Options);

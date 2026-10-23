@@ -119,6 +119,10 @@ internal sealed class SqliteSession : IDisposable
     /// <returns>一致する行。</returns>
     public T[] List<T>(string kind, string? scope = null, bool sharedOnly = false, bool excludeRetired = false, IReadOnlyCollection<string>? keys = null, CancellationToken cancellationToken = default) => records.List<T>(kind, scope, sharedOnly, excludeRetired, keys, cancellationToken);
 
+    /// <summary>現在の読取り取引で競合行と対応する現在値を確認します。</summary>
+    /// <returns>重複を除いた候補です。</returns>
+    internal IReadOnlyList<DurableEntry> ReadConflicts(string scope, CancellationToken cancellationToken) => records.ReadConflicts(scope, cancellationToken);
+
     /// <summary>前回観測との比較も同じ読取り取引へ含めます。</summary>
     /// <returns>内容を検証済みの対象集合です。</returns>
     internal IReadOnlyList<DurableObservation> Observe(string scope, IReadOnlyDictionary<string, string> known, IReadOnlySet<string>? keys, HistoryObservationCache cache, CancellationToken cancellationToken)
@@ -348,12 +352,9 @@ internal sealed class SqliteSession : IDisposable
 
     /// <summary>現在取引に所属するcommandを作ります。</summary>
     /// <returns>呼出元が破棄するcommand。</returns>
-    private SqliteCommand Create()
+    private SqliteCommand Create() => new()
     {
-        return new SqliteCommand
-        {
-            Connection = connection,
-            Transaction = transaction,
-        };
-    }
+        Connection = connection,
+        Transaction = transaction,
+    };
 }
