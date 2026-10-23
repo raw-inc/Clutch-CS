@@ -35,6 +35,29 @@ public sealed class FleetUpdateTests
         Assert.Contains(notifications, notification => string.Equals(notification.Name, "update.completed", StringComparison.Ordinal));
     }
 
+    /// <summary>未選択の稼働ピアを可用性判定へ含めても、更新対象を増やしません。</summary>
+    /// <returns>選択した一ピアだけの更新と、残るピアの保持です。</returns>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task UnselectedMembersContributeReadinessWithoutBeingUpdated(bool ready)
+    {
+        FleetUpdateTarget selected = Target("a", "one"), remaining = Target("b", "one");
+        FleetUpdateStatus input = Status([selected]);
+        FleetUpdateTestRemote remote = new([selected, remaining]);
+        remote.Observations[("one", "b")] = remote.Observations[("one", "b")] with { Ready = ready };
+        FleetUpdateStatus result = await RunAsync(input, remote);
+        Assert.Single(result.Peers);
+        string expected = "Deferred";
+        if (ready)
+        {
+            expected = "Completed";
+        }
+        Assert.Equal(expected, result.Peers[0].State);
+        Assert.DoesNotContain(remote.Events, value => value.Contains("b/one", StringComparison.Ordinal));
+        Assert.Equal(remaining.Peer.InstanceId, remote.Observations[("one", "b")].Peer.InstanceId);
+    }
+
     /// <summary>同じPCの複数クラスタを先に処理し、復帰確認前に別PCを止めません。</summary>
     /// <returns>保存順序と更新順序の検証です。</returns>
     [Fact]

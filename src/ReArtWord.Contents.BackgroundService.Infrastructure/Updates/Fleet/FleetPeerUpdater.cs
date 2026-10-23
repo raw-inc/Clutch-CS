@@ -16,17 +16,20 @@ internal sealed class FleetPeerUpdater(IFleetUpdateRemote remote)
     internal async Task<string?> RemainingAsync(FleetUpdateRequest request, FleetUpdateTarget target, CancellationToken cancellationToken = default)
     {
         FleetUpdateTarget[] members = request.Targets.Where(peer => string.Equals(peer.ClusterId, target.ClusterId, StringComparison.Ordinal)).ToArray();
-        IReadOnlyList<string>? known = await remote.MembersAsync(target, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<Contracts.Cluster.PeerInfo>? known = await remote.MembersAsync(target, cancellationToken).ConfigureAwait(false);
         if (known is null)
         {
             return "Cluster membership could not be confirmed. This peer was deferred.";
         }
-        int population = known.Concat(members.Select(peer => peer.Peer.PeerId)).Distinct(StringComparer.Ordinal).Count();
+        int population = known.Select(peer => peer.PeerId).Concat(members.Select(peer => peer.Peer.PeerId)).Distinct(StringComparer.Ordinal).Count();
         if (population == members.Length && population < 3 && members.Select(peer => peer.Peer.HostId).Distinct(StringComparer.Ordinal).Count() == 1)
         {
             return null;
         }
-        FleetUpdateTarget[] remaining = members.Where(peer => !string.Equals(peer.Peer.PeerId, target.Peer.PeerId, StringComparison.Ordinal)).ToArray();
+
+        // 更新しない所属ピアも稼働確認に含めます。更新対象の固定集合は増やしません。
+        FleetUpdateTarget[] remaining = members.Concat(known.Select(peer => new FleetUpdateTarget(target.ClusterId, peer, target.Binding)))
+            .DistinctBy(peer => peer.Peer.PeerId, StringComparer.Ordinal).Where(peer => !string.Equals(peer.Peer.PeerId, target.Peer.PeerId, StringComparison.Ordinal)).ToArray();
         FleetPeerObservation?[] observations = await Task.WhenAll(remaining.Select(peer => remote.ObserveAsync(peer, cancellationToken))).ConfigureAwait(false);
         int required = 1;
         if (3 <= population)

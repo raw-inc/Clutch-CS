@@ -87,10 +87,13 @@ internal static class WizardSummary
                 text.AppendLine(settings.Text("Web client settings and startup method are kept. The management page disconnects briefly during the update.",
                     "Webクライアントの設定と起動方法は保持します。更新中は管理画面への接続が一時的に切れます。"));
             }
-            if (settings.AllowActive)
+            string mode = settings.UpdateMode switch
             {
-                text.AppendLine(labels["Active"]);
-            }
+                EInstallerUpdateMode.StopActive => "UpdateStopActive",
+                EInstallerUpdateMode.Fleet => "UpdateFleet",
+                _ => "UpdateSkipActive",
+            };
+            text.AppendLine(labels[mode]);
         }
         return text.ToString();
     }

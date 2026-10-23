@@ -21,10 +21,10 @@ public sealed class UdpFleetUpdateRemote(Func<string, string, UdpObserver?> find
     private static readonly JsonSerializerOptions healthOptions = new(ContractJson.Options) { UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip };
 
     /// <summary>更新対象Coreが保持する所属集合を読み、停止中のメンバーを分母から落としません。</summary>
-    /// <returns>この実体で確認した所属IDです。</returns>
+    /// <returns>この実体で確認した所属ピア情報です。</returns>
     // 抑制理由: 過半数の判定前に、一回の応答として所属集合全体を固定する必要があります。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW160", Justification = "所属集合を一回のsnapshotで検証してから停止可否を判定します。")]
-    public async Task<IReadOnlyList<string>?> MembersAsync(FleetUpdateTarget target, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PeerInfo>?> MembersAsync(FleetUpdateTarget target, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(target);
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -45,7 +45,7 @@ public sealed class UdpFleetUpdateRemote(Func<string, string, UdpObserver?> find
             {
                 return null;
             }
-            return status.Peers.Select(peer => peer.PeerId).Distinct(StringComparer.Ordinal).ToArray();
+            return status.Peers.DistinctBy(peer => peer.PeerId, StringComparer.Ordinal).ToArray();
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or JsonException or OperationCanceledException)
         {
