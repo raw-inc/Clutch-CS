@@ -6,11 +6,12 @@ using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Data;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.AI;
 
 /// <summary>ElevenLabsのWAV出力と小数設定を実HTTP・実媒体で検証します。</summary>
-public sealed class ElevenLabsAudioFormatTests
+public sealed class ElevenLabsAudioFormatTests(ITestOutputHelper testOutput)
 {
     /// <summary>両TTSモデルの各WAV形式を要求し、受信した媒体を変更せず保存します。</summary>
     /// <returns>要求形式、保存内容、MIME種別とprobeの確認です。</returns>
@@ -31,7 +32,7 @@ public sealed class ElevenLabsAudioFormatTests
     [InlineData(true, 48000)]
     public async Task SpeechSavesSelectedWaveWithoutTranscodingAsync(bool v3, int sampleRate)
     {
-        using MediaTestFiles files = new();
+        using MediaTestFiles files = new(testOutput);
         byte[] wave = await CreateWaveAsync(files, sampleRate).ConfigureAwait(true);
         AiWireFixture server;
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = (server = new((_, _) => Task.FromResult(new AiWireResponse(200, "audio/wav", wave)))).ConfigureAwait(true);
@@ -39,7 +40,7 @@ public sealed class ElevenLabsAudioFormatTests
         string format = "wav_" + sampleRate.ToString(System.Globalization.CultureInfo.InvariantCulture);
         Dictionary<string, object> settings = new(StringComparer.Ordinal) { ["voice"] = "voice", ["outputPath"] = output, ["outputFormat"] = format, ["stability"] = 0.35 };
         NodeResult result = await ExecuteAsync(server, files, v3, settings).ConfigureAwait(true);
-        Assert.Equal(EOutcome.Succeeded, result.Outcome);
+        Assert.True(result.Outcome == EOutcome.Succeeded, result.ReasonCode + ": " + result.Message);
         Assert.Equal(wave, await File.ReadAllBytesAsync(output).ConfigureAwait(true));
         JsonElement artifact = result.Outputs["value"].Json;
         Assert.Equal("audio/wav", artifact.GetProperty("mediaType").GetString());
@@ -60,7 +61,7 @@ public sealed class ElevenLabsAudioFormatTests
     [InlineData(true)]
     public async Task WaveRequestRejectsMp3PayloadAsync(bool v3)
     {
-        using MediaTestFiles files = new();
+        using MediaTestFiles files = new(testOutput);
         byte[] mp3 = await ElevenLabsSpeechTests.CreateMp3Async(files).ConfigureAwait(true);
         AiWireFixture server;
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = (server = new((_, _) => Task.FromResult(new AiWireResponse(200, "audio/wav", mp3)))).ConfigureAwait(true);
@@ -82,7 +83,7 @@ public sealed class ElevenLabsAudioFormatTests
     [InlineData(true, 1.01)]
     public async Task StabilityOutsideRangeDoesNotDispatchAsync(bool v3, double stability)
     {
-        using MediaTestFiles files = new();
+        using MediaTestFiles files = new(testOutput);
         AiWireFixture server;
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = (server = new((_, _) => Task.FromResult(AiWireResponse.Json("{}")))).ConfigureAwait(true);
         Dictionary<string, object> settings = new(StringComparer.Ordinal) { ["voice"] = "voice", ["outputPath"] = Path.Combine(files.Root, "generated.wav"), ["outputFormat"] = "wav_24000", ["stability"] = stability };
@@ -97,7 +98,7 @@ public sealed class ElevenLabsAudioFormatTests
     [Fact]
     public async Task SoundEffectsDoNotAdvertiseTtsOnlyWaveFormatsAsync()
     {
-        using MediaTestFiles files = new();
+        using MediaTestFiles files = new(testOutput);
         AiWireFixture server;
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = (server = new((_, _) => Task.FromResult(AiWireResponse.Json("{}")))).ConfigureAwait(true);
         Dictionary<string, object> settings = new(StringComparer.Ordinal) { ["model"] = "eleven_text_to_sound_v2", ["outputPath"] = Path.Combine(files.Root, "generated.wav"), ["outputFormat"] = "wav_24000" };
@@ -114,7 +115,7 @@ public sealed class ElevenLabsAudioFormatTests
         string output = Path.Combine(files.Root, "fixture.wav");
         IActionNode converter = (IActionNode)Assert.Single(MediaNodeRegistration.Create(files.Options), node => string.Equals(node.Descriptor.Type, "media.audio.convert", StringComparison.Ordinal));
         NodeResult result = await converter.ExecuteAsync(NodeTestContext.Create(JsonSerializer.Serialize(new { outputPath = output, format = "wav", sampleRate, channels = 1 }), NodeValue.FromObject(input))).ConfigureAwait(true);
-        Assert.Equal(EOutcome.Succeeded, result.Outcome);
+        Assert.True(result.Outcome == EOutcome.Succeeded, result.ReasonCode + ": " + result.Message);
         return await File.ReadAllBytesAsync(output).ConfigureAwait(true);
     }
 

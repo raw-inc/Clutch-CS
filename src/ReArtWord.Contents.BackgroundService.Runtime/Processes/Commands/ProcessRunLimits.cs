@@ -9,4 +9,11 @@ namespace ReArtWord.Contents.BackgroundService.Runtime.Processes.Commands;
 /// <param name="OutputEncoding">子が使用する標準出力・標準エラーの文字コード。未指定は既存の既定です。</param>
 /// <param name="EnvironmentOverrides">この子プロセスだけへ適用する値です。nullの値は継承変数を除去します。</param>
 public sealed record ProcessRunLimits(int OutputCharacters = 1048576, bool FailOnOutputLimit = false, long? WorkingSetBytes = null, string? WorkingDirectory = null, string? StandardInput = null,
-    System.Text.Encoding? OutputEncoding = null, IReadOnlyDictionary<string, string?>? EnvironmentOverrides = null);
+    System.Text.Encoding? OutputEncoding = null, IReadOnlyDictionary<string, string?>? EnvironmentOverrides = null)
+{
+    /// <summary>明示した場合だけ、終了情報と最大16,384文字の標準エラーを通知します。標準エラーは入力内容を含む場合があります。</summary>
+    public Action<string>? DiagnosticOutput
+    {
+        get; init;
+    }
+}

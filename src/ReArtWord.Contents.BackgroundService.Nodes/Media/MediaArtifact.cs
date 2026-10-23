@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Runtime.Files;
-using ReArtWord.Contents.BackgroundService.Runtime.Processes.Commands;
 
 namespace ReArtWord.Contents.BackgroundService.Nodes.Media;
 
@@ -16,12 +15,17 @@ internal static class MediaArtifact
 
     /// <summary>許可パスの実ファイルを検査し、formatとストリームを取得します。</summary>
     /// <returns>ffprobeが検証したメディア情報です。</returns>
-    internal static async Task<JsonElement> ProbeAsync(MediaOptions options, string path, string kind, CancellationToken cancellationToken = default)
+    internal static Task<JsonElement> ProbeAsync(MediaOptions options, string path, string kind, CancellationToken cancellationToken = default)
+        => ProbeCoreAsync(options, path, kind, "input-probe", cancellationToken);
+
+    /// <summary>入力と生成物の検査を区別して、同じ検証を実行します。</summary>
+    /// <returns>ffprobeが検証したメディア情報です。</returns>
+    private static async Task<JsonElement> ProbeCoreAsync(MediaOptions options, string path, string kind, string stage, CancellationToken cancellationToken = default)
     {
         FileAccessPolicy policy = new(options.Files);
         policy.ValidatePath(path);
         string[] arguments = ["-v", "error", "-protocol_whitelist", "file", "-format_whitelist", "wav,mp3,flac,ogg,mov,matroska,webm,avi,png_pipe,jpeg_pipe,webp_pipe", "-show_entries", "format=format_name,duration:stream=codec_type,codec_name,width,height,sample_rate,channels", "-of", "json", path];
-        string result = await BoundedProcessRunner.RunAsync(options.FfprobePath, arguments, cancellationToken).ConfigureAwait(false);
+        string result = await MediaProcess.RunAsync(options, options.FfprobePath, arguments, stage, cancellationToken).ConfigureAwait(false);
         using JsonDocument document = JsonDocument.Parse(result);
         JsonElement root = document.RootElement;
         string expected = "video";
@@ -40,25 +44,35 @@ internal static class MediaArtifact
 
     /// <summary>保存先を変更せず、一時媒体の検証情報を作ります。</summary>
     /// <returns>確定処理が成功してから公開するファイル情報です。</returns>
+    // 抑制理由: 診断の有無で、呼出元が扱う元の検証例外を変更しません。
+    [SuppressMessage("SourceQuality", "RAW330", Justification = "検証例外を診断した後、元の例外とスタックを維持します。")]
     internal static async Task<NodeValue> InspectAsync(MediaOptions options, string temporaryPath, string outputPath, string peerId, string mediaType, string kind, CancellationToken cancellationToken = default)
     {
-        JsonElement probe = await ProbeAsync(options, temporaryPath, kind, cancellationToken).ConfigureAwait(false);
-        RequireFormat(probe, mediaType);
-        FileAccessPolicy policy = new(options.Files);
-        policy.ValidatePath(temporaryPath);
-        byte[] hash;
-        long size;
-        using (FileStream input = new(temporaryPath, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, true))
+        try
         {
-            size = input.Length;
-            if (size == 0)
+            JsonElement probe = await ProbeCoreAsync(options, temporaryPath, kind, "output-probe", cancellationToken).ConfigureAwait(false);
+            RequireFormat(probe, mediaType);
+            FileAccessPolicy policy = new(options.Files);
+            policy.ValidatePath(temporaryPath);
+            byte[] hash;
+            long size;
+            using (FileStream input = new(temporaryPath, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, true))
             {
-                throw new InvalidDataException("生成ファイルが空です。");
+                size = input.Length;
+                if (size == 0)
+                {
+                    throw new InvalidDataException("生成ファイルが空です。");
+                }
+                hash = await SHA256.HashDataAsync(input, cancellationToken).ConfigureAwait(false);
             }
-            hash = await SHA256.HashDataAsync(input, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            return NodeValue.FromObject(new { peerId, path = outputPath, mediaType, size, sha256 = Convert.ToHexStringLower(hash), probe });
         }
-        cancellationToken.ThrowIfCancellationRequested();
-        return NodeValue.FromObject(new { peerId, path = outputPath, mediaType, size, sha256 = Convert.ToHexStringLower(hash), probe });
+        catch (Exception error) when (error is InvalidDataException or IOException or JsonException or UnauthorizedAccessException or ArgumentException or OperationCanceledException)
+        {
+            MediaProcess.Failed(options, "output-validation", error);
+            throw;
+        }
     }
 
     /// <summary>許可出力の隣に一意の一時パスを作ります。</summary>

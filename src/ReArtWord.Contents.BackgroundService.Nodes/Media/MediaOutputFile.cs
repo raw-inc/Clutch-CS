@@ -48,12 +48,15 @@ internal static class MediaOutputFile
         }
         catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException or NotSupportedException)
         {
+            MediaProcess.Failed(media, "output-prepare", error);
             return NodeResult.Failure(prefix + ".outputPathInvalid", "出力先の絶対パス・OSアクセス権・リンク境界を確認してください。", EOutcome.NotExecuted);
         }
     }
 
     /// <summary>媒体検証後の競合にも同じ方針を適用し、未変更の場合だけスキップします。</summary>
     /// <returns>確定済み媒体情報、既存先のスキップ、またはロック失敗です。</returns>
+    // 抑制理由: 確定に失敗した元の例外を診断し、呼出元の失敗分類を維持します。
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW330", Justification = "診断を追加しても、元のファイル例外とスタックを維持します。")]
     internal static async Task<NodeResult> CommitAsync(MediaOptions media, NodeExecutionContext context, string temporary, string outputPath,
         string mediaType, string kind, string prefix = "ai", CancellationToken cancellationToken = default)
     {
@@ -75,12 +78,18 @@ internal static class MediaOutputFile
         }
         catch (IOException error) when (FileOutputPolicy.IsLock(error))
         {
+            MediaProcess.Failed(media, "output-commit", error);
             return FileOutputPolicy.Locked(context, output, EOutcome.Failed, prefix);
         }
         catch (IOException) when (skip && File.Exists(output) && !Directory.Exists(output))
         {
             policy.ValidatePath(output);
             return FileOutputPolicy.Skipped(context.PeerId, output, "existing");
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            MediaProcess.Failed(media, "output-commit", error);
+            throw;
         }
     }
 }
