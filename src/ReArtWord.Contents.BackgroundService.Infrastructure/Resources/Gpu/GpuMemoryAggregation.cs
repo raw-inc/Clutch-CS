@@ -39,8 +39,13 @@ internal static class GpuMemoryAggregation
         double? result = null;
         foreach (PerformanceCounterValue counter in counters ?? [])
         {
-            string name = counter.Instance.Split('#')[0];
-            if (string.Equals(name, target, StringComparison.OrdinalIgnoreCase) && counter.Value is double value && double.IsFinite(value) && 0 <= value)
+            ReadOnlySpan<char> name = counter.Instance.AsSpan();
+            int suffix = name.IndexOf('#');
+            if (0 <= suffix)
+            {
+                name = name[..suffix];
+            }
+            if (name.Equals(target, StringComparison.OrdinalIgnoreCase) && counter.Value is double value && double.IsFinite(value) && 0 <= value)
             {
                 result = Math.Max(result ?? 0, value);
             }
