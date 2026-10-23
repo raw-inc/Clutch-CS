@@ -83,6 +83,7 @@ internal static class WorkflowManagement
             return new { valid = result.Workflow is not null, result.Issues, revision = result.Workflow?.Revision };
         });
         registry.ReadValue("workflows.parse", value => WorkflowYamlReader.Read(ManagementRegistry.Body<WorkflowYamlImport>(value).Text));
+        registry.ReadValue("workflows.export-yaml", value => WorkflowYamlWriter.Write(ManagementRegistry.Body<WorkflowDefinition>(value)));
         registry.Write("workflows.save", async (value, cancellation) => await service.Workflows.SaveAsync(ManagementRegistry.Body<WorkflowSaveRequest>(value), cancellation).ConfigureAwait(false));
         registry.Write("workflows.delete", async (value, cancellation) => await service.Workflows.DeleteAsync(ManagementRegistry.Body<WorkflowDeleteRequest>(value), cancellation).ConfigureAwait(false));
         registry.Read("workflows.deletions", async (value, cancellation) => await service.Workflows.GetDeleteOperationAsync(ManagementRegistry.OperationId(value), cancellation).ConfigureAwait(false));
