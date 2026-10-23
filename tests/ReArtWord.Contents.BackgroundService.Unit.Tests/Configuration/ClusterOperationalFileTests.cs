@@ -148,7 +148,7 @@ public sealed class ClusterOperationalFileTests
         using UdpClient reservation = new(new IPEndPoint(IPAddress.Loopback, 0));
         int port = ((IPEndPoint)reservation.Client.LocalEndPoint!).Port;
         reservation.Close();
-        FileTestPeer peer = new(Guid.NewGuid().ToString("N"), "peer", port, true, node =>
+        FileTestPeer peer = await FileTestPeer.CreateAsync(Guid.NewGuid().ToString("N"), "peer", port, true, node =>
         {
             string upsert = "file.upsert";
             if (!string.Equals(node.Descriptor.Type, upsert, StringComparison.Ordinal))

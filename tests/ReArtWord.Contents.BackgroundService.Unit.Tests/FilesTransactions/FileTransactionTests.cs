@@ -23,7 +23,7 @@ public sealed class FileTransactionTests
     [Fact]
     public async Task DetachedLocalTransactionUsesOnlyPeerStorage()
     {
-        FileTestPeer peer = new(Guid.NewGuid().ToString("N"), "one", Port(), true);
+        FileTestPeer peer = await FileTestPeer.CreateAsync(Guid.NewGuid().ToString("N"), "one", Port(), true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = peer.ConfigureAwait(false);
         peer.Cluster.LocalDetachedExecutionAllowed = request => request.Kind.StartsWith("file.", StringComparison.Ordinal) || string.Equals(request.Kind, "node.execute", StringComparison.Ordinal);
         await peer.Cluster.StartAsync();
@@ -49,7 +49,7 @@ public sealed class FileTransactionTests
         TaskCompletionSource secondEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource finish = new(TaskCreationOptions.RunContinuationsAsynchronously);
         ControlledFileNode? firstNode = null;
-        FileTestPeer first = new(id, "first", port, true, node =>
+        FileTestPeer first = await FileTestPeer.CreateAsync(id, "first", port, true, node =>
         {
             string upsert = "file.upsert";
             if (!string.Equals(node.Descriptor.Type, upsert, StringComparison.Ordinal))
@@ -69,7 +69,7 @@ public sealed class FileTransactionTests
         });
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = first.ConfigureAwait(false);
         await first.Cluster.StartAsync();
-        FileTestPeer second = new(id, "second", port, false, node =>
+        FileTestPeer second = await FileTestPeer.CreateAsync(id, "second", port, false, node =>
         {
             string upsert = "file.upsert";
             if (!string.Equals(node.Descriptor.Type, upsert, StringComparison.Ordinal))
@@ -139,10 +139,10 @@ public sealed class FileTransactionTests
         string id = Guid.NewGuid().ToString("N");
         int port = Port();
         ControlledFileNode? controlled = null;
-        FileTestPeer first = new(id, "first", port, true);
+        FileTestPeer first = await FileTestPeer.CreateAsync(id, "first", port, true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = first.ConfigureAwait(false);
         await first.Cluster.StartAsync();
-        FileTestPeer second = new(id, "second", port, false, node =>
+        FileTestPeer second = await FileTestPeer.CreateAsync(id, "second", port, false, node =>
         {
             string upsert = "file.upsert";
             if (!string.Equals(node.Descriptor.Type, upsert, StringComparison.Ordinal))

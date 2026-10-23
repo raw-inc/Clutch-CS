@@ -24,7 +24,7 @@ public sealed class PeerStreamPriorityTests
     {
         string id = Guid.NewGuid().ToString("N");
         int port = Port();
-        FileTestPeer first = new(id, "first", port, true), second = new(id, "second", port, false), third = new(id, "third", port, false);
+        FileTestPeer first = await FileTestPeer.CreateAsync(id, "first", port, true), second = await FileTestPeer.CreateAsync(id, "second", port, false), third = await FileTestPeer.CreateAsync(id, "third", port, false);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = first.ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable secondLifetime = second.ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable thirdLifetime = third.ConfigureAwait(true);
@@ -87,7 +87,7 @@ public sealed class PeerStreamPriorityTests
     [InlineData(true, "request", 11000)]
     public async Task LegacyAndPrioritizedFramesUseTheSameReceiverAsync(bool prioritized, string kind, int delayMilliseconds)
     {
-        FileTestPeer peer = new(Guid.NewGuid().ToString("N"), "peer", Port(), true);
+        FileTestPeer peer = await FileTestPeer.CreateAsync(Guid.NewGuid().ToString("N"), "peer", Port(), true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = peer.ConfigureAwait(true);
         peer.Cluster.RegisterHandler("fixture.echo", async (request, token) =>
         {
@@ -130,7 +130,7 @@ public sealed class PeerStreamPriorityTests
     [InlineData(3)]
     public async Task MismatchedFrameLaneCannotExecuteARequestAsync(int lane)
     {
-        FileTestPeer peer = new(Guid.NewGuid().ToString("N"), "peer", Port(), true);
+        FileTestPeer peer = await FileTestPeer.CreateAsync(Guid.NewGuid().ToString("N"), "peer", Port(), true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = peer.ConfigureAwait(true);
         int effects = 0;
         peer.Cluster.RegisterHandler("fixture.effect", (_, _) =>

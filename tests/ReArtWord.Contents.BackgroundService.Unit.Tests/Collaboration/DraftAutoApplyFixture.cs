@@ -13,7 +13,6 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Collaboration;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Configuration;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Workflows;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
-using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
 using ReArtWord.Contents.BackgroundService.Nodes.Control;
 using ReArtWord.Contents.BackgroundService.Runtime.Configuration;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
@@ -54,7 +53,7 @@ internal sealed class DraftAutoApplyFixture : IAsyncDisposable
         get; private set;
     } = null!;
 
-    internal SqliteRepository Repository => peers.Repositories["a"];
+    internal IDurableRepository Repository => peers.Repositories["a"];
     internal int Activations
     {
         get; private set;

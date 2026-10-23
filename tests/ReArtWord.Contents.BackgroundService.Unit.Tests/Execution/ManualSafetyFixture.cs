@@ -10,7 +10,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Execution;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Execution.Safety;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Receipts;
-using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
+using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Routing;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Execution;
 using Xunit;
@@ -21,6 +21,7 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Execution;
 internal sealed class ManualSafetyFixture : IAsyncDisposable
 {
     private readonly List<(PeerCluster Cluster, ManualSafetyService Safety)> owned = [];
+    private readonly List<RepositoryRuntime> repositories = [];
     private readonly string root = Path.Combine(Path.GetTempPath(), "contents-safety-" + Guid.NewGuid().ToString("N"));
     private readonly string clusterId = Guid.NewGuid().ToString("N");
     private readonly int port = Port();
@@ -41,7 +42,7 @@ internal sealed class ManualSafetyFixture : IAsyncDisposable
     } = new(StringComparer.Ordinal);
 
     /// <summary>再起動で保持する独立した保存領域です。</summary>
-    public Dictionary<string, SqliteRepository> Repositories
+    public Dictionary<string, IDurableRepository> Repositories
     {
         get;
     } = new(StringComparer.Ordinal);
@@ -50,9 +51,12 @@ internal sealed class ManualSafetyFixture : IAsyncDisposable
     /// <returns>起動処理の完了です。</returns>
     public async Task StartAsync(string id, bool fresh = false, bool policyKnown = true, int? networkPort = null, CancellationToken cancellationToken = default)
     {
-        if (!Repositories.TryGetValue(id, out SqliteRepository? repository))
+        if (!Repositories.TryGetValue(id, out IDurableRepository? repository))
         {
-            repository = new SqliteRepository(Path.Combine(root, id + ".db"));
+            // Coreと同じWAL・接続の所有期間で検証し、短いHeartbeatごとの接続再生成を避けます。
+            RepositoryRuntime runtime = await RepositoryFactory.CreateRuntimeAsync(Path.Combine(root, id), id, new(), cancellationToken).ConfigureAwait(false);
+            repositories.Add(runtime);
+            repository = runtime.Repository;
             Repositories[id] = repository;
         }
         ClusterOptions options = new(clusterId, id, id, "127.0.0.1", "127.255.255.255", networkPort ?? port, 1, fresh, root)
@@ -147,6 +151,10 @@ internal sealed class ManualSafetyFixture : IAsyncDisposable
         {
             await ((IAsyncDisposable)cluster).DisposeAsync().ConfigureAwait(false);
             safety.Dispose();
+        }
+        foreach (RepositoryRuntime repository in repositories)
+        {
+            repository.Dispose();
         }
     }
 

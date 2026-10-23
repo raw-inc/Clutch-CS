@@ -2,7 +2,6 @@ using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
-using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.State;
 using ReArtWord.Contents.BackgroundService.Nodes.State;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
@@ -23,7 +22,7 @@ public sealed class NodeStateScopeTests
         ManualSafetyFixture fixture = new();
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = fixture.ConfigureAwait(false);
         await fixture.StartAsync("a", true);
-        SqliteRepository repository = fixture.Repositories["a"];
+        IDurableRepository repository = fixture.Repositories["a"];
         DurableEntry before = (await repository.ReadAsync("peer:a:membership", "known"))!;
         Assert.NotNull(before);
         NodeStateStore store = new(repository, "a");

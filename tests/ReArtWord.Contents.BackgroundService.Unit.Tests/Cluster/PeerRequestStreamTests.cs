@@ -23,7 +23,7 @@ public sealed class PeerRequestStreamTests
     [Fact]
     public async Task ConfirmedConnectionIsReusedAfterTheListenerClosesAsync()
     {
-        FileTestPeer peer = new(Guid.NewGuid().ToString("N"), "peer", Port(), true);
+        FileTestPeer peer = await FileTestPeer.CreateAsync(Guid.NewGuid().ToString("N"), "peer", Port(), true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = peer.ConfigureAwait(true);
         await peer.Cluster.StartAsync();
         string network = ObserverNetwork.GetInterfaces().Single(item => item.Addresses.Any(address => address.Address is "127.0.0.1")).InterfaceId;
@@ -83,7 +83,7 @@ public sealed class PeerRequestStreamTests
     [InlineData("inspect", 16)]
     public async Task QueuedRequestsLeaveCapacityForConfirmationsAndReleaseOnCancellationAsync(string blockedKind, int capacity)
     {
-        FileTestPeer peer = new(Guid.NewGuid().ToString("N"), "peer", Port(), true);
+        FileTestPeer peer = await FileTestPeer.CreateAsync(Guid.NewGuid().ToString("N"), "peer", Port(), true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = peer.ConfigureAwait(true);
         await peer.Cluster.StartAsync();
         TaskCompletionSource saturated = new(TaskCreationOptions.RunContinuationsAsynchronously), release = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -138,7 +138,7 @@ public sealed class PeerRequestStreamTests
     {
         string cluster = Guid.NewGuid().ToString("N");
         int port = Port();
-        FileTestPeer first = new(cluster, "first", port, true), second = new(cluster, "second", port, false);
+        FileTestPeer first = await FileTestPeer.CreateAsync(cluster, "first", port, true), second = await FileTestPeer.CreateAsync(cluster, "second", port, false);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = first.ConfigureAwait(false);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable secondLifetime = second.ConfigureAwait(false);
         int writes = 0;
@@ -179,7 +179,7 @@ public sealed class PeerRequestStreamTests
     public async Task FallbackNeverReplaysAnAdmittedRequestAsync(string mode, int expectedFallback, int expectedBodies)
     {
         const string legacy = "legacy", inspection = "inspect";
-        FileTestPeer peer = new(Guid.NewGuid().ToString("N"), "peer", Port(), true);
+        FileTestPeer peer = await FileTestPeer.CreateAsync(Guid.NewGuid().ToString("N"), "peer", Port(), true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = peer.ConfigureAwait(false);
         await peer.Cluster.StartAsync();
         PeerInfo member = Assert.Single(peer.Cluster.GetPeers());
