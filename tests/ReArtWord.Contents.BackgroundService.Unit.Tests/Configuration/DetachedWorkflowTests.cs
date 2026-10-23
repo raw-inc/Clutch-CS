@@ -78,7 +78,26 @@ public sealed class DetachedWorkflowTests
         await fixture.Peers["a"].RejoinAsync();
         await ManualSafetyFixture.WaitAsync(() => fixture.Peers["a"].GetPeers().Count(peer => peer.Status == EPeerStatus.Ready) == 2);
         Assert.Single(await first.GetDetachedAsync());
-        await first.ReconcileDetachedAsync();
+
+        // 共有の確定応答が遅れた場合は、同じ統合操作を照会して完了を確認します。
+        using CancellationTokenSource confirmation = new(TimeSpan.FromSeconds(15));
+        Guid? integrationOperation = null;
+        do
+        {
+            await first.ReconcileDetachedAsync(confirmation.Token);
+            IReadOnlyList<DetachedWorkflowState> pending = await first.GetDetachedAsync(confirmation.Token);
+            if (pending.Count == 0)
+            {
+                break;
+            }
+            if (Assert.Single(pending).IntegrationOperationId is Guid operation)
+            {
+                integrationOperation ??= operation;
+                Assert.Equal(integrationOperation, operation);
+            }
+            await Task.Delay(25, confirmation.Token);
+        }
+        while (true);
         Assert.Empty(await first.GetDetachedAsync());
         Assert.Equal("local", (await second.GetAsync("demo"))!.Definition.Name);
         Assert.False((await first.GetAsync("demo"))!.LocalOnly);

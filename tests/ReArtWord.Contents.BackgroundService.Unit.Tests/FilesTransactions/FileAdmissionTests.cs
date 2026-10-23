@@ -30,7 +30,7 @@ public sealed class FileAdmissionTests
         using UdpClient socket = new(new IPEndPoint(IPAddress.Loopback, 0));
         int port = ((IPEndPoint)socket.Client.LocalEndPoint!).Port;
         socket.Close();
-        FileTestPeer peer = new(Guid.NewGuid().ToString("N"), "one", port, true);
+        FileTestPeer peer = await FileTestPeer.CreateAsync(Guid.NewGuid().ToString("N"), "one", port, true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = peer.ConfigureAwait(false);
         peer.Cluster.LocalDetachedExecutionAllowed = request => request.Kind.StartsWith("file.", StringComparison.Ordinal) || string.Equals(request.Kind, "node.execute", StringComparison.Ordinal);
         await peer.Cluster.StartAsync();

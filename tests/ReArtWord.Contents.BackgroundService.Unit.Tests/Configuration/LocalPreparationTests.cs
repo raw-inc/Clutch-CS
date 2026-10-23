@@ -11,7 +11,6 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Operatio
 using ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Workflows;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Documents;
-using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Compilation;
@@ -31,7 +30,7 @@ public sealed class LocalPreparationTests
         ManualSafetyFixture fixture = new();
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = fixture.ConfigureAwait(false);
         await fixture.StartAsync("a", true);
-        SqliteRepository repository = fixture.Repositories["a"];
+        IDurableRepository repository = fixture.Repositories["a"];
         using ClusterConfigurationStore seed = new(repository, fixture.Peers["a"]);
         Assert.Equal(ELocalPreparationState.Empty, (await seed.PrepareLocalAsync()).State);
         ClusterOperationalSettings settings = new("UTC", EFileConflictPolicy.Fail, EFileInternalFailurePolicy.Keep, new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal));
@@ -57,7 +56,7 @@ public sealed class LocalPreparationTests
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = fixture.ConfigureAwait(false);
         await fixture.StartAsync("a", true);
         await fixture.StopAsync("a");
-        SqliteRepository repository = fixture.Repositories["a"];
+        IDurableRepository repository = fixture.Repositories["a"];
         Dictionary<string, CompiledWorkflow> effective = new(StringComparer.Ordinal);
         WorkflowStore store = new(repository, fixture.Peers["a"], new WorkflowCompiler(new NodeRegistry([])))
         {

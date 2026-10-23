@@ -16,6 +16,7 @@ internal sealed class FileReservationCoordinator(PeerCluster cluster, IDurableRe
 {
     private readonly SemaphoreSlim writes = new(1, 1);
     private readonly FileReservationCapabilities capabilities = new(cluster);
+    private readonly FileReleaseBatch releases = new();
     private bool closing;
     private FileReservationLedger? sharedLedger;
     private FileReservationLedger? localLedger;
@@ -98,32 +99,88 @@ internal sealed class FileReservationCoordinator(PeerCluster cluster, IDurableRe
 
     /// <summary>保存された所有情報と一致する予約だけを空きスロットへ戻します。</summary>
     /// <returns>元の実行やファイル内容を変更しない解放確認です。</returns>
-    internal async Task<ClusterResponse> ReleaseAsync(ClusterRequest request, CancellationToken cancellationToken = default)
+    internal Task<ClusterResponse> ReleaseAsync(ClusterRequest request, CancellationToken cancellationToken = default)
     {
         FileGateRelease release = request.Payload.Json.Deserialize<FileGateRelease>() ?? throw new InvalidDataException("解放が不正です。");
+        return releases.WriteAsync(request.Id, release, ReleaseBatchAsync, cancellationToken);
+    }
+
+    /// <summary>取得と同じ排他の内側で所有者を個別に照合し、同じ固定集合への解放だけをまとめます。</summary>
+    /// <returns>全参加者の耐久確認後の、元要求順の結果です。</returns>
+    private async Task<IReadOnlyList<ClusterResponse>> ReleaseBatchAsync(Func<IReadOnlyList<FileReleaseBatch.Request>> take, CancellationToken cancellationToken = default)
+    {
         await writes.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            if (!MayWrite(release.Lease.LocalOnly, cluster.LocalInstanceId))
+            IReadOnlyList<FileReleaseBatch.Request> requests = take();
+            ClusterResponse[] results = new ClusterResponse[requests.Count];
+            foreach (IGrouping<string, int> group in Enumerable.Range(0, requests.Count).GroupBy(index => ReleaseGroup(requests[index].Release), StringComparer.Ordinal))
             {
-                return new(EOutcome.NotExecuted, Reason: "File.CoordinatorChanged");
+                FileGateRelease release = requests[group.First()].Release;
+                bool local = release.Lease.LocalOnly;
+                try
+                {
+                    if (!MayWrite(local, cluster.LocalInstanceId))
+                    {
+                        foreach (int index in group)
+                        {
+                            results[index] = new(EOutcome.NotExecuted, Reason: "File.CoordinatorChanged");
+                        }
+                        continue;
+                    }
+                    FileReservationLedger ledger = await ReadAsync(local, cancellationToken).ConfigureAwait(false);
+                    List<int> accepted = [];
+                    foreach (int index in group)
+                    {
+                        FileLease lease = requests[index].Release.Lease;
+                        if (ledger.Active.TryGetValue(lease.Id, out FileLease? held)
+                            && !string.Equals(ContractJson.Hash(held), ContractJson.Hash(lease), StringComparison.Ordinal))
+                        {
+                            results[index] = new(EOutcome.NotExecuted, Reason: "File.LeaseOwnerMismatch");
+                        }
+                        else
+                        {
+                            accepted.Add(index);
+                        }
+                    }
+                    if (accepted.Count == 0)
+                    {
+                        continue;
+                    }
+                    Guid operation = accepted.Count == 1 ? requests[accepted[0]].Id
+                                                         : Guid.CreateVersion7();
+                    bool slots = await UseSlotsAsync(ledger, local, cancellationToken).ConfigureAwait(false);
+                    HashSet<Guid> removed = accepted.Select(index => requests[index].Release.Lease.Id).ToHashSet();
+                    DurableReceipt saved = await SaveAsync(operation, ledger.ReleaseChanges(operation, removed, slots), release.Members, local, cancellationToken).ConfigureAwait(false);
+                    Remember(local, ledger.Updated(saved));
+                    foreach (int index in accepted)
+                    {
+                        // 元要求の受付・結果はRequestExecutorが個別に保存します。不明な解放を成功へ読み替えません。
+                        results[index] = new(saved.Outcome, Reason: saved.Reason);
+                    }
+                }
+                catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or System.Data.Common.DbException or JsonException)
+                {
+                    Remember(local, null);
+                    foreach (int index in group)
+                    {
+                        results[index] ??= new(EOutcome.Unknown, Reason: "File.ReleaseUnconfirmed");
+                    }
+                }
             }
-            FileReservationLedger ledger = await ReadAsync(release.Lease.LocalOnly, cancellationToken).ConfigureAwait(false);
-            if (ledger.Active.TryGetValue(release.Lease.Id, out FileLease? held)
-                && !string.Equals(ContractJson.Hash(held), ContractJson.Hash(release.Lease), StringComparison.Ordinal))
-            {
-                return new(EOutcome.NotExecuted, Reason: "File.LeaseOwnerMismatch");
-            }
-            bool slots = await UseSlotsAsync(ledger, release.Lease.LocalOnly, cancellationToken).ConfigureAwait(false);
-            DurableReceipt saved = await SaveAsync(request.Id, ledger.Changes(request.Id, null, release.Lease.Id, slots), release.Members, release.Lease.LocalOnly, cancellationToken).ConfigureAwait(false);
-            Remember(release.Lease.LocalOnly, ledger.Updated(saved));
-            return new(saved.Outcome, Reason: saved.Reason);
+            return results;
         }
         finally
         {
             writes.Release();
         }
     }
+
+    /// <summary>独立運転と、異なる参加者・起動実体への確認を同じ取引へ混ぜません。</summary>
+    /// <returns>要求順によらない固定参加者集合です。</returns>
+    private static string ReleaseGroup(FileGateRelease release) => ContractJson.Hash(new { release.Lease.LocalOnly,
+        Members = release.Members.OrderBy(peer => peer.PeerId, StringComparer.Ordinal).ThenBy(peer => peer.InstanceId)
+            .Select(peer => new { peer.PeerId, peer.InstanceId, peer.HostId }) });
 
     /// <summary>旧版がCoordinatorとして再参加した場合は、保持中の予約ごと従来形式へ戻します。</summary>
     /// <returns>旧版が新形式を未予約として解釈しないための互換回復です。</returns>

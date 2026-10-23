@@ -5,9 +5,8 @@ using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Contracts.Workflow;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Cluster;
-using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Receipts;
-using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
+using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Scheduling;
 using ReArtWord.Contents.BackgroundService.Runtime.Scheduling;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Execution;
@@ -31,7 +30,7 @@ public sealed class ScheduleRetentionTests
         await fixture.StartAsync("a", true).ConfigureAwait(true);
         await fixture.WaitForStatesAsync("a", [("a", EPeerStatus.Ready)]).ConfigureAwait(true);
         PeerCluster peer = fixture.Peers["a"];
-        SqliteRepository repository = fixture.Repositories["a"];
+        IDurableRepository repository = fixture.Repositories["a"];
         ScheduleCursorStore store = new(peer, repository);
         using ScheduledInputCoordinator coordinator = new(peer, store.Inputs, execution.Compiler, execution.Engine, execution.Sources);
         RemoteExecutionRequest source = Source(peer);
@@ -120,13 +119,13 @@ public sealed class ScheduleRetentionTests
             new(entry.Scope, entry.Key, entry.Version, NodeValue.FromObject(record with { ChangeId = unfinished, Input = null, Outcome = EOutcome.Cancelled })),
             new(index!.Scope, index.Key, index.Version, NodeValue.FromObject(new ScheduledInputIndex(unfinished, record.ConfirmedPeers, []))),
         ];
-        foreach (SqliteRepository repository in fixture.Repositories.Values)
+        foreach (IDurableRepository repository in fixture.Repositories.Values)
         {
             Assert.Equal(EOutcome.Succeeded, (await repository.PrepareAsync(unfinished, pending).ConfigureAwait(true)).Outcome);
         }
         await fixture.StopAsync("a").ConfigureAwait(true);
         await fixture.WaitForStatesAsync("c", [("a", EPeerStatus.Unavailable), ("c", EPeerStatus.Ready)]).ConfigureAwait(true);
-        SqliteRepository standby = fixture.Repositories["c"];
+        IDurableRepository standby = fixture.Repositories["c"];
         ScheduleCursorStore standbyStore = new(fixture.Peers["c"], standby);
         ScheduledInputStore inputs = standbyStore.Inputs;
         using ScheduledInputCoordinator coordinator = new(fixture.Peers["c"], inputs, execution.Compiler, execution.Engine, execution.Sources);
@@ -150,7 +149,7 @@ public sealed class ScheduleRetentionTests
         {
             Assert.Equal("schedule.resultUnconfirmed", view.Reason);
         }
-        foreach (SqliteRepository repository in fixture.Repositories.Values)
+        foreach (IDurableRepository repository in fixture.Repositories.Values)
         {
             _ = await repository.AbortPreparedAsync(unfinished).ConfigureAwait(true);
         }

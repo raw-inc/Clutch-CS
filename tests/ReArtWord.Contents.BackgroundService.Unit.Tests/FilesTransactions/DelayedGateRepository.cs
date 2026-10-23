@@ -17,6 +17,12 @@ internal sealed class DelayedGateRepository : DurableRepository
         get; init;
     }
 
+    /// <summary>指定した保存段階だけで、媒体の読書き失敗を再現します。</summary>
+    internal int? ThrowAtPreparation
+    {
+        get; init;
+    }
+
     internal int Preparations
     {
         get; private set;
@@ -57,6 +63,10 @@ internal sealed class DelayedGateRepository : DurableRepository
             if (Reject)
             {
                 return new(operationId, string.Empty, EOutcome.Failed, [], "fixture.rejected");
+            }
+            if (Preparations == ThrowAtPreparation)
+            {
+                throw new IOException("The fixture could not save this preparation.");
             }
         }
         return await base.PrepareAsync(operationId, mutations, cancellationToken).ConfigureAwait(false);

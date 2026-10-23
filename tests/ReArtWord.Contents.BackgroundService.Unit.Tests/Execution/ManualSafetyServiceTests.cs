@@ -3,6 +3,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution.Safety;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
+using ReArtWord.Contents.BackgroundService.Infrastructure.Execution.Safety;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Receipts;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
@@ -123,6 +124,20 @@ public sealed class ManualSafetyServiceTests(ITestOutputHelper output)
         Assert.Equal(EOutcome.Succeeded, first.Outcome);
         ManualSafetyChange resume = new(Guid.NewGuid(), "workflow", "node", false, "stale-ui-version", Continued: true);
         Assert.Equal(EOutcome.Succeeded, (await fixture.ChangeAndConfirmAsync("a", resume)).Outcome);
+
+        // 古い要求の再送前に、受信側の保存状態へ再開操作が届いたことを確認します。
+        ManualSafetyService receiver = fixture.Safety["b"];
+        using CancellationTokenSource confirmation = new(TimeSpan.FromSeconds(15));
+        do
+        {
+            await receiver.RefreshAsync(confirmation.Token);
+            if (receiver.Current.SingleOrDefault()?.OperationId == resume.OperationId)
+            {
+                break;
+            }
+            await Task.Delay(25, confirmation.Token);
+        }
+        while (true);
         Assert.Equal(EOutcome.Succeeded, (await fixture.ChangeAndConfirmAsync("b", stop)).Outcome);
         Assert.False(Assert.Single(fixture.Safety["b"].Current).Stopped);
         Assert.False(Assert.Single(fixture.Safety["b"].Current).Continued);

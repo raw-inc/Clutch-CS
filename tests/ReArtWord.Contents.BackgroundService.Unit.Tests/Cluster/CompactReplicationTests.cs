@@ -76,7 +76,8 @@ public sealed class CompactReplicationTests : IDisposable
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(20));
         await first.StartAsync(timeout.Token).ConfigureAwait(true);
         await second.StartAsync(timeout.Token).ConfigureAwait(true);
-        while (first.GetPeers().Count(peer => peer.Status == EPeerStatus.Ready) != 2)
+        while (first.GetPeers().Count(peer => peer.Status == EPeerStatus.Ready) != 2
+            || second.GetPeers().Count(peer => peer.Status == EPeerStatus.Ready) != 2)
         {
             await Task.Delay(20, timeout.Token).ConfigureAwait(true);
         }
@@ -102,9 +103,15 @@ public sealed class CompactReplicationTests : IDisposable
         Assert.Equal(EOutcome.Succeeded, result.Outcome);
         Assert.Equal(text, Assert.Single(result.Entries).Value!.Json.GetString());
         Assert.Equal(text, (await remote.ReadAsync("configuration", "large", timeout.Token).ConfigureAwait(true))!.Value!.Json.GetString());
-        WireMessage compressed = Assert.Single(observed, message => string.Equals(message.Kind, ReplicationPreparationPayload.Kind, StringComparison.Ordinal));
-        Assert.Equal(operation, ReplicationPreparationPayload.Read(compressed.Body, 1048576).Id);
-        Assert.InRange(JsonSerializer.SerializeToUtf8Bytes(compressed).Length, 1, 4096);
+
+        // UDPは確認応答まで同じ準備を再送できます。回数ではなく、届いた全件の内容を検証します。
+        WireMessage[] compressed = observed.Where(message => string.Equals(message.Kind, ReplicationPreparationPayload.Kind, StringComparison.Ordinal)).ToArray();
+        Assert.NotEmpty(compressed);
+        Assert.All(compressed, message =>
+        {
+            Assert.Equal(operation, ReplicationPreparationPayload.Read(message.Body, 1048576).Id);
+            Assert.InRange(JsonSerializer.SerializeToUtf8Bytes(message).Length, 1, 4096);
+        });
         Assert.DoesNotContain(observed, message => string.Equals(message.Kind, prepare, StringComparison.Ordinal));
         Assert.All(observed.Where(message => string.Equals(message.Kind, commit, StringComparison.Ordinal)), message =>
         {

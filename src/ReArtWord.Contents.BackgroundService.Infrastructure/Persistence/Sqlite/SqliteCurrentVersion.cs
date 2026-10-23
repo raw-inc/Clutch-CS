@@ -33,8 +33,18 @@ internal sealed class SqliteCurrentVersion(string path, TimeProvider? timeProvid
             return RepositoryStateVersion.WithPending(previous.Version, retained, pendingIds);
         }
 
-        // SQL外の破損も検出するため、世代が同じでも前回の検証から30秒以上経過した確認では本文を読み直します。
-        SqliteSharedFingerprint.VerifiedRows? verified = session.SharedFingerprint();
+        // 一件の予約変更で、未変更の大きなワークフロー本文まで読み直しません。
+        // SQL更新は行ごとの世代で即座に検出します。SQL外の破損検査の期限は、他行の変更では延長しません。
+        bool reuse = previous?.Rows is not null && previous.Generation.Epoch == generation.Epoch
+            && clock.GetElapsedTime(previous.CheckedAt) is { TotalSeconds: >= 0 and < 30 };
+        SqliteVersionRows? known = null;
+        long checkedAt = clock.GetTimestamp();
+        if (reuse)
+        {
+            known = previous!.Rows;
+            checkedAt = previous.CheckedAt;
+        }
+        SqliteSharedFingerprint.VerifiedRows? verified = session.SharedFingerprint(known);
         string? fingerprint = verified?.Fingerprint;
         if (fingerprint is not null)
         {
@@ -42,7 +52,7 @@ internal sealed class SqliteCurrentVersion(string path, TimeProvider? timeProvid
         }
         if (fingerprint is not null && string.Equals(previous?.Fingerprint, fingerprint, StringComparison.Ordinal))
         {
-            Volatile.Write(ref cached, previous! with { Generation = generation, CheckedAt = clock.GetTimestamp() });
+            Volatile.Write(ref cached, previous! with { Generation = generation, CheckedAt = checkedAt });
             return RepositoryStateVersion.WithPending(previous!.Version, retained, pendingIds);
         }
         string version;
@@ -57,7 +67,7 @@ internal sealed class SqliteCurrentVersion(string path, TimeProvider? timeProvid
             DurableEntry[] entries = session.List<DurableEntry>("entry", sharedOnly: true, excludeRetired: retained, cancellationToken: cancellationToken).Concat(session.List<DurableEntry>("conflict", sharedOnly: true, cancellationToken: cancellationToken)).ToArray();
             version = RepositoryStateVersion.CurrentHash(entries, retained, SqliteVersionRows.ProtectedHistory(session, entries));
         }
-        Volatile.Write(ref cached, new(fingerprint, version, rows, retirementRevision, retained, generation, clock.GetTimestamp()));
+        Volatile.Write(ref cached, new(fingerprint, version, rows, retirementRevision, retained, generation, checkedAt));
         return RepositoryStateVersion.WithPending(version, retained, pendingIds);
     }
 

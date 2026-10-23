@@ -112,7 +112,7 @@ public sealed class KnownPeerTests
 
     /// <summary>保存済み集合を実際に読めるまで待ちます。</summary>
     /// <returns>ローカル置換の確認完了です。</returns>
-    private static async Task WaitKnownAsync(SqliteRepository repository, string id, Func<PeerInfo[], bool> condition)
+    private static async Task WaitKnownAsync(IDurableRepository repository, string id, Func<PeerInfo[], bool> condition)
     {
         using CancellationTokenSource deadline = new(TimeSpan.FromSeconds(15));
         bool complete = false;

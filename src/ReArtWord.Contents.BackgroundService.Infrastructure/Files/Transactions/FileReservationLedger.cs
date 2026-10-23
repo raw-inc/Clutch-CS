@@ -125,8 +125,25 @@ internal sealed class FileReservationLedger(string scope, DurableEntry? header, 
     /// <returns>変更した一件、または旧形式との切替に必要な原子的変更です。</returns>
     internal IReadOnlyList<DurableMutation> Changes(Guid operation, FileLease? adding, Guid? removing, bool useSlots)
     {
+        HashSet<Guid> removed = [];
+        if (removing is Guid id)
+        {
+            removed.Add(id);
+        }
+        return ChangeSet(operation, adding, removed, useSlots);
+    }
+
+    /// <summary>所有確認済みの解放だけを同じガード版で保存し、保持中の予約を変更しません。</summary>
+    /// <returns>全解放とガードの原子的な変更です。</returns>
+    internal IReadOnlyList<DurableMutation> ReleaseChanges(Guid operation, IReadOnlySet<Guid> removing, bool useSlots)
+        => ChangeSet(operation, null, removing, useSlots);
+
+    /// <summary>新旧両形式で、取得または確認済み解放の集合だけを反映します。</summary>
+    /// <returns>台帳の一回分の比較更新です。</returns>
+    private List<DurableMutation> ChangeSet(Guid operation, FileLease? adding, IReadOnlySet<Guid> removing, bool useSlots)
+    {
         Dictionary<Guid, FileLease> next = new(active);
-        if (removing is Guid removed)
+        foreach (Guid removed in removing)
         {
             next.Remove(removed);
         }
@@ -156,13 +173,9 @@ internal sealed class FileReservationLedger(string scope, DurableEntry? header, 
                 .Select(slot => new DurableMutation(slot.Scope, slot.Key, slot.Version, null)));
             return changes;
         }
-        if (removing is Guid id)
+        foreach (DurableEntry held in slots.Where(slot => slot.Value is not null && removing.Contains(slot.Value.Json.GetProperty("Id").GetGuid())))
         {
-            DurableEntry? held = slots.FirstOrDefault(slot => slot.Value?.Json.GetProperty("Id").GetGuid() == id);
-            if (held is not null)
-            {
-                changes.Add(new(held.Scope, held.Key, held.Version, null));
-            }
+            changes.Add(new(held.Scope, held.Key, held.Version, null));
         }
         if (adding is not null)
         {
