@@ -1,7 +1,7 @@
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Updates;
 
-namespace ReArtWord.Contents.BackgroundService.ClientHost.Updates.Fleet;
+namespace ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
 
 /// <summary>明示的な復元と、更新失敗後に確認された旧版復帰を同じ境界で判定します。</summary>
 internal static class FleetUpdateResult

@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
 using System.Runtime.InteropServices;
 using ReArtWord.Contents.BackgroundService.ClientHost.Updates.Fleet;
 using ReArtWord.Contents.BackgroundService.Contracts.Cluster;

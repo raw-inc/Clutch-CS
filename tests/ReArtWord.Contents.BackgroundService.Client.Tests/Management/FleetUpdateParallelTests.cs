@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using ReArtWord.Contents.BackgroundService.ClientHost.Updates;

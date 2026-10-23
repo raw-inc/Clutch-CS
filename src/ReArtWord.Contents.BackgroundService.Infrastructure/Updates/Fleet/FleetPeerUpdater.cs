@@ -6,7 +6,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Updates;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Releases;
 using ReArtWord.Contents.BackgroundService.Runtime.Updates;
 
-namespace ReArtWord.Contents.BackgroundService.ClientHost.Updates.Fleet;
+namespace ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
 
 /// <summary>一ピアの準備・入替・復帰を確認し、結果不明な停止を再実行しません。</summary>
 internal sealed class FleetPeerUpdater(IFleetUpdateRemote remote)

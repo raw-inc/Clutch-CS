@@ -4,10 +4,10 @@ using ReArtWord.Contents.BackgroundService.Contracts.Updates.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Updates.Fleet;
 using ReArtWord.Contents.BackgroundService.Runtime.Updates;
 
-namespace ReArtWord.Contents.BackgroundService.ClientHost.Updates.Fleet;
+namespace ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
 
 /// <summary>host順序の制御から、現行health照会と既存Updater配送を分離します。</summary>
-internal interface IFleetUpdateRemote
+public interface IFleetUpdateRemote
 {
     /// <summary>固定host上の現在実体を、キャッシュを使わず確認します。</summary>
     /// <returns>当該hostの稼働確認です。</returns>
@@ -26,4 +26,4 @@ internal interface IFleetUpdateRemote
 /// <param name="Peer">今回確認した実体です。</param>
 /// <param name="Ready">Readyでmaintenanceがない場合だけtrueです。</param>
 /// <param name="BuildVersion">確認した版です。</param>
-internal sealed record FleetPeerObservation(PeerInfo Peer, bool Ready, string? BuildVersion);
+public sealed record FleetPeerObservation(PeerInfo Peer, bool Ready, string? BuildVersion);

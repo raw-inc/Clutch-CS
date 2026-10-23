@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using ReArtWord.Contents.BackgroundService.ClientHost.Networking;
+using ReArtWord.Contents.BackgroundService.Contracts.Management.Discovery;
 using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Management;
@@ -13,10 +13,10 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Cluster;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Observers;
 using ReArtWord.Contents.BackgroundService.Runtime.Updates;
 
-namespace ReArtWord.Contents.BackgroundService.ClientHost.Updates.Fleet;
+namespace ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
 
 /// <summary>選択済みNIC上の実healthと既存のUpdater配送を使います。</summary>
-internal sealed class FleetUpdateRemote(ObserverConnection connection) : IFleetUpdateRemote
+public sealed class UdpFleetUpdateRemote(Func<string, string, UdpObserver?> findObserver, Func<IReadOnlyList<DiscoveredCluster>> getClusters) : IFleetUpdateRemote
 {
     private static readonly JsonSerializerOptions healthOptions = new(ContractJson.Options) { UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip };
 
@@ -26,11 +26,12 @@ internal sealed class FleetUpdateRemote(ObserverConnection connection) : IFleetU
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW160", Justification = "所属集合を一回のsnapshotで検証してから停止可否を判定します。")]
     public async Task<IReadOnlyList<string>?> MembersAsync(FleetUpdateTarget target, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(target);
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(4));
         try
         {
-            UdpObserver? observer = connection.FindObserver(target.ClusterId, target.Peer.PeerId);
+            UdpObserver? observer = findObserver(target.ClusterId, target.Peer.PeerId);
             if (observer is null || observer.CaptureBindingStatus().Binding != target.Binding)
             {
                 return null;
@@ -57,18 +58,19 @@ internal sealed class FleetUpdateRemote(ObserverConnection connection) : IFleetU
     /// <returns>今回直接確認した稼働状態です。</returns>
     public async Task<FleetPeerObservation?> ObserveAsync(FleetUpdateTarget target, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(target);
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(4));
         try
         {
-            PeerInfo[] peers = connection.GetClusters().Where(cluster => string.Equals(cluster.ClusterId, target.ClusterId, StringComparison.Ordinal))
+            PeerInfo[] peers = getClusters().Where(cluster => string.Equals(cluster.ClusterId, target.ClusterId, StringComparison.Ordinal))
                 .SelectMany(cluster => cluster.Peers).Where(peer => string.Equals(peer.PeerId, target.Peer.PeerId, StringComparison.Ordinal)).ToArray();
             if (peers.Length != 1 || !string.Equals(peers[0].HostId, target.Peer.HostId, StringComparison.Ordinal)
                 || TimeSpan.FromSeconds(15) < DateTimeOffset.UtcNow - peers[0].LastSeen)
             {
                 return null;
             }
-            UdpObserver? observer = connection.FindObserver(target.ClusterId, target.Peer.PeerId);
+            UdpObserver? observer = findObserver(target.ClusterId, target.Peer.PeerId);
             if (observer is null || observer.CaptureBindingStatus().Binding != target.Binding)
             {
                 return null;
@@ -95,7 +97,9 @@ internal sealed class FleetUpdateRemote(ObserverConnection connection) : IFleetU
     /// <returns>開始時のNICと実体へ固定した配送です。</returns>
     public IUpdatePeerTransport Create(ClusterUpdateRequest request, FleetUpdateTarget target)
     {
-        PeerInfo? source = connection.GetClusters().Where(cluster => string.Equals(cluster.ClusterId, target.ClusterId, StringComparison.Ordinal))
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(request);
+        PeerInfo? source = getClusters().Where(cluster => string.Equals(cluster.ClusterId, target.ClusterId, StringComparison.Ordinal))
             .SelectMany(cluster => cluster.Peers).FirstOrDefault(peer => string.Equals(peer.Address, target.Binding.BindAddress, StringComparison.Ordinal));
         ClusterUpdateJob job = new(request, new Dictionary<string, Guid>(StringComparer.Ordinal) { [target.Peer.PeerId] = target.Peer.InstanceId },
             target.Binding, target.ClusterId, string.Empty, "json", source?.PeerId ?? "clienthost");

@@ -2,17 +2,19 @@ using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Updates;
 using ReArtWord.Contents.BackgroundService.Contracts.Updates.Fleet;
 
-namespace ReArtWord.Contents.BackgroundService.ClientHost.Updates.Fleet;
+namespace ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
 
 /// <summary>PCとクラスタの排他を守って有限並列で更新し、進捗を一列に保存します。</summary>
-internal sealed class FleetUpdateRunner(IFleetUpdateRemote remote)
+public sealed class FleetUpdateRunner(IFleetUpdateRemote remote)
 {
     /// <summary>安全な対象を空き枠へ割り当て、結果不明後は開始済み処理だけを回収します。</summary>
     /// <returns>保存した全対象の結果です。</returns>
     // 抑制理由: 所有する全taskをfinallyで回収してから保存排他を解放します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2025", Justification = "全taskをfinallyでawaitし、借用資源の寿命内に回収します。")]
-    internal async Task<FleetUpdateStatus> RunAsync(FleetUpdateStatus initial, Func<FleetUpdateStatus, CancellationToken, Task> save, CancellationToken cancellationToken = default)
+    public async Task<FleetUpdateStatus> RunAsync(FleetUpdateStatus initial, Func<FleetUpdateStatus, CancellationToken, Task> save, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(initial);
+        ArgumentNullException.ThrowIfNull(save);
         ArgumentOutOfRangeException.ThrowIfLessThan(initial.Request.Release.MaximumParallelism, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(initial.Request.Release.MaximumParallelism, 3);
         FleetUpdateStatus status = initial;

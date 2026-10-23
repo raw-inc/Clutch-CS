@@ -6,15 +6,16 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Updates;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Releases;
 using ReArtWord.Contents.BackgroundService.Runtime.Updates;
 
-namespace ReArtWord.Contents.BackgroundService.ClientHost.Updates.Fleet;
+namespace ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
 
 /// <summary>中断後は元Updaterの結果だけを照会し、更新開始や新しい試行は発行しません。</summary>
-internal sealed class FleetUpdateRecovery(IFleetUpdateRemote remote)
+public sealed class FleetUpdateRecovery(IFleetUpdateRemote remote)
 {
     /// <summary>確定した入替・復元の保留を解除し、未確認の結果を画面へ残します。</summary>
     /// <returns>再確認後の全体進捗です。</returns>
-    internal async Task<FleetUpdateStatus> ReconcileAsync(FleetUpdateStatus status, CancellationToken cancellationToken = default)
+    public async Task<FleetUpdateStatus> ReconcileAsync(FleetUpdateStatus status, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(status);
         List<FleetUpdatePeerProgress> peers = [];
         string[] terminal = ["Completed", "Deferred", "Failed"], notDispatched = ["Queued", "Preparing", "Retrying"];
         foreach (FleetUpdatePeerProgress peer in status.Peers)
