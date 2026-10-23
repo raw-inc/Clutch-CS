@@ -207,17 +207,25 @@ public static class BoundedProcessRunner
         char[] buffer = new char[4096];
         int count;
         long total = 0;
-        while ((count = await reader.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false)) != 0)
+        try
         {
-            total += count;
-            if (limits.FailOnOutputLimit && limits.OutputCharacters < total)
+            while ((count = await reader.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false)) != 0)
             {
-                await limitReached().ConfigureAwait(false);
+                total += count;
+                if (limits.FailOnOutputLimit && limits.OutputCharacters < total)
+                {
+                    await limitReached().ConfigureAwait(false);
+                }
+                if (retain && result.Length < limits.OutputCharacters)
+                {
+                    result.Append(buffer, 0, Math.Min(count, limits.OutputCharacters - result.Length));
+                }
             }
-            if (retain && result.Length < limits.OutputCharacters)
-            {
-                result.Append(buffer, 0, Math.Min(count, limits.OutputCharacters - result.Length));
-            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // 本体終了後も子孫がpipeを保持する場合は、読取り期限までに受信した出力を返します。
+            // 呼出元からの取消と終了コードはRunAsyncで別に判定します。
         }
         return result.ToString();
     }

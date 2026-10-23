@@ -8,6 +8,63 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Processes;
 /// <summary>実プロセスの標準pipeで文字境界、長い出力、無出力時の取消を確認します。</summary>
 public sealed class BoundedProcessRunnerTests
 {
+    /// <summary>本体の正常終了後に子孫がpipeを保持していても、受信済みの出力を失いません。</summary>
+    /// <returns>本体の終了と、pipeの読取り期限を別々に扱う確認です。</returns>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task InheritedPipesPreserveOutputAfterProcessExit(bool empty, bool failed)
+    {
+        using MediaTestFiles files = new();
+        string config = Path.Combine(files.Root, "inherited.txt");
+        string mode = "inherited-output";
+        string expected = "completed";
+        if (empty)
+        {
+            mode = "inherited-empty";
+            expected = string.Empty;
+        }
+        if (failed)
+        {
+            mode = "inherited-failure";
+        }
+        await File.WriteAllTextAsync(config, mode).ConfigureAwait(true);
+        using CancellationTokenSource cancellation = new(TimeSpan.FromSeconds(15));
+        Task<string> running = BoundedProcessRunner.RunAsync(Executable(), ["--config", config], cancellation.Token);
+        Process? child = null;
+        try
+        {
+            int pid = await ReadStartedProcessAsync(config + ".child", cancellation.Token).ConfigureAwait(true);
+            child = Process.GetProcessById(pid);
+            if (failed)
+            {
+                await Assert.ThrowsAsync<InvalidDataException>(() => running).ConfigureAwait(true);
+            }
+            else
+            {
+                Assert.Equal(expected, await running.ConfigureAwait(true));
+            }
+            Assert.False(child.HasExited);
+            Assert.False(cancellation.IsCancellationRequested);
+        }
+        finally
+        {
+            await cancellation.CancelAsync().ConfigureAwait(true);
+            if (child is not null)
+            {
+                using (child)
+                {
+                    if (!child.HasExited)
+                    {
+                        child.Kill(true);
+                    }
+                    await child.WaitForExitAsync(CancellationToken.None).ConfigureAwait(true);
+                }
+            }
+        }
+    }
+
     /// <summary>標準入出力の容量を超えるJSONも、引数へ展開せずUTF-8とEOFで渡します。</summary>
     /// <returns>同時出力中の全文受渡しと空入力の終了確認です。</returns>
     [Theory]
