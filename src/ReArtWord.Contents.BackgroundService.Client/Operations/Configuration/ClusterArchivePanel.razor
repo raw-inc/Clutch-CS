@@ -1,0 +1,19 @@
+<section class="card section">
+    <h2>@Ui["Cluster archive"]</h2>
+    <p>@Ui["Export shared settings and saved and active workflows. Logs retained by the cluster members can be included."]</p>
+    <label><input type="checkbox" @bind="includeLogs" disabled="@working" />@Ui["Include retained log entries"]</label>
+    <button @onclick="ExportAsync" disabled="@(working || !Connection.Connected)"><UiIcon Name="save" />@Ui["Export cluster archive"]</button>
+    <p class="muted">@Ui["Restore archives from the CLI or Setup → Repair."]</p>
+    @if (working)
+    {
+        <p role="status">@Ui["Preparing the archive…"]</p>
+    }
+    @if (message is not null)
+    {
+        <p class="notice" role="status">@message()</p>
+    }
+    @if (operation != Guid.Empty)
+    {
+        <p class="muted">@Ui["Operation ID"]: <code>@operation</code></p>
+    }
+</section>

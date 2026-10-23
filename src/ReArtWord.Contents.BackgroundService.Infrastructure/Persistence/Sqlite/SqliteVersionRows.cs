@@ -14,7 +14,11 @@ internal sealed class SqliteVersionRows
     private static long MaximumCachedBytes => 67108864;
     private readonly Dictionary<long, CachedRow> rows = [];
 
-    /// <summary>毎回実バイト列を検査した行だけを使い、削除済み行と上限超過分を保持しません。</summary>
+    /// <summary>サイズ上限内で保持している、本文を検証済みの行の識別情報です。</summary>
+    /// <returns>保持していない行は再検証するためnullです。</returns>
+    internal SqliteSharedFingerprint.Row? FindVerified(long id) => rows.GetValueOrDefault(id)?.Source;
+
+    /// <summary>実バイト列または行の変更世代を検査した行だけを使い、削除済み行と上限超過分を保持しません。</summary>
     /// <returns>今回の行集合だけを所有するキャッシュと既存形式の共有版です。</returns>
     internal static (SqliteVersionRows Rows, string Version) Read(SqliteSession session, IReadOnlyList<SqliteSharedFingerprint.Row> verified,
         SqliteVersionRows? previous, bool retained, bool retirementChanged)

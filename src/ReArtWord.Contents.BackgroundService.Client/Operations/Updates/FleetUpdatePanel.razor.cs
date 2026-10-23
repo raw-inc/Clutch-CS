@@ -52,7 +52,7 @@ public sealed partial class FleetUpdatePanel
 
     private bool busy, allowActive;
     private int maximumAttempts = 3;
-    private int maximumParallelism = 2;
+    private int maximumParallelism = 1;
     private string payloadRoot = string.Empty, timeoutSeconds = "600";
     private Func<string>? message;
 

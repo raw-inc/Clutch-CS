@@ -92,6 +92,26 @@ public sealed class WorkflowLogService : IWorkflowLog, IAsyncDisposable
         _ = await EnqueueAsync(entry, true, null, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>ログのIDと時刻を維持して復元します。ログの転送や、ログをきっかけとするWFの実行は行いません。</summary>
+    /// <returns>重複を除いたログの保存処理。</returns>
+    public async Task RestoreArchiveAsync(IReadOnlyList<WorkflowLogEntry> entries, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref disposed) != 0, this);
+        IReadOnlyList<string> patterns = await redactor.ReadPatternsAsync(cancellationToken).ConfigureAwait(false);
+        List<LogWorkItem> items = new(entries.Count);
+        foreach (WorkflowLogEntry entry in entries)
+        {
+            if (entry is null || entry.Id == Guid.Empty || string.IsNullOrWhiteSpace(entry.PeerId) || entry.Message is null)
+            {
+                throw new InvalidDataException("Archive log identity is invalid.");
+            }
+            WorkflowLogEntry safe = LogRedactor.Redact(entry with { Level = LogPolicy.NormalizeLevel(entry.Level) }, patterns);
+            items.Add(new(JsonSerializer.SerializeToUtf8Bytes(safe), false));
+        }
+        await store.PersistAsync(items, Current(), cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>この呼出し以前に受付済みのログ保存を待ちます。</summary>
     /// <returns>保存境界の確認です。</returns>
     public async Task FlushAsync(CancellationToken cancellationToken = default)

@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
@@ -47,7 +46,6 @@ public sealed class RealWebClientUpdateTests
         string program = WebClientCatalog.ProgramRoot(client);
         ReleaseManifest previous = await LocalUpdateExecutor.ReadManifestAsync(program, cancellationToken).ConfigureAwait(true);
         Assert.Equal("Clutch-CS.ClientHost.exe", previous.EntryPoint);
-        Process? core = null;
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromMinutes(4));
         try
@@ -64,16 +62,17 @@ public sealed class RealWebClientUpdateTests
                 SetupResult installed = await fixture.RunAsync(new(Guid.NewGuid(), ESetupAction.Install, settings), "core-install", timeout.Token).ConfigureAwait(true);
                 Assert.True(installed.Outcome == EOutcome.Succeeded, installed.Detail);
                 InstallationRecord record = await InstallationFiles.ReadAsync(settings.Root, timeout.Token).ConfigureAwait(true);
-                ProcessStartInfo start = new(Path.Combine(settings.Root, "core", record.CoreEntryPoint)) { UseShellExecute = false, CreateNoWindow = true };
-                start.ArgumentList.Add("--config");
-                start.ArgumentList.Add(Path.Combine(settings.Root, "config", "contents.toml"));
-                core = Process.Start(start) ?? throw new IOException("The test Core could not start.");
+
+                // 管理者のまま手動起動せず、SYSTEMまたは通常ユーザーという製品の起動条件を使います。
+                TestCoreProcess core = new(Path.Combine(settings.Root, "core", record.CoreEntryPoint), Path.Combine(settings.Root, "config", "contents.toml"));
+                await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable coreLifetime = core.ConfigureAwait(true);
+                await core.StartAsync(timeout.Token).ConfigureAwait(true);
                 UpdateObserver observer = new(settings.Network, settings.ClusterId);
                 await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = observer.ConfigureAwait(true);
                 PeerInfo peer = await observer.FindAsync(settings.PeerId, cancellationToken: timeout.Token).ConfigureAwait(true);
                 ObservedTarget target = new(settings.ClusterId, settings.PeerId, settings.Network, peer, record);
                 result = await InstallerClientUpdates.RemoteAsync(new(client, target), Path.Combine(package, "client"), cancellationToken: timeout.Token).ConfigureAwait(true);
-                Assert.False(core.HasExited);
+                Assert.True(core.Running);
                 Assert.Equal(peer.InstanceId, (await observer.FindAsync(peer.PeerId, cancellationToken: timeout.Token).ConfigureAwait(true)).InstanceId);
             }
             else
@@ -94,15 +93,6 @@ public sealed class RealWebClientUpdateTests
         }
         finally
         {
-            if (core is not null)
-            {
-                if (!core.HasExited)
-                {
-                    core.Kill(false);
-                    await core.WaitForExitAsync(CancellationToken.None).ConfigureAwait(true);
-                }
-                core.Dispose();
-            }
             client = await WebClientCatalog.ReadAsync(client.Root, false, CancellationToken.None).ConfigureAwait(true);
             await WebClientStartup.StopAsync(client, CancellationToken.None).ConfigureAwait(true);
             await WebClientStartup.UnregisterAsync(client, CancellationToken.None).ConfigureAwait(true);

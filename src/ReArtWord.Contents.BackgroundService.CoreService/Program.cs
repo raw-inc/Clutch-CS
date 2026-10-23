@@ -158,6 +158,14 @@ internal static class Program
                 provider.GetRequiredService<CollaborationService>(), cluster, provider.GetRequiredService<ServiceRuntime>().Operational));
             builder.Services.AddHostedService(provider => new DraftAutoApplyWorker(provider.GetRequiredService<DraftAutoApply>()));
             builder.Services.AddSingleton<SetupManagement>();
+            builder.Services.AddSingleton(provider =>
+            {
+                ServiceRuntime runtime = provider.GetRequiredService<ServiceRuntime>();
+                return new Infrastructure.Configuration.Archives.ClusterArchiveService(configuration.DataDirectory, repository, cluster,
+                    runtime.Workflows, runtime.Operational, log);
+            });
+            builder.Services.AddSingleton<ArchiveManagement>();
+            builder.Services.AddHostedService(provider => provider.GetRequiredService<ArchiveManagement>());
             builder.Services.AddHostedService(provider => provider.GetRequiredService<SetupManagement>());
             builder.Services.AddSingleton<WebClientUpdateManagement>();
             builder.Services.AddHostedService(provider => provider.GetRequiredService<WebClientUpdateManagement>());
@@ -189,6 +197,7 @@ internal static class Program
         ManagementRegistry management = new();
         management.AdmissionCheck = operation => DetachedManagementPolicy.GetProblem(operation, runtime.Cluster.IsDetached, runtime.Configuration.Detached);
         CoreManagement.Register(management, runtime, log);
+        services.GetRequiredService<ArchiveManagement>().Register(management);
         services.GetRequiredService<SetupManagement>().Register(management);
         services.GetRequiredService<WebClientUpdateManagement>().Register(management);
         Management.DeviceManagement.Register(management, services.GetRequiredService<Infrastructure.DeviceManagement.DeviceManagementService>());

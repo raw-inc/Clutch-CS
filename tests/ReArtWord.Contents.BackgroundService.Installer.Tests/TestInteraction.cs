@@ -37,6 +37,10 @@ internal sealed class TestInteraction : IInstallerInteraction
     /// <returns>未選択です。</returns>
     public Task<string?> PickImageAsync(CancellationToken cancellationToken = default) => Task.FromResult<string?>(null);
 
+    /// <summary>アーカイブ選択を取り消します。</summary>
+    /// <returns>未選択です。</returns>
+    public Task<string?> PickArchiveAsync(CancellationToken cancellationToken = default) => Task.FromResult<string?>(null);
+
     /// <summary>OSの再起動は実施しません。</summary>
     /// <returns>試験境界の完了です。</returns>
     public Task RestartAsync(CancellationToken cancellationToken = default)

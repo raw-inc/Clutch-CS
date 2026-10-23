@@ -193,6 +193,16 @@ public sealed partial class WorkflowEditorPage
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "UIコールバックの呼出し署名を維持し、取消可能なI/Oには画面が所有するトークンを渡します。")]
     private async Task ExportAsync() => await GuardAsync(async () => await Storage.DownloadAsync(Model.Draft.Document.Id + ".json", Model.Draft.Document, lifetime.Token).ConfigureAwait(true)).ConfigureAwait(true);
 
+    /// <summary>編集中のワークフローをYAMLファイルとしてダウンロードします。</summary>
+    /// <returns>YAMLの生成とダウンロード要求。</returns>
+    private async Task ExportYamlAsync(CancellationToken cancellationToken = default) => await GuardAsync(async () =>
+    {
+        WorkflowDefinition document = Model.Draft.Document;
+        string yaml = await Api.PostAsync<string>("/api/workflows/export-yaml", document, cancellationToken).ConfigureAwait(true)
+            ?? throw new InvalidOperationException(Ui["The workflow could not be exported."]);
+        await Storage.DownloadTextAsync(document.Id + ".yaml", yaml, "application/yaml", cancellationToken).ConfigureAwait(true);
+    }).ConfigureAwait(true);
+
     /// <summary>選択ファイルを有限のサイズで読み込んで取込入力へ設定します。</summary>
     /// <returns>要求処理と現時点の画面反映の完了です。</returns>
     // 抑制理由: UIコールバックの呼出し署名を維持し、取消可能なI/Oには画面が所有するトークンを渡します。

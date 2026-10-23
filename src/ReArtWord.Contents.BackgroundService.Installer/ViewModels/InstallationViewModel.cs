@@ -70,10 +70,6 @@ internal sealed partial class InstallationViewModel : CommunityToolkit.Mvvm.Comp
     [RelayCommand]
     private void ChooseClusterMode(bool create) => NewCluster = create;
 
-    /// <summary>選択した修復方式を反映します。</summary>
-    [RelayCommand]
-    private void ChooseRepairMode(bool reinstall) => Reinstall = reinstall;
-
     /// <summary>再配置時のデータ保持方式を反映します。</summary>
     [RelayCommand]
     private void ChooseDatabaseRetention(bool keep) => KeepDatabase = keep;
@@ -192,12 +188,11 @@ internal sealed partial class InstallationViewModel : CommunityToolkit.Mvvm.Comp
         get; set;
     }
 
-    /// <summary>自動修復か再インストールかです。</summary>
-    [ObservableProperty]
-    public partial bool Reinstall
+    /// <summary>修復の実行方式とアーカイブ入力です。</summary>
+    public RepairViewModel Repair
     {
-        get; set;
-    }
+        get;
+    } = new();
 
     /// <summary>DB保持を選択したかです。</summary>
     [ObservableProperty]
@@ -213,12 +208,25 @@ internal sealed partial class InstallationViewModel : CommunityToolkit.Mvvm.Comp
         get; set;
     } = true;
 
-    /// <summary>稼働中更新の影響を確認したかです。</summary>
-    [ObservableProperty]
-    public partial bool AllowActive
+    /// <summary>選択中の更新方式。</summary>
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(SkipActive)), NotifyPropertyChangedFor(nameof(StopActive)), NotifyPropertyChangedFor(nameof(Fleet))]
+    public partial EInstallerUpdateMode UpdateMode
     {
         get; set;
     }
+
+    /// <summary>処理中の対象を除外する方式が選択されているか。</summary>
+    public bool SkipActive => UpdateMode == EInstallerUpdateMode.SkipActive;
+
+    /// <summary>実行中の処理を停止する方式が選択されているか。</summary>
+    public bool StopActive => UpdateMode == EInstallerUpdateMode.StopActive;
+
+    /// <summary>Fleet Updateが選択されているか。</summary>
+    public bool Fleet => UpdateMode == EInstallerUpdateMode.Fleet;
+
+    /// <summary>選択した更新方式を反映します。</summary>
+    [RelayCommand]
+    private void ChooseUpdateMode(EInstallerUpdateMode mode) => UpdateMode = mode;
 
     /// <summary>破壊的操作の最終警告を確認したかです。</summary>
     [ObservableProperty]
@@ -259,6 +267,7 @@ internal sealed partial class InstallationViewModel : CommunityToolkit.Mvvm.Comp
         string? path = field switch
         {
             "Icon" or "Favicon" => await interaction.PickImageAsync(cancellationToken).ConfigureAwait(true),
+            "Archive" => await interaction.PickArchiveAsync(cancellationToken).ConfigureAwait(true),
             _ => await interaction.PickFolderAsync(cancellationToken).ConfigureAwait(true),
         };
         if (path is not null)
@@ -268,6 +277,7 @@ internal sealed partial class InstallationViewModel : CommunityToolkit.Mvvm.Comp
                 case "Root": Root = path; break;
                 case "Icon": Appearance.Icon = path; break;
                 case "Favicon": Appearance.Favicon = path; break;
+                case "Archive": Repair.Archive.Path = path; break;
             }
         }
     }

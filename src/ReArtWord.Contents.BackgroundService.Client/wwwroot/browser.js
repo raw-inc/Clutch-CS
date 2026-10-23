@@ -9,9 +9,9 @@ window.contentsBrowser = {
 
     write: (key, value, session = false) => !session && window.contentsEditorStore.owns(key) ? window.contentsEditorStore.write(key, value) : (session ? sessionStorage : localStorage).setItem(key, value),
 
-    download: (name, text) =>
+    download: (name, text, type = 'application/json') =>
     {
-        const url = URL.createObjectURL(new Blob([text], { type: 'application/json' })), link = document.createElement('a');
+        const url = URL.createObjectURL(new Blob([text], { type })), link = document.createElement('a');
         link.href = url;
         link.download = name;
         link.click();

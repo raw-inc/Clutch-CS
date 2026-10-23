@@ -23,7 +23,7 @@ public sealed class AiFileReservationTests
     [Fact]
     public async Task UnconfirmedProcessStopKeepsTheReservationAsync()
     {
-        FileTestPeer peer = Peer();
+        FileTestPeer peer = await PeerAsync();
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable peerLifetime = peer.ConfigureAwait(true);
         await peer.Cluster.StartAsync().ConfigureAwait(true);
         AiWireFixture server = new((_, _) => Task.FromResult(AiWireResponse.Json("{}")));
@@ -54,7 +54,7 @@ public sealed class AiFileReservationTests
     [InlineData("ai.video.generate", "wan2.6-t2v")]
     public async Task ProviderFailureReleasesOnlyTheLocalReservationAsync(string type, string model)
     {
-        FileTestPeer peer = Peer();
+        FileTestPeer peer = await PeerAsync();
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable peerLifetime = peer.ConfigureAwait(true);
         await peer.Cluster.StartAsync().ConfigureAwait(true);
         AiWireFixture server = new((_, _) => Task.FromResult(AiWireResponse.Json("{}", 500)));
@@ -82,7 +82,7 @@ public sealed class AiFileReservationTests
     [InlineData(true)]
     public async Task TimeoutAndCancellationReleaseTheOwnedReservationAsync(bool cancel)
     {
-        FileTestPeer peer = Peer();
+        FileTestPeer peer = await PeerAsync();
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable peerLifetime = peer.ConfigureAwait(true);
         await peer.Cluster.StartAsync().ConfigureAwait(true);
         TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously), release = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -119,10 +119,10 @@ public sealed class AiFileReservationTests
 
     /// <summary>検証中は外部サービスや本番の保存先を使用しません。</summary>
     /// <returns>独立した実クラスタです。</returns>
-    private static FileTestPeer Peer()
+    private static Task<FileTestPeer> PeerAsync()
     {
         using UdpClient socket = new(new IPEndPoint(IPAddress.Loopback, 0));
-        return new(Guid.NewGuid().ToString("N"), "one", ((IPEndPoint)socket.Client.LocalEndPoint!).Port, true);
+        return FileTestPeer.CreateAsync(Guid.NewGuid().ToString("N"), "one", ((IPEndPoint)socket.Client.LocalEndPoint!).Port, true);
     }
 
     /// <summary>HTTP失敗の前にプローブを実行しない試験用の構成です。</summary>

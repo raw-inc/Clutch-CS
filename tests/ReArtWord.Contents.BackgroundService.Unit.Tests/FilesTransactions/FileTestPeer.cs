@@ -4,7 +4,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Cluster;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Files.Transactions;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
-using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
+using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Routing;
 using ReArtWord.Contents.BackgroundService.Nodes.FileSystem;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 
@@ -13,17 +13,41 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.FilesTransactions;
 /// <summary>実SQLite・UDP・許可ルート内のファイルを持つ試験Peerです。</summary>
 internal sealed class FileTestPeer : IAsyncDisposable
 {
-    /// <summary>試験ごとに独立したファイル所有領域を作ります。</summary>
-    public FileTestPeer(string clusterId, string peerId, int port, bool fresh, Func<INode, INode>? wrap = null)
+    private readonly RepositoryRuntime runtime;
+
+    /// <summary>試験の終了まで保存先を所有し、Coreと同じ接続寿命を使用します。</summary>
+    private FileTestPeer(RepositoryRuntime runtime, string root, string clusterId, string peerId, int port, bool fresh, Func<INode, INode>? wrap)
     {
-        Root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(Root);
-        Repository = new SqliteRepository(Path.Combine(Root, "state.db"));
+        this.runtime = runtime;
+        Root = root;
+        Repository = runtime.Repository;
         Cluster = new PeerCluster(new ClusterOptions(clusterId, peerId, peerId, "127.0.0.1", "127.255.255.255", port, 1, fresh, Root) { HeartbeatInterval = TimeSpan.FromMilliseconds(50), RequestTimeout = TimeSpan.FromSeconds(2) }, Repository) { ReadinessCheck = token => ValueTask.FromResult(true) };
         FileSystemOptions options = new([Root], RecoveryDirectory: Path.Combine(Root, "recovery"));
         Registry = new NodeRegistry(FileSystemNodeRegistration.Create(options).Select(node => wrap?.Invoke(node) ?? node));
         Transactions = new FileTransactionService(Registry, Cluster, Repository, options);
         Cluster.RemoteExecutionHandler = (request, token) => Transactions.ExecuteFileAsync((IActionNode)Registry.Find(request.Node.Type)!, Context(request), token).AsTask();
+    }
+
+    /// <summary>独立した保存先でWALと接続の所有期間を設定します。</summary>
+    /// <returns>終了時に保存先も解放する試験Peerです。</returns>
+    // 抑制理由: 成功時は試験Peerへ所有権を渡し、構築失敗時はfinallyで解放します。
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW141", Justification = "返却する試験Peerが保存先を所有し、構築失敗時だけfinallyで破棄します。")]
+    internal static async Task<FileTestPeer> CreateAsync(string clusterId, string peerId, int port, bool fresh, Func<INode, INode>? wrap = null, CancellationToken cancellationToken = default)
+    {
+        string root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        RepositoryRuntime runtime = await RepositoryFactory.CreateRuntimeAsync(root, peerId, new(), cancellationToken).ConfigureAwait(false);
+        bool transferred = false;
+        try
+        {
+            FileTestPeer peer = new(runtime, root, clusterId, peerId, port, fresh, wrap);
+            transferred = true;
+            return peer;
+        }
+        finally
+        {
+            using RepositoryRuntime? abandoned = transferred ? null
+                                                             : runtime;
+        }
     }
 
     /// <summary>許可された作業領域です。</summary>
@@ -33,7 +57,7 @@ internal sealed class FileTestPeer : IAsyncDisposable
     }
 
     /// <summary>永続保存先です。</summary>
-    public SqliteRepository Repository
+    public IDurableRepository Repository
     {
         get;
     }
@@ -66,5 +90,6 @@ internal sealed class FileTestPeer : IAsyncDisposable
     {
         await ((IAsyncDisposable)Cluster).DisposeAsync().ConfigureAwait(false);
         Transactions.Dispose();
+        runtime.Dispose();
     }
 }

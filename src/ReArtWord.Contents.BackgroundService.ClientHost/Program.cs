@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -54,7 +55,11 @@ internal static class Program
             builder.Services.AddSingleton<Updates.ClientUpdateLauncher>();
             builder.Services.AddHostedService(provider => new Infrastructure.Updates.Releases.UpdateRetentionWorker(provider.GetRequiredService<Updates.ClientUpdateLauncher>().TrimAsync));
             builder.Services.AddSingleton(_ => new Updates.Fleet.FleetUpdateStore(options.StateDirectory));
-            builder.Services.AddSingleton<Updates.Fleet.IFleetUpdateRemote, Updates.Fleet.FleetUpdateRemote>();
+            builder.Services.AddSingleton<IFleetUpdateRemote>(services =>
+            {
+                ObserverConnection connection = services.GetRequiredService<ObserverConnection>();
+                return new UdpFleetUpdateRemote(connection.FindObserver, connection.GetClusters);
+            });
             builder.Services.AddSingleton<Updates.Fleet.FleetUpdates>();
             builder.Services.AddHostedService(provider => provider.GetRequiredService<Updates.Fleet.FleetUpdates>());
             builder.Services.AddSingleton<Updates.Fleet.FleetUpdateEvents>();
@@ -111,6 +116,7 @@ internal static class Program
             app.MapGet("/client/dashboard/status", (HttpContext context, DashboardCache cache) =>
                 cache.Read(context.Request.Headers["X-Contents-Cluster"].ToString(), context.Request.Headers["X-Contents-Peer"].ToString())?.Status);
             DomainRoutes.Map(app);
+            ArchiveDownloadRoutes.Map(app);
             app.MapPost("/client/script-packages/search", (Contracts.Scripting.Packages.ScriptPackageSearchRequest request, Scripting.PackageRegistryClient registry, CancellationToken cancellation) => registry.SearchAsync(request, cancellation));
             app.MapPost("/client/script-packages/details", (Contracts.Scripting.Packages.ScriptPackageDetailsRequest request, Scripting.PackageRegistryClient registry, CancellationToken cancellation) => registry.DetailsAsync(request, cancellation));
             InternalDataRoutes.Map(app);

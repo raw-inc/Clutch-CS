@@ -20,8 +20,10 @@ public sealed class StagedSynchronizationTests
     {
         using MediaTestFiles sourceFiles = new();
         using MediaTestFiles targetFiles = new();
-        IDurableRepository sourceStore = await RepositoryFactory.CreateAsync(sourceFiles.Root, "source", new());
-        IDurableRepository targetStore = await RepositoryFactory.CreateAsync(targetFiles.Root, "target", new());
+        using RepositoryRuntime sourceRuntime = await RepositoryFactory.CreateRuntimeAsync(sourceFiles.Root, "source", new());
+        using RepositoryRuntime targetRuntime = await RepositoryFactory.CreateRuntimeAsync(targetFiles.Root, "target", new());
+        IDurableRepository sourceStore = sourceRuntime.Repository;
+        IDurableRepository targetStore = targetRuntime.Repository;
         for (int index = 0; index < 256; index++)
         {
             await sourceStore.AbortPreparedAsync(Guid.NewGuid());
@@ -68,15 +70,16 @@ public sealed class StagedSynchronizationTests
     {
         using MediaTestFiles firstFiles = new();
         using MediaTestFiles secondFiles = new();
-        IDurableRepository firstStore = await RepositoryFactory.CreateAsync(firstFiles.Root, "first", new());
-        IDurableRepository secondStore = await RepositoryFactory.CreateAsync(secondFiles.Root, "second", new());
+        using RepositoryRuntime firstRuntime = await RepositoryFactory.CreateRuntimeAsync(firstFiles.Root, "first", new());
+        using RepositoryRuntime secondRuntime = await RepositoryFactory.CreateRuntimeAsync(secondFiles.Root, "second", new());
+        IDurableRepository firstStore = firstRuntime.Repository;
+        IDurableRepository secondStore = secondRuntime.Repository;
         string clusterId = Guid.NewGuid().ToString("N");
         int port = LargeSynchronizationTests.Port();
         TimeProvider clock = new HistoryClock();
         await using PeerCluster first = Create(firstStore, firstFiles.Root, clusterId, "first", port, true, clock);
         await using PeerCluster second = Create(secondStore, secondFiles.Root, clusterId, "second", port, false, clock);
-        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(40));
-        await first.StartAsync(timeout.Token);
+        await first.StartAsync();
         DateTimeOffset? readySince = first.GetPeers().Single(peer => peer.InstanceId == first.LocalInstanceId).ReadySince;
         Guid firstOperation = Guid.Empty;
         string? version = null;
@@ -88,9 +91,12 @@ public sealed class StagedSynchronizationTests
                 firstOperation = id;
             }
             Assert.Equal(EOutcome.Succeeded, (await firstStore.ApplyBatchAsync(id,
-                [new("workflow:history-test", "state", version, NodeValue.FromObject(new { Index = index, Padding = new string('x', 16384) }))], timeout.Token)).Outcome);
+                [new("workflow:history-test", "state", version, NodeValue.FromObject(new { Index = index, Padding = new string('x', 16384) }))])).Outcome);
             version = id.ToString("N");
         }
+
+        // 参加先の起動・背景取得の期限は、履歴の準備後に計測します。
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(40));
         await second.StartAsync(timeout.Token);
         while (second.GetPeers().Single(peer => peer.InstanceId == second.LocalInstanceId).Status != EPeerStatus.Ready)
         {

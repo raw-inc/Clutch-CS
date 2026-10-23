@@ -28,7 +28,7 @@ public sealed class FileReservationRecoveryTests
         int port = ((IPEndPoint)socket.Client.LocalEndPoint!).Port;
         socket.Close();
         ControlledFileNode? controlled = null;
-        FileTestPeer peer = new(Guid.NewGuid().ToString("N"), "one", port, true, node =>
+        FileTestPeer peer = await FileTestPeer.CreateAsync(Guid.NewGuid().ToString("N"), "one", port, true, node =>
         {
             const string upsert = "file.upsert";
             if (!string.Equals(node.Descriptor.Type, upsert, StringComparison.Ordinal))
@@ -68,7 +68,7 @@ public sealed class FileReservationRecoveryTests
         using UdpClient socket = new(new IPEndPoint(IPAddress.Loopback, 0));
         int port = ((IPEndPoint)socket.Client.LocalEndPoint!).Port;
         socket.Close();
-        FileTestPeer peer = new(Guid.NewGuid().ToString("N"), "one", port, true);
+        FileTestPeer peer = await FileTestPeer.CreateAsync(Guid.NewGuid().ToString("N"), "one", port, true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = peer.ConfigureAwait(true);
         await peer.Cluster.StartAsync().ConfigureAwait(true);
         ReArtWord.Contents.BackgroundService.Contracts.Cluster.PeerInfo member = Assert.Single(peer.Cluster.GetPeers());

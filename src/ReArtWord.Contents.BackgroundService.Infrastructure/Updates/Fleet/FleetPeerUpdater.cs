@@ -6,27 +6,30 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Updates;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Releases;
 using ReArtWord.Contents.BackgroundService.Runtime.Updates;
 
-namespace ReArtWord.Contents.BackgroundService.ClientHost.Updates.Fleet;
+namespace ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
 
-/// <summary>一ピアの準備・入替・復帰を確認し、結果不明な停止を再実行しません。</summary>
+/// <summary>ピア1件の更新を行い、更新後の起動とクラスターへの参加を確認します。</summary>
 internal sealed class FleetPeerUpdater(IFleetUpdateRemote remote)
 {
-    /// <summary>所属集合と直接health照会から、停止後のReady過半数を確認します。</summary>
-    /// <returns>更新を保留する理由、または続行可能ならnullです。</returns>
+    /// <summary>対象を停止してもクラスターが稼働を維持できるか、所属情報と現在の稼働状態で判断します。</summary>
+    /// <returns>保留する理由。更新できる場合はnull。</returns>
     internal async Task<string?> RemainingAsync(FleetUpdateRequest request, FleetUpdateTarget target, CancellationToken cancellationToken = default)
     {
         FleetUpdateTarget[] members = request.Targets.Where(peer => string.Equals(peer.ClusterId, target.ClusterId, StringComparison.Ordinal)).ToArray();
-        IReadOnlyList<string>? known = await remote.MembersAsync(target, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<Contracts.Cluster.PeerInfo>? known = await remote.MembersAsync(target, cancellationToken).ConfigureAwait(false);
         if (known is null)
         {
             return "Cluster membership could not be confirmed. This peer was deferred.";
         }
-        int population = known.Concat(members.Select(peer => peer.Peer.PeerId)).Distinct(StringComparer.Ordinal).Count();
+        int population = known.Select(peer => peer.PeerId).Concat(members.Select(peer => peer.Peer.PeerId)).Distinct(StringComparer.Ordinal).Count();
         if (population == members.Length && population < 3 && members.Select(peer => peer.Peer.HostId).Distinct(StringComparer.Ordinal).Count() == 1)
         {
             return null;
         }
-        FleetUpdateTarget[] remaining = members.Where(peer => !string.Equals(peer.Peer.PeerId, target.Peer.PeerId, StringComparison.Ordinal)).ToArray();
+
+        // 更新対象外のピアも、クラスターの稼働を維持できるかどうかの判断に含めます。
+        FleetUpdateTarget[] remaining = members.Concat(known.Select(peer => new FleetUpdateTarget(target.ClusterId, peer, target.Binding)))
+            .DistinctBy(peer => peer.Peer.PeerId, StringComparer.Ordinal).Where(peer => !string.Equals(peer.Peer.PeerId, target.Peer.PeerId, StringComparison.Ordinal)).ToArray();
         FleetPeerObservation?[] observations = await Task.WhenAll(remaining.Select(peer => remote.ObserveAsync(peer, cancellationToken))).ConfigureAwait(false);
         int required = 1;
         if (3 <= population)
@@ -40,8 +43,8 @@ internal sealed class FleetPeerUpdater(IFleetUpdateRemote remote)
         return "Too few Ready peers would remain. This peer was deferred.";
     }
 
-    /// <summary>既知の未開始または確認済み復元だけを有限回再試行します。</summary>
-    /// <returns>一ピアの更新結果です。</returns>
+    /// <summary>更新が未実行、または旧版への復帰を確認できた場合に限り、上限回数まで再試行します。</summary>
+    /// <returns>対象ピアの更新結果。</returns>
     // 抑制理由: factoryが返す一試行のtransportはfinallyでIAsyncDisposableを確認して解放します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW141", Justification = "一試行のtransportはfinallyで非同期解放します。")]
     internal async Task<FleetUpdatePeerProgress> UpdateAsync(FleetUpdateRequest request, FleetUpdatePeerProgress progress,
@@ -159,8 +162,8 @@ internal sealed class FleetPeerUpdater(IFleetUpdateRemote remote)
         return progress with { State = "Failed", Reason = progress.Reason ?? "The maximum number of attempts was reached." };
     }
 
-    /// <summary>元Updaterの状態だけを照会し、応答欠落時も更新要求を増やしません。</summary>
-    /// <returns>終端結果または結果不明です。</returns>
+    /// <summary>受付済みの更新結果を照会します。応答がなくても更新要求は再送しません。</summary>
+    /// <returns>完了した更新の結果。確認できない場合は結果不明。</returns>
     private static async Task<UpdatePeerResult> WaitAsync(IUpdatePeerTransport transport, UpdatePeerResult result, int milliseconds, CancellationToken cancellationToken = default)
     {
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -181,8 +184,8 @@ internal sealed class FleetPeerUpdater(IFleetUpdateRemote remote)
         }
     }
 
-    /// <summary>同じmaintenance所有者の冪等な解除だけを最大3回試します。</summary>
-    /// <returns>通常処理の再開確認です。</returns>
+    /// <summary>この更新が取得した保守保留を解除します。通信エラーの場合は最大3回試行します。</summary>
+    /// <returns>保守保留の解除。</returns>
     private static async Task ReleaseAsync(IUpdatePeerTransport transport, Guid operation, string peer, CancellationToken cancellationToken = default)
     {
         for (int attempt = 1; attempt <= 3; attempt++)
@@ -200,8 +203,8 @@ internal sealed class FleetPeerUpdater(IFleetUpdateRemote remote)
         throw new IOException("Maintenance release was not confirmed.");
     }
 
-    /// <summary>新実体・版・Ready・maintenance解除を確認してから次の対象へ進みます。</summary>
-    /// <returns>復帰した実体です。</returns>
+    /// <summary>起動後のInstanceId、バージョン、Ready状態、保守保留の解除を確認します。</summary>
+    /// <returns>確認できた稼働状態。期限内に確認できない場合はnull。</returns>
     private async Task<FleetPeerObservation?> WaitReadyAsync(FleetUpdateTarget target, Guid expected, string? version, int milliseconds, CancellationToken cancellationToken = default)
     {
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -227,8 +230,8 @@ internal sealed class FleetPeerUpdater(IFleetUpdateRemote remote)
         }
     }
 
-    /// <summary>元試行の識別子を保って実結果を追記します。</summary>
-    /// <returns>結果を反映した不変進捗です。</returns>
+    /// <summary>操作IDと対象ピアを照合し、該当する試行の結果を記録します。</summary>
+    /// <returns>結果を反映した進捗情報。</returns>
     private static FleetUpdatePeerProgress WithResult(FleetUpdatePeerProgress progress, UpdatePeerResult result)
     {
         FleetUpdateAttempt[] attempts = progress.Attempts.ToArray();
@@ -240,8 +243,8 @@ internal sealed class FleetPeerUpdater(IFleetUpdateRemote remote)
         return progress with { Attempts = attempts };
     }
 
-    /// <summary>再試行後も失敗段階を保持し、例外本文や要求内容を保存しません。</summary>
-    /// <returns>元試行の診断を追記した進捗です。</returns>
+    /// <summary>失敗した工程とエラーコードを記録します。</summary>
+    /// <returns>エラー情報を反映した進捗情報。</returns>
     private static FleetUpdatePeerProgress WithProblem(FleetUpdatePeerProgress progress, string step, Exception exception)
     {
         string code = exception.GetType().Name + "." + exception.HResult.ToString("X8", System.Globalization.CultureInfo.InvariantCulture);
