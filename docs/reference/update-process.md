@@ -83,21 +83,25 @@ Updater の終了コード1は更新失敗と旧版復帰が確定した意味�
 
 ### セットアップから選択した対象を順次更新する
 
-「更新」の方式で「1台ずつ順番に更新する（Fleet Update）」を選択してください。CoreServiceの固定対象をホスト順に並べ、並列数1で実行します。ClientHostと共通の稼働確認・配布検証・入れ替え・復帰確認を使用します。更新しない所属ピアも残存稼働の判定へ含めます。WebClientは選択したCoreServiceの更新後に、個別の選択に従って更新します。
+更新方式で「1台ずつ順番に更新する（Fleet Update）」を選択してください。選択したCoreServiceを1件ずつ更新し、起動とクラスターへの参加を確認してから次へ進みます。処理中のCoreServiceは、その処理を停止してから更新します。
+
+クラスターの稼働を維持できるかどうかは、更新対象外のピアも含めて判断します。WebClientも選択している場合は、CoreServiceの更新後に更新します。
+
+セットアップを中断した場合は、対象の状態を確認してから、未更新の対象を選んで実行してください。進捗記録は `%LOCALAPPDATA%\ReArtWord\SetupOperations` 内の操作IDのフォルダーにある `fleet.json` で確認できます。フォルダー名では操作IDのハイフンを省略します。
 
 ### CLIからFleet Updateを実行する
 
-`fleet` はローカルClientHostが観測する全対象を扱うため、`--cluster` と `--peer` は指定しません。Installerで一部の対象だけを選択する方式とは対象範囲が異なります。
+`fleet` コマンドは、ClientHostが検出した全クラスターのCoreServiceを更新します。`--cluster` と `--peer` は指定しません。一部の対象だけを更新する場合は、セットアップで対象を選択してください。
 
-1. `FleetReleaseSelection` のJSONを用意してください。`manifest` に配布物の `release-manifest.json` の内容、`payloadRoot` にClientHostのPC上の配布元を指定します。複数RIDの `variants` や全Core成功後に更新する `client` も指定できます。`maximumParallelism` の既定は1です。
-2. 計画を取得し、終了コード0を確認してから、標準出力の `response` を開始用ファイルへ保存してください。
+1. 更新条件を記述した `fleet-selection.json` を用意してください。`manifest` に `release-manifest.json` の内容、`payloadRoot` にClientHostのPC上に置いた配布物のパスを指定します。複数のOS・CPU向けの配布物は `variants`、CoreServiceの更新後に更新するClientHostは `client` で指定できます。同時更新数を指定する `maximumParallelism` の既定値は1です。
+2. `fleet preview` を実行してください。成功したこと（終了コード0）を確認し、応答の `response` を更新計画として保存してください。
 
 ```powershell
 $preview = contents-cli --url http://127.0.0.1:5081 fleet preview --body fleet-selection.json | ConvertFrom-Json
 $preview.response | ConvertTo-Json -Depth 100 | Set-Content -Encoding utf8 fleet-plan.json
 ```
 
-3. `fleet-plan.json` の対象・実体・配布元・更新方式を確認してから開始してください。
+3. `fleet-plan.json` に記載された更新対象、配布物のパス、更新条件を確認してから開始してください。
 
 ```powershell
 contents-cli --url http://127.0.0.1:5081 fleet start --body fleet-plan.json
@@ -105,28 +109,35 @@ contents-cli --url http://127.0.0.1:5081 fleet status --id 11111111-1111-4111-81
 contents-cli --url http://127.0.0.1:5081 fleet list
 ```
 
-`--id` は計画の `operationId` に読み替えてください。受付直後の未完了は終了コード5です。更新はClientHost内で継続します。中断後の `fleet reconcile --id <操作ID>` は元Updaterの結果と復帰状態を再確認し、新しい更新を開始しません。結果不明のまま別の操作IDで再開しないでください。
+`--id` には計画の `operationId` を指定してください。更新中、または結果を確認できない場合は終了コード5を返します。CLIが終了した後も、ClientHostが更新を続けます。
 
-### 画面から全クラスターをホスト単位で更新する
+結果を確認できなかった場合は、`fleet reconcile --id <操作ID>` で同じ更新の結果と稼働状態を確認してください。このコマンドは更新をやり直すものではありません。結果が分かるまで、別の操作IDで更新を開始しないでください。
 
-Dashboard の **Settings & maintenance → Update all discovered peers** は、接続先ピアを選択せずに使用できます。
+### 画面から全クラスターを更新する
 
-1. `New-InstallPackage.ps1` が生成した `fleet-release.json` を選び、配布元にパッケージのルート（`core` と `client` の親）を指定します。CoreServiceだけを更新する場合は従来の `release-manifest.json` または `release-bundle.json` も利用できます。配布元の絶対パスは、画面を配信している **ClientHostのPC上** のディレクトリです。各CoreServiceのstagingへ事前コピーする必要はありません。
-2. 必要な場合だけ稼働中更新を許可し、最大試行回数（既定3回、初回を含む）、最大並列数（1〜3、既定1）、ピアごとの確認期限を設定します。
-3. **Preview update plan** で、発見中の全クラスター・全ピア（最大256件）の固定対象、ホスト順の優先順序、並列上限、一台構成のクラスターを確認し、**Start this update** で開始します。開始時にも実体・ホスト・NICと配布元ファイルのSHA-256を検証します。
-4. 異なるPC・クラスターの対象を空き枠へ割り当てます。同一PCまたは同一クラスターのピアは同時更新せず、新しい実体、指定版、Ready、maintenance解除まで枠を保持します。発見一覧から消えた停止中ピアもCoreServiceの所属情報で数えます。3ピア以上のクラスターでは、停止する対象を除いて `floor(ピア数 / 2) + 1` 以上のReadyを、準備前と停止直前に確認します。例えば3ピアでは残り2ピア、4ピアでは残り3ピアのReadyが必要です。2ピアで複数PCのクラスターは相手のReadyを確認し、2ピア以下で単一PCのクラスターは一時切断を許容します。条件を満たさない対象は保留し、安全に開始できる別対象を先に処理します。
+Dashboardの **Settings & maintenance → Update all discovered peers** を使用してください。
 
-並列数は固定計画へ保存され、開始後の編集は実行中の更新へ遡及しません。進捗保存を直列化し、結果不明が出た場合は新規更新を止め、開始済みの他ピアは結果確認まで回収します。未着手ピアの更新を自動再開しません。
+1. 配布物の `fleet-release.json` を選び、配布元にパッケージのルート（`core` と `client` の親フォルダー）を指定してください。パスは、画面を配信する **ClientHostのPC上** の絶対パスです。CoreServiceだけを更新する場合は、`release-manifest.json` または `release-bundle.json` も使用できます。
+2. 処理中の更新を許可するか選択し、最大試行回数（既定3回、初回を含む）、同時更新数（1〜3、既定1）、対象ごとの確認期限を設定してください。
+3. **Preview update plan** で対象一覧と更新条件を確認し、**Start this update** で開始してください。検出した全クラスターのピアが対象で、上限は256件です。
 
-既存UpdaterによるCoreService一式の入替を使用します。`fleet-release.json` にClientHostが含まれる場合は、全CoreServiceの成功後に、この操作を実行しているClientHostも最後に更新します。CLIおよび別PC上のClientHostは対象外です。稼働中の版との互換性がマニフェストに宣言されていることが必要です。更新済みの互換版は維持し、失敗したピアでは既存Updaterの旧版復元結果を確認します。
+同じPC、または同じクラスターに属するピアは同時に更新しません。更新するピアの処理を一時停止し、更新後に指定した版で起動して `Ready` に戻り、保守保留が解除されたことを確認します。更新開始後に設定を編集しても、進行中の更新条件は変わりません。
 
-通常処理の保留は更新するピアだけで行い、全クラスターをまとめて保留しません。
+対象を停止できるかどうかは、次の条件で判断します。ピア数には、停止中のピアも含めます。条件を満たさない対象は保留し、更新できる対象から進めます。
 
-停止開始前の配布失敗、明示的な未実行、または旧版への復帰とReadyを確認できた失敗だけを最大回数まで再試行します。各試行の操作IDは保存します。停止・入替・復帰が結果不明の場合は自動再試行も後続ホストの更新も停止します。**Recheck saved updater results** は元のUpdaterの結果を再照会し、確認できた入替・復元のmaintenanceだけを解除します。新たな入替要求は送りません。
+| クラスターの構成 | 更新を開始する条件 |
+| --- | --- |
+| 1台のPC上で、ピアが2件以下 | 更新中の一時切断を許容します。 |
+| 複数PCにまたがる2ピア | もう一方のピアが `Ready` である必要があります。 |
+| 3ピア以上 | 更新対象を除いて、全ピアの過半数が `Ready` である必要があります。3ピアなら残り2ピア、4ピアなら残り3ピアです。 |
 
-更新と進捗はClientHostが所有し、ブラウザーの画面移動・再読み込み・接続先切替後も続行します。同じClientHostを開いた画面で進捗を確認できます。ClientHost自体が停止した場合は、再起動時に元IDを保持したまま未確認として復元し、更新を暗黙に再開しません。元結果を再確認してから、未着手・保留の対象を新しい計画で更新してください。
+配布物には、稼働中の版との互換性が宣言されている必要があります。`fleet-release.json` にClientHostが含まれる場合は、全CoreServiceの更新成功後に、更新を管理しているClientHostも更新します。別PCのClientHostとCLIは、この操作の対象外です。
 
-画面には直近20操作を表示し、元IDの重複受付を防ぐ記録は `--state` 配下の `fleet-updates` に保存します。
+再試行するのは、更新が未実行と確認できた場合、または旧版への復帰と `Ready` を確認できた場合です。停止・入れ替え・復帰の結果が不明な場合は、新たな更新や再試行を止め、既に開始した更新の結果を待ちます。**Recheck saved updater results** で結果を再確認してください。更新または旧版への復帰を確認できれば、その対象の保守保留を解除します。
+
+画面を閉じたり再読み込みしたりしても、ClientHostが更新を続けます。ClientHost自体が停止した場合は、再起動後に結果を再確認してください。中断した更新は自動で再開されません。未更新の対象を更新するには、結果を確認してから新しい計画を作成してください。
+
+画面には直近20件の操作を表示します。操作記録の保存先は、ClientHostの `--state` で指定したフォルダー内の `fleet-updates` です。
 
 ### ClientHostと自動起動の維持
 

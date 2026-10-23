@@ -35,8 +35,8 @@ public sealed class FleetUpdateTests
         Assert.Contains(notifications, notification => string.Equals(notification.Name, "update.completed", StringComparison.Ordinal));
     }
 
-    /// <summary>未選択の稼働ピアを可用性判定へ含めても、更新対象を増やしません。</summary>
-    /// <returns>選択した一ピアだけの更新と、残るピアの保持です。</returns>
+    /// <summary>更新対象外のピアを稼働判定に含めても、そのピアを更新しないことを確認します。</summary>
+    /// <returns>選択したピアだけが更新されることの検証。</returns>
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

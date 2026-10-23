@@ -215,8 +215,8 @@ internal static class CliResponse
         };
     }
 
-    /// <summary>プレビューの計画を開始済み結果と区別します。</summary>
-    /// <returns>対象と配布元が揃った計画だけを確認済みとします。</returns>
+    /// <summary>更新計画に必要な操作ID、対象、配布物が含まれているか確認します。</summary>
+    /// <returns>有効な計画なら0、不完全な応答なら5。</returns>
     private static int FleetPreview(JsonElement response)
     {
         string operationKey = "operationId", targetsKey = "targets", releaseKey = "release";

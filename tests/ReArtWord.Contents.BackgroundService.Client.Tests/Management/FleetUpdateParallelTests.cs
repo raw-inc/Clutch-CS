@@ -15,7 +15,7 @@ namespace ReArtWord.Contents.BackgroundService.Client.Tests.Management;
 /// <summary>並列上限と可用性、進捗保存と未確認時の開始境界を検証します。</summary>
 public sealed class FleetUpdateParallelTests
 {
-    /// <summary>指定上限を使い切り、保存の重複と試行記録の欠落を防ぎます。</summary>
+    /// <summary>指定した並列数で更新され、進捗と試行結果が欠けずに保存されることを確認します。</summary>
     /// <returns>同時に止まった実体数と全結果の確認です。</returns>
     [Theory, InlineData(1), InlineData(2), InlineData(3)]
     public async Task FillsSlotsWithoutOverlappingJournalWrites(int limit)

@@ -3,11 +3,11 @@ using ReArtWord.Contents.BackgroundService.Contracts.Updates;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
 
-/// <summary>明示的な復元と、更新失敗後に確認された旧版復帰を同じ境界で判定します。</summary>
+/// <summary>Updaterの結果から、旧版への復帰を確認できたか判定します。</summary>
 internal static class FleetUpdateResult
 {
-    /// <summary>Updaterが旧版の別実体への復帰を確認した結果だけを受け入れます。</summary>
-    /// <returns>保留解除と稼働確認へ進める復元結果ならtrueです。</returns>
+    /// <summary>旧版への復帰結果と、再起動によるInstanceIdの変更を確認します。</summary>
+    /// <returns>旧版への復帰を確認できた場合はtrue。</returns>
     internal static bool IsRestored(UpdatePeerResult result, Guid previousInstance)
     {
         if (result.InstanceId is not { } instance || instance == Guid.Empty || instance == previousInstance)

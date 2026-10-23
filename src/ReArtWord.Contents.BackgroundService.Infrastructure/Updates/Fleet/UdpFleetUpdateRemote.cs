@@ -15,13 +15,13 @@ using ReArtWord.Contents.BackgroundService.Runtime.Updates;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
 
-/// <summary>選択済みNIC上の実healthと既存のUpdater配送を使います。</summary>
+/// <summary>選択したネットワーク経由で、CoreServiceの稼働状態を照会し、Updaterへ更新を依頼します。</summary>
 public sealed class UdpFleetUpdateRemote(Func<string, string, UdpObserver?> findObserver, Func<IReadOnlyList<DiscoveredCluster>> getClusters) : IFleetUpdateRemote
 {
     private static readonly JsonSerializerOptions healthOptions = new(ContractJson.Options) { UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip };
 
-    /// <summary>更新対象Coreが保持する所属集合を読み、停止中のメンバーを分母から落としません。</summary>
-    /// <returns>この実体で確認した所属ピア情報です。</returns>
+    /// <summary>停止中のピアも過半数の判定に含めるため、CoreServiceの所属情報を取得します。</summary>
+    /// <returns>応答したCoreServiceが保持する所属ピアの一覧。</returns>
     // 抑制理由: 過半数の判定前に、一回の応答として所属集合全体を固定する必要があります。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW160", Justification = "所属集合を一回のsnapshotで検証してから停止可否を判定します。")]
     public async Task<IReadOnlyList<PeerInfo>?> MembersAsync(FleetUpdateTarget target, CancellationToken cancellationToken = default)
@@ -54,8 +54,8 @@ public sealed class UdpFleetUpdateRemote(Func<string, string, UdpObserver?> find
         }
     }
 
-    /// <summary>別host・曖昧な実体・変更されたNICを正常な残存ピアとして扱いません。</summary>
-    /// <returns>今回直接確認した稼働状態です。</returns>
+    /// <summary>応答元のPCとネットワークが更新計画に一致することを確認し、稼働状態を取得します。</summary>
+    /// <returns>取得した稼働状態。対象を特定できない場合はnull。</returns>
     public async Task<FleetPeerObservation?> ObserveAsync(FleetUpdateTarget target, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(target);
@@ -94,7 +94,7 @@ public sealed class UdpFleetUpdateRemote(Func<string, string, UdpObserver?> find
     }
 
     /// <summary>送信元のCoreの有無にかかわらず、TCP転送を優先します。</summary>
-    /// <returns>開始時のNICと実体へ固定した配送です。</returns>
+    /// <returns>選択したネットワークとCoreServiceへの更新用通信。</returns>
     public IUpdatePeerTransport Create(ClusterUpdateRequest request, FleetUpdateTarget target)
     {
         ArgumentNullException.ThrowIfNull(target);
@@ -106,9 +106,9 @@ public sealed class UdpFleetUpdateRemote(Func<string, string, UdpObserver?> find
         return new UdpUpdatePeerTransport(job);
     }
 
-    /// <summary>稼働判定に必要なhealth項目だけを読みます。</summary>
+    /// <summary>health応答のうち、稼働判定に使用する項目。</summary>
     private sealed record Health(string ClusterId, string PeerId, Guid InstanceId, EPeerStatus Status, string? BuildVersion, JsonElement? Maintenance);
 
-    /// <summary>過半数の分母を取得するための既存status契約です。</summary>
+    /// <summary>status応答に含まれるクラスターの所属情報。</summary>
     private sealed record Membership(string ClusterId, string PeerId, Guid InstanceId, IReadOnlyList<PeerInfo> Peers);
 }

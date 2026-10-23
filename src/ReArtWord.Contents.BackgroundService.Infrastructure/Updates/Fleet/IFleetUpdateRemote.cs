@@ -6,24 +6,24 @@ using ReArtWord.Contents.BackgroundService.Runtime.Updates;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
 
-/// <summary>host順序の制御から、現行health照会と既存Updater配送を分離します。</summary>
+/// <summary>Fleet Updateで使用する稼働状態の照会と、Updaterへの通信を提供します。</summary>
 public interface IFleetUpdateRemote
 {
-    /// <summary>固定host上の現在実体を、キャッシュを使わず確認します。</summary>
-    /// <returns>当該hostの稼働確認です。</returns>
+    /// <summary>更新対象のCoreServiceへ問い合わせ、現在の稼働状態を確認します。</summary>
+    /// <returns>取得した稼働状態。確認できない場合はnull。</returns>
     public Task<FleetPeerObservation?> ObserveAsync(FleetUpdateTarget target, CancellationToken cancellationToken = default);
 
-    /// <summary>発見期限から外れた停止中メンバーも、対象Coreの所属情報で確認します。</summary>
-    /// <returns>稼働確認に使う所属ピア情報、または確認不能です。</returns>
+    /// <summary>対象CoreServiceが保持するクラスターの所属情報を取得します。</summary>
+    /// <returns>所属ピアの一覧。確認できない場合はnull。</returns>
     public Task<IReadOnlyList<PeerInfo>?> MembersAsync(FleetUpdateTarget target, CancellationToken cancellationToken = default);
 
-    /// <summary>一試行の固定実体へ既存Updater配送を作ります。呼出側が解放します。</summary>
-    /// <returns>一試行で所有する配送処理です。</returns>
+    /// <summary>更新対象との通信を作成します。使用後は呼び出し元で解放してください。</summary>
+    /// <returns>この更新に使用する通信オブジェクト。</returns>
     public IUpdatePeerTransport Create(ClusterUpdateRequest request, FleetUpdateTarget target);
 }
 
-/// <summary>実照会した実体、通常処理可能性と版です。</summary>
-/// <param name="Peer">今回確認した実体です。</param>
-/// <param name="Ready">Readyでmaintenanceがない場合だけtrueです。</param>
-/// <param name="BuildVersion">確認した版です。</param>
+/// <summary>CoreServiceから取得した稼働状態とバージョン。</summary>
+/// <param name="Peer">応答したCoreServiceのピア情報。</param>
+/// <param name="Ready">Readyで、保守による処理保留が解除されている場合はtrue。</param>
+/// <param name="BuildVersion">CoreServiceのバージョン。</param>
 public sealed record FleetPeerObservation(PeerInfo Peer, bool Ready, string? BuildVersion);

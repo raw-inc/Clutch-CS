@@ -9,11 +9,11 @@ using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.CommandLine;
 
-/// <summary>Fleetの計画・受付・照会を実HTTPで検証し、未確定の更新を成功扱いしません。</summary>
+/// <summary>HTTPサーバーを使い、Fleet UpdateのCLIコマンドと終了コードを検証します。</summary>
 public sealed class FleetCommandLineTests
 {
-    /// <summary>Core指定を要求せず、プレビューした操作IDで開始と照会を行います。</summary>
-    /// <returns>送信内容、再確認、終了コードの検証です。</returns>
+    /// <summary>Coreを個別に指定せずに計画を作成し、同じ操作IDで開始・照会できることを確認します。</summary>
+    /// <returns>CLIの送信内容と終了コードの検証。</returns>
     [Fact]
     public async Task PreviewStartQueryAndReconcileKeepTheOriginalOperation()
     {
@@ -50,7 +50,7 @@ public sealed class FleetCommandLineTests
         Assert.Equal(1, starts);
     }
 
-    /// <summary>対象がない、識別子が不正、未完了の応答を成功にしません。</summary>
+    /// <summary>不正な計画や未完了の応答に対して、終了コード0を返さないことを確認します。</summary>
     [Theory]
     [InlineData("fleet preview", "{\"operationId\":12,\"targets\":[],\"release\":{}}", 5)]
     [InlineData("fleet start", "{\"completed\":false,\"outcome\":\"succeeded\"}", 5)]
@@ -61,8 +61,8 @@ public sealed class FleetCommandLineTests
         Assert.Equal(expected, CliResponse.Classify(command, response.RootElement, 200));
     }
 
-    /// <summary>loopbackの一回のCLI実行を捕捉します。</summary>
-    /// <returns>実際の終了コードとJSON出力です。</returns>
+    /// <summary>ローカルのHTTPサーバーに対してCLIを実行します。</summary>
+    /// <returns>終了コードと標準出力。</returns>
     private static async Task<(int Code, string Output)> RunAsync(string url, string[] command, string body = "", CancellationToken cancellationToken = default)
     {
         using StringReader input = new(body);

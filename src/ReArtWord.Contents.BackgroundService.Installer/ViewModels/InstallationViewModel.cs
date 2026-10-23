@@ -213,20 +213,20 @@ internal sealed partial class InstallationViewModel : CommunityToolkit.Mvvm.Comp
         get; set;
     } = true;
 
-    /// <summary>処理中の対象の扱いと更新順序です。</summary>
+    /// <summary>選択中の更新方式。</summary>
     [ObservableProperty, NotifyPropertyChangedFor(nameof(SkipActive)), NotifyPropertyChangedFor(nameof(StopActive)), NotifyPropertyChangedFor(nameof(Fleet))]
     public partial EInstallerUpdateMode UpdateMode
     {
         get; set;
     }
 
-    /// <summary>処理中の対象を除外する方式です。</summary>
+    /// <summary>処理中の対象を除外する方式が選択されているか。</summary>
     public bool SkipActive => UpdateMode == EInstallerUpdateMode.SkipActive;
 
-    /// <summary>処理を停止する方式です。</summary>
+    /// <summary>実行中の処理を停止する方式が選択されているか。</summary>
     public bool StopActive => UpdateMode == EInstallerUpdateMode.StopActive;
 
-    /// <summary>一台ずつ復帰を確認する方式です。</summary>
+    /// <summary>Fleet Updateが選択されているか。</summary>
     public bool Fleet => UpdateMode == EInstallerUpdateMode.Fleet;
 
     /// <summary>選択した更新方式を反映します。</summary>

@@ -12,11 +12,11 @@ using ReArtWord.Contents.BackgroundService.ManagementTransport.Observers;
 
 namespace ReArtWord.Contents.BackgroundService.Installer.Services;
 
-/// <summary>Installerが選んだ実体と配布物を固定し、共通のFleet処理で一台ずつ更新します。</summary>
+/// <summary>Installerで選択したCoreServiceを、Fleet Updateで1件ずつ更新します。</summary>
 internal static class InstallerFleetUpdate
 {
-    /// <summary>開始前と各工程を保存し、未確認の更新を再送しません。</summary>
-    /// <returns>選択した全対象の確認結果です。</returns>
+    /// <summary>更新対象を確認し、進捗を保存しながら更新します。</summary>
+    /// <returns>対象ごとの更新結果。</returns>
     // 抑制理由: 作成した監視処理はリストへ所有権を渡し、finallyで全件の終了を待ちます。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW141", Justification = "作成済みの全監視をfinallyで非同期解放します。")]
     internal static async Task<FleetUpdateStatus> ExecuteAsync(IReadOnlyList<ObservedTarget> targets, string payload,
@@ -67,7 +67,7 @@ internal static class InstallerFleetUpdate
         }
         catch (Exception exception) when (exception is IOException or InvalidDataException or InvalidOperationException or OperationCanceledException)
         {
-            // 停止要求の前後を保存状態で区別し、確認していない副作用を失敗と断定しません。
+            // 更新を開始していた対象は結果不明、未着手の対象は保留として記録します。
             latest = latest with
             {
                 Completed = true, Outcome = EOutcome.Unknown, UpdatedAt = DateTimeOffset.UtcNow,
@@ -91,8 +91,8 @@ internal static class InstallerFleetUpdate
         }
     }
 
-    /// <summary>開始時の実体を観測してから、稼働確認と配送に進みます。</summary>
-    /// <returns>観測完了です。未観測なら更新を開始しません。</returns>
+    /// <summary>選択時と同じInstanceIdのCoreServiceが応答するまで待ちます。</summary>
+    /// <returns>全対象からの応答待ち。</returns>
     private static async Task WaitForTargetsAsync(IReadOnlyList<FleetUpdateTarget> targets, Dictionary<ClientNetworkBinding, UdpObserver> observers,
         CancellationToken cancellationToken = default)
     {

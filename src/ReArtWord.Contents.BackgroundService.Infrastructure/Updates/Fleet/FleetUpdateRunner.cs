@@ -4,11 +4,11 @@ using ReArtWord.Contents.BackgroundService.Contracts.Updates.Fleet;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
 
-/// <summary>PCとクラスタの排他を守って有限並列で更新し、進捗を一列に保存します。</summary>
+/// <summary>同じPC・クラスターの同時更新を避けながら、指定した並列数で更新します。</summary>
 public sealed class FleetUpdateRunner(IFleetUpdateRemote remote)
 {
-    /// <summary>安全な対象を空き枠へ割り当て、結果不明後は開始済み処理だけを回収します。</summary>
-    /// <returns>保存した全対象の結果です。</returns>
+    /// <summary>更新可能な対象から開始します。結果不明が生じた場合は、開始済みの更新の完了だけを待ちます。</summary>
+    /// <returns>全対象の更新結果。</returns>
     // 抑制理由: 所有する全taskをfinallyで回収してから保存排他を解放します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2025", Justification = "全taskをfinallyでawaitし、借用資源の寿命内に回収します。")]
     public async Task<FleetUpdateStatus> RunAsync(FleetUpdateStatus initial, Func<FleetUpdateStatus, CancellationToken, Task> save, CancellationToken cancellationToken = default)
@@ -135,8 +135,8 @@ public sealed class FleetUpdateRunner(IFleetUpdateRemote remote)
         }
     }
 
-    /// <summary>同じPCまたはクラスタに対する更新は復帰確認まで重ねません。</summary>
-    /// <returns>同時更新できない組合せかです。</returns>
+    /// <summary>同じPC、または同じクラスターに属する対象かを判定します。</summary>
+    /// <returns>同時に更新できない組み合わせの場合はtrue。</returns>
     private static bool Conflicts(FleetUpdateTarget first, FleetUpdateTarget second)
         => string.Equals(first.Peer.HostId, second.Peer.HostId, StringComparison.Ordinal)
             || string.Equals(first.ClusterId, second.ClusterId, StringComparison.Ordinal);

@@ -10,12 +10,12 @@ using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Installer.Tests;
 
-/// <summary>三つの更新方式の選択と、処理中の対象を巻き込まない更新単位を検証します。</summary>
+/// <summary>更新方式の選択と、対象のグループ分けを検証します。</summary>
 [Collection(nameof(InstallerTestApp))]
 public sealed class UpdateModeTests
 {
-    /// <summary>実AXAMLの選択は排他的で、確認画面まで同じ方式を保持します。</summary>
-    /// <returns>日本語・英語の更新選択画面の検証です。</returns>
+    /// <summary>画面で更新方式を一つ選択でき、確認画面にもその選択が反映されることを確認します。</summary>
+    /// <returns>日本語・英語での画面操作の検証。</returns>
     [Theory]
     [InlineData(0)]
     [InlineData(1)]
@@ -58,7 +58,7 @@ public sealed class UpdateModeTests
         }, CancellationToken.None).ConfigureAwait(true);
     }
 
-    /// <summary>処理中の対象が準備を拒否しても、別対象の更新まで取り消すグループにしません。</summary>
+    /// <summary>処理中の対象を除外する方式では、対象ごとに更新することを確認します。</summary>
     [Fact]
     public void SkipActiveSeparatesTargetsWhileStopActiveKeepsTheClusterTogether()
     {

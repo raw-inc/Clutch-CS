@@ -8,11 +8,11 @@ using ReArtWord.Contents.BackgroundService.Runtime.Updates;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
 
-/// <summary>中断後は元Updaterの結果だけを照会し、更新開始や新しい試行は発行しません。</summary>
+/// <summary>中断した更新の結果を再確認します。更新処理は再実行しません。</summary>
 public sealed class FleetUpdateRecovery(IFleetUpdateRemote remote)
 {
-    /// <summary>確定した入替・復元の保留を解除し、未確認の結果を画面へ残します。</summary>
-    /// <returns>再確認後の全体進捗です。</returns>
+    /// <summary>更新または旧版への復帰を確認できたピアの保守保留を解除し、進捗を更新します。</summary>
+    /// <returns>再確認後の進捗情報。</returns>
     public async Task<FleetUpdateStatus> ReconcileAsync(FleetUpdateStatus status, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(status);
@@ -50,8 +50,8 @@ public sealed class FleetUpdateRecovery(IFleetUpdateRemote remote)
                                                  : null };
     }
 
-    /// <summary>一つの元操作を照会し、確定結果がある場合だけ同じ保留を解除します。</summary>
-    /// <returns>再確認できた一ピアの状態です。</returns>
+    /// <summary>対象ピアの更新結果を照会し、結果が確認できた場合に保守保留を解除します。</summary>
+    /// <returns>対象ピアの再確認結果。</returns>
     // 抑制理由: factoryが返す一試行のtransportはfinallyで非同期解放します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW141", Justification = "transportはfinallyで非同期解放します。")]
     private async Task<FleetUpdatePeerProgress> ReconcilePeerAsync(FleetUpdateRequest request, FleetUpdatePeerProgress progress, CancellationToken cancellationToken = default)

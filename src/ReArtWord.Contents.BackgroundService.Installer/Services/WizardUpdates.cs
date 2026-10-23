@@ -12,8 +12,8 @@ namespace ReArtWord.Contents.BackgroundService.Installer.Services;
 /// <summary>選択した更新方式を適用し、CoreとWebクライアントの結果をまとめます。</summary>
 internal static class WizardUpdates
 {
-    /// <summary>処理中の対象の扱いを固定して更新します。</summary>
-    /// <returns>確認できた結果と診断です。</returns>
+    /// <summary>選択した方式でCoreServiceを更新し、続いて選択済みのWebClientを更新します。</summary>
+    /// <returns>画面に表示する更新結果と詳細。</returns>
     internal static async Task<WizardResult> ExecuteAsync(InstallationViewModel state, IProgress<OperationProgress> progress, CancellationToken cancellationToken = default)
     {
         ObservedTarget[] targets = state.Selected.ToArray();
@@ -101,8 +101,8 @@ internal static class WizardUpdates
         return new(report.ToString(), details.ToString(), updatedClient);
     }
 
-    /// <summary>処理中の対象を除外する場合は、ほかの対象の準備と停止を巻き込みません。</summary>
-    /// <returns>一括停止または対象別に分けた更新単位です。</returns>
+    /// <summary>処理中の対象を除外する方式では、1件の除外でほかの更新が中止されないよう、対象を個別に扱います。</summary>
+    /// <returns>更新方式に応じてグループ分けした対象。</returns>
     internal static ObservedTarget[][] Groups(IReadOnlyList<ObservedTarget> targets, EInstallerUpdateMode mode)
     {
         if (!Enum.IsDefined(mode))
