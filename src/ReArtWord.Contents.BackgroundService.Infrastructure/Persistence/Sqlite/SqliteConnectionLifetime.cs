@@ -7,6 +7,7 @@ internal sealed class SqliteConnectionLifetime : IDisposable
 {
     private readonly Lock gate = new();
     private readonly HashSet<string> pools = new(StringComparer.Ordinal);
+    private readonly Dictionary<(string Path, SqliteOpenMode Mode), string> connectionStrings = [];
     private int disposed;
 
     /// <summary>ローカル固定ディスクでは、確定時の同期を維持してWALを使用します。</summary>
@@ -43,6 +44,30 @@ internal sealed class SqliteConnectionLifetime : IDisposable
         SqliteConnection.ClearPool(connection);
     }
 
+    /// <summary>同じ保存先と開始モードの接続文字列を、所有期間内で再利用します。</summary>
+    /// <returns>プールを使用する接続の設定です。</returns>
+    internal string GetConnectionString(string path, SqliteOpenMode mode)
+    {
+        using (gate.EnterScope())
+        {
+            if (connectionStrings.TryGetValue((path, mode), out string? known))
+            {
+                return known;
+            }
+            string options = CreateConnectionString(path, mode, true);
+            if (disposed == 0)
+            {
+                connectionStrings.Add((path, mode), options);
+            }
+            return options;
+        }
+    }
+
+    /// <summary>パスの引用をプロバイダーへ任せ、接続モードとプール利用を明示します。</summary>
+    /// <returns>プロバイダーが解釈する接続文字列です。</returns>
+    internal static string CreateConnectionString(string path, SqliteOpenMode mode, bool pooling)
+        => new SqliteConnectionStringBuilder { DataSource = path, Mode = mode, Pooling = pooling }.ToString();
+
     /// <summary>この所有期間で利用した全プールを破棄します。</summary>
     public void Dispose()
     {
@@ -55,6 +80,7 @@ internal sealed class SqliteConnectionLifetime : IDisposable
         {
             owned = pools.ToArray();
             pools.Clear();
+            connectionStrings.Clear();
         }
         foreach (string options in owned)
         {
