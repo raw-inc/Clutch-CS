@@ -84,7 +84,7 @@ internal static class DomainRoutes
         ManagementFacade.MapRoute(app, "POST", "/api/workflows/detached/resolve", "workflows.detached-resolve", body: true);
         ManagementFacade.MapRoute(app, "GET", "/api/workflows/detached/operations/{id:guid}", "workflows.detached-operations", readOnly: true, id: "id");
         ManagementFacade.MapRoute(app, "GET", "/api/workflows/{id}", "workflows.read", readOnly: true, id: "id");
-        foreach (string name in new[] { "validate", "parse" })
+        foreach (string name in new[] { "validate", "parse", "export-yaml" })
         {
             ManagementFacade.MapRoute(app, "POST", "/api/workflows/" + name, "workflows." + name, readOnly: true, body: true);
         }

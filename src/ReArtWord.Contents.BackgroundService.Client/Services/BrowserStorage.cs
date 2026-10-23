@@ -58,4 +58,9 @@ internal sealed class BrowserStorage(IJSRuntime script)
     {
         return script.InvokeVoidAsync("contentsBrowser.download", cancellationToken, name, JsonSerializer.Serialize(value, ContractJson.Options));
     }
+
+    /// <summary>書式化済みの本文を、JSON文字列へ変換せず書き出します。</summary>
+    /// <returns>ブラウザーへの書出し要求です。</returns>
+    internal ValueTask DownloadTextAsync(string name, string text, string contentType, CancellationToken cancellationToken = default)
+        => script.InvokeVoidAsync("contentsBrowser.download", cancellationToken, name, text, contentType);
 }
