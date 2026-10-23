@@ -180,7 +180,7 @@ first, second
         };
         _ = await ReadAsync<TerminalView>(second, "api/terminal/input", cluster, "a", input).ConfigureAwait(true);
         _ = await ReadAsync<TerminalView>(second, "api/terminal/input", cluster, "a", input).ConfigureAwait(true);
-        await CorePeer.WaitAsync(async token => File.Exists(output) && !string.IsNullOrEmpty(await FileObservation.ReadTextAsync(output, token).ConfigureAwait(true))).ConfigureAwait(true);
+        await CorePeer.WaitAsync(async token => !string.IsNullOrEmpty(await FileObservation.ReadFirstAppendAsync(output, token).ConfigureAwait(true))).ConfigureAwait(true);
         Assert.Equal(["once"], await File.ReadAllLinesAsync(output).ConfigureAwait(true));
         if (OperatingSystem.IsWindows())
         {

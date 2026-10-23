@@ -70,9 +70,9 @@ public sealed class ScheduleDeferredTargetTests
                 && string.Equals(source.GetProperty("status").GetProperty("state").GetString(), "completed", StringComparison.Ordinal))).ConfigureAwait(true);
         if (expected)
         {
-            await CorePeer.WaitAsync(async token => string.Equals(await FileObservation.ReadTextAsync(localFile, token).ConfigureAwait(true), "tick\n", StringComparison.Ordinal)).ConfigureAwait(true);
+            await CorePeer.WaitAsync(async token => string.Equals(await FileObservation.ReadFirstAppendAsync(localFile, token).ConfigureAwait(true), "tick\n", StringComparison.Ordinal)).ConfigureAwait(true);
         }
-        Assert.Equal(string.Empty, await FileObservation.ReadTextAsync(remoteFile).ConfigureAwait(true));
+        Assert.Equal(string.Empty, await File.ReadAllTextAsync(remoteFile).ConfigureAwait(true));
         await second.StartAsync().ConfigureAwait(true);
         await ReadyAsync(second).ConfigureAwait(true);
         await CorePeer.WaitAsync(async token =>
@@ -85,7 +85,7 @@ public sealed class ScheduleDeferredTargetTests
         {
             content = "tick\n";
         }
-        Assert.Equal(content, await FileObservation.ReadTextAsync(remoteFile).ConfigureAwait(true));
+        Assert.Equal(content, await File.ReadAllTextAsync(remoteFile).ConfigureAwait(true));
     }
 
     /// <summary>各PCの許可範囲に、追記先の空ファイルを用意します。</summary>
