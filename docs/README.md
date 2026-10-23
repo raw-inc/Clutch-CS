@@ -28,6 +28,7 @@
 | 別の PC でコマンドを実行する | [ターミナルを使う](guides/terminal.md) |
 | 通信内容を取得・検索する | [ネットワーク通信を調べる](guides/network-capture.md) |
 | 処理が失敗した理由や過去の記録を調べる | [ログを調べる](guides/logs.md) |
+| 共通設定・WFと必要なログをまとめて保存・復元する | [クラスターの設定をまとめて移す](guides/cluster-archive.md) |
 | 更新、修復、アンインストールを行う | [保守の手順](guides/maintenance.md) |
 | 接続できない、同期できない、更新が止まった | [トラブルシューティング](guides/troubleshooting.md) |
 
