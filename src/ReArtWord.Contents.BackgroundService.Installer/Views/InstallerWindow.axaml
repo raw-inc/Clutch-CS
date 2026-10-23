@@ -154,7 +154,10 @@
           </StackPanel>
           <StackPanel Classes="form" IsVisible="{Binding IsMaintenance}">
             <StackPanel Classes="form" IsVisible="{Binding IsUpdate}">
-              <CheckBox IsChecked="{Binding Settings.AllowActive}"><TextBlock Classes="note" Text="{Binding Text[Active]}" /></CheckBox>
+              <RadioButton x:Name="SkipActiveUpdateOption" GroupName="UpdateMode" Content="{Binding Text[UpdateSkipActive]}" IsChecked="{Binding Settings.SkipActive, Mode=OneWay}" Command="{Binding Settings.ChooseUpdateModeCommand}" CommandParameter="{x:Static models:EInstallerUpdateMode.SkipActive}" />
+              <RadioButton x:Name="StopActiveUpdateOption" GroupName="UpdateMode" Content="{Binding Text[UpdateStopActive]}" IsChecked="{Binding Settings.StopActive, Mode=OneWay}" Command="{Binding Settings.ChooseUpdateModeCommand}" CommandParameter="{x:Static models:EInstallerUpdateMode.StopActive}" />
+              <RadioButton x:Name="FleetUpdateOption" GroupName="UpdateMode" Content="{Binding Text[UpdateFleet]}" IsChecked="{Binding Settings.Fleet, Mode=OneWay}" Command="{Binding Settings.ChooseUpdateModeCommand}" CommandParameter="{x:Static models:EInstallerUpdateMode.Fleet}" />
+              <TextBlock Classes="note" Text="{Binding Text[UpdateFleetHelp]}" IsVisible="{Binding Settings.Fleet}" />
             </StackPanel>
             <StackPanel Classes="form" IsVisible="{Binding IsRepair}">
               <RadioButton Content="{Binding Text[AutoRepair]}" IsChecked="{Binding !Settings.Reinstall, Mode=OneWay}" Command="{Binding Settings.ChooseRepairModeCommand}">

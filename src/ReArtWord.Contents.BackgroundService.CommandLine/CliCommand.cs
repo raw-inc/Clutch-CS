@@ -106,6 +106,11 @@ internal sealed record CliCommand(Uri BaseAddress, string Name, string Path, Htt
             "update schedule-cancel" => ("/api/updates/schedules/cancel", HttpMethod.Post, true, false, true),
             "update schedule-status" => ("/api/updates/schedules/" + OperationIdentifier(options), HttpMethod.Get, false, false, false),
             "update schedule-operation" => ("/api/updates/schedules/operations/" + OperationIdentifier(options), HttpMethod.Get, false, false, false),
+            "fleet preview" => ("/client/updates/preview", HttpMethod.Post, false, false, false),
+            "fleet start" => ("/client/updates", HttpMethod.Post, true, false, true),
+            "fleet list" => ("/client/updates", HttpMethod.Get, false, false, false),
+            "fleet status" => ("/client/updates/" + OperationIdentifier(options), HttpMethod.Get, false, false, false),
+            "fleet reconcile" => ("/client/updates/" + OperationIdentifier(options) + "/reconcile", HttpMethod.Post, false, false, true),
             "network get" => ("/client/network", HttpMethod.Get, false, false, false),
             "network set" => ("/client/network", HttpMethod.Post, false, false, true),
             "cluster list" => ("/client/clusters", HttpMethod.Get, false, false, false),
@@ -126,14 +131,15 @@ internal sealed record CliCommand(Uri BaseAddress, string Name, string Path, Htt
             ArgumentException.ThrowIfNullOrWhiteSpace(options["--cluster"]);
             ArgumentException.ThrowIfNullOrWhiteSpace(options["--peer"]);
         }
-        string[] identityCommands = ["configuration status", "trace status", "workflow get", "workflow run-status", "workflow cancel-status", "run-status", "workflow operation", "operation status", "snapshot capture-status", "snapshot restore-status", "file operation", "file recover", "update status", "request status", "safety status", "conflict status", "workflow detached-detail", "workflow detached-status"];
+        string[] identityCommands = ["fleet status", "fleet reconcile", "configuration status", "trace status", "workflow get", "workflow run-status", "workflow cancel-status", "run-status", "workflow operation", "operation status", "snapshot capture-status", "snapshot restore-status", "file operation", "file recover", "update status", "request status", "safety status", "conflict status", "workflow detached-detail", "workflow detached-status"];
         if (identityCommands.Contains(name, StringComparer.Ordinal))
         {
             allowed.Add("--id");
         }
         string keyCluster = "cluster ";
         string fileRecover = "file recover";
-        if (method != HttpMethod.Get && !string.Equals(name, fileRecover, StringComparison.Ordinal) && !secret && !name.StartsWith(keyCluster, StringComparison.Ordinal))
+        string fleetReconcile = "fleet reconcile";
+        if (method != HttpMethod.Get && !string.Equals(name, fileRecover, StringComparison.Ordinal) && !string.Equals(name, fleetReconcile, StringComparison.Ordinal) && !secret && !name.StartsWith(keyCluster, StringComparison.Ordinal))
         {
             allowed.Add("--body");
         }

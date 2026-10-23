@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
 using System.Threading.Channels;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;

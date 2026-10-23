@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -54,7 +55,11 @@ internal static class Program
             builder.Services.AddSingleton<Updates.ClientUpdateLauncher>();
             builder.Services.AddHostedService(provider => new Infrastructure.Updates.Releases.UpdateRetentionWorker(provider.GetRequiredService<Updates.ClientUpdateLauncher>().TrimAsync));
             builder.Services.AddSingleton(_ => new Updates.Fleet.FleetUpdateStore(options.StateDirectory));
-            builder.Services.AddSingleton<Updates.Fleet.IFleetUpdateRemote, Updates.Fleet.FleetUpdateRemote>();
+            builder.Services.AddSingleton<IFleetUpdateRemote>(services =>
+            {
+                ObserverConnection connection = services.GetRequiredService<ObserverConnection>();
+                return new UdpFleetUpdateRemote(connection.FindObserver, connection.GetClusters);
+            });
             builder.Services.AddSingleton<Updates.Fleet.FleetUpdates>();
             builder.Services.AddHostedService(provider => provider.GetRequiredService<Updates.Fleet.FleetUpdates>());
             builder.Services.AddSingleton<Updates.Fleet.FleetUpdateEvents>();

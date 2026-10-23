@@ -1,3 +1,5 @@
+using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
+using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.ClientHost.Updates;
 using ReArtWord.Contents.BackgroundService.ClientHost.Updates.Fleet;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
@@ -41,8 +43,8 @@ internal sealed class FleetUpdateTestRemote : IFleetUpdateRemote
 
     /// <summary>停止中のピアも含め、同じクラスタの所属IDを返します。</summary>
     /// <returns>試験で保持する所属集合です。</returns>
-    public Task<IReadOnlyList<string>?> MembersAsync(FleetUpdateTarget target, CancellationToken cancellationToken = default)
-        => Task.FromResult<IReadOnlyList<string>?>(Observations.Keys.Where(key => string.Equals(key.Cluster, target.ClusterId, StringComparison.Ordinal)).Select(key => key.Peer).ToArray());
+    public Task<IReadOnlyList<PeerInfo>?> MembersAsync(FleetUpdateTarget target, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<PeerInfo>?>(Observations.Where(item => string.Equals(item.Key.Cluster, target.ClusterId, StringComparison.Ordinal)).Select(item => item.Value.Peer).ToArray());
 
     /// <summary>一試行だけの配送を作ります。</summary>
     /// <returns>解放も計数する試験用配送です。</returns>

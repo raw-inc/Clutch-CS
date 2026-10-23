@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using ReArtWord.Contents.BackgroundService.ClientHost.Updates;
@@ -14,7 +15,7 @@ namespace ReArtWord.Contents.BackgroundService.Client.Tests.Management;
 /// <summary>並列上限と可用性、進捗保存と未確認時の開始境界を検証します。</summary>
 public sealed class FleetUpdateParallelTests
 {
-    /// <summary>既定値2と指定上限を使い切り、保存の重複と試行記録の欠落を防ぎます。</summary>
+    /// <summary>指定した並列数で更新され、進捗と試行結果が欠けずに保存されることを確認します。</summary>
     /// <returns>同時に止まった実体数と全結果の確認です。</returns>
     [Theory, InlineData(1), InlineData(2), InlineData(3)]
     public async Task FillsSlotsWithoutOverlappingJournalWrites(int limit)
@@ -203,7 +204,7 @@ public sealed class FleetUpdateParallelTests
         FleetUpdateTestRemote remote = new(initial.Request.Targets);
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => new FleetUpdateRunner(remote).RunAsync(initial, (_, _) => Task.CompletedTask));
         Assert.Empty(remote.Events);
-        Assert.Equal(2, new FleetReleaseSelection(initial.Request.Release.Manifest, Path.GetTempPath()).MaximumParallelism);
+        Assert.Equal(1, new FleetReleaseSelection(initial.Request.Release.Manifest, Path.GetTempPath()).MaximumParallelism);
     }
 
     /// <summary>試行と並列の上限を持つ一回の固定要求を作ります。</summary>
