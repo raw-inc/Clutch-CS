@@ -3,6 +3,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Configuration;
 using ReArtWord.Contents.BackgroundService.Contracts.Configuration.Operational;
 using ReArtWord.Contents.BackgroundService.Contracts.Configuration.Workflows;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
+using ReArtWord.Contents.BackgroundService.Contracts.Execution.History;
 using ReArtWord.Contents.BackgroundService.Contracts.Management;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Workflow;
@@ -63,7 +64,7 @@ public sealed class ScheduleHandoffTests
         await CorePeer.WaitAsync(async token => (await first.GetAsync<JsonElement>("status", token).ConfigureAwait(true)).GetProperty("sourceQueue").GetProperty("running").GetInt32() != 0).ConfigureAwait(true);
         if (startedWork)
         {
-            await CorePeer.WaitAsync(async token => string.Equals(await FileObservation.ReadTextAsync(firstOutput, token).ConfigureAwait(true), "tick\n", StringComparison.Ordinal)).ConfigureAwait(true);
+            await CorePeer.WaitAsync(async token => string.Equals(await FileObservation.ReadFirstAppendAsync(firstOutput, token).ConfigureAwait(true), "tick\n", StringComparison.Ordinal)).ConfigureAwait(true);
 
             // ファイル追記後の予約解放を終えてから、担当Coreを停止します。
             await CorePeer.WaitAsync(async token => (await first.GetAsync<JsonElement>("status", token).ConfigureAwait(true))
@@ -116,7 +117,7 @@ public sealed class ScheduleHandoffTests
         await ReadyAsync(target).ConfigureAwait(true);
         if (!startedWork && !cancel)
         {
-            await CorePeer.WaitAsync(async token => string.Equals(await FileObservation.ReadTextAsync(output, token).ConfigureAwait(true), "tick\n", StringComparison.Ordinal)).ConfigureAwait(true);
+            await CorePeer.WaitAsync(async token => string.Equals(await FileObservation.ReadFirstAppendAsync(output, token).ConfigureAwait(true), "tick\n", StringComparison.Ordinal)).ConfigureAwait(true);
         }
         await CorePeer.WaitAsync(async token => (await standby.GetAsync<JsonElement>("status", token).ConfigureAwait(true)).GetProperty("sourceQueue").GetProperty("running").GetInt32() == 0).ConfigureAwait(true);
         string expected = "tick\n";
@@ -164,8 +165,18 @@ public sealed class ScheduleHandoffTests
         ], [new("timer", "value", "tick", "trigger"), new("timer", "source", "complete", "trigger", When: "completed")], Enabled: true);
         WorkflowSaveResult saved = await first.PostAsync<WorkflowSaveResult>("workflows.save", new WorkflowSaveRequest(Guid.NewGuid(), definition, null)).ConfigureAwait(true);
         Assert.Equal(EOutcome.Succeeded, saved.Activation.Outcome);
-        await CorePeer.WaitAsync(async token => string.Equals(await FileObservation.ReadTextAsync(tick, token).ConfigureAwait(true), "tick\n", StringComparison.Ordinal)
-            && string.Equals(await FileObservation.ReadTextAsync(completed, token).ConfigureAwait(true), "tick\n", StringComparison.Ordinal)).ConfigureAwait(true);
+        ExecutionReport[] reports = [];
+        await CorePeer.WaitAsync(async token =>
+        {
+            ExecutionHistoryPage history = await first.GetAsync<ExecutionHistoryPage>("executions.list", token).ConfigureAwait(true);
+            reports = history.Entries.Select(entry => entry.Report).OfType<ExecutionReport>()
+                .Where(report => string.Equals(report.WorkflowId, definition.Id, StringComparison.Ordinal)).ToArray();
+            return 2 <= reports.Length;
+        }).ConfigureAwait(true);
+        Assert.Equal(2, reports.Length);
+        Assert.All(reports, report => Assert.Equal(EOutcome.Succeeded, report.Outcome));
+        Assert.Equal("tick\n", await File.ReadAllTextAsync(tick).ConfigureAwait(true));
+        Assert.Equal("tick\n", await File.ReadAllTextAsync(completed).ConfigureAwait(true));
         await second.StartAsync().ConfigureAwait(true);
         await ReadyAsync(second).ConfigureAwait(true);
         await CorePeer.WaitAsync(async token =>
