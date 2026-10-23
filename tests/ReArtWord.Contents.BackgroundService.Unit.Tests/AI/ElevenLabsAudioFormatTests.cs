@@ -39,7 +39,7 @@ public sealed class ElevenLabsAudioFormatTests
         string format = "wav_" + sampleRate.ToString(System.Globalization.CultureInfo.InvariantCulture);
         Dictionary<string, object> settings = new(StringComparer.Ordinal) { ["voice"] = "voice", ["outputPath"] = output, ["outputFormat"] = format, ["stability"] = 0.35 };
         NodeResult result = await ExecuteAsync(server, files, v3, settings).ConfigureAwait(true);
-        Assert.Equal(EOutcome.Succeeded, result.Outcome);
+        Assert.True(result.Outcome == EOutcome.Succeeded, result.ReasonCode + ": " + result.Message);
         Assert.Equal(wave, await File.ReadAllBytesAsync(output).ConfigureAwait(true));
         JsonElement artifact = result.Outputs["value"].Json;
         Assert.Equal("audio/wav", artifact.GetProperty("mediaType").GetString());
@@ -114,7 +114,7 @@ public sealed class ElevenLabsAudioFormatTests
         string output = Path.Combine(files.Root, "fixture.wav");
         IActionNode converter = (IActionNode)Assert.Single(MediaNodeRegistration.Create(files.Options), node => string.Equals(node.Descriptor.Type, "media.audio.convert", StringComparison.Ordinal));
         NodeResult result = await converter.ExecuteAsync(NodeTestContext.Create(JsonSerializer.Serialize(new { outputPath = output, format = "wav", sampleRate, channels = 1 }), NodeValue.FromObject(input))).ConfigureAwait(true);
-        Assert.Equal(EOutcome.Succeeded, result.Outcome);
+        Assert.True(result.Outcome == EOutcome.Succeeded, result.ReasonCode + ": " + result.Message);
         return await File.ReadAllBytesAsync(output).ConfigureAwait(true);
     }
 
