@@ -41,6 +41,27 @@ internal sealed class SqliteRecordAccess(SqliteConnection connection, SqliteTran
     internal IReadOnlyList<DurableObservation> Observe(string scope, IReadOnlyDictionary<string, string> known, IReadOnlySet<string>? keys, HistoryObservationCache cache, CancellationToken cancellationToken)
         => SqliteObservations.Read(connection, transaction, history, scope, known, keys, cache, cancellationToken);
 
+    /// <summary>競合行と対応する現在行だけを読み、個別照会と一括照会で同じ候補を返します。</summary>
+    /// <returns>空スコープは全用途、それ以外は指定用途の候補です。</returns>
+    internal IReadOnlyList<DurableEntry> ReadConflicts(string scope, CancellationToken cancellationToken)
+    {
+        string? selected = scope;
+        if (scope.Length == 0)
+        {
+            selected = null;
+        }
+        List<DurableEntry> result = [.. List<DurableEntry>("conflict", selected, cancellationToken: cancellationToken)];
+        foreach (string address in result.Select(entry => DurableRepository.GetAddress(entry.Scope, entry.Key)).Distinct(StringComparer.Ordinal).ToArray())
+        {
+            DurableEntry? current = Read<DurableEntry>("entry", address);
+            if (current is not null)
+            {
+                result.Add(current);
+            }
+        }
+        return result.Distinct().ToArray();
+    }
+
     /// <summary>現在行を優先し、不在の場合だけ圧縮された元の確定結果を参照します。</summary>
     /// <returns>検証済みの同じ型の値、未保存ならnullです。</returns>
     internal T? Read<T>(string kind, string key, bool remember = true)

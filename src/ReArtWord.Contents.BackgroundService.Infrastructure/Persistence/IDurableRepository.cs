@@ -18,6 +18,11 @@ public interface IDurableRepository
     /// <returns>保存履歴、または未作成のnull。</returns>
     public ValueTask<DurableEntry?> ReadAsync(string scope, string key, CancellationToken cancellationToken = default);
 
+    /// <summary>指定項目と同じ用途の競合をまとめて読みます。専用実装のない媒体は既存の照会を使います。</summary>
+    /// <returns>削除履歴を含む項目と、現在値を含む競合候補です。</returns>
+    public ValueTask<(DurableEntry? Entry, IReadOnlyList<DurableEntry> Conflicts)> ReadWithConflictsAsync(string scope, string key, CancellationToken cancellationToken = default)
+        => RepositoryObservations.ReadWithConflictsAsync(this, scope, key, cancellationToken);
+
     /// <summary>保存準備中の操作が指定項目を予約しているか、変更せず確認します。</summary>
     /// <returns>予約が残る場合はtrueです。確認後の競合は更新時にも検査します。</returns>
     public ValueTask<bool> HasPendingWriteAsync(string scope, string key, CancellationToken cancellationToken = default);

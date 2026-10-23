@@ -119,6 +119,17 @@ public sealed class SqliteRepository : DurableRepository, ILocalJsonSnapshots, I
     /// <returns>保存項目。</returns>
     public override ValueTask<DurableEntry?> ReadAsync(string scope, string key, CancellationToken cancellationToken = default) => ValueTask.FromResult(ReadRecord<DurableEntry>("entry", GetAddress(scope, key), cancellationToken));
 
+    /// <summary>競合と現在値を同じ読取り取引で検証し、取引準備を繰り返しません。</summary>
+    /// <returns>同じ時点の指定項目と競合候補です。</returns>
+    public override ValueTask<(DurableEntry? Entry, IReadOnlyList<DurableEntry> Conflicts)> ReadWithConflictsAsync(string scope, string key, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        string address = GetAddress(scope, key);
+        using SqliteSession session = new(path, write: false);
+        IReadOnlyList<DurableEntry> conflicts = session.ReadConflicts(scope, cancellationToken);
+        return ValueTask.FromResult((session.Read<DurableEntry>("entry", address), conflicts));
+    }
+
     /// <summary>同期に必要な複数行を一つの読取り取引で検証します。</summary>
     /// <returns>実在する検証済みの項目です。</returns>
     internal ValueTask<IReadOnlyList<DurableEntry>> ReadEntriesAsync(string scope, IReadOnlyCollection<string> keys, CancellationToken cancellationToken = default)
@@ -247,21 +258,7 @@ public sealed class SqliteRepository : DurableRepository, ILocalJsonSnapshots, I
     {
         cancellationToken.ThrowIfCancellationRequested();
         using SqliteSession session = new(path, write: false);
-        string? selected = scope;
-        if (scope.Length == 0)
-        {
-            selected = null;
-        }
-        List<DurableEntry> result = [.. session.List<DurableEntry>("conflict", selected, cancellationToken: cancellationToken)];
-        foreach (string address in result.Select(entry => GetAddress(entry.Scope, entry.Key)).Distinct(StringComparer.Ordinal).ToArray())
-        {
-            DurableEntry? current = session.Read<DurableEntry>("entry", address);
-            if (current is not null)
-            {
-                result.Add(current);
-            }
-        }
-        return ValueTask.FromResult<IReadOnlyList<DurableEntry>>(result.Distinct().ToArray());
+        return ValueTask.FromResult(session.ReadConflicts(scope, cancellationToken));
     }
 
     /// <summary>診断リングの対象一行だけを履歴なしで置換します。</summary>
