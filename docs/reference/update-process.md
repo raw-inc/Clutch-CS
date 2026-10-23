@@ -81,12 +81,38 @@ Updater の終了コード1は更新失敗と旧版復帰が確定した意味�
 
 操作入力と結果はWebClientの配置先にある `update-staging/operations/<操作ID>` に保存します。元要求の受付後は自動再実行せず、保存結果だけを照会します。接続先の結果を確認できない場合は、そのPCの `result.json` と稼働状態を確認してください。
 
+### セットアップから選択した対象を順次更新する
+
+「更新」の方式で「1台ずつ順番に更新する（Fleet Update）」を選択してください。CoreServiceの固定対象をホスト順に並べ、並列数1で実行します。ClientHostと共通の稼働確認・配布検証・入れ替え・復帰確認を使用します。更新しない所属ピアも残存稼働の判定へ含めます。WebClientは選択したCoreServiceの更新後に、個別の選択に従って更新します。
+
+### CLIからFleet Updateを実行する
+
+`fleet` はローカルClientHostが観測する全対象を扱うため、`--cluster` と `--peer` は指定しません。Installerで一部の対象だけを選択する方式とは対象範囲が異なります。
+
+1. `FleetReleaseSelection` のJSONを用意してください。`manifest` に配布物の `release-manifest.json` の内容、`payloadRoot` にClientHostのPC上の配布元を指定します。複数RIDの `variants` や全Core成功後に更新する `client` も指定できます。`maximumParallelism` の既定は1です。
+2. 計画を取得し、終了コード0を確認してから、標準出力の `response` を開始用ファイルへ保存してください。
+
+```powershell
+$preview = contents-cli --url http://127.0.0.1:5081 fleet preview --body fleet-selection.json | ConvertFrom-Json
+$preview.response | ConvertTo-Json -Depth 100 | Set-Content -Encoding utf8 fleet-plan.json
+```
+
+3. `fleet-plan.json` の対象・実体・配布元・更新方式を確認してから開始してください。
+
+```powershell
+contents-cli --url http://127.0.0.1:5081 fleet start --body fleet-plan.json
+contents-cli --url http://127.0.0.1:5081 fleet status --id 11111111-1111-4111-8111-111111111111
+contents-cli --url http://127.0.0.1:5081 fleet list
+```
+
+`--id` は計画の `operationId` に読み替えてください。受付直後の未完了は終了コード5です。更新はClientHost内で継続します。中断後の `fleet reconcile --id <操作ID>` は元Updaterの結果と復帰状態を再確認し、新しい更新を開始しません。結果不明のまま別の操作IDで再開しないでください。
+
 ### 画面から全クラスターをホスト単位で更新する
 
 Dashboard の **Settings & maintenance → Update all discovered peers** は、接続先ピアを選択せずに使用できます。
 
 1. `New-InstallPackage.ps1` が生成した `fleet-release.json` を選び、配布元にパッケージのルート（`core` と `client` の親）を指定します。CoreServiceだけを更新する場合は従来の `release-manifest.json` または `release-bundle.json` も利用できます。配布元の絶対パスは、画面を配信している **ClientHostのPC上** のディレクトリです。各CoreServiceのstagingへ事前コピーする必要はありません。
-2. 必要な場合だけ稼働中更新を許可し、最大試行回数（既定3回、初回を含む）、最大並列数（1〜3、既定2）、ピアごとの確認期限を設定します。
+2. 必要な場合だけ稼働中更新を許可し、最大試行回数（既定3回、初回を含む）、最大並列数（1〜3、既定1）、ピアごとの確認期限を設定します。
 3. **Preview update plan** で、発見中の全クラスター・全ピア（最大256件）の固定対象、ホスト順の優先順序、並列上限、一台構成のクラスターを確認し、**Start this update** で開始します。開始時にも実体・ホスト・NICと配布元ファイルのSHA-256を検証します。
 4. 異なるPC・クラスターの対象を空き枠へ割り当てます。同一PCまたは同一クラスターのピアは同時更新せず、新しい実体、指定版、Ready、maintenance解除まで枠を保持します。発見一覧から消えた停止中ピアもCoreServiceの所属情報で数えます。3ピア以上のクラスターでは、停止する対象を除いて `floor(ピア数 / 2) + 1` 以上のReadyを、準備前と停止直前に確認します。例えば3ピアでは残り2ピア、4ピアでは残り3ピアのReadyが必要です。2ピアで複数PCのクラスターは相手のReadyを確認し、2ピア以下で単一PCのクラスターは一時切断を許容します。条件を満たさない対象は保留し、安全に開始できる別対象を先に処理します。
 

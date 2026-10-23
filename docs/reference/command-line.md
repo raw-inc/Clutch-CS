@@ -50,6 +50,11 @@ dotnet run --project src/ReArtWord.Contents.BackgroundService.CommandLine -- --u
 | `safety list` | 現ピアのloadedと取込状態を照会 |
 | `safety status` | `--id` で今回の受付結果を読取専用照会 |
 | `safety set` | `--body safety.json` (workflowId,scope,stopped,expectedVersion) |
+| `fleet preview` | `--body fleet-selection.json`。ClientHost上の配布元と方針から固定計画を作成。クラスター・ピアの指定は不要 |
+| `fleet start` | `--body fleet-plan.json`。確認した計画を開始し、同じ `operationId` で照会 |
+| `fleet list` | ClientHostに保存した全体更新の一覧 |
+| `fleet status` | `--id` で固定計画と対象別結果を照会 |
+| `fleet reconcile` | `--id` の元Updaterを再確認。本文・新ID・新しい更新開始は不要 |
 | `update start` | `--body update-request.json` (マニフェスト,payloadRoot,peerIds,failurePolicy等。variantsもそのまま送信) |
 | `update status` | `--id` で更新の全体・ピア別結果を照会 |
 | `log query` | `--body log-query.json` (空オブジェクトも可) |

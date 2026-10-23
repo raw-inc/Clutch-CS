@@ -21,6 +21,11 @@ internal static class CliResponse
             return string.Equals(command, resourcesHistory, StringComparison.Ordinal) || command.EndsWith(keyList, StringComparison.Ordinal) || string.Equals(command, keyCatalog, StringComparison.Ordinal) ? 0
                                                                                                                                                                                                              : 5;
         }
+        string fleetPreview = "fleet preview";
+        if (string.Equals(command, fleetPreview, StringComparison.Ordinal))
+        {
+            return FleetPreview(response);
+        }
         string yamlParseCommand = "workflow parse";
         string idKey = "id";
         string nodesKey = "nodes";
@@ -208,6 +213,20 @@ internal static class CliResponse
             "status" or "catalog" or "workflow list" or "workflow get" or "network get" or "configuration get" or "resources get" or "log statistics" => 0,
             _ => 5,
         };
+    }
+
+    /// <summary>プレビューの計画を開始済み結果と区別します。</summary>
+    /// <returns>対象と配布元が揃った計画だけを確認済みとします。</returns>
+    private static int FleetPreview(JsonElement response)
+    {
+        string operationKey = "operationId", targetsKey = "targets", releaseKey = "release";
+        if (response.TryGetProperty(operationKey, out JsonElement operation) && operation.ValueKind == JsonValueKind.String && operation.TryGetGuid(out Guid id) && id != Guid.Empty
+            && response.TryGetProperty(targetsKey, out JsonElement targets) && targets.ValueKind == JsonValueKind.Array && targets.GetArrayLength() != 0
+            && response.TryGetProperty(releaseKey, out JsonElement release) && release.ValueKind == JsonValueKind.Object)
+        {
+            return 0;
+        }
+        return 5;
     }
 
     /// <summary>bridgeの受付完了と内側の業務結果を別々に確認します。</summary>
