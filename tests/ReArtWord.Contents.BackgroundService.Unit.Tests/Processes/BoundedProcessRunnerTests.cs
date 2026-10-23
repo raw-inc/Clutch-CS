@@ -31,7 +31,8 @@ public sealed class BoundedProcessRunnerTests
         }
         await File.WriteAllTextAsync(config, mode).ConfigureAwait(true);
         using CancellationTokenSource cancellation = new(TimeSpan.FromSeconds(15));
-        Task<string> running = BoundedProcessRunner.RunAsync(Executable(), ["--config", config], cancellation.Token);
+        List<string> diagnostics = [];
+        Task<string> running = BoundedProcessRunner.RunAsync(Executable(), ["--config", config], new ProcessRunLimits(DiagnosticOutput: diagnostics.Add), cancellation.Token);
         Process? child = null;
         try
         {
@@ -47,6 +48,10 @@ public sealed class BoundedProcessRunnerTests
             }
             Assert.False(child.HasExited);
             Assert.False(cancellation.IsCancellationRequested);
+            string report = Assert.Single(diagnostics);
+            Assert.Contains("pipeDrainTimedOut=True", report, StringComparison.Ordinal);
+            Assert.Contains(failed ? "exitCode=7"
+                                   : "exitCode=0", report, StringComparison.Ordinal);
         }
         finally
         {
@@ -63,6 +68,75 @@ public sealed class BoundedProcessRunnerTests
                 }
             }
         }
+    }
+
+    /// <summary>成功・失敗の終了コードと有限の標準エラーを、結果を変えずに記録します。</summary>
+    /// <returns>実プロセスの診断内容と標準出力の確認です。</returns>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DiagnosticsPreserveResultAndBoundStandardErrorAsync(bool failed)
+    {
+        using MediaTestFiles files = new();
+        string config = Path.Combine(files.Root, "diagnostics.txt");
+        await File.WriteAllTextAsync(config, failed ? "diagnostic-failure"
+                                                    : "diagnostic-success").ConfigureAwait(true);
+        List<string> diagnostics = [];
+        Task<string> running = BoundedProcessRunner.RunAsync(Executable(), ["--config", config], new ProcessRunLimits(DiagnosticOutput: diagnostics.Add));
+        if (failed)
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() => running).ConfigureAwait(true);
+        }
+        else
+        {
+            Assert.Equal("completed", await running.ConfigureAwait(true));
+        }
+        string report = Assert.Single(diagnostics);
+        Assert.Contains(failed ? "exitCode=7"
+                               : "exitCode=0", report, StringComparison.Ordinal);
+        Assert.Contains("stderrTruncated=True", report, StringComparison.Ordinal);
+        Assert.Contains("known-error", report, StringComparison.Ordinal);
+        Assert.DoesNotContain("end-of-stderr", report, StringComparison.Ordinal);
+        Assert.Contains("pipeDrainTimedOut=False", report, StringComparison.Ordinal);
+        if (failed)
+        {
+            Assert.Contains(nameof(InvalidDataException), report, StringComparison.Ordinal);
+        }
+    }
+
+    /// <summary>診断先の例外で、本来の正常終了や異常終了を置き換えません。</summary>
+    /// <returns>診断先が失敗する場合の実終了結果です。</returns>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DiagnosticSinkFailureDoesNotChangeResultAsync(bool failed)
+    {
+        using MediaTestFiles files = new();
+        string config = Path.Combine(files.Root, "diagnostics.txt");
+        await File.WriteAllTextAsync(config, failed ? "7"
+                                                    : "0").ConfigureAwait(true);
+        Task<string> running = BoundedProcessRunner.RunAsync(Executable(), ["--config", config], new ProcessRunLimits(DiagnosticOutput: _ => throw new InvalidOperationException("diagnostic sink failed")));
+        if (failed)
+        {
+            await Assert.ThrowsAsync<InvalidDataException>(() => running).ConfigureAwait(true);
+        }
+        else
+        {
+            Assert.Equal(string.Empty, await running.ConfigureAwait(true));
+        }
+    }
+
+    /// <summary>起動前の失敗は、終了コードを捏造せず元の例外とともに記録します。</summary>
+    /// <returns>プロセスが存在しない失敗の診断です。</returns>
+    [Fact]
+    public async Task DiagnosticReportsStartupFailureAsync()
+    {
+        using MediaTestFiles files = new();
+        List<string> diagnostics = [];
+        await Assert.ThrowsAsync<FileNotFoundException>(() => BoundedProcessRunner.RunAsync(Path.Combine(files.Root, "missing.exe"), [], new ProcessRunLimits(DiagnosticOutput: diagnostics.Add))).ConfigureAwait(true);
+        string report = Assert.Single(diagnostics);
+        Assert.Contains("exitCode=unavailable", report, StringComparison.Ordinal);
+        Assert.Contains(nameof(FileNotFoundException), report, StringComparison.Ordinal);
     }
 
     /// <summary>標準入出力の容量を超えるJSONも、引数へ展開せずUTF-8とEOFで渡します。</summary>
@@ -102,7 +176,8 @@ public sealed class BoundedProcessRunnerTests
         string config = Path.Combine(files.Root, "behavior.txt");
         await File.WriteAllTextAsync(config, "wait");
         using CancellationTokenSource cancellation = new(TimeSpan.FromSeconds(10));
-        Task<string> running = BoundedProcessRunner.RunAsync(Executable(), ["--config", config], cancellation.Token);
+        List<string> diagnostics = [];
+        Task<string> running = BoundedProcessRunner.RunAsync(Executable(), ["--config", config], new ProcessRunLimits(DiagnosticOutput: diagnostics.Add), cancellation.Token);
         Process? child = null;
         try
         {
@@ -113,6 +188,7 @@ public sealed class BoundedProcessRunnerTests
         {
             await cancellation.CancelAsync();
             await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await running.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false));
+            Assert.Contains("CanceledException", Assert.Single(diagnostics), StringComparison.Ordinal);
             if (child is not null)
             {
                 Assert.True(child.HasExited);

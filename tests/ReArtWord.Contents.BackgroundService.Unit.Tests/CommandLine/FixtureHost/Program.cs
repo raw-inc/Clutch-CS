@@ -33,6 +33,17 @@ internal static class Program
         string pipe = "pipe";
         string inputMode = "input";
         string inheritedOutput = "inherited-output", inheritedEmpty = "inherited-empty", inheritedFailure = "inherited-failure";
+        string diagnosticSuccess = "diagnostic-success", diagnosticFailure = "diagnostic-failure";
+        if (string.Equals(text, diagnosticSuccess, StringComparison.Ordinal) || string.Equals(text, diagnosticFailure, StringComparison.Ordinal))
+        {
+            await Console.Out.WriteAsync("completed").ConfigureAwait(false);
+            await Console.Error.WriteAsync("known-error\n" + new string('e', 32768) + "end-of-stderr").ConfigureAwait(false);
+            if (string.Equals(text, diagnosticFailure, StringComparison.Ordinal))
+            {
+                return 7;
+            }
+            return 0;
+        }
         if (string.Equals(text, inheritedOutput, StringComparison.Ordinal) || string.Equals(text, inheritedEmpty, StringComparison.Ordinal)
             || string.Equals(text, inheritedFailure, StringComparison.Ordinal))
         {

@@ -16,9 +16,42 @@ public static class BoundedProcessRunner
 
     /// <summary>shellを使わず実行し、取消時にも実プロセスを停止します。</summary>
     /// <returns>正常終了時の上限付き標準出力です。</returns>
+    public static Task<string> RunAsync(string executable, IReadOnlyList<string> arguments, ProcessRunLimits limits, CancellationToken cancellationToken = default)
+    {
+        if (limits is { DiagnosticOutput: { } output })
+        {
+            return RunObservedAsync(executable, arguments, limits, new ProcessDiagnostics(executable, output), cancellationToken);
+        }
+        return RunCoreAsync(executable, arguments, limits, null, cancellationToken);
+    }
+
+    /// <summary>診断を指定した一回だけ、正常終了・起動失敗・取消を記録します。</summary>
+    /// <returns>診断の有無で変わらない実行結果です。</returns>
+    // 抑制理由: 元の例外を診断後にそのまま再送出します。
+    [SuppressMessage("Design", "CA1031", Justification = "例外の種類を変換せず、明示した診断先へ記録します。"), SuppressMessage("SourceQuality", "RAW330", Justification = "診断のために元の例外とスタックを変更しません。")]
+    private static async Task<string> RunObservedAsync(string executable, IReadOnlyList<string> arguments, ProcessRunLimits limits, ProcessDiagnostics diagnostics, CancellationToken cancellationToken = default)
+    {
+        Exception? failure = null;
+        try
+        {
+            return await RunCoreAsync(executable, arguments, limits, diagnostics, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            failure = exception;
+            throw;
+        }
+        finally
+        {
+            diagnostics.Complete(failure);
+        }
+    }
+
+    /// <summary>起動・入出力・停止を一回の所有範囲で処理します。</summary>
+    /// <returns>正常終了時の上限付き標準出力です。</returns>
     // 抑制理由: 子プロセス停止を確認した後で取消を上位へ伝え、停止不能は結果不明へ分離します。
     [SuppressMessage("SourceQuality", "RAW330", Justification = "停止完了後も元の取消tokenを保持します。"), SuppressMessage("SourceQuality", "RAW333", Justification = "停止を確認できなかった場合だけ結果不明専用例外へ変換します。")]
-    public static async Task<string> RunAsync(string executable, IReadOnlyList<string> arguments, ProcessRunLimits limits, CancellationToken cancellationToken = default)
+    private static async Task<string> RunCoreAsync(string executable, IReadOnlyList<string> arguments, ProcessRunLimits limits, ProcessDiagnostics? diagnostics, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(limits);
@@ -67,10 +100,11 @@ public static class BoundedProcessRunner
         }
         using Process process = new() { StartInfo = start };
         await StartAsync(process, cancellationToken).ConfigureAwait(false);
+        diagnostics?.Started(process);
         using CancellationTokenSource pipes = new();
         using CancellationTokenSource resourceLimit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        Task<string> output = DrainAsync(process.StandardOutput, true, limits, resourceLimit.CancelAsync, pipes.Token);
-        Task<string> errors = DrainAsync(process.StandardError, false, limits, resourceLimit.CancelAsync, pipes.Token);
+        Task<string> output = DrainAsync(process.StandardOutput, true, limits, resourceLimit.CancelAsync, diagnostics, pipes.Token);
+        Task<string> errors = DrainAsync(process.StandardError, false, limits, resourceLimit.CancelAsync, diagnostics, pipes.Token);
         Task input = limits.StandardInput is null ? Task.CompletedTask
                                                   : FeedAsync(process.StandardInput, limits.StandardInput, resourceLimit.CancelAsync, pipes.Token);
         bool exceeded = false;
@@ -118,6 +152,14 @@ public static class BoundedProcessRunner
             catch (OperationCanceledException) when (pipes.IsCancellationRequested)
             {
                 // 継承pipeを持つ子孫がいても、停止結果の通知を無期限に待たせません。
+                if (diagnostics is not null)
+                {
+                    diagnostics.DrainTimedOut = true;
+                }
+            }
+            finally
+            {
+                diagnostics?.Exited(process);
             }
         }
         if (exceeded || resourceLimit.IsCancellationRequested || process.ExitCode != 0)
@@ -200,7 +242,7 @@ public static class BoundedProcessRunner
 
     /// <summary>子プロセスのpipeを読み続け、ログへ生内容をそのまま出力しません。</summary>
     /// <returns>必要な標準出力だけを上限内で保持します。</returns>
-    private static async Task<string> DrainAsync(StreamReader original, bool retain, ProcessRunLimits limits, Func<Task> limitReached, CancellationToken cancellationToken = default)
+    private static async Task<string> DrainAsync(StreamReader original, bool retain, ProcessRunLimits limits, Func<Task> limitReached, ProcessDiagnostics? diagnostics, CancellationToken cancellationToken = default)
     {
         using StreamReader reader = Reader(original);
         StringBuilder result = new();
@@ -212,6 +254,10 @@ public static class BoundedProcessRunner
             while ((count = await reader.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false)) != 0)
             {
                 total += count;
+                if (!retain)
+                {
+                    diagnostics?.CaptureError(buffer.AsSpan(0, count));
+                }
                 if (limits.FailOnOutputLimit && limits.OutputCharacters < total)
                 {
                     await limitReached().ConfigureAwait(false);
@@ -224,6 +270,11 @@ public static class BoundedProcessRunner
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            if (diagnostics is not null)
+            {
+                diagnostics.DrainTimedOut = true;
+            }
+
             // 本体終了後も子孫がpipeを保持する場合は、読取り期限までに受信した出力を返します。
             // 呼出元からの取消と終了コードはRunAsyncで別に判定します。
         }
