@@ -10,6 +10,15 @@ internal static class SqliteSharedChanges
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA2100", Justification = "固定SQL定数のscope修飾だけを展開し、外部値のepochはパラメーターで渡します。")]
     internal static void Initialize(SqliteConnection connection, SqliteTransaction transaction)
     {
+        using (SqliteCommand column = new("SELECT 1 FROM pragma_table_info('records') WHERE name='shared_revision'", connection, transaction))
+        {
+            if (column.ExecuteScalar() is null)
+            {
+                column.CommandText = "ALTER TABLE records ADD COLUMN shared_revision INTEGER NOT NULL DEFAULT 0; DROP INDEX IF EXISTS shared_content_lookup; "
+                    + "CREATE INDEX shared_content_lookup ON records(kind,key,hash,scope,shared_revision) WHERE " + SqliteSharedFingerprint.ScopeFilter;
+                column.ExecuteNonQuery();
+            }
+        }
         string old = SqliteSharedFingerprint.ScopeFilter.Replace("scope", "OLD.scope", StringComparison.Ordinal);
         string current = SqliteSharedFingerprint.ScopeFilter.Replace("scope", "NEW.scope", StringComparison.Ordinal);
         using SqliteCommand command = new($$"""
@@ -19,9 +28,18 @@ internal static class SqliteSharedChanges
             WHEN (NEW.kind IN ('entry','conflict') AND {{current}})
                 OR EXISTS(SELECT 1 FROM records WHERE kind=NEW.kind AND key=NEW.key AND kind IN ('entry','conflict') AND {{SqliteSharedFingerprint.ScopeFilter}})
             BEGIN UPDATE shared_changes SET revision=revision+1 WHERE id=1; END;
-            CREATE TRIGGER IF NOT EXISTS shared_record_update AFTER UPDATE ON records
+            CREATE TRIGGER IF NOT EXISTS shared_row_insert AFTER INSERT ON records
+            WHEN NEW.kind IN ('entry','conflict') AND {{current}}
+            BEGIN
+                UPDATE records SET shared_revision=(SELECT revision FROM shared_changes WHERE id=1) WHERE rowid=NEW.rowid;
+            END;
+            DROP TRIGGER IF EXISTS shared_record_update;
+            CREATE TRIGGER shared_record_update AFTER UPDATE OF kind,key,scope,payload,hash,rowid,oid,_rowid_ ON records
             WHEN (OLD.kind IN ('entry','conflict') AND {{old}}) OR (NEW.kind IN ('entry','conflict') AND {{current}})
-            BEGIN UPDATE shared_changes SET revision=revision+1 WHERE id=1; END;
+            BEGIN
+                UPDATE shared_changes SET revision=revision+1 WHERE id=1;
+                UPDATE records SET shared_revision=(SELECT revision FROM shared_changes WHERE id=1) WHERE rowid=NEW.rowid;
+            END;
             CREATE TRIGGER IF NOT EXISTS shared_record_delete AFTER DELETE ON records
             WHEN OLD.kind IN ('entry','conflict') AND {{old}}
             BEGIN UPDATE shared_changes SET revision=revision+1 WHERE id=1; END;

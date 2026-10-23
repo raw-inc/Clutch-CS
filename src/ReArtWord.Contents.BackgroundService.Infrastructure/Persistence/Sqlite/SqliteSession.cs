@@ -318,7 +318,7 @@ internal sealed class SqliteSession : IDisposable
 
     /// <summary>実内容の検証を省略しない共有版キャッシュの変更識別です。</summary>
     /// <returns>検証済み行集合、または通常読取りが必要なnullです。</returns>
-    internal SqliteSharedFingerprint.VerifiedRows? SharedFingerprint() => SqliteSharedFingerprint.Read(connection, transaction);
+    internal SqliteSharedFingerprint.VerifiedRows? SharedFingerprint(SqliteVersionRows? previous = null) => SqliteSharedFingerprint.Read(connection, transaction, previous);
 
     /// <summary>同じ取引の最新復旧点を共有し、本文の全走査を履歴件数分繰り返しません。</summary>
     /// <returns>対象・種類・保存領域ごとの最新スナップショットかです。</returns>
