@@ -67,12 +67,12 @@ public sealed class TraceService : ITracePolicyProvider, IDisposable
     {
         try
         {
-            if ((await repository.GetConflictsAsync(Scope, cancellationToken).ConfigureAwait(false)).Count != 0)
+            (DurableEntry? entry, IReadOnlyList<DurableEntry> conflicts) = await repository.ReadWithConflictsAsync(Scope, Key, cancellationToken).ConfigureAwait(false);
+            if (conflicts.Count != 0)
             {
                 Volatile.Write(ref current, Volatile.Read(ref current) with { Loaded = false, Reason = "Trace.StateConflict" });
                 return;
             }
-            DurableEntry? entry = await repository.ReadAsync(Scope, Key, cancellationToken).ConfigureAwait(false);
             Dictionary<string, TraceSelection> policies = entry?.Value?.Json.Deserialize<Dictionary<string, TraceSelection>>(ContractJson.Options) ?? new(StringComparer.Ordinal);
             Volatile.Write(ref current, new TraceView(entry?.Version, policies, true, null));
         }

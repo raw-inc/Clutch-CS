@@ -146,15 +146,14 @@ public sealed class SourcePcAssignments
             // 保存だけでなく、待機中の同じ担当本文・競合集合・確定履歴の読取りも開始しません。
             return null;
         }
-        IReadOnlyList<DurableEntry> conflicts = await repository.GetConflictsAsync(scope, cancellationToken).ConfigureAwait(false);
-        DurableEntry[] candidates = conflicts.Where(entry => string.Equals(entry.Key, node.Id, StringComparison.Ordinal)).ToArray();
-        if (candidates.Length != 0 && (!owner || candidates.Any(entry => entry.Value?.Json.Deserialize<SourcePcAssignment>(ContractJson.Options) is not { } assignment
+        (DurableEntry? entry, IReadOnlyList<DurableEntry> conflicts) = await repository.ReadWithConflictsAsync(scope, node.Id, cancellationToken).ConfigureAwait(false);
+        DurableEntry[] candidates = conflicts.Where(candidate => string.Equals(candidate.Key, node.Id, StringComparison.Ordinal)).ToArray();
+        if (candidates.Length != 0 && (!owner || candidates.Any(candidate => candidate.Value?.Json.Deserialize<SourcePcAssignment>(ContractJson.Options) is not { } assignment
             || !string.Equals(assignment.WorkflowId, plan.Definition.Id, StringComparison.Ordinal) || !string.Equals(assignment.NodeId, node.Id, StringComparison.Ordinal))))
         {
             Defer(attemptKey, "conflict:" + revision, sharedVersion, readContext);
             return null;
         }
-        DurableEntry? entry = await repository.ReadAsync(scope, node.Id, cancellationToken).ConfigureAwait(false);
         SourcePcAssignment? saved = entry?.Value?.Json.Deserialize<SourcePcAssignment>(ContractJson.Options);
         bool same = candidates.Length == 0 && saved is not null && string.Equals(saved.ChoiceRevision, revision, StringComparison.Ordinal) && Valid(saved, plan.Definition.Id, node.Id);
         if (same && !await confirmation.CheckAsync(entry!, saved!.OperationId, saved.ConfirmedPeers, detached, cancellationToken).ConfigureAwait(false))
