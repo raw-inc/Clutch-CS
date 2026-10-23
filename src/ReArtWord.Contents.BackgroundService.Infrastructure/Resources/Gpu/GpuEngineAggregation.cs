@@ -17,7 +17,7 @@ internal static class GpuEngineAggregation
             Dictionary<(uint Physical, uint Engine, uint Process), double?> unique = [];
             foreach (PerformanceCounterValue counter in counters)
             {
-                if (!TryParse(counter.Instance, out string? luid, out uint physical, out uint engine, out uint process) || !string.Equals(luid, adapter.Luid, StringComparison.OrdinalIgnoreCase))
+                if (!TryMatchAdapter(counter.Instance, adapter.Luid, out uint physical, out uint engine, out uint process))
                 {
                     continue;
                 }
@@ -52,24 +52,30 @@ internal static class GpuEngineAggregation
         return result;
     }
 
-    /// <summary>公開カウンター実体に含まれるLUID・physical・エンジン・pidを識別します。</summary>
-    /// <returns>必要な識別部がすべて整数として読めるかです。</returns>
-    private static bool TryParse(string instance, out string? luid, out uint physical, out uint engine, out uint process)
+    /// <summary>カウンター名を新しい文字列へ分割せず、指定GPUと物理エンジン・pidを識別します。</summary>
+    /// <returns>識別部が有効で、指定GPUに属するかです。</returns>
+    private static bool TryMatchAdapter(string instance, string expectedLuid, out uint physical, out uint engine, out uint process)
     {
-        luid = null;
         physical = engine = process = 0;
-        string[] parts = instance.Split('_');
+        ReadOnlySpan<char> text = instance.AsSpan();
+        Span<Range> parts = stackalloc Range[10];
         string pidField = "pid", luidField = "luid", physicalField = "phys", engineField = "eng", hex = "0x";
-        if (parts.Length < 10 || !string.Equals(parts[0], pidField, StringComparison.OrdinalIgnoreCase) || !string.Equals(parts[2], luidField, StringComparison.OrdinalIgnoreCase)
-            || !string.Equals(parts[5], physicalField, StringComparison.OrdinalIgnoreCase) || !string.Equals(parts[7], engineField, StringComparison.OrdinalIgnoreCase)
-            || !parts[3].StartsWith(hex, StringComparison.OrdinalIgnoreCase) || !parts[4].StartsWith(hex, StringComparison.OrdinalIgnoreCase)
-            || !uint.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out process) || !uint.TryParse(parts[6], NumberStyles.None, CultureInfo.InvariantCulture, out physical)
-            || !uint.TryParse(parts[8], NumberStyles.None, CultureInfo.InvariantCulture, out engine)
-            || !uint.TryParse(parts[3].AsSpan(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint high) || !uint.TryParse(parts[4].AsSpan(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint low))
+        if (text.Split(parts, '_') < 10 || !text[parts[0]].Equals(pidField, StringComparison.OrdinalIgnoreCase) || !text[parts[2]].Equals(luidField, StringComparison.OrdinalIgnoreCase)
+            || !text[parts[5]].Equals(physicalField, StringComparison.OrdinalIgnoreCase) || !text[parts[7]].Equals(engineField, StringComparison.OrdinalIgnoreCase)
+            || !text[parts[3]].StartsWith(hex, StringComparison.OrdinalIgnoreCase) || !text[parts[4]].StartsWith(hex, StringComparison.OrdinalIgnoreCase)
+            || !uint.TryParse(text[parts[1]], NumberStyles.None, CultureInfo.InvariantCulture, out process) || !uint.TryParse(text[parts[6]], NumberStyles.None, CultureInfo.InvariantCulture, out physical)
+            || !uint.TryParse(text[parts[8]], NumberStyles.None, CultureInfo.InvariantCulture, out engine)
+            || !uint.TryParse(text[parts[3]][2..], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint high) || !uint.TryParse(text[parts[4]][2..], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint low))
         {
             return false;
         }
-        luid = string.Create(CultureInfo.InvariantCulture, $"luid_0x{high:X8}_0x{low:X8}");
-        return true;
+
+        // 数値も直接書き込み、カウンターごとの文字列生成とボックス化を避けます。
+        Span<char> luid = stackalloc char[26];
+        "luid_0x".AsSpan().CopyTo(luid);
+        "_0x".AsSpan().CopyTo(luid[15..]);
+        return high.TryFormat(luid[7..15], out _, "X8", CultureInfo.InvariantCulture)
+            && low.TryFormat(luid[18..], out _, "X8", CultureInfo.InvariantCulture)
+            && luid.Equals(expectedLuid, StringComparison.OrdinalIgnoreCase);
     }
 }

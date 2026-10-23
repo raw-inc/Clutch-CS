@@ -116,6 +116,51 @@ public sealed class WindowsGpuProbeTests(ITestOutputHelper output)
         Assert.NotNull(missing.Reason);
     }
 
+    /// <summary>桁数・大文字小文字・別名の表記が異なっても、同じGPUと物理エンジンへ対応付けます。</summary>
+    /// <param name="instance">OSカウンターの実体名です。</param>
+    [Theory]
+    [InlineData("pid_7_luid_0x00ABCDEF_0x00000001_phys_2_eng_4_engtype_3D")]
+    [InlineData("PID_4294967295_LUID_0Xabcdef_0X1_PHYS_2_ENG_4294967295_engtype_Video_Decode#1")]
+    [InlineData("pid_0_luid_0x00abcdef_0x1_phys_2_eng_0_")]
+    public void CounterNamesPreserveAdapterAndPhysicalIdentity(string instance)
+    {
+        GpuAdapterIdentity adapter = new("luid_0x00ABCDEF_0x00000001", "GPU", 0x1002);
+        ResourceMetric metric = Assert.Single(GpuEngineAggregation.Aggregate([new(instance, 37)], [adapter]));
+        Assert.Equal(37d, metric.Value);
+        Assert.Equal(adapter.Luid + "_phys_2", metric.Target);
+        Assert.Null(metric.Reason);
+    }
+
+    /// <summary>不完全な識別情報を別のGPUやゼロ使用率として採用しません。</summary>
+    /// <param name="instance">不正または別GPUのカウンター名です。</param>
+    [Theory]
+    [InlineData("")]
+    [InlineData("pid_1_luid_0x0_0x1_phys_0_eng_0")]
+    [InlineData("pid_-1_luid_0x0_0x1_phys_0_eng_0_3D")]
+    [InlineData("pid_4294967296_luid_0x0_0x1_phys_0_eng_0_3D")]
+    [InlineData("pid_1_luid_0_0x1_phys_0_eng_0_3D")]
+    [InlineData("pid_1_luid_0x100000000_0x1_phys_0_eng_0_3D")]
+    [InlineData("pid_1_luid_0x0_0x1_phys_-1_eng_0_3D")]
+    [InlineData("pid_1_luid_0x0_0x1_phys_0_eng_x_3D")]
+    [InlineData("pid_1_luid_0x0_0x2_phys_0_eng_0_3D")]
+    public void InvalidOrUnrelatedCounterNamesRemainUnavailable(string instance)
+    {
+        ResourceMetric metric = Assert.Single(GpuEngineAggregation.Aggregate([new(instance, 37)], [Adapter(1, "GPU", 0x1002)]));
+        Assert.Null(metric.Value);
+        Assert.Equal("resource.gpuNoEngineSample", metric.Reason);
+    }
+
+    /// <summary>メモリカウンターの別名と大文字小文字を区別せず、最大の有効値を採用します。</summary>
+    [Fact]
+    public void MemoryCounterAliasesPreserveMaximumValidValue()
+    {
+        GpuAdapterIdentity adapter = Adapter(1, "GPU", 0x1002);
+        string target = adapter.Luid + "_phys_0";
+        IReadOnlyList<ResourceMetric> metrics = GpuMemoryAggregation.Aggregate([adapter],
+            [new(target.ToUpperInvariant() + "#1#alias", 12), new(target, 9), new(target + "#2", double.NaN), new(target + "#3", -1), new(target + "_other", 100)], null);
+        Assert.Equal(12d, Assert.Single(metrics, metric => string.Equals(metric.Name, "gpu.memory.used", StringComparison.Ordinal)).Value);
+    }
+
     /// <summary>物理接続実装のLUIDと名前を作ります。</summary>
     /// <returns>既知接続実装です。</returns>
     private static GpuAdapterIdentity Adapter(uint low, string name, uint vendor) => new(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"luid_0x00000000_0x{low:X8}"), name, vendor);
