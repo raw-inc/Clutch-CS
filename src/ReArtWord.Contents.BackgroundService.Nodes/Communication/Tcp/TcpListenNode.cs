@@ -70,38 +70,45 @@ internal sealed class TcpListenNode : ISourceNode
         using CancellationTokenSource lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, context.StopToken);
         LocalNetworkBinding binding = new(context.Initial.Settings, context.Initial.HostId);
         long received = 0;
-        while (!context.IsStopRequested && !cancellationToken.IsCancellationRequested)
+        try
         {
-            try
+            while (!context.IsStopRequested && !cancellationToken.IsCancellationRequested)
             {
-                await RunBindingAsync(context, binding, ports, () => Interlocked.Increment(ref received), lifetime.Token, cancellationToken).ConfigureAwait(false);
-                return CommunicationSupport.Terminal(cancellationToken);
-            }
-            catch (InvalidOperationException)
-            {
-                await context.ReportStatusAsync(new(ESourceState.Unavailable, "network.binding.unresolved"), cancellationToken).ConfigureAwait(false);
-                return NodeResult.Failure("network.binding.unresolved", "指定NICとIPを再選択してください。");
-            }
-            catch (SocketException)
-            {
-                await context.ReportStatusAsync(new(ESourceState.Unavailable, "network.listen.unavailable"), cancellationToken).ConfigureAwait(false);
                 try
                 {
-                    await Task.Delay(TimeSpan.FromMilliseconds(250), lifetime.Token).ConfigureAwait(false);
+                    await RunBindingAsync(context, binding, ports, () => Interlocked.Increment(ref received), lifetime.Token, cancellationToken).ConfigureAwait(false);
+                    return CommunicationSupport.Terminal(cancellationToken);
+                }
+                catch (InvalidOperationException)
+                {
+                    await context.ReportStatusAsync(new(ESourceState.Unavailable, "network.binding.unresolved"), cancellationToken).ConfigureAwait(false);
+                    return NodeResult.Failure("network.binding.unresolved", "指定NICとIPを再選択してください。");
+                }
+                catch (SocketException)
+                {
+                    await context.ReportStatusAsync(new(ESourceState.Unavailable, "network.listen.unavailable"), cancellationToken).ConfigureAwait(false);
+                    try
+                    {
+                        await Task.Delay(TimeSpan.FromMilliseconds(250), lifetime.Token).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return CommunicationSupport.Terminal(cancellationToken);
+                    }
                 }
                 catch (OperationCanceledException)
                 {
-                    return CommunicationSupport.Terminal(cancellationToken);
+                    if (lifetime.IsCancellationRequested)
+                    {
+                        return CommunicationSupport.Terminal(cancellationToken);
+                    }
+                    await context.ReportStatusAsync(new(ESourceState.Unavailable, "network.binding.unresolved", "同一NICと指定IPの回復を待機します。新IPへ自動変更しません。"), cancellationToken).ConfigureAwait(false);
                 }
             }
-            catch (OperationCanceledException)
-            {
-                if (lifetime.IsCancellationRequested)
-                {
-                    return CommunicationSupport.Terminal(cancellationToken);
-                }
-                await context.ReportStatusAsync(new(ESourceState.Unavailable, "network.binding.unresolved", "同一NICと指定IPの回復を待機します。新IPへ自動変更しません。"), cancellationToken).ConfigureAwait(false);
-            }
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        {
+            // 待受の復旧処理や状態通知の途中でも、停止要求に対応する終了結果を返します。
         }
         return CommunicationSupport.Terminal(cancellationToken);
     }
