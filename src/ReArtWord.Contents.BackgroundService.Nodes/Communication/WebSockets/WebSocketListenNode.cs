@@ -62,32 +62,39 @@ internal sealed class WebSocketListenNode(CommunicationReplyRegistry replies) : 
             }
         };
         using CancellationTokenSource lifetime = CancellationTokenSource.CreateLinkedTokenSource(context.StopToken, completed.Token, cancellationToken);
-        while (!lifetime.IsCancellationRequested && !context.IsStopRequested)
+        try
         {
-            try
+            while (!lifetime.IsCancellationRequested && !context.IsStopRequested)
             {
-                NodeResult result = await RunBindingAsync(context, admit, complete, completed.Token, cancellationToken).ConfigureAwait(false);
-                if (result.Outcome != EOutcome.Failed)
+                try
                 {
-                    return result;
+                    NodeResult result = await RunBindingAsync(context, admit, complete, completed.Token, cancellationToken).ConfigureAwait(false);
+                    if (result.Outcome != EOutcome.Failed)
+                    {
+                        return result;
+                    }
+                }
+                catch (Exception exception) when (exception is IOException or System.Net.Sockets.SocketException)
+                {
+                    await context.ReportStatusAsync(new(ESourceState.Unavailable, "websocket.bindingUnavailable"), cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    return CommunicationSupport.Terminal(cancellationToken);
+                }
+                try
+                {
+                    await Task.Delay(250, lifetime.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    return CommunicationSupport.Terminal(cancellationToken);
                 }
             }
-            catch (Exception exception) when (exception is IOException or System.Net.Sockets.SocketException)
-            {
-                await context.ReportStatusAsync(new(ESourceState.Unavailable, "websocket.bindingUnavailable"), cancellationToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                return CommunicationSupport.Terminal(cancellationToken);
-            }
-            try
-            {
-                await Task.Delay(250, lifetime.Token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                return CommunicationSupport.Terminal(cancellationToken);
-            }
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        {
+            // 待受の復旧処理や状態通知の途中でも、停止要求に対応する終了結果を返します。
         }
         return CommunicationSupport.Terminal(cancellationToken);
     }
