@@ -10,13 +10,13 @@ using ReArtWord.Contents.BackgroundService.ManagementTransport.Observers;
 
 namespace ReArtWord.Contents.BackgroundService.ClientHost.Management;
 
-/// <summary>完成したアーカイブをブラウザーの標準ダウンロードへ逐次転送します。</summary>
+/// <summary>Coreが作成したアーカイブを、ブラウザーへストリーミング転送します。</summary>
 internal static class ArchiveDownloadRoutes
 {
     private static readonly Action<ILogger, Guid, Exception?> reportFailure = LoggerMessage.Define<Guid>(LogLevel.Warning, new EventId(402, "ArchiveDownloadFailed"),
         "Archive {OperationId} download failed.");
 
-    /// <summary>パスを受け取らず、選択済みのクラスター・ピア・実体だけを照会します。</summary>
+    /// <summary>操作IDで指定したアーカイブをダウンロードするAPIを登録します。</summary>
     internal static void Map(WebApplication app)
     {
         app.MapGet("/client/archives/{id:guid}/download", async (Guid id, string cluster, string peer, Guid instance, ObserverConnection connection, HttpContext context) =>
@@ -50,8 +50,8 @@ internal static class ArchiveDownloadRoutes
         });
     }
 
-    /// <summary>欠落や検査値不一致があれば、正常なダウンロードとして終了させません。</summary>
-    /// <returns>全体検証を伴う転送、またはHTTP接続の中断です。</returns>
+    /// <summary>ファイル全体のSHA-256を検証し、不一致や転送エラーがあればHTTP接続を中断します。</summary>
+    /// <returns>ファイルの転送と検証。</returns>
     // 抑制理由: HTTP本文の開始後はエラー本文へ変更できないため、診断を残して接続を中断します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031", Justification = "出力の障害を診断し、HTTP応答を明示的に中断します。")]
     private static async Task SendAsync(Stream output, ArchiveTransfer file, Func<string, object, CancellationToken, Task<JsonElement>> read,

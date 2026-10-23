@@ -92,8 +92,8 @@ public sealed class WorkflowLogService : IWorkflowLog, IAsyncDisposable
         _ = await EnqueueAsync(entry, true, null, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>保管ログを元のID・時刻で復元し、転送やログ起点のワークフローを再実行しません。</summary>
-    /// <returns>重複IDを除いた永続保存の確認です。</returns>
+    /// <summary>ログのIDと時刻を維持して復元します。ログの転送や、ログをきっかけとするWFの実行は行いません。</summary>
+    /// <returns>重複を除いたログの保存処理。</returns>
     public async Task RestoreArchiveAsync(IReadOnlyList<WorkflowLogEntry> entries, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entries);

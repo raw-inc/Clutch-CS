@@ -12,10 +12,10 @@ using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Archives;
 
-/// <summary>一回の固定取得先からログを集約し、完成したZIPだけを公開します。</summary>
+/// <summary>クラスターの設定と各ピアのログをZIPファイルにまとめます。</summary>
 internal static class ArchiveExport
 {
-    /// <summary>各ピアで保持するログを、読取り専用の有限ページとして照会します。</summary>
+    /// <summary>各ピアのログをページ単位で取得する照会を登録します。</summary>
     internal static void Register(PeerCluster cluster, WorkflowLogService log)
     {
         cluster.RegisterInspection("archive.logs", async (request, token) =>
@@ -29,8 +29,8 @@ internal static class ArchiveExport
         });
     }
 
-    /// <summary>全ピアの取得が確認できた場合だけ、転送情報を返します。</summary>
-    /// <returns>完成ZIPの元操作・長さ・SHA-256です。</returns>
+    /// <summary>設定と必要なログを書き出し、ZIPの作成が完了したら転送情報を返します。</summary>
+    /// <returns>書き出し結果と、ZIPのサイズ・SHA-256。</returns>
     internal static async Task<ArchiveOperationResult> WriteAsync(ArchiveExportRequest request, ClusterArchiveState state,
         WorkflowLogService log, PeerCluster cluster, ArchiveWorkspace workspace, CancellationToken cancellationToken = default)
     {
@@ -65,8 +65,8 @@ internal static class ArchiveExport
         return new(request.OperationId, "completed", true, EOutcome.Succeeded, File: file);
     }
 
-    /// <summary>通常の複数取得先検索と同じ重複除去を使用し、未確認先を隠しません。</summary>
-    /// <returns>同じ検索状態を使うページ読取りです。</returns>
+    /// <summary>既存のログ検索を使い、重複を除いて各ピアのログを取得します。</summary>
+    /// <returns>同じ検索の次ページを取得する関数。</returns>
     private static Func<LogQuery, CancellationToken, Task<LogQueryResult>> ClusterLogs(PeerCluster cluster, WorkflowLogService log,
         IReadOnlyList<PeerInfo> members, DateTimeOffset captured)
     {

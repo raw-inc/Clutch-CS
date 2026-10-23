@@ -6,7 +6,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 
 namespace ReArtWord.Contents.BackgroundService.Client.Operations.Configuration;
 
-/// <summary>明示選択したCoreの設定と任意のログを、一回のアーカイブへ書き出します。</summary>
+/// <summary>クラスターの設定とログを書き出す画面。</summary>
 // 抑制理由: Razorの生成する公開partial型に合わせます。
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1515", Justification = "Razorが生成する公開partial型です。")]
 public sealed partial class ClusterArchivePanel
@@ -31,9 +31,9 @@ public sealed partial class ClusterArchivePanel
     private Guid operation;
     private Func<string>? message;
 
-    /// <summary>選択先を固定し、本文をブラウザーのメモリーへ載せずダウンロードします。</summary>
-    /// <returns>書出し確認とダウンロード開始です。</returns>
-    // 抑制理由: UIイベントの署名を維持し、画面寿命の取消トークンを各I/Oへ渡します。
+    /// <summary>書き出しが完了したら、ブラウザーのダウンロードを開始します。</summary>
+    /// <returns>書き出しの完了確認とダウンロード要求。</returns>
+    // 抑制理由: UIイベントには引数を追加せず、画面を閉じた際のキャンセルをUiCancellationで各処理に伝えます。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "UIイベントからUiCancellationを引き継ぎます。")]
     private async Task ExportAsync()
     {

@@ -7,11 +7,11 @@ using ReArtWord.Contents.BackgroundService.ManagementTransport.Clients;
 
 namespace ReArtWord.Contents.BackgroundService.CommandLine;
 
-/// <summary>アーカイブの転送と事前確認を行い、復元開始を別コマンドに分けます。</summary>
+/// <summary>アーカイブの書き出し・取り込み用CLIコマンド。</summary>
 internal static class CliArchive
 {
-    /// <summary>ループバックClientHost経由で、元IDを保持した操作を行います。</summary>
-    /// <returns>通常CLIと同じ確認済み・未確定の終了コードです。</returns>
+    /// <summary>手元のClientHostを通して、指定したアーカイブ操作を実行します。</summary>
+    /// <returns>CLIの終了コード。</returns>
     internal static async Task<int> RunAsync(CliCommand command, TextWriter output, TextWriter error, CancellationToken cancellationToken = default)
     {
         bool mutationSent = false;
@@ -166,8 +166,8 @@ internal static class CliArchive
         }
     }
 
-    /// <summary>元操作の状態だけを結果として受け入れます。</summary>
-    /// <returns>照合済み状態です。</returns>
+    /// <summary>応答の操作IDが、照会した操作に一致するか確認します。</summary>
+    /// <returns>IDを確認した操作結果。</returns>
     private static ArchiveOperationResult ReadResult(JsonElement value, Guid id)
     {
         ArchiveOperationResult result = value.Deserialize<ArchiveOperationResult>(ContractJson.Options) ?? throw new InvalidDataException("Archive result is missing.");
@@ -178,12 +178,12 @@ internal static class CliArchive
         return result;
     }
 
-    /// <summary>受理を成功とせず、終了コードを揃えます。</summary>
-    /// <returns>業務結果の終了コードです。</returns>
+    /// <summary>操作結果をCLIの終了コードへ変換します。</summary>
+    /// <returns>成功は0、結果不明は5、それ以外は4。</returns>
     private static int Code(EOutcome outcome) => outcome switch { EOutcome.Succeeded => 0, EOutcome.Unknown => 5, _ => 4 };
 
-    /// <summary>呼出元が計画と結果を保存できるJSONを出力します。</summary>
-    /// <returns>同じ終了コードです。</returns>
+    /// <summary>操作IDと応答をJSONで標準出力に書き込みます。</summary>
+    /// <returns>引数で指定した終了コード。</returns>
     private static async Task<int> PrintAsync(TextWriter output, Guid operationId, object response, int code, CancellationToken cancellationToken = default)
     {
         await output.WriteLineAsync(JsonSerializer.Serialize(new { operationId, exitCode = code, response }, ContractJson.Options).AsMemory(), cancellationToken).ConfigureAwait(false);

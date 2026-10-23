@@ -23,14 +23,14 @@ using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Compilation;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Configuration;
 
-/// <summary>アーカイブの実保存と管理操作を、独立クラスターと保存先で検証します。</summary>
+/// <summary>独立した保存先とUDP通信を使う、アーカイブ試験の環境。</summary>
 internal sealed class ArchiveTestEnvironment : IAsyncDisposable
 {
     private readonly CancellationTokenSource stopping = new();
     private readonly Task worker;
     internal readonly ConcurrentQueue<Exception> Errors = [];
 
-    /// <summary>一回の試験だけが所有する保存と実UDPピアを作ります。</summary>
+    /// <summary>試験専用の保存先とUDPピアを作成します。</summary>
     internal ArchiveTestEnvironment()
     {
         Root = Path.Combine(Path.GetTempPath(), "ClutchArchiveTests", Guid.NewGuid().ToString("N"));
@@ -114,13 +114,13 @@ internal sealed class ArchiveTestEnvironment : IAsyncDisposable
         await Log.StartAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>差分と反映状態を区別できる定義を作ります。</summary>
-    /// <returns>定数入力を持つ通常WFです。</returns>
+    /// <summary>入力値で版を区別できる、試験用のWFを作成します。</summary>
+    /// <returns>定数入力を持つWF。</returns>
     internal static WorkflowDefinition Definition(string id, int value) => new(id, id, [new("pass", "control.pass", JsonSerializer.SerializeToElement(new { }),
         new Dictionary<string, NodeValue>(StringComparer.Ordinal) { ["value"] = NodeValue.FromObject(value) })], [], Enabled: true);
 
-    /// <summary>受け付けた処理の停止を確認してから保存とソケットを解放します。</summary>
-    /// <returns>試験所有物の後始末です。</returns>
+    /// <summary>バックグラウンド処理を停止し、試験用の保存先と通信を解放します。</summary>
+    /// <returns>試験環境の終了処理。</returns>
     public async ValueTask DisposeAsync()
     {
         await stopping.CancelAsync().ConfigureAwait(false);

@@ -5,11 +5,11 @@ using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 
 namespace ReArtWord.Contents.BackgroundService.ManagementTransport.Clients;
 
-/// <summary>HTTP・UDPの既存管理経路を使い、アーカイブ全体をメモリーへ載せず転送します。</summary>
+/// <summary>アーカイブを分割転送し、ファイル全体のサイズとSHA-256を検証します。</summary>
 public static class ArchiveFileTransfer
 {
-    /// <summary>同じファイルの受信済み位置から続け、最後に全体の検査値を固定します。</summary>
-    /// <returns>プレビューへ渡す元操作の転送条件です。</returns>
+    /// <summary>ファイルのサイズとSHA-256を登録し、受信済みの位置からアップロードします。</summary>
+    /// <returns>アップロードしたファイルの転送情報。</returns>
     public static async Task<ArchiveTransfer> UploadAsync(Stream input, Guid operation,
         Func<string, object, CancellationToken, Task<JsonElement>> send, CancellationToken cancellationToken = default)
     {
@@ -45,8 +45,8 @@ public static class ArchiveFileTransfer
         return file;
     }
 
-    /// <summary>元操作・位置・長さ・検査値が一致したZIPだけを完了として返します。</summary>
-    /// <returns>全内容の転送と検査の完了です。</returns>
+    /// <summary>操作IDと転送位置を確認しながらダウンロードし、最後に全体のSHA-256を照合します。</summary>
+    /// <returns>ファイルのダウンロードと検証。</returns>
     public static async Task DownloadAsync(Stream output, ArchiveTransfer file,
         Func<string, object, CancellationToken, Task<JsonElement>> send, CancellationToken cancellationToken = default)
     {

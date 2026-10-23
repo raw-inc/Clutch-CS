@@ -3,6 +3,6 @@ using ReArtWord.Contents.BackgroundService.Contracts.Configuration.Archives;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Archives;
 
-/// <summary>確認画面の対象、変更前状態、変更後状態と参加実体を固定します。</summary>
+/// <summary>復元内容、復元前の設定、参加ピアを記録した復元計画。</summary>
 internal sealed record ArchiveImportPlan(ArchiveImportPreview Preview, ArchiveTransfer File, ClusterArchiveConfiguration Before,
     ClusterArchiveConfiguration Incoming, IReadOnlyList<PeerInfo> Members);

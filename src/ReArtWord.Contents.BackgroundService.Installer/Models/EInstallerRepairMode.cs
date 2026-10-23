@@ -1,6 +1,6 @@
 namespace ReArtWord.Contents.BackgroundService.Installer.Models;
 
-/// <summary>自動修復・再配置・アーカイブ復元を排他的に選びます。</summary>
+/// <summary>修復画面で選択する実行方法。</summary>
 internal enum EInstallerRepairMode
 {
     /// <summary>自動修復を行います。</summary>

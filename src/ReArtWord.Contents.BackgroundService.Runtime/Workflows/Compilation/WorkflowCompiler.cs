@@ -50,8 +50,8 @@ public sealed class WorkflowCompiler
     public CompilationResult Compile(WorkflowDefinition definition)
         => Compile(definition, new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal));
 
-    /// <summary>一括取込み後の参照集合で検証し、稼働中のレシピカタログを変更しません。</summary>
-    /// <returns>指定した集合だけで解決した計画または問題です。</returns>
+    /// <summary>指定したレシピ定義を使ってコンパイルします。稼働中のレシピは変更しません。</summary>
+    /// <returns>コンパイル結果と検証エラー。</returns>
     public CompilationResult CompileInContext(WorkflowDefinition definition, IReadOnlyDictionary<string, WorkflowDefinition>? definitions)
     {
         ArgumentNullException.ThrowIfNull(definition);

@@ -16,13 +16,13 @@ using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 
-/// <summary>実CLI・ClientHost・二つの実クラスターを通して、全ピアへの復元を確認します。</summary>
+/// <summary>CLI、ClientHost、2つのクラスターを起動し、全ピアへの復元を検証します。</summary>
 public sealed class ClusterArchiveProcessTests
 {
     private static readonly string[] expectedPeers = ["a", "b"];
 
-    /// <summary>別クラスターへ保存版・有効版・両Coreのログを運び、再起動後も元の有効版を保持します。</summary>
-    /// <returns>書出し・ダウンロード・確認・復元・永続結果の検証です。</returns>
+    /// <summary>保存版・有効版・両Coreのログを別クラスターへ復元し、再起動後も有効版が変わらないことを確認します。</summary>
+    /// <returns>書き出しから復元、再起動後の状態までの検証。</returns>
     [Fact]
     public async Task CliMovesSettingsAndLogsAcrossClustersAndRestoresEveryActivePeer()
     {
@@ -112,15 +112,15 @@ public sealed class ClusterArchiveProcessTests
         await destinationB.StopAsync(timeout.Token).ConfigureAwait(true);
         await destinationB.StartAsync(timeout.Token).ConfigureAwait(true);
 
-        // 管理APIの起動と設定の復帰は別です。参加準備が完了した実体の有効版を確認します。
+        // 管理APIへの応答だけでは設定の復元完了を判断できないため、Readyになってから有効版を確認します。
         await WaitReadyAsync(destinationB, timeout.Token).ConfigureAwait(true);
         Assert.Equal(active.Revision, (await destinationB.GetAsync<JsonElement>("workflows.read", "screen", timeout.Token).ConfigureAwait(true)).GetProperty("effectiveRevision").GetString());
         (int duplicateCode, string duplicate) = await CliAsync(client, destinationId, ["import", "--id", plan.OperationId.ToString("D"), "--confirmation", plan.Confirmation], timeout.Token).ConfigureAwait(true);
         Assert.True(duplicateCode == 0, duplicate);
     }
 
-    /// <summary>実体の参加完了まで待ち、起動時の同期を取り込み対象に混在させません。</summary>
-    /// <returns>二ピアのReady確認です。</returns>
+    /// <summary>両ピアのクラスターへの参加が完了するまで待ちます。</summary>
+    /// <returns>両ピアがReadyになるまでの待機。</returns>
     private static Task WaitReadyAsync(CorePeer peer, CancellationToken cancellationToken = default) => CorePeer.WaitAsync(async token =>
     {
         JsonElement status = await peer.GetAsync<JsonElement>("status", token).ConfigureAwait(false);
@@ -128,13 +128,13 @@ public sealed class ClusterArchiveProcessTests
         return members.Length == 2 && members.All(member => member.Status == EPeerStatus.Ready);
     }, cancellationToken);
 
-    /// <summary>内容の版を確認できる定数ノードです。</summary>
-    /// <returns>外部副作用を持たない有効WFです。</returns>
+    /// <summary>入力値で版を区別できる、試験用のWFを作成します。</summary>
+    /// <returns>定数入力を持つWF。</returns>
     private static WorkflowDefinition Definition(string id, int value) => new(id, id, [new("pass", "control.pass", JsonSerializer.SerializeToElement(new { }),
         new Dictionary<string, NodeValue>(StringComparer.Ordinal) { ["value"] = NodeValue.FromObject(value) })], [], Enabled: true);
 
-    /// <summary>実CLIの標準出力と、未完了を表す非ゼロ終了も検証します。</summary>
-    /// <returns>プロセスの終了コードと応答です。</returns>
+    /// <summary>CLIを別プロセスで実行し、終了コードと応答を取得します。</summary>
+    /// <returns>CLIの終了コードと応答。</returns>
     private static async Task<(int Code, string Output)> CliAsync(ClientHostProcess client, string cluster, string[] arguments, CancellationToken cancellationToken = default)
     {
         string configuration = new DirectoryInfo(AppContext.BaseDirectory).Parent!.Name;

@@ -12,13 +12,13 @@ using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Configuration;
 
-/// <summary>ZIPの往復で保存版・有効版・型情報とログ選択を保持します。</summary>
+/// <summary>ZIPへの書き出しと読み込みで、設定とログが保持されることを検証します。</summary>
 public sealed class ClusterArchiveFileTests
 {
     private static readonly byte[] binary = [0, 7, 255];
 
-    /// <summary>ログを除外した場合は取得せず、含める場合はページを欠落なく保存します。</summary>
-    /// <returns>実ZIPの読取り結果です。</returns>
+    /// <summary>選択した場合だけ、ログの全ページがZIPへ保存されることを確認します。</summary>
+    /// <returns>ZIPファイルの内容の検証。</returns>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -74,8 +74,8 @@ public sealed class ClusterArchiveFileTests
         }
     }
 
-    /// <summary>欠落した検索を成功したバックアップにしません。</summary>
-    /// <returns>未完了ページの拒否です。</returns>
+    /// <summary>ログを完全に取得できなかった場合、書き出しが失敗することを確認します。</summary>
+    /// <returns>ログ取得が不完全な場合のエラー処理の検証。</returns>
     [Fact]
     public async Task IncompleteLogSearchCannotProduceACompleteArchive()
     {
@@ -84,8 +84,8 @@ public sealed class ClusterArchiveFileTests
             (_, _) => Task.FromResult(new LogQueryResult([], null, false))));
     }
 
-    /// <summary>任意パス・重複名・未宣言ログを、展開や変更より前に拒否します。</summary>
-    /// <returns>ZIP構造の検査です。</returns>
+    /// <summary>想定外のパス、重複したファイル名、設定と矛盾するログを含むZIPを拒否することを確認します。</summary>
+    /// <returns>不正なZIPの検証。</returns>
     [Theory]
     [InlineData("../outside.json")]
     [InlineData("configuration.json")]
@@ -113,8 +113,8 @@ public sealed class ClusterArchiveFileTests
         }
     }
 
-    /// <summary>草稿と有効版が異なる実例を作ります。</summary>
-    /// <returns>Binaryと有効状態を含む設定です。</returns>
+    /// <summary>保存版と有効版が異なる試験用の設定を作成します。</summary>
+    /// <returns>バイト列の入力値を含む設定。</returns>
     private static ClusterArchiveConfiguration Configuration(bool logs)
     {
         WorkflowDefinition active = new("screen", "Display", [new("pass", "control.pass", JsonSerializer.SerializeToElement(new { }),

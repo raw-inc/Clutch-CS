@@ -4,13 +4,13 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Archives
 
 namespace ReArtWord.Contents.BackgroundService.CoreService.Management;
 
-/// <summary>アーカイブの転送・確認・開始・元結果照会を既存管理経路へ公開します。</summary>
+/// <summary>アーカイブの管理APIとバックグラウンド処理を提供します。</summary>
 internal sealed class ArchiveManagement(ClusterArchiveService archives, ILogger<ArchiveManagement> logger) : Microsoft.Extensions.Hosting.BackgroundService
 {
     private static readonly Action<ILogger, Exception?> reportFailure = LoggerMessage.Define(LogLevel.Error, new EventId(401, "ArchiveOperationFailed"),
         "Archive operation failed; inspect the original operation result.");
 
-    /// <summary>読み取りと、元IDを維持する明示操作を登録します。</summary>
+    /// <summary>書き出し、転送、復元、結果照会の操作を管理APIへ登録します。</summary>
     internal void Register(ManagementRegistry registry)
     {
         registry.Write("archive.export", async (body, token) => await archives.ExportAsync(ManagementRegistry.Body<ArchiveExportRequest>(body), token).ConfigureAwait(false));
@@ -23,8 +23,8 @@ internal sealed class ArchiveManagement(ClusterArchiveService archives, ILogger<
         registry.Write("archive.reconcile", async (body, token) => await archives.ReconcileAsync(ManagementRegistry.OperationId(body), token).ConfigureAwait(false));
     }
 
-    /// <summary>画面の切断後も処理を所有し、停止時は元結果を保存します。</summary>
-    /// <returns>このHostが受け付けた処理の寿命です。</returns>
+    /// <summary>CoreServiceの終了まで、受け付けたアーカイブ操作を処理します。</summary>
+    /// <returns>アーカイブ操作のバックグラウンド処理。</returns>
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
         => archives.RunAsync(exception => reportFailure(logger, exception), stoppingToken);
 }

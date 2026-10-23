@@ -13,11 +13,11 @@ using ReArtWord.Contents.BackgroundService.ManagementTransport.Clients;
 
 namespace ReArtWord.Contents.BackgroundService.Installer.Services;
 
-/// <summary>修復画面から一つのクラスターへ、確認済みアーカイブを復元します。</summary>
+/// <summary>Installerから、選択したクラスターへアーカイブを復元します。</summary>
 internal static class InstallerArchive
 {
-    /// <summary>明示した通信経路の実体へ転送し、変更するWF一覧を取得します。</summary>
-    /// <returns>実行確認画面の準備です。</returns>
+    /// <summary>選択したCoreServiceへアーカイブを転送し、復元による変更内容を取得します。</summary>
+    /// <returns>復元内容の事前確認。</returns>
     internal static async Task PrepareAsync(InstallationViewModel state, CancellationToken cancellationToken = default)
     {
         state.Repair.Archive.Preview = null;
@@ -50,8 +50,8 @@ internal static class InstallerArchive
         state.Repair.Archive.Target = target;
     }
 
-    /// <summary>確認画面で固定した内容を開始し、通信断でも別実体へ再送しません。</summary>
-    /// <returns>結果と元操作IDです。</returns>
+    /// <summary>事前確認した内容で復元を開始し、完了まで進捗を表示します。</summary>
+    /// <returns>復元結果と操作ID。</returns>
     internal static async Task<WizardResult> ExecuteAsync(InstallationViewModel state, IProgress<OperationProgress> progress, CancellationToken cancellationToken = default)
     {
         ArchiveImportPreview preview = state.Repair.Archive.Preview ?? throw new InvalidOperationException("Preview the archive first.");
@@ -92,8 +92,8 @@ internal static class InstallerArchive
         }
     }
 
-    /// <summary>開始時の実体と操作名を保持する一回の管理要求です。</summary>
-    /// <returns>業務結果のJSONです。</returns>
+    /// <summary>選択したInstanceIdのCoreServiceへ管理要求を送信します。</summary>
+    /// <returns>操作結果のJSON。</returns>
     private static async Task<JsonElement> SendCoreAsync(UpdateObserver observer, ObservedTarget target, string action, object body, bool readOnly,
         CancellationToken cancellationToken = default)
     {
@@ -105,8 +105,8 @@ internal static class InstallerArchive
         return reply.Value.Json;
     }
 
-    /// <summary>別の操作結果を完了として表示しません。</summary>
-    /// <returns>元操作の実結果です。</returns>
+    /// <summary>応答の操作IDが、要求した操作に一致するか確認します。</summary>
+    /// <returns>IDを確認した操作結果。</returns>
     private static ArchiveOperationResult Read(JsonElement value, Guid operation)
     {
         ArchiveOperationResult result = value.Deserialize<ArchiveOperationResult>(ContractJson.Options) ?? throw new InvalidDataException("Archive result is missing.");

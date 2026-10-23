@@ -11,7 +11,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Archives;
 
-/// <summary>画面・CLIの寿命から独立して、一回の書出し・復元と元の結果を保持します。</summary>
+/// <summary>画面やCLIが切断された後も、受け付けた書き出し・復元を実行し、結果を保存します。</summary>
 public sealed class ClusterArchiveService : IDisposable
 {
     private readonly ArchiveWorkspace workspace;
@@ -23,7 +23,7 @@ public sealed class ClusterArchiveService : IDisposable
     private readonly ConcurrentDictionary<Guid, byte> running = [];
     private readonly SemaphoreSlim commands = new(1, 1);
 
-    /// <summary>既存の設定・共有・ログ保存境界を使い、専用フォルダーへ資材を保存します。</summary>
+    /// <summary>設定とログを操作するサービスを受け取り、アーカイブ用の保存先を設定します。</summary>
     public ClusterArchiveService(string directory, IDurableRepository repository, PeerCluster cluster, WorkflowStore workflows,
         ClusterConfigurationStore operational, WorkflowLogService log)
     {
@@ -42,8 +42,8 @@ public sealed class ClusterArchiveService : IDisposable
         ArchiveExport.Register(cluster, log);
     }
 
-    /// <summary>元の要求を保存してから書出しを受け付けます。</summary>
-    /// <returns>受付済み、または同じ操作の保存済み結果です。</returns>
+    /// <summary>書き出し条件を保存し、実行キューへ追加します。</summary>
+    /// <returns>受付結果。同じ操作IDで再送された場合は、保存済みの結果。</returns>
     public async Task<ArchiveOperationResult> ExportAsync(ArchiveExportRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -71,8 +71,8 @@ public sealed class ClusterArchiveService : IDisposable
         }
     }
 
-    /// <summary>インポートの入力サイズとハッシュを固定します。</summary>
-    /// <returns>再送を省ける受信済み位置です。</returns>
+    /// <summary>アップロードするファイルのサイズとSHA-256を登録します。</summary>
+    /// <returns>転送を続ける位置を示す受信済みバイト数。</returns>
     public async Task<long> BeginUploadAsync(ArchiveTransfer request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -92,8 +92,8 @@ public sealed class ClusterArchiveService : IDisposable
         }
     }
 
-    /// <summary>一断片を照合して受信します。</summary>
-    /// <returns>確認した受信位置です。</returns>
+    /// <summary>転送データを検証し、ファイルに追記します。</summary>
+    /// <returns>受信済みのバイト数。</returns>
     public async Task<long> UploadAsync(ArchiveChunk chunk, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(chunk);
@@ -108,8 +108,8 @@ public sealed class ClusterArchiveService : IDisposable
         }
     }
 
-    /// <summary>復元前に全内容と現在版を検査し、確認した計画を保存します。</summary>
-    /// <returns>追加・上書き・削除を示す確認内容です。</returns>
+    /// <summary>アーカイブと復元先の設定を検証し、復元計画を保存します。</summary>
+    /// <returns>追加・上書き・削除されるWFと確認トークン。</returns>
     public async Task<ArchiveImportPreview> PreviewAsync(ArchivePreviewRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -129,8 +129,8 @@ public sealed class ClusterArchiveService : IDisposable
         }
     }
 
-    /// <summary>確認した計画を一度だけ受け付けます。画面やCLIの切断で再実行しません。</summary>
-    /// <returns>受付または元操作の状態です。</returns>
+    /// <summary>確認済みの計画で復元を開始します。同じ操作IDで再送された場合は、元の結果を返します。</summary>
+    /// <returns>復元の受付結果、または保存済みの結果。</returns>
     public async Task<ArchiveOperationResult> ImportAsync(ArchiveImportRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -159,8 +159,8 @@ public sealed class ClusterArchiveService : IDisposable
         }
     }
 
-    /// <summary>再起動後の未完了を成功・実行中にせず、元状態を返します。</summary>
-    /// <returns>保存済み結果、または未受付のnullです。</returns>
+    /// <summary>操作の状態を読み取ります。Coreの再起動で処理が中断していた場合は、結果不明として返します。</summary>
+    /// <returns>操作の状態。記録がない場合はnull。</returns>
     public async Task<ArchiveOperationResult?> ReadAsync(Guid id, CancellationToken cancellationToken = default)
     {
         // 読取り中に完了した処理を中断扱いにしないよう、読取り前の稼働状態も保持します。
@@ -188,8 +188,8 @@ public sealed class ClusterArchiveService : IDisposable
         return result;
     }
 
-    /// <summary>完了したZIPを有限サイズで転送します。</summary>
-    /// <returns>元の位置の断片です。</returns>
+    /// <summary>書き出し済みZIPから、指定位置のデータを読み取ります。</summary>
+    /// <returns>転送1回分のデータ。</returns>
     public async Task<ArchiveChunk> ReadChunkAsync(ArchiveReadRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -204,8 +204,8 @@ public sealed class ClusterArchiveService : IDisposable
         }
     }
 
-    /// <summary>中断した共有取引と実有効状態を再確認します。</summary>
-    /// <returns>再送しない再確認結果です。</returns>
+    /// <summary>中断した復元の保存結果と反映状態を再確認します。</summary>
+    /// <returns>再確認後の操作結果。</returns>
     public async Task<ArchiveOperationResult> ReconcileAsync(Guid id, CancellationToken cancellationToken = default)
     {
         await commands.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -229,9 +229,9 @@ public sealed class ClusterArchiveService : IDisposable
         }
     }
 
-    /// <summary>このプロセスが受け付けた処理だけを実行し、過去の副作用は再開しません。</summary>
-    /// <returns>Hostの停止までの処理です。</returns>
-    // 抑制理由: アーカイブ一件の障害を診断と未確認結果へ隔離し、常駐Coreの寿命へ波及させません。
+    /// <summary>受け付けた操作を実行します。再起動前の未完了操作は自動で再開しません。</summary>
+    /// <returns>CoreServiceの終了まで続くバックグラウンド処理。</returns>
+    // 抑制理由: アーカイブ処理の失敗でCoreService全体が停止しないよう、例外を記録して操作を終了します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031", Justification = "補助処理の最上位境界で全障害を診断し、元の未完了記録を保持します。")]
     public async Task RunAsync(Action<Exception> diagnose, CancellationToken cancellationToken = default)
     {
@@ -271,7 +271,7 @@ public sealed class ClusterArchiveService : IDisposable
                 }
                 catch (Exception storageFailure)
                 {
-                    // 補助処理の記録障害をCoreの終了へ波及させず、元の未完了記録を残します。
+                    // 結果の保存にも失敗した場合は診断を残し、CoreServiceの稼働を続けます。
                     diagnose(storageFailure);
                 }
             }
@@ -298,11 +298,11 @@ public sealed class ClusterArchiveService : IDisposable
         }
     }
 
-    /// <summary>所有する受付排他を解放します。</summary>
+    /// <summary>受付処理に使用したセマフォを解放します。</summary>
     public void Dispose() => commands.Dispose();
 
-    /// <summary>開始権と受付記録を先に確定します。</summary>
-    /// <returns>開始要求の受付です。</returns>
+    /// <summary>開始済みの記録を作成してから、操作を実行キューへ追加します。</summary>
+    /// <returns>操作の受付結果。</returns>
     private async Task<ArchiveOperationResult> EnqueueAsync(Guid id, string stage, CancellationToken cancellationToken = default)
     {
         workspace.Claim(id);
@@ -328,7 +328,7 @@ public sealed class ClusterArchiveService : IDisposable
         }
     }
 
-    /// <summary>同時に別の全体操作を開始しません。</summary>
+    /// <summary>別のアーカイブ操作が実行中なら、新しい操作を拒否します。</summary>
     private void RequireIdle()
     {
         if (!running.IsEmpty)
@@ -337,7 +337,7 @@ public sealed class ClusterArchiveService : IDisposable
         }
     }
 
-    /// <summary>同じIDで条件を変更させません。</summary>
+    /// <summary>同じ操作IDで異なる内容が送られた場合は拒否します。</summary>
     private static void RequireSame<T>(T known, T request)
     {
         if (!string.Equals(ContractJson.Hash(known), ContractJson.Hash(request), StringComparison.Ordinal))

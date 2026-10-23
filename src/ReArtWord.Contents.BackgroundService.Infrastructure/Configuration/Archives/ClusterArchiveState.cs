@@ -9,11 +9,11 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Workflow
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Archives;
 
-/// <summary>保存版と実有効版の読み取り、復元候補の検証、確認画面の差分をまとめます。</summary>
+/// <summary>保存版と有効版を取得し、復元後の設定を検証します。</summary>
 internal sealed class ClusterArchiveState(PeerCluster cluster, WorkflowStore workflows, ClusterConfigurationStore operational)
 {
-    /// <summary>取得中に設定が変わった場合は混在したバックアップを作りません。</summary>
-    /// <returns>同じ内容を連続して確認できた設定です。</returns>
+    /// <summary>設定を続けて2回読み取り、取得中に変更されていないことを確認します。</summary>
+    /// <returns>取得した共通設定とワークフロー。</returns>
     public async Task<ClusterArchiveConfiguration> CaptureAsync(bool includeLogs = false, CancellationToken cancellationToken = default)
     {
         ClusterArchiveConfiguration before = await ReadAsync(includeLogs, cancellationToken).ConfigureAwait(false);
@@ -25,8 +25,8 @@ internal sealed class ClusterArchiveState(PeerCluster cluster, WorkflowStore wor
         return after;
     }
 
-    /// <summary>内容の版、適用方針、実有効版も含めて変更前に検証します。</summary>
-    /// <returns>取り込みを妨げる問題です。</returns>
+    /// <summary>保存版と有効版の内容、反映方法、レシピの参照を検証します。</summary>
+    /// <returns>復元前に解消する必要がある問題の一覧。</returns>
     internal async Task<IReadOnlyList<ValidationIssue>> ValidateAsync(ClusterArchiveConfiguration configuration, ClusterArchiveConfiguration? desired = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(configuration);
@@ -72,8 +72,8 @@ internal sealed class ClusterArchiveState(PeerCluster cluster, WorkflowStore wor
         return issues;
     }
 
-    /// <summary>取得時刻や保存日時に依存せず、実際の設定内容と有効状態を照合します。</summary>
-    /// <returns>内容確認に使うSHA-256です。</returns>
+    /// <summary>取得日時を除き、設定内容と有効状態から比較用のハッシュを生成します。</summary>
+    /// <returns>設定を比較するためのSHA-256。</returns>
     public static string Fingerprint(ClusterArchiveConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
@@ -89,8 +89,8 @@ internal sealed class ClusterArchiveState(PeerCluster cluster, WorkflowStore wor
         });
     }
 
-    /// <summary>残す定義と取り込む定義を固定し、開始後に対象を増やしません。</summary>
-    /// <returns>全参加ピアで確認する復元後の設定です。</returns>
+    /// <summary>復元方式に従い、取り込み元の設定と復元先に残すWFを組み合わせます。</summary>
+    /// <returns>復元後に使用する設定。</returns>
     public static ClusterArchiveConfiguration Desired(ClusterArchiveConfiguration current, ClusterArchiveConfiguration incoming, EArchiveImportMode mode)
     {
         ArgumentNullException.ThrowIfNull(current);
@@ -112,8 +112,8 @@ internal sealed class ClusterArchiveState(PeerCluster cluster, WorkflowStore wor
         };
     }
 
-    /// <summary>実有効版を保存版から推測せず、現在の実行計画から取得します。</summary>
-    /// <returns>一回の読取り結果です。</returns>
+    /// <summary>保存済みの定義と、現在の実行計画で使用している定義を取得します。</summary>
+    /// <returns>取得した共通設定とワークフロー。</returns>
     private async Task<ClusterArchiveConfiguration> ReadAsync(bool includeLogs, CancellationToken cancellationToken = default)
     {
         List<ArchivedWorkflow> definitions = [];

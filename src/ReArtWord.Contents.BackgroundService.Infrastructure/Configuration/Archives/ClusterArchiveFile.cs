@@ -8,18 +8,18 @@ using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Archives;
 
-/// <summary>パスを展開せず、設定と有限サイズのログ断片だけをZIPへ読み書きします。</summary>
+/// <summary>設定とログをZIP形式で読み書きします。ZIP内のファイルをディスクへ展開することはありません。</summary>
 public static class ClusterArchiveFile
 {
-    /// <summary>一回の転送と展開内容の上限です。</summary>
+    /// <summary>ZIPファイルと展開後の内容に許容する最大バイト数。</summary>
     public static long MaximumBytes => ArchiveTransferLimits.MaximumBytes;
     private static int ConfigurationBytes => 16777216;
     private static int LogPartBytes => 1048576;
     private static int MaximumParts => 4096;
     private static string ConfigurationName => "configuration.json";
 
-    /// <summary>取得時刻以前の保持ログを逐次書き出し、省略や検索不能を完了にしません。</summary>
-    /// <returns>書き出したログ件数です。</returns>
+    /// <summary>設定と、取得時刻までのログをZIPへ書き出します。ログに欠落や省略があれば中止します。</summary>
+    /// <returns>書き出したログ件数。</returns>
     // 抑制理由: ZIPと各entryはawait usingで所有し、呼出元のstreamだけを開いたまま返します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW141", Justification = "ZIPとentryをawait usingで非同期解放します。")]
     public static async Task<long> WriteAsync(Stream output, ClusterArchiveConfiguration configuration,
@@ -62,8 +62,8 @@ public static class ClusterArchiveFile
         return count;
     }
 
-    /// <summary>変更前に全entryを読み、構文・サイズ・ログ識別子を検証します。</summary>
-    /// <returns>復元する設定と、完全に読み取れたログ件数です。</returns>
+    /// <summary>ZIP内の全ファイルを読み取り、JSONの構文、サイズ、ログIDを検証します。</summary>
+    /// <returns>復元対象の設定とログ件数。</returns>
     public static async Task<(ClusterArchiveConfiguration Configuration, long Logs)> InspectAsync(string path, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
@@ -96,8 +96,8 @@ public static class ClusterArchiveFile
         return (configuration, ids.Count);
     }
 
-    /// <summary>検査済みZIPからログを一断片ずつ読み、全件をメモリーへ載せません。</summary>
-    /// <returns>元のID・時刻・記録元を保ったログ断片です。</returns>
+    /// <summary>メモリー使用量を抑えるため、ZIP内のログをファイル単位で読み取ります。</summary>
+    /// <returns>ファイルごとのログ一覧。</returns>
     public static async IAsyncEnumerable<IReadOnlyList<WorkflowLogEntry>> ReadLogsAsync(string path, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         using FileStream file = File.OpenRead(path);
@@ -109,7 +109,7 @@ public static class ClusterArchiveFile
         }
     }
 
-    /// <summary>既知のentry名とサイズだけを許可し、重複と展開爆弾を拒否します。</summary>
+    /// <summary>ZIP内のファイル名、重複、展開後のサイズを検査します。</summary>
     private static void ValidateEntries(ZipArchive zip, long bytes)
     {
         if (MaximumBytes < bytes || zip.Entries.Count is 0 || MaximumParts + 1 < zip.Entries.Count
@@ -138,8 +138,8 @@ public static class ClusterArchiveFile
         }
     }
 
-    /// <summary>宣言長を越えた展開も検出してからJSONを解析します。</summary>
-    /// <returns>有限サイズで検査した本文です。</returns>
+    /// <summary>実際の展開サイズが上限を超えていないことを確認し、JSONを読み取ります。</summary>
+    /// <returns>JSONから読み取ったデータ。</returns>
     private static async Task<T> ReadEntryAsync<T>(ZipArchiveEntry entry, int maximum, CancellationToken cancellationToken = default)
     {
         if (entry.Length < 1 || maximum < entry.Length)
@@ -156,8 +156,8 @@ public static class ClusterArchiveFile
         return JsonSerializer.Deserialize<T>(bytes, ContractJson.Options) ?? throw new InvalidDataException("Archive entry is empty.");
     }
 
-    /// <summary>一断片の上限を確認してから圧縮します。</summary>
-    /// <returns>圧縮前のバイト数です。</returns>
+    /// <summary>データのサイズを確認し、ZIP内のファイルに書き込みます。</summary>
+    /// <returns>圧縮前のバイト数。</returns>
     // 抑制理由: 作成したentry streamは直後のawait usingが所有します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW141", Justification = "entry streamはawait usingで非同期解放します。")]
     private static async Task<int> WriteEntryAsync<T>(ZipArchive zip, string name, T value, int maximum, CancellationToken cancellationToken = default)

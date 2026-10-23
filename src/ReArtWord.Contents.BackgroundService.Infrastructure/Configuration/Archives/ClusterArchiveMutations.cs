@@ -13,11 +13,11 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Archives;
 
-/// <summary>設定・有効化希望・復元前保護を一つの共有取引へまとめます。</summary>
+/// <summary>設定、反映する版、復元前のスナップショットを一括保存するための変更データを作成します。</summary>
 internal sealed class ClusterArchiveMutations(IDurableRepository repository, PeerCluster cluster)
 {
-    /// <summary>確認した範囲の保護を各CASへ含め、適用途中の設定を公開しません。</summary>
-    /// <returns>一括確定する変更集合です。</returns>
+    /// <summary>編集保護を含む変更データを作成します。保存時に版の一致を検証し、ほかの編集による変更の上書きを防ぎます。</summary>
+    /// <returns>一括保存する変更データ。</returns>
     internal async Task<IReadOnlyList<DurableMutation>> CreateAsync(Guid operation, ClusterArchiveConfiguration before,
         ClusterArchiveConfiguration incoming, EArchiveImportMode mode, CancellationToken cancellationToken = default)
     {
@@ -82,16 +82,16 @@ internal sealed class ClusterArchiveMutations(IDurableRepository repository, Pee
         return mutations;
     }
 
-    /// <summary>同じ保存方式の期待版を使って値を置き換えます。</summary>
-    /// <returns>変更集合への追加です。</returns>
+    /// <summary>現在の版を保存時の照合条件として、変更データを追加します。</summary>
+    /// <returns>変更データの追加処理。</returns>
     private async Task SetAsync(List<DurableMutation> mutations, string scope, string key, NodeValue? value, CancellationToken cancellationToken = default)
     {
         DurableEntry? entry = await repository.ReadAsync(scope, key, cancellationToken).ConfigureAwait(false);
         mutations.Add(new(scope, key, entry?.Version, value));
     }
 
-    /// <summary>既存の内容版を壊さず、未登録の履歴だけを追加します。</summary>
-    /// <returns>履歴の追加準備です。</returns>
+    /// <summary>履歴にない版だけを追加します。</summary>
+    /// <returns>履歴の変更データを追加する処理。</returns>
     private async Task HistoryAsync(List<DurableMutation> mutations, string scope, string revision, NodeValue value, CancellationToken cancellationToken = default)
     {
         DurableEntry? existing = await repository.ReadAsync(scope, revision, cancellationToken).ConfigureAwait(false);
@@ -101,11 +101,11 @@ internal sealed class ClusterArchiveMutations(IDurableRepository repository, Pee
         }
     }
 
-    /// <summary>保存版と有効版を、既存のスナップショット形式で保護します。</summary>
+    /// <summary>保存版と有効版を含むスナップショットを追加します。</summary>
     private void AddWorkflowSnapshot(List<DurableMutation> mutations, Guid operation, string phase, ArchivedWorkflow workflow)
         => AddSnapshot(mutations, operation, phase, workflow.Saved.Definition.Id, NodeValue.FromObject(new ConfigurationSnapshotState(workflow.Saved, workflow.Effective)));
 
-    /// <summary>元操作から決まるIDで共有スナップショットを追加します。</summary>
+    /// <summary>復元の操作IDから生成したIDで、スナップショットを追加します。</summary>
     private void AddSnapshot(List<DurableMutation> mutations, Guid operation, string phase, string target, NodeValue value)
     {
         string id = WorkflowStore.PhaseId(operation, "archive:" + phase + ":" + target).ToString("N");
@@ -113,8 +113,8 @@ internal sealed class ClusterArchiveMutations(IDurableRepository repository, Pee
         mutations.Add(new("snapshots", id, null, NodeValue.FromObject(snapshot)));
     }
 
-    /// <summary>未有効化をnullとして保持し、最新版へ読み替えません。</summary>
-    /// <returns>共有の有効化希望です。</returns>
+    /// <summary>有効だった版を反映用の保存データに変換します。有効版がなければnullにします。</summary>
+    /// <returns>反映する版の保存データ。</returns>
     private static NodeValue? Effective(ArchivedWorkflow workflow)
     {
         if (workflow.Effective is null)

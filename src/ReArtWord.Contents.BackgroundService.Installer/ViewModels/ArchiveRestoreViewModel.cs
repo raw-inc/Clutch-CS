@@ -4,7 +4,7 @@ using ReArtWord.Contents.BackgroundService.Installer.Services;
 
 namespace ReArtWord.Contents.BackgroundService.Installer.ViewModels;
 
-/// <summary>復元するファイル、既存WFの扱いと確認済み計画を保持します。</summary>
+/// <summary>復元するファイル、復元方式、事前確認の結果を保持します。</summary>
 internal sealed partial class ArchiveRestoreViewModel : ObservableObject
 {
     /// <summary>読み込むZIPのパスです。</summary>
@@ -14,20 +14,20 @@ internal sealed partial class ArchiveRestoreViewModel : ObservableObject
         get; set;
     } = string.Empty;
 
-    /// <summary>0は既存WFを残し、1は取得元にそろえます。</summary>
+    /// <summary>復元先にだけあるWFを残す場合は0、削除する場合は1。</summary>
     [ObservableProperty]
     public partial int ModeIndex
     {
         get; set;
     }
 
-    /// <summary>確認時点で固定した対象実体です。</summary>
+    /// <summary>事前確認したCoreServiceの接続先とInstanceId。</summary>
     internal ObservedTarget? Target
     {
         get; set;
     }
 
-    /// <summary>変更内容と確認値を含む元計画です。</summary>
+    /// <summary>変更内容と確認トークンを含む復元計画。</summary>
     internal ArchiveImportPreview? Preview
     {
         get; set;

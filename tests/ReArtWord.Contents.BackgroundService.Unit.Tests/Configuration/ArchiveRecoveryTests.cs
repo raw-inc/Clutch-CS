@@ -8,11 +8,11 @@ using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Configuration;
 
-/// <summary>転送の改変、中断した保護、資材整理が設定の再実行へつながらないことを検証します。</summary>
+/// <summary>転送エラー、中断後の復旧、不要ファイルの整理を検証します。</summary>
 public sealed class ArchiveRecoveryTests
 {
-    /// <summary>同じ断片の再送だけを認め、欠落や改変を完成扱いにしません。</summary>
-    /// <returns>転送全体の照合結果です。</returns>
+    /// <summary>再送内容の変更、転送の欠落、ハッシュの不一致を検出することを確認します。</summary>
+    /// <returns>転送データの検証。</returns>
     [Fact]
     public async Task UploadRejectsChangedRetriesGapsAndMismatchedHashes()
     {
@@ -35,8 +35,8 @@ public sealed class ArchiveRecoveryTests
         Assert.Equal(new byte[] { 1, 2, 3, 5 }, await File.ReadAllBytesAsync(workspace.FileFor(id, "archive.zip")));
     }
 
-    /// <summary>開始済みの元操作は再受付で復元せず、元の保護だけを解放します。</summary>
-    /// <returns>設定未変更と保護解除を区別した回復結果です。</returns>
+    /// <summary>中断した復元を再実行せず、その操作による編集保護だけを解除できることを確認します。</summary>
+    /// <returns>設定が変わらず、編集保護が解除されることの検証。</returns>
     [Fact]
     public async Task InterruptedProtectionCanBeReleasedWithoutReplayingImport()
     {
@@ -72,8 +72,8 @@ public sealed class ArchiveRecoveryTests
         Assert.Empty(fixture.Errors);
     }
 
-    /// <summary>成功した古い資材だけを回収し、未確認・活動中の資材と元操作の記録を残します。</summary>
-    /// <returns>24時間経過後の保存境界です。</returns>
+    /// <summary>古い作業ファイルを削除し、結果不明や使用中のファイルと操作記録は残すことを確認します。</summary>
+    /// <returns>24時間経過後に残るファイルの検証。</returns>
     [Fact]
     public async Task RetentionKeepsUnknownOperationsAndRecentDownloads()
     {

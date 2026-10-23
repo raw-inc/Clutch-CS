@@ -16,12 +16,12 @@ using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Installer.Tests;
 
-/// <summary>Installerの確認・実行を実Coreへ接続し、確認前に設定を変えないことを検証します。</summary>
+/// <summary>CoreServiceを起動し、Installerからの事前確認と復元を検証します。</summary>
 [Collection(nameof(InstallerTestApp))]
 public sealed class ArchiveRestoreProcessTests
 {
-    /// <summary>復元先だけのWFの選択を、UDP経由の実復元にも反映します。</summary>
-    /// <returns>保存版・有効版・保持または削除の確認です。</returns>
+    /// <summary>復元先にだけあるWFが、選択どおりに保持・削除されることを確認します。</summary>
+    /// <returns>保存版、有効版、復元先にだけあるWFの検証。</returns>
     [Theory]
     [InlineData(0)]
     [InlineData(1)]
@@ -76,8 +76,8 @@ public sealed class ArchiveRestoreProcessTests
         Assert.Equal(mode == 0, list.Entries.Any(entry => entry.Id is "extra"));
     }
 
-    /// <summary>外部副作用のない定義で、復元した版を区別します。</summary>
-    /// <returns>値だけが異なるWFです。</returns>
+    /// <summary>入力値で版を区別できる、試験用のWFを作成します。</summary>
+    /// <returns>定数入力を持つWF。</returns>
     private static WorkflowDefinition Definition(string id, int value) => new(id, id, [new("pass", "control.pass", JsonSerializer.SerializeToElement(new { }),
         new Dictionary<string, NodeValue>(StringComparer.Ordinal) { ["value"] = NodeValue.FromObject(value) })], [], Enabled: true);
 }

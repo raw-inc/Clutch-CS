@@ -25,11 +25,11 @@ using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Configuration;
 
-/// <summary>通常の保存・反映経路と同じ保存形式で、一括復元の実有効状態を確認します。</summary>
+/// <summary>設定の一括保存と、復元後に有効になる版を検証します。</summary>
 public sealed class ClusterArchiveStateTests
 {
-    /// <summary>保存版と有効版が異なるWF・共通設定を戻し、選択した場合だけ余分なWFを削除します。</summary>
-    /// <returns>実保存・保護・共有確定・再採用の検証です。</returns>
+    /// <summary>保存版と有効版をそれぞれ復元し、復元先にだけあるWFを選択どおりに保持・削除することを確認します。</summary>
+    /// <returns>編集保護、設定保存、有効版の反映の検証。</returns>
     [Theory]
     [InlineData(EArchiveImportMode.Merge)]
     [InlineData(EArchiveImportMode.Replace)]
@@ -97,8 +97,8 @@ public sealed class ClusterArchiveStateTests
         Assert.Equal(EOutcome.Succeeded, (await protection.ReleaseAsync(operation)).Outcome);
     }
 
-    /// <summary>版の違いを外から確認できる定数入力です。</summary>
-    /// <returns>有効な通常WFです。</returns>
+    /// <summary>入力値で版を区別できる、試験用のWFを作成します。</summary>
+    /// <returns>定数入力を持つWF。</returns>
     private static WorkflowDefinition Definition(string id, int value) => new(id, id, [new("pass", "control.pass", JsonSerializer.SerializeToElement(new { }),
         new Dictionary<string, NodeValue>(StringComparer.Ordinal) { ["value"] = NodeValue.FromObject(value) })], [], Enabled: true);
 }

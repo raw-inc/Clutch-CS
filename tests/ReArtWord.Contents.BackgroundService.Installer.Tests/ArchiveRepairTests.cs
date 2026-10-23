@@ -11,12 +11,12 @@ using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Installer.Tests;
 
-/// <summary>修復画面で復元方式を選択し、削除を含む確認内容を表示します。</summary>
+/// <summary>修復画面の復元方式と、変更内容の表示を検証します。</summary>
 [Collection(nameof(InstallerTestApp))]
 public sealed class ArchiveRepairTests
 {
-    /// <summary>日英の実画面でアーカイブ選択・復元方式・確認一覧が一致します。</summary>
-    /// <returns>入力と表示の検証です。</returns>
+    /// <summary>日本語・英語の画面で入力した内容が、復元の確認画面にも反映されることを確認します。</summary>
+    /// <returns>画面操作と表示内容の検証。</returns>
     [Theory]
     [InlineData(0)]
     [InlineData(1)]
@@ -67,8 +67,8 @@ public sealed class ArchiveRepairTests
         }, CancellationToken.None).ConfigureAwait(true);
     }
 
-    /// <summary>対象を指定せず、ほかのクラスターへ暗黙に切り替えて転送しません。</summary>
-    /// <returns>操作開始前の拒否です。</returns>
+    /// <summary>復元先が未選択の場合、ファイルを開く前にエラーになることを確認します。</summary>
+    /// <returns>復元先がない場合のエラー処理の検証。</returns>
     [Fact]
     public async Task MissingTargetFailsBeforeOpeningTheArchive()
     {

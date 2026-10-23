@@ -5,13 +5,13 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Updates;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Archives;
 
-/// <summary>操作IDごとの転送資材と結果を保存し、利用者からファイルパスを受け取りません。</summary>
+/// <summary>操作IDごとに、転送ファイル、復元計画、処理結果を保存します。</summary>
 internal sealed class ArchiveWorkspace(string root)
 {
     internal static int ChunkBytes => ArchiveTransferLimits.ChunkBytes;
 
-    /// <summary>入力IDから一つの操作フォルダーだけを解決します。</summary>
-    /// <returns>この操作が所有する保存先です。</returns>
+    /// <summary>指定した操作IDの保存先パスを組み立てます。</summary>
+    /// <returns>操作フォルダー内のファイルパス。</returns>
     internal string FileFor(Guid id, string name)
     {
         ArgumentOutOfRangeException.ThrowIfEqual(id, Guid.Empty);
@@ -19,8 +19,8 @@ internal sealed class ArchiveWorkspace(string root)
         return Path.Combine(directory, name);
     }
 
-    /// <summary>完了・準備・固定入力を置換保存します。</summary>
-    /// <returns>保存の確認です。</returns>
+    /// <summary>操作記録を一時ファイルに書き込み、完成後に置き換えます。</summary>
+    /// <returns>ファイルの保存処理。</returns>
     internal Task WriteAsync<T>(Guid id, string name, T value, CancellationToken cancellationToken = default)
     {
         string path = FileFor(id, name);
@@ -28,8 +28,8 @@ internal sealed class ArchiveWorkspace(string root)
         return UpdateProgressFile.WriteAsync(path, value, cancellationToken);
     }
 
-    /// <summary>保存済みの元情報を読みます。</summary>
-    /// <returns>未作成ならnullです。</returns>
+    /// <summary>保存された操作記録を読み取ります。</summary>
+    /// <returns>読み取った記録。ファイルがなければnull。</returns>
     internal async Task<T?> ReadAsync<T>(Guid id, string name, CancellationToken cancellationToken = default)
     {
         try
@@ -42,7 +42,7 @@ internal sealed class ArchiveWorkspace(string root)
         }
     }
 
-    /// <summary>同じIDの処理を一度だけ開始し、途中終了後に再実行しません。</summary>
+    /// <summary>開始済みを示すファイルを作成し、同じ操作の二重実行を防ぎます。</summary>
     internal void Claim(Guid id)
     {
         using FileStream marker = new(FileFor(id, "started"), FileMode.CreateNew, FileAccess.Write, FileShare.Read, 1, FileOptions.WriteThrough);
@@ -50,7 +50,7 @@ internal sealed class ArchiveWorkspace(string root)
         marker.Flush(true);
     }
 
-    /// <summary>開始済みの入力を後から変更させません。</summary>
+    /// <summary>既に開始した操作なら、入力の変更を拒否します。</summary>
     internal void RequireNotStarted(Guid id)
     {
         string marker = FileFor(id, "started");
@@ -60,8 +60,8 @@ internal sealed class ArchiveWorkspace(string root)
         }
     }
 
-    /// <summary>全体長とハッシュを固定し、再開時も別内容へ変更させません。</summary>
-    /// <returns>既に受信したバイト数です。</returns>
+    /// <summary>転送するファイルのサイズとSHA-256を記録します。再開時は同じファイルであることを確認します。</summary>
+    /// <returns>受信済みのバイト数。</returns>
     internal async Task<long> BeginAsync(ArchiveTransfer request, CancellationToken cancellationToken = default)
     {
         RequireNotStarted(request.OperationId);
@@ -81,8 +81,8 @@ internal sealed class ArchiveWorkspace(string root)
                            : 0;
     }
 
-    /// <summary>同じ位置の再送を照合し、追記済み内容を上書きしません。</summary>
-    /// <returns>受信済みの末尾位置です。</returns>
+    /// <summary>受信したデータを追記します。同じ位置への再送は、内容が一致する場合だけ受け付けます。</summary>
+    /// <returns>追記後のファイルサイズ。</returns>
     internal async Task<long> AppendAsync(ArchiveChunk chunk, CancellationToken cancellationToken = default)
     {
         RequireNotStarted(chunk.OperationId);
@@ -125,8 +125,8 @@ internal sealed class ArchiveWorkspace(string root)
         return file.Length;
     }
 
-    /// <summary>全内容を検証してから、プレビューや復元に渡します。</summary>
-    /// <returns>確認した転送条件です。</returns>
+    /// <summary>受信したファイルのサイズとSHA-256を検証します。</summary>
+    /// <returns>検証済みファイルの転送情報。</returns>
     internal async Task<ArchiveTransfer> VerifyAsync(Guid id, CancellationToken cancellationToken = default)
     {
         ArchiveTransfer expected = await ReadAsync<ArchiveTransfer>(id, "upload.json", cancellationToken).ConfigureAwait(false)
@@ -139,8 +139,8 @@ internal sealed class ArchiveWorkspace(string root)
         return actual;
     }
 
-    /// <summary>完成したZIPの転送情報を計算します。</summary>
-    /// <returns>全体長と検査値です。</returns>
+    /// <summary>ZIPファイルのサイズとSHA-256を取得します。</summary>
+    /// <returns>ファイルのサイズとSHA-256。</returns>
     internal async Task<ArchiveTransfer> DescribeAsync(Guid id, CancellationToken cancellationToken = default)
     {
         using FileStream file = File.OpenRead(FileFor(id, "archive.zip"));
@@ -152,8 +152,8 @@ internal sealed class ArchiveWorkspace(string root)
         return new(id, file.Length, hash);
     }
 
-    /// <summary>完成済み書出しの一断片を読みます。</summary>
-    /// <returns>要求した位置のバイト列です。</returns>
+    /// <summary>書き出し済みZIPの指定位置から、転送1回分のデータを読み取ります。</summary>
+    /// <returns>読み取ったデータとファイル内の位置。</returns>
     internal async Task<ArchiveChunk> ReadChunkAsync(ArchiveReadRequest request, CancellationToken cancellationToken = default)
     {
         ArchiveOperationResult? result = await ReadAsync<ArchiveOperationResult>(request.OperationId, "result.json", cancellationToken).ConfigureAwait(false);
@@ -176,8 +176,8 @@ internal sealed class ArchiveWorkspace(string root)
         return new(request.OperationId, request.Offset, Convert.ToBase64String(bytes));
     }
 
-    /// <summary>完了済み資材と未開始の古い転送だけを整理し、操作記録と未確認の入力を保持します。</summary>
-    /// <returns>24時間を過ぎた大きな資材の回収です。</returns>
+    /// <summary>24時間を過ぎた完了済みファイルと未開始の転送ファイルを削除します。結果不明の操作に必要なファイルは残します。</summary>
+    /// <returns>不要な作業ファイルの削除処理。</returns>
     internal async Task CleanAsync(CancellationToken cancellationToken = default)
     {
         if (!Directory.Exists(root))

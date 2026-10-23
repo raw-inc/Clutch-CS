@@ -16,21 +16,21 @@ using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Archives;
 
-/// <summary>一括復元を一つの共有取引へまとめ、固定参加ピアの実有効状態まで確認します。</summary>
+/// <summary>設定を一括復元し、参加ピアへの反映を確認してからログを取り込みます。</summary>
 internal sealed class ArchiveImporter(IDurableRepository repository, PeerCluster cluster, WorkflowStore workflows,
     ClusterConfigurationStore operational, WorkflowLogService log)
 {
     private readonly ClusterArchiveState state = new(cluster, workflows, operational);
 
-    /// <summary>復元後の実状態を各参加ピアで読み取る検査を登録します。</summary>
+    /// <summary>各ピアの保存版と有効版を比較するため、設定のハッシュを返す照会を登録します。</summary>
     internal void Register()
     {
         cluster.RegisterInspection("archive.fingerprint", async (_, token) => new(EOutcome.Succeeded,
             NodeValue.FromObject(ClusterArchiveState.Fingerprint(await state.CaptureAsync(cancellationToken: token).ConfigureAwait(false)))));
     }
 
-    /// <summary>アーカイブ全体を検証し、追加・上書き・削除と確認値を固定します。</summary>
-    /// <returns>明示開始に使用する計画です。</returns>
+    /// <summary>アーカイブを検証し、変更されるWFと確認トークンを含む復元計画を作成します。</summary>
+    /// <returns>復元の開始時に使用する計画。</returns>
     internal async Task<ArchiveImportPlan> PreviewAsync(ArchivePreviewRequest request, ArchiveWorkspace workspace, CancellationToken cancellationToken = default)
     {
         if (!Enum.IsDefined(request.Mode))
@@ -61,8 +61,8 @@ internal sealed class ArchiveImporter(IDurableRepository repository, PeerCluster
         return new(preview, file, before, incoming, members);
     }
 
-    /// <summary>実行前の変更を拒否し、確認済みの全設定を原子的に共有します。</summary>
-    /// <returns>共有保存と実反映、ログ取込みを区別した結果です。</returns>
+    /// <summary>事前確認後の変更がないことを確かめ、設定を一つのトランザクションで復元します。</summary>
+    /// <returns>設定の保存・反映・ログ取り込みの各結果。</returns>
     internal async Task<ArchiveOperationResult> ApplyAsync(ArchiveImportPlan plan, ArchiveWorkspace workspace,
         Func<ArchiveOperationResult, CancellationToken, Task> save, CancellationToken cancellationToken = default)
     {
@@ -134,8 +134,8 @@ internal sealed class ArchiveImporter(IDurableRepository repository, PeerCluster
         return new(id, "completed", true, EOutcome.Succeeded, Steps: steps);
     }
 
-    /// <summary>元取引と現在状態だけを確認し、設定の再書込みやログの再取込みは行いません。</summary>
-    /// <returns>既知結果、または引き続き未確認の結果です。</returns>
+    /// <summary>中断した復元の結果を再確認します。設定やログは再度書き込みません。</summary>
+    /// <returns>再確認後の復元結果。</returns>
     internal async Task<ArchiveOperationResult> ReconcileAsync(ArchiveImportPlan plan, ArchiveOperationResult previous, CancellationToken cancellationToken = default)
     {
         Guid id = plan.Preview.OperationId;
@@ -180,8 +180,8 @@ internal sealed class ArchiveImporter(IDurableRepository repository, PeerCluster
         return new(id, "completed", true, EOutcome.Succeeded, Steps: previous.Steps);
     }
 
-    /// <summary>設定の再反映は通常処理に任せ、全固定実体の実有効状態を読み取ります。</summary>
-    /// <returns>同じ内容と有効状態まで確認できた場合だけtrueです。</returns>
+    /// <summary>復元計画に記録した全ピアへ、設定が反映されたか確認します。</summary>
+    /// <returns>保存版と有効版が復元計画に一致した場合はtrue。</returns>
     private async Task<bool> ConfirmAsync(ArchiveImportPlan plan, CancellationToken cancellationToken = default)
     {
         string expected = ClusterArchiveState.Fingerprint(ClusterArchiveState.Desired(plan.Before, plan.Incoming, plan.Preview.Mode));
@@ -214,8 +214,8 @@ internal sealed class ArchiveImporter(IDurableRepository repository, PeerCluster
         return false;
     }
 
-    /// <summary>参加実体と設定の競合を確認し、未解消の候補を上書きしません。</summary>
-    /// <returns>開始時に固定するReady集合です。</returns>
+    /// <summary>全参加ピアがReadyで、設定の競合がないことを確認します。</summary>
+    /// <returns>復元に参加するピアの一覧。</returns>
     private async Task<PeerInfo[]> ReadyMembersAsync(CancellationToken cancellationToken = default)
     {
         PeerInfo[] members = cluster.GetPeers().OrderBy(peer => peer.PeerId, StringComparer.Ordinal).ToArray();
@@ -233,7 +233,7 @@ internal sealed class ArchiveImporter(IDurableRepository repository, PeerCluster
         return members;
     }
 
-    /// <summary>元操作と一括確定を一意に対応させます。</summary>
-    /// <returns>共有取引の操作IDです。</returns>
+    /// <summary>復元の操作IDから、設定保存に使用するトランザクションIDを生成します。</summary>
+    /// <returns>設定保存のトランザクションID。</returns>
     private static Guid CommitId(Guid operation) => WorkflowStore.PhaseId(operation, "archive.commit");
 }

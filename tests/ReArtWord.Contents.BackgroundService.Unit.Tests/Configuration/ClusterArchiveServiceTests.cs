@@ -10,11 +10,11 @@ using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Configuration;
 
-/// <summary>別クラスターへの転送、確認、元状態への復元と再送境界を検証します。</summary>
+/// <summary>別クラスターへの復元と、同じ操作を再送した場合の動作を検証します。</summary>
 public sealed class ClusterArchiveServiceTests
 {
-    /// <summary>残すWFが使うレシピを通常WFへ置き換える取込みは、保存前に拒否します。</summary>
-    /// <returns>保持する側も含めた依存関係の検証です。</returns>
+    /// <summary>残すWFが参照するレシピを通常WFに置き換えようとすると、復元前に拒否されることを確認します。</summary>
+    /// <returns>復元先に残すWFの依存関係の検証。</returns>
     [Fact]
     public async Task MergeValidatesRetainedCallersAgainstImportedRecipes()
     {
@@ -39,8 +39,8 @@ public sealed class ClusterArchiveServiceTests
         Assert.Single(fixture.Effective["retained"].RecipeInstances);
     }
 
-    /// <summary>JSONとして読めても有効な共通設定を持たない入力は、復元先を変更しません。</summary>
-    /// <returns>意味が不正なアーカイブの拒否です。</returns>
+    /// <summary>JSONの構文が正しくても、共通設定が欠けていれば復元前に拒否されることを確認します。</summary>
+    /// <returns>不正な設定の検証。</returns>
     [Fact]
     public async Task MissingOperationalStateIsRejectedBeforeImport()
     {
@@ -58,8 +58,8 @@ public sealed class ClusterArchiveServiceTests
         Assert.Null(await fixture.Archives.ReadAsync(operationId));
     }
 
-    /// <summary>取込み元にだけあるレシピを事前検証し、呼出し元が先に並んでも復帰を確認します。</summary>
-    /// <returns>別クラスターへの依存関係を含む復元です。</returns>
+    /// <summary>復元先に存在しないレシピも、そのレシピを使うWFと一緒に復元できることを確認します。</summary>
+    /// <returns>レシピと呼び出し元WFの復元の検証。</returns>
     [Fact]
     public async Task ARecipeAndItsCallerCanBeImportedIntoAnEmptyCluster()
     {
@@ -89,8 +89,8 @@ public sealed class ClusterArchiveServiceTests
         Assert.Empty(destination.Errors);
     }
 
-    /// <summary>バイト転送から完了照会まで通し、同じ要求で再度変更しません。</summary>
-    /// <returns>共通設定・有効状態・ログの実保存確認です。</returns>
+    /// <summary>転送から復元まで実行し、同じ要求を再送しても復元し直さないことを確認します。</summary>
+    /// <returns>設定、有効状態、ログの復元の検証。</returns>
     [Theory]
     [InlineData(EArchiveImportMode.Merge)]
     [InlineData(EArchiveImportMode.Replace)]
@@ -135,8 +135,8 @@ public sealed class ClusterArchiveServiceTests
         Assert.Empty(destination.Errors);
     }
 
-    /// <summary>確認後に復元先が変わった場合は、取り込み元で上書きしません。</summary>
-    /// <returns>確認値の変化と未実行結果です。</returns>
+    /// <summary>事前確認後に復元先の設定が変わった場合、復元を開始しないことを確認します。</summary>
+    /// <returns>事前確認後の変更を検出する処理の検証。</returns>
     [Fact]
     public async Task AChangedDestinationInvalidatesThePreviewBeforeConfigurationWrites()
     {
@@ -160,8 +160,8 @@ public sealed class ClusterArchiveServiceTests
         Assert.Empty(fixture.Errors);
     }
 
-    /// <summary>共通クライアントの実転送境界を使います。</summary>
-    /// <returns>JSONで直列化した実応答です。</returns>
+    /// <summary>アーカイブサービスを呼び出し、転送クライアント用の応答を生成します。</summary>
+    /// <returns>サービスの応答を表すJSON。</returns>
     private static async Task<JsonElement> SendAsync(ClusterArchiveService service, string operation, object body, CancellationToken cancellationToken = default)
     {
         object response = operation switch
@@ -174,8 +174,8 @@ public sealed class ClusterArchiveServiceTests
         return JsonSerializer.SerializeToElement(response, ContractJson.Options);
     }
 
-    /// <summary>一回の操作結果だけを有限時間照会します。</summary>
-    /// <returns>確定した操作状態です。</returns>
+    /// <summary>指定した操作が完了するまで、期限を設けて結果を照会します。</summary>
+    /// <returns>完了した操作の結果。</returns>
     private static async Task<ArchiveOperationResult> WaitAsync(ClusterArchiveService service, Guid id, CancellationToken cancellationToken = default)
     {
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

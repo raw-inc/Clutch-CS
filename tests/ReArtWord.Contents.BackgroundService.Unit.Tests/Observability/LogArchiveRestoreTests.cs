@@ -6,11 +6,11 @@ using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Observability;
 
-/// <summary>復元ログを新しい実行イベントとして扱わず、元の識別子で保管します。</summary>
+/// <summary>ログを復元しても、転送やワークフローの再実行が起きないことを検証します。</summary>
 public sealed class LogArchiveRestoreTests
 {
-    /// <summary>再取込みでも重複せず、秘密を伏せ、Hookと転送を発火させません。</summary>
-    /// <returns>実ファイル・検索・通知境界の検証です。</returns>
+    /// <summary>重複したログの除外、秘密情報のマスク、イベントと転送の抑止を確認します。</summary>
+    /// <returns>保存されたログと通知の有無の検証。</returns>
     [Fact]
     public async Task ImportedLogsKeepIdentityWithoutPublishingOrForwarding()
     {
@@ -33,11 +33,11 @@ public sealed class LogArchiveRestoreTests
         Assert.Equal(0, events.Published);
     }
 
-    /// <summary>履歴の取込みでイベントが再発火したら試験を失敗させます。</summary>
+    /// <summary>試験中のイベント配信回数を記録します。</summary>
     private sealed class CapturedEvents : IWorkflowEvents
     {
-        /// <summary>復元処理からの配信を拒否します。</summary>
-        /// <returns>この試験で呼び出してはいけません。</returns>
+        /// <summary>イベントの配信回数を加算します。</summary>
+        /// <returns>完了済みのValueTask。</returns>
         public ValueTask PublishAsync(WorkflowEvent item, CancellationToken cancellationToken = default)
         {
             Published++;
@@ -50,8 +50,8 @@ public sealed class LogArchiveRestoreTests
             get; private set;
         }
 
-        /// <summary>購読も必要ありません。</summary>
-        /// <returns>この試験で呼び出してはいけません。</returns>
+        /// <summary>ログの復元中にイベントが購読された場合、試験を失敗させます。</summary>
+        /// <returns>呼び出された場合は試験を失敗させるため、値は返しません。</returns>
         public IAsyncEnumerable<WorkflowEvent> SubscribeAsync(CancellationToken cancellationToken = default) => throw new InvalidOperationException();
     }
 }

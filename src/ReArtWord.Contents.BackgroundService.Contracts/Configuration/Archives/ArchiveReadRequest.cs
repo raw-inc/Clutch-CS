@@ -1,6 +1,6 @@
 namespace ReArtWord.Contents.BackgroundService.Contracts.Configuration.Archives;
 
-/// <summary>転送位置を固定する読取り要求です。</summary>
-/// <param name="OperationId">元の操作IDです。</param>
-/// <param name="Offset">読取り位置です。</param>
+/// <summary>アーカイブの指定位置を読み取る要求。</summary>
+/// <param name="OperationId">操作ID。</param>
+/// <param name="Offset">ファイル先頭からのバイト位置。</param>
 public sealed record ArchiveReadRequest(Guid OperationId, long Offset);

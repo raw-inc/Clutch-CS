@@ -13,8 +13,8 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.CommandLine;
 /// <summary>実HTTP経由でCLIの送信と終了結果を確認します。</summary>
 public sealed class CommandLineTests
 {
-    /// <summary>不正なZIP断片で例外終了せず、保存途中のファイルを完成品として残しません。</summary>
-    /// <returns>全体ハッシュ不一致時の終了コードと後始末です。</returns>
+    /// <summary>ダウンロードしたデータのハッシュが一致しない場合、エラーを返して一時ファイルを削除することを確認します。</summary>
+    /// <returns>終了コードとファイル削除の検証。</returns>
     [Fact]
     public async Task ArchiveHashMismatchDoesNotLeaveACompletedFile()
     {
