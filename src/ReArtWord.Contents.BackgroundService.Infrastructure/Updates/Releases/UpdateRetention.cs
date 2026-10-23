@@ -52,9 +52,10 @@ public static class UpdateRetention
                 }
                 completed.Add((File.GetLastWriteTimeUtc(layout.JournalPath), layout));
             }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
+            catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or JsonException or ArgumentException)
             {
                 // 確認できない記録は削除対象にしません。
+                ReportFailure(directory, exception);
             }
         }
         foreach ((DateTimeOffset time, UpdateLayout layout) in completed.OrderByDescending(item => item.Time).Skip(3))
@@ -111,9 +112,10 @@ public static class UpdateRetention
                     completed.Add((result.UpdatedAt, candidate));
                 }
             }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
+            catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or JsonException or ArgumentException)
             {
                 // 不明な状態や別配置の内容には触れません。
+                ReportFailure(directory, exception);
             }
         }
         foreach ((DateTimeOffset time, ClientUpdateFiles files) in completed.OrderByDescending(item => item.Time).Skip(3))
@@ -139,9 +141,9 @@ public static class UpdateRetention
                 await TrimManagedClientCoreAsync(installation, cancellationToken).ConfigureAwait(false);
             }
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
+        catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or JsonException or ArgumentException)
         {
-            System.Diagnostics.Trace.TraceWarning("Web client update files could not be cleaned up: {0}", exception.Message);
+            ReportFailure(program, exception);
         }
     }
 
@@ -196,9 +198,10 @@ public static class UpdateRetention
                 }
                 completed.Add((File.GetLastWriteTimeUtc(resultPath), directory, id));
             }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or ArgumentException)
+            catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or JsonException or ArgumentException)
             {
                 // 所有や終了を確認できない世代は、その資材も記録も残します。
+                ReportFailure(directory, exception);
             }
         }
         foreach ((DateTimeOffset time, string directory, Guid id) in completed.OrderByDescending(item => item.Time).Skip(3))
@@ -255,9 +258,23 @@ public static class UpdateRetention
                 Directory.Delete(directory, recursive: false);
             }
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException)
         {
             // 失敗した残りは次回再確認し、削除完了を成功記録へ偽装しません。
+            ReportFailure(root, exception);
+        }
+    }
+
+    /// <summary>保持した配置と理由を記録し、診断先の失敗は別世代の整理へ波及させません。</summary>
+    private static void ReportFailure(string path, Exception exception)
+    {
+        try
+        {
+            System.Diagnostics.Trace.TraceWarning("Update files retained at {0} ({1}): {2}", path, exception.GetType().Name, exception.Message);
+        }
+        catch (Exception diagnostic) when (diagnostic is not OutOfMemoryException)
+        {
+            // 診断を出せない場合も、元の記録と資材を保持します。
         }
     }
 
