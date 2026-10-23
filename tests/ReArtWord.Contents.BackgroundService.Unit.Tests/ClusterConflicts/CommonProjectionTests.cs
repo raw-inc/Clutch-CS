@@ -36,11 +36,13 @@ public sealed class CommonProjectionTests
         ManualSafetyFixture fixture = new();
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = fixture.ConfigureAwait(false);
         await fixture.StartAsync("a", true);
-        await fixture.StartAsync("b");
-        await ManualSafetyFixture.WaitAsync(() => fixture.Peers["a"].GetPeers().Count(peer => peer.Status == EPeerStatus.Ready) == 2);
         using ClusterConfigurationStore first = new(fixture.Repositories["a"], fixture.Peers["a"]);
         ClusterOperationalSettings initial = new("UTC", EFileConflictPolicy.Fail, EFileInternalFailurePolicy.Keep, new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal));
         Assert.Equal(EOutcome.Succeeded, (await first.InitializeAsync(initial, true)).Outcome);
+
+        // 共通の起点を確定してから参加させ、初期化と参加時同期を競合させません。
+        await fixture.StartAsync("b");
+        await ManualSafetyFixture.WaitAsync(() => fixture.Peers.Values.All(peer => peer.GetPeers().Count(item => item.Status == EPeerStatus.Ready) == 2));
         await fixture.StopAsync("b");
         using UdpClient probe = new(new IPEndPoint(IPAddress.Loopback, 0));
         int partition = ((IPEndPoint)probe.Client.LocalEndPoint!).Port;
