@@ -170,6 +170,7 @@ public sealed class WorkflowLogService : IWorkflowLog, IAsyncDisposable
             }
             await store.ProtectExistingAsync(before, next, choice, cancellationToken).ConfigureAwait(false);
             Volatile.Write(ref policy, next);
+            transport.OptionsChanged();
             try
             {
                 if (!RetentionHeld)

@@ -54,7 +54,8 @@ internal sealed class SqliteConnectionScope : IDisposable
         SqliteConnection? connection = null;
         try
         {
-            connection = new(new SqliteConnectionStringBuilder { DataSource = path, Mode = mode, Pooling = scope is not null }.ToString());
+            string options = scope?.lifetime.GetConnectionString(path, mode) ?? SqliteConnectionLifetime.CreateConnectionString(path, mode, false);
+            connection = new(options);
             try
             {
                 connection.Open();

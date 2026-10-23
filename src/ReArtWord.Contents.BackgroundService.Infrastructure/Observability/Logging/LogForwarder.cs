@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
+using System.Threading.Channels;
 using ReArtWord.Contents.BackgroundService.Contracts.Observability;
 using ReArtWord.Contents.BackgroundService.Contracts.Observability.Logging;
 using ReArtWord.Contents.BackgroundService.Runtime.Networking;
@@ -15,6 +16,11 @@ internal sealed class LogForwarder
     private readonly Func<LogPolicy> options;
     private readonly Func<WorkflowLogEntry, CancellationToken, Task<bool>> accept;
     private readonly Action<string, string?> failure;
+    private readonly Channel<byte> listenerChanges = Channel.CreateBounded<byte>(new BoundedChannelOptions(1)
+    {
+        SingleReader = true,
+        FullMode = BoundedChannelFullMode.DropWrite,
+    });
     private string? endpoint;
 
     /// <summary>保持済みファイルと宛先受付を接続します。</summary>
@@ -29,6 +35,9 @@ internal sealed class LogForwarder
 
     /// <summary>実際にbindできた待受endpointです。</summary>
     internal string? Endpoint => Volatile.Read(ref endpoint);
+
+    /// <summary>設定の公開後に待受へ通知します。連続した変更は最新設定で確認します。</summary>
+    internal void OptionsChanged() => listenerChanges.Writer.TryWrite(0);
 
     /// <summary>設定した各宛先への未転送バイト数です。</summary>
     internal long PendingBytes
@@ -52,7 +61,7 @@ internal sealed class LogForwarder
             {
                 if (current.ListenPort is not int port)
                 {
-                    await Task.Delay(TimeSpan.FromMilliseconds(500), cancellationToken).ConfigureAwait(false);
+                    await listenerChanges.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
                     continue;
                 }
                 LocalNetworkBinding binding = Binding(current);
@@ -61,25 +70,7 @@ internal sealed class LogForwarder
                 listener.Start();
                 Volatile.Write(ref endpoint, listener.LocalEndpoint.ToString());
                 failure("listen", null);
-                while (!lease.Token.IsCancellationRequested && !cancellationToken.IsCancellationRequested && SameListener(current, options().Options))
-                {
-                    try
-                    {
-                        using TcpClient? client = await AcceptAsync(listener, lease.Token).ConfigureAwait(false);
-                        if (client is not null)
-                        {
-                            await ReceiveAsync(client, current, cancellationToken).ConfigureAwait(false);
-                        }
-                    }
-                    catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-                    {
-                        failure("receive", "log.receive.unavailable");
-                    }
-                    catch (Exception exception) when (exception is System.Data.Common.DbException or ZstdSharp.ZstdException or InvalidDataException or IOException or SocketException or JsonException or FormatException or InvalidOperationException)
-                    {
-                        failure("receive", "log.receive.unavailable");
-                    }
-                }
+                await ReceiveConnectionsAsync(listener, current, lease.Token, cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
@@ -104,19 +95,65 @@ internal sealed class LogForwarder
         }
     }
 
-    /// <summary>設定確認のため接続待ちだけに短い期限を設けます。</summary>
-    /// <returns>受理した接続、または空待機です。</returns>
-    private static async Task<TcpClient?> AcceptAsync(TcpListener listener, CancellationToken cancellationToken = default)
+    /// <summary>接続待ちは設定変更・NIC切断・終了時だけ解除し、受信中の処理には設定変更を遡及させません。</summary>
+    /// <returns>この待受で受理した通信の終了です。</returns>
+    // 抑制理由: 設定監視は接続待ちと並行し、finallyで停止と終了を確認します。
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW141", Justification = "設定監視のTaskをfinallyで必ずawaitします。"),
+        System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2025", Justification = "設定監視はfinallyでawaitし、その後にCancellationTokenSourceを破棄します。")]
+    private async Task ReceiveConnectionsAsync(TcpListener listener, LogOptions current, CancellationToken bindingToken, CancellationToken cancellationToken = default)
     {
-        using CancellationTokenSource poll = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        poll.CancelAfter(TimeSpan.FromMilliseconds(500));
+        using CancellationTokenSource accepting = CancellationTokenSource.CreateLinkedTokenSource(bindingToken);
+        Task updates = WatchListenerAsync(current, accepting, accepting.Token);
         try
         {
-            return await listener.AcceptTcpClientAsync(poll.Token).ConfigureAwait(false);
+            while (!accepting.IsCancellationRequested)
+            {
+                bool connected = false;
+                try
+                {
+                    using TcpClient client = await listener.AcceptTcpClientAsync(accepting.Token).ConfigureAwait(false);
+                    connected = true;
+                    await ReceiveAsync(client, current, cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (!connected && accepting.IsCancellationRequested && !bindingToken.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    failure("receive", "log.receive.unavailable");
+                }
+                catch (Exception exception) when (exception is System.Data.Common.DbException or ZstdSharp.ZstdException or InvalidDataException or IOException or SocketException or JsonException or FormatException or InvalidOperationException)
+                {
+                    failure("receive", "log.receive.unavailable");
+                }
+            }
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        finally
         {
-            return null;
+            await accepting.CancelAsync().ConfigureAwait(false);
+            await updates.ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>変更通知後に待受設定を比較し、保持設定だけの変更では接続待ちを維持します。</summary>
+    /// <returns>設定変更または待受終了までの監視です。</returns>
+    private async Task WatchListenerAsync(LogOptions current, CancellationTokenSource accepting, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            while (SameListener(current, options().Options))
+            {
+                await listenerChanges.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException) when (accepting.IsCancellationRequested)
+        {
+            // 待受側の終了に合わせて通知待ちを解除します。
+        }
+        finally
+        {
+            await accepting.CancelAsync().ConfigureAwait(false);
         }
     }
 

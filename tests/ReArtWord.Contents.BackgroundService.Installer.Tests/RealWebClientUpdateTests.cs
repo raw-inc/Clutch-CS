@@ -63,8 +63,8 @@ public sealed class RealWebClientUpdateTests
                 Assert.True(installed.Outcome == EOutcome.Succeeded, installed.Detail);
                 InstallationRecord record = await InstallationFiles.ReadAsync(settings.Root, timeout.Token).ConfigureAwait(true);
 
-                // 管理者のまま手動起動せず、SYSTEMまたは通常ユーザーという製品の起動条件を使います。
-                TestCoreProcess core = new(Path.Combine(settings.Root, "core", record.CoreEntryPoint), Path.Combine(settings.Root, "config", "contents.toml"));
+                // 管理者環境では実サービスから、通常権限では対話ユーザーから更新を要求します。
+                TestCoreProcess core = new(Path.Combine(settings.Root, "core", record.CoreEntryPoint), Path.Combine(settings.Root, "config", "contents.toml"), record.ServiceName);
                 await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable coreLifetime = core.ConfigureAwait(true);
                 await core.StartAsync(timeout.Token).ConfigureAwait(true);
                 UpdateObserver observer = new(settings.Network, settings.ClusterId);

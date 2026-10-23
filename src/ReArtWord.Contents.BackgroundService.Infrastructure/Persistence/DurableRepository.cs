@@ -47,6 +47,11 @@ public abstract class DurableRepository : IDurableRepository, ILocalSnapshotBatc
         return ValueTask.FromResult(Access(document => document.Entries.GetValueOrDefault(address) ?? JsonHistoryAccess.Read<DurableEntry>(document, "entry", address), false));
     }
 
+    /// <summary>専用読取りのない媒体でも、通常の検証を通して値と競合を返します。</summary>
+    /// <returns>削除履歴を含む項目と、その用途の競合候補です。</returns>
+    public virtual ValueTask<(DurableEntry? Entry, IReadOnlyList<DurableEntry> Conflicts)> ReadWithConflictsAsync(string scope, string key, CancellationToken cancellationToken = default)
+        => RepositoryObservations.ReadWithConflictsAsync(this, scope, key, cancellationToken);
+
     /// <summary>元の操作を確定・中止せず、対象項目の保存予約だけを確認します。</summary>
     /// <returns>未完了の保存準備があるかです。</returns>
     public virtual ValueTask<bool> HasPendingWriteAsync(string scope, string key, CancellationToken cancellationToken = default)
@@ -276,8 +281,7 @@ public abstract class DurableRepository : IDurableRepository, ILocalSnapshotBatc
     public virtual ValueTask<IReadOnlyList<DurableEntry>> GetConflictsAsync(string scope, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyList<DurableEntry> result = Access(document => document.Conflicts.Where(entry => scope.Length == 0 || string.Equals(entry.Scope, scope, StringComparison.Ordinal)).SelectMany(entry => new[] { entry, document.Entries[GetAddress(entry.Scope, entry.Key)] }).Distinct().ToArray(), false);
-        return ValueTask.FromResult(result);
+        return ValueTask.FromResult<IReadOnlyList<DurableEntry>>(Access(document => RepositoryObservations.ReadConflicts(document, scope), false));
     }
 
     /// <summary>人が確認した分岐集合だけを新しい一版へ統合します。</summary>

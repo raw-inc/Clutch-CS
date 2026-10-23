@@ -39,6 +39,13 @@ internal sealed class WorkflowNodeEvaluation(NodeRegistry registry, IPeerDirecto
         CancellationToken cancellationToken = default)
     {
         ExecutionFrame[] upstream = await Task.WhenAll(parents).ConfigureAwait(false);
+
+        // リンク先tokenへの通知より先に上流の取消結果が届くことがあるため、入力不足を判定する前に呼出元の取消も確認します。
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return new(node.Id, EOutcome.Cancelled, [new(string.Empty,
+                NodeResult.Failure("execution.cancelledBeforeStart", "The execution was cancelled before this node started.", EOutcome.Cancelled))]);
+        }
         NodeDescriptor descriptor = ConfiguredNodePorts.ResolveExecution(registry.Find(node.Type)!.Descriptor, node)!;
         if (descriptor.Outputs.Any(port => port.ValueKind == EPortValueKind.PcSelection) && workflow.ConfigurationValues?.ContainsKey(node.Id) == true)
         {

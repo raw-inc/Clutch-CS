@@ -68,70 +68,77 @@ internal sealed class DatagramReceiveNode : ISourceNode
             return NodeResult.Failure("network.binding.invalid", "待受の明示NICとIPが不正です。", EOutcome.NotExecuted);
         }
         int count = 0;
-        while (!context.IsStopRequested && !cancellationToken.IsCancellationRequested)
+        try
         {
-            try
+            while (!context.IsStopRequested && !cancellationToken.IsCancellationRequested)
             {
-                using NetworkBindingLease lease = new(binding, lifetime.Token);
-                DatagramListenerSet client = new();
-                await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable subscriptionLifetime = client.ConfigureAwait(false);
-                client.Open(binding.InterfaceId, binding.Resolve(), ports, lease.Token);
-                await context.ReportStatusAsync(new(ESourceState.Listening, null, client.Endpoints), lifetime.Token).ConfigureAwait(false);
-                while (!context.IsStopRequested)
-                {
-                    UdpReceiveResult packet = await client.ReadAsync(lease.Token).ConfigureAwait(false);
-                    NodeExecutionContext item = context.BeginItem();
-                    await CommunicationTrace.WriteAsync(item, format, false, packet.Buffer, CancellationToken.None).ConfigureAwait(false);
-
-                    // NICの変更と定期確認はleaseが監視するため、パケットごとのOS全件照会を重ねません。
-                    lease.Token.ThrowIfCancellationRequested();
-                    NodeSettings settings = new(item.Settings);
-                    NodeResult? result = Decode(packet.Buffer, settings.ReadInt32("maxBytes", 65507), item.Settings);
-                    if (result is null)
-                    {
-                        continue;
-                    }
-                    await context.EmitAsync(item, result, cancellationToken).ConfigureAwait(false);
-                    count++;
-                    int limit = settings.ReadInt32("count");
-                    if (0 < limit && limit <= count)
-                    {
-                        return NodeResult.Success();
-                    }
-                }
-            }
-            catch (InvalidOperationException exception) when (exception is not System.Threading.Channels.ChannelClosedException)
-            {
-                await context.ReportStatusAsync(new(ESourceState.Unavailable, "network.binding.unresolved", "指定NICまたはIPの再選択が必要です。"), cancellationToken).ConfigureAwait(false);
-                return NodeResult.Failure("network.binding.unresolved", "指定NICまたはIPを解決できません。");
-            }
-            catch (Exception exception) when (exception is SocketException or IOException or System.Threading.Channels.ChannelClosedException)
-            {
-                string code = "network.listen.unavailable";
-                string message = "同じNICとIPで待受を再開します。";
-                if (exception is System.Threading.Channels.ChannelClosedException { InnerException: IOException })
-                {
-                    code = "network.receive.overrun";
-                    message = "このノードの受信処理が追いつかず、受信キューの上限に達しました。待受を再開します。";
-                }
-                await context.ReportStatusAsync(new(ESourceState.Unavailable, code, message), cancellationToken).ConfigureAwait(false);
                 try
                 {
-                    await Task.Delay(TimeSpan.FromMilliseconds(250), lifetime.Token).ConfigureAwait(false);
+                    using NetworkBindingLease lease = new(binding, lifetime.Token);
+                    DatagramListenerSet client = new();
+                    await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable subscriptionLifetime = client.ConfigureAwait(false);
+                    client.Open(binding.InterfaceId, binding.Resolve(), ports, lease.Token);
+                    await context.ReportStatusAsync(new(ESourceState.Listening, null, client.Endpoints), lifetime.Token).ConfigureAwait(false);
+                    while (!context.IsStopRequested)
+                    {
+                        UdpReceiveResult packet = await client.ReadAsync(lease.Token).ConfigureAwait(false);
+                        NodeExecutionContext item = context.BeginItem();
+                        await CommunicationTrace.WriteAsync(item, format, false, packet.Buffer, CancellationToken.None).ConfigureAwait(false);
+
+                        // NICの変更と定期確認はleaseが監視するため、パケットごとのOS全件照会を重ねません。
+                        lease.Token.ThrowIfCancellationRequested();
+                        NodeSettings settings = new(item.Settings);
+                        NodeResult? result = Decode(packet.Buffer, settings.ReadInt32("maxBytes", 65507), item.Settings);
+                        if (result is null)
+                        {
+                            continue;
+                        }
+                        await context.EmitAsync(item, result, cancellationToken).ConfigureAwait(false);
+                        count++;
+                        int limit = settings.ReadInt32("count");
+                        if (0 < limit && limit <= count)
+                        {
+                            return NodeResult.Success();
+                        }
+                    }
+                }
+                catch (InvalidOperationException exception) when (exception is not System.Threading.Channels.ChannelClosedException)
+                {
+                    await context.ReportStatusAsync(new(ESourceState.Unavailable, "network.binding.unresolved", "指定NICまたはIPの再選択が必要です。"), cancellationToken).ConfigureAwait(false);
+                    return NodeResult.Failure("network.binding.unresolved", "指定NICまたはIPを解決できません。");
+                }
+                catch (Exception exception) when (exception is SocketException or IOException or System.Threading.Channels.ChannelClosedException)
+                {
+                    string code = "network.listen.unavailable";
+                    string message = "同じNICとIPで待受を再開します。";
+                    if (exception is System.Threading.Channels.ChannelClosedException { InnerException: IOException })
+                    {
+                        code = "network.receive.overrun";
+                        message = "このノードの受信処理が追いつかず、受信キューの上限に達しました。待受を再開します。";
+                    }
+                    await context.ReportStatusAsync(new(ESourceState.Unavailable, code, message), cancellationToken).ConfigureAwait(false);
+                    try
+                    {
+                        await Task.Delay(TimeSpan.FromMilliseconds(250), lifetime.Token).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return CommunicationSupport.Terminal(cancellationToken);
+                    }
                 }
                 catch (OperationCanceledException)
                 {
-                    return CommunicationSupport.Terminal(cancellationToken);
+                    if (lifetime.IsCancellationRequested)
+                    {
+                        return CommunicationSupport.Terminal(cancellationToken);
+                    }
+                    await context.ReportStatusAsync(new(ESourceState.Unavailable, "network.binding.unresolved", "同一NICと指定IPの回復を待機します。新IPへ自動変更しません。"), cancellationToken).ConfigureAwait(false);
                 }
             }
-            catch (OperationCanceledException)
-            {
-                if (lifetime.IsCancellationRequested)
-                {
-                    return CommunicationSupport.Terminal(cancellationToken);
-                }
-                await context.ReportStatusAsync(new(ESourceState.Unavailable, "network.binding.unresolved", "同一NICと指定IPの回復を待機します。新IPへ自動変更しません。"), cancellationToken).ConfigureAwait(false);
-            }
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        {
+            // 待受の復旧処理や状態通知の途中でも、停止要求に対応する終了結果を返します。
         }
         return CommunicationSupport.Terminal(cancellationToken);
     }

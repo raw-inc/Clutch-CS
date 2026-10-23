@@ -103,7 +103,7 @@ public sealed class TerminalStreamProcessTests
                     }
                 }
             }
-            await CorePeer.WaitAsync(async token => File.Exists(file) && !string.IsNullOrEmpty(await FileObservation.ReadTextAsync(file, token).ConfigureAwait(true)), timeout.Token).ConfigureAwait(true);
+            await CorePeer.WaitAsync(async token => !string.IsNullOrEmpty(await FileObservation.ReadFirstAppendAsync(file, token).ConfigureAwait(true)), timeout.Token).ConfigureAwait(true);
         }
         Assert.Equal(["once"], await File.ReadAllLinesAsync(file, timeout.Token).ConfigureAwait(true));
         Assert.Single(await core.GetAsync<TerminalView[]>("terminal.list", timeout.Token).ConfigureAwait(true));

@@ -114,6 +114,11 @@ internal sealed class RoutedRepository(string directory, RepositoryRoutes routes
     /// <returns>元の版と値です。</returns>
     public ValueTask<DurableEntry?> ReadAsync(string scope, string key, CancellationToken cancellationToken = default) => new(AccessAsync(() => routes.Stores[routes.Backend(scope)].ReadAsync(scope, key, cancellationToken).AsTask(), cancellationToken: cancellationToken));
 
+    /// <summary>取込み途中の確認と排他を一回だけ行い、同じ媒体の値と競合を取得します。</summary>
+    /// <returns>用途に対応する保存先の項目と競合です。</returns>
+    public ValueTask<(DurableEntry? Entry, IReadOnlyList<DurableEntry> Conflicts)> ReadWithConflictsAsync(string scope, string key, CancellationToken cancellationToken = default)
+        => new(AccessAsync(() => routes.Stores[routes.Backend(scope)].ReadWithConflictsAsync(scope, key, cancellationToken).AsTask(), cancellationToken: cancellationToken));
+
     /// <summary>指定用途の保存先で、対象項目を保持する未完了予約を確認します。</summary>
     /// <returns>保存準備が残っているかです。</returns>
     public ValueTask<bool> HasPendingWriteAsync(string scope, string key, CancellationToken cancellationToken = default)
@@ -147,7 +152,7 @@ internal sealed class RoutedRepository(string directory, RepositoryRoutes routes
 
     /// <summary>空結果であっても元の媒体から操作記録を返します。</summary>
     /// <returns>元操作の保存結果です。</returns>
-    public ValueTask<DurableReceipt?> ReadReceiptAsync(Guid operationId, CancellationToken cancellationToken = default) => new(AccessAsync(() => ReceiptAsync(operationId, cancellationToken), cancellationToken: cancellationToken));
+    public ValueTask<DurableReceipt?> ReadReceiptAsync(Guid operationId, CancellationToken cancellationToken = default) => new(AccessAsync(() => state.ReceiptAsync(operationId, routes, cancellationToken), cancellationToken: cancellationToken));
 
     /// <summary>準備を受け付けた元の媒体だけを照会し、別媒体へ作り直しません。</summary>
     /// <returns>確定済みや中止済みを含めず、準備中だけの指紋です。</returns>
@@ -285,7 +290,7 @@ internal sealed class RoutedRepository(string directory, RepositoryRoutes routes
             }
             return old;
         }
-        DurableReceipt? receipt = await ReceiptAsync(id, cancellationToken).ConfigureAwait(false);
+        DurableReceipt? receipt = await state.ReceiptAsync(id, routes, cancellationToken).ConfigureAwait(false);
         if (receipt is not null)
         {
             if (!string.Equals(receipt.Fingerprint, fingerprint, StringComparison.Ordinal))
@@ -313,7 +318,7 @@ internal sealed class RoutedRepository(string directory, RepositoryRoutes routes
     private async Task<DurableReceipt> CompleteAsync(Guid id, bool abort, CancellationToken cancellationToken = default)
     {
         RoutingOwner? owner = await state.OwnerAsync(id, cancellationToken).ConfigureAwait(false);
-        DurableReceipt? receipt = await ReceiptAsync(id, cancellationToken).ConfigureAwait(false);
+        DurableReceipt? receipt = await state.ReceiptAsync(id, routes, cancellationToken).ConfigureAwait(false);
         if (receipt is not null)
         {
             return receipt;
@@ -339,10 +344,6 @@ internal sealed class RoutedRepository(string directory, RepositoryRoutes routes
         }
         return committed;
     }
-
-    /// <summary>保存媒体の所有記録から元操作を追跡します。</summary>
-    /// <returns>移行前を含む確定結果です。</returns>
-    private Task<DurableReceipt?> ReceiptAsync(Guid id, CancellationToken cancellationToken = default) => state.ReceiptAsync(id, routes, cancellationToken);
 
     /// <summary>全取込み完了前の保存値を別処理へ公開しません。</summary>
     /// <returns>ローカル排他中に実行した処理結果です。</returns>
