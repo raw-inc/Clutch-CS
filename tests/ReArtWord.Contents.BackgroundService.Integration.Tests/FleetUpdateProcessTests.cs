@@ -14,8 +14,10 @@ public sealed class FleetUpdateProcessTests
 {
     /// <summary>画面APIの固定計画・受付・継続・再読込みから四ピアの新実体確認まで通します。</summary>
     /// <returns>本番とは独立した実UDP・HTTP・プロセス入替の検証です。</returns>
-    [Fact]
-    public async Task ClientHostUpdatesEveryPeerAcrossClustersAndRetainsTheResults()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task ClientHostUpdatesEveryPeerAcrossClustersAndRetainsTheResults(int parallelism)
     {
         string root = Path.GetFullPath("../../../../../.work/integration/fleet-" + Guid.NewGuid().ToString("N"), AppContext.BaseDirectory);
         string payload = Path.Combine(root, "release");
@@ -47,7 +49,7 @@ public sealed class FleetUpdateProcessTests
                 configured.EnsureSuccessStatusCode();
             }
             FleetUpdateRequest? plan = null;
-            FleetReleaseSelection selection = new(release, payload, true, PeerTimeoutMilliseconds: 60000);
+            FleetReleaseSelection selection = new(release, payload, true, PeerTimeoutMilliseconds: 60000, MaximumParallelism: parallelism);
             await CorePeer.WaitAsync(async token =>
             {
                 using HttpResponseMessage preview = await client.SendAsync(HttpMethod.Post, "client/updates/preview", selection, cancellationToken: token).ConfigureAwait(true);
@@ -58,7 +60,7 @@ public sealed class FleetUpdateProcessTests
                 plan = await preview.Content.ReadFromJsonAsync<FleetUpdateRequest>(ContractJson.Options, token).ConfigureAwait(true);
                 return plan?.Targets.Count == 4;
             }, timeout.Token).ConfigureAwait(true);
-            Assert.Equal(2, plan!.Release.MaximumParallelism);
+            Assert.Equal(parallelism, plan!.Release.MaximumParallelism);
             Assert.Equal(2, plan.Targets.Select(target => target.Peer.HostId).Distinct().Count());
             using (HttpResponseMessage accepted = await client.SendAsync(HttpMethod.Post, "client/updates", plan, cancellationToken: timeout.Token).ConfigureAwait(true))
             {
@@ -88,7 +90,7 @@ public sealed class FleetUpdateProcessTests
             }
             while (status?.Completed != true);
             Assert.True(status!.Outcome == EOutcome.Succeeded, JsonSerializer.Serialize(status, ContractJson.Options));
-            Assert.Equal(2, peak);
+            Assert.Equal(parallelism, peak);
             Assert.All(status.Peers, peer => Assert.Equal("Completed", peer.State));
             Assert.All(status.Peers, peer => Assert.Single(peer.Attempts));
             using (HttpResponseMessage overview = await client.SendAsync(HttpMethod.Get, "client/updates", cancellationToken: timeout.Token).ConfigureAwait(true))

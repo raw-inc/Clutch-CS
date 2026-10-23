@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Fleet;
 using System.Runtime.InteropServices;
 using ReArtWord.Contents.BackgroundService.ClientHost.Updates;
 using ReArtWord.Contents.BackgroundService.ClientHost.Updates.Fleet;
@@ -32,6 +33,29 @@ public sealed class FleetUpdateTests
         IReadOnlyList<UpdateNotification> notifications = FleetUpdateNotifications.Capture(completed, "one");
         Assert.Contains(notifications, notification => notification.Id == first.Id);
         Assert.Contains(notifications, notification => string.Equals(notification.Name, "update.completed", StringComparison.Ordinal));
+    }
+
+    /// <summary>更新対象外のピアを稼働判定に含めても、そのピアを更新しないことを確認します。</summary>
+    /// <returns>選択したピアだけが更新されることの検証。</returns>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task UnselectedMembersContributeReadinessWithoutBeingUpdated(bool ready)
+    {
+        FleetUpdateTarget selected = Target("a", "one"), remaining = Target("b", "one");
+        FleetUpdateStatus input = Status([selected]);
+        FleetUpdateTestRemote remote = new([selected, remaining]);
+        remote.Observations[("one", "b")] = remote.Observations[("one", "b")] with { Ready = ready };
+        FleetUpdateStatus result = await RunAsync(input, remote);
+        Assert.Single(result.Peers);
+        string expected = "Deferred";
+        if (ready)
+        {
+            expected = "Completed";
+        }
+        Assert.Equal(expected, result.Peers[0].State);
+        Assert.DoesNotContain(remote.Events, value => value.Contains("b/one", StringComparison.Ordinal));
+        Assert.Equal(remaining.Peer.InstanceId, remote.Observations[("one", "b")].Peer.InstanceId);
     }
 
     /// <summary>同じPCの複数クラスタを先に処理し、復帰確認前に別PCを止めません。</summary>

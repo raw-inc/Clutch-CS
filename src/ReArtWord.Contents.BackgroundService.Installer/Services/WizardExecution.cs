@@ -141,52 +141,7 @@ internal static class WizardExecution
         ObservedTarget[] targets = state.Selected.ToArray();
         if (state.Operation == EInstallerOperation.Update)
         {
-            Dictionary<ObservedTarget, UpdatePeerResult> coreResults = [];
-            IGrouping<(string ClusterId, Contracts.Management.Discovery.ClientNetworkBinding Binding), ObservedTarget>[] clusters = targets.GroupBy(target => (target.ClusterId, target.Binding)).ToArray();
-            int index = 0;
-            int completedSteps = 0;
-            int totalSteps = 0;
-            foreach (IGrouping<(string ClusterId, Contracts.Management.Discovery.ClientNetworkBinding Binding), ObservedTarget> cluster in clusters)
-            {
-                index++;
-                string group = $"({index} / {clusters.Length}) {cluster.Key.ClusterId}";
-                int currentSteps = 0;
-                EOutcome outcome = EOutcome.Unknown;
-                progress.Report(new("update-check", completedSteps, totalSteps, group));
-                try
-                {
-                    Contracts.Updates.Cluster.ClusterUpdateStatus result = await InstallerOperations.UpdateAsync(cluster.ToArray(), Path.Combine(state.Package, "core"), state.AllowActive,
-                        value =>
-                        {
-                            currentSteps = value.CompletedSteps;
-                            totalSteps = value.TotalSteps / cluster.Count() * targets.Length;
-                            string target = group;
-                            if (value.Target is not null)
-                            {
-                                target += " / " + value.Target;
-                            }
-                            progress.Report(value with { CompletedSteps = completedSteps + currentSteps, TotalSteps = totalSteps, Target = target });
-                        }, cancellationToken).ConfigureAwait(false);
-                    outcome = result.Outcome;
-                    report.AppendLine(cluster.Key.ClusterId + " · " + Outcome(state, result.Outcome));
-                    details.AppendLine(cluster.Key.ClusterId + " · " + result.Outcome + " · " + result.Reason);
-                    foreach (Contracts.Updates.UpdatePeerResult peer in result.Peers)
-                    {
-                        coreResults[cluster.Single(target => string.Equals(target.PeerId, peer.PeerId, StringComparison.Ordinal))] = peer;
-                        report.AppendLine("  " + peer.PeerId + " · " + Outcome(state, peer.Outcome));
-                        details.AppendLine("  " + peer.PeerId + " · " + peer.Outcome + " · " + peer.Phase + " · " + peer.Reason);
-                    }
-                }
-                catch (Exception exception) when (exception is IOException or InvalidDataException or InvalidOperationException or ArgumentException)
-                {
-                    report.AppendLine(cluster.Key.ClusterId + " · " + Outcome(state, EOutcome.Unknown));
-                    details.AppendLine(exception.Message);
-                }
-                completedSteps += currentSteps;
-                progress.Report(new("outcome-" + outcome, completedSteps, totalSteps, group));
-            }
-            WebClientInstallation? updatedClient = await UpdateClientsAsync(state, coreResults, report, details, progress, cancellationToken).ConfigureAwait(false);
-            return new(report.ToString(), details.ToString(), updatedClient);
+            return await WizardUpdates.ExecuteAsync(state, progress, cancellationToken).ConfigureAwait(false);
         }
         int completed = 0;
         foreach (ObservedTarget target in targets)
@@ -255,7 +210,7 @@ internal static class WizardExecution
 
     /// <summary>Webクライアントは個別に更新し、依存するCoreの成功だけを引き継ぎます。</summary>
     /// <returns>このPCで更新できたクライアントです。</returns>
-    private static async Task<WebClientInstallation?> UpdateClientsAsync(InstallationViewModel state, Dictionary<ObservedTarget, UpdatePeerResult> cores,
+    internal static async Task<WebClientInstallation?> UpdateClientsAsync(InstallationViewModel state, Dictionary<ObservedTarget, UpdatePeerResult> cores,
         StringBuilder report, StringBuilder details, IProgress<OperationProgress> progress, CancellationToken cancellationToken = default)
     {
         WebClientInstallation? local = null;

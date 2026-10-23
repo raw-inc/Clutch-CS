@@ -25,7 +25,7 @@ internal static class CommandLineApplication
         string help = "--help";
         if (args.Length == 1 && string.Equals(args[0], help, StringComparison.Ordinal))
         {
-            await output.WriteLineAsync("Usage: --url http(s)://127.0.0.1:port [--cluster CLUSTER --peer PEER] [--display-name NAME] COMMAND [--id ID] [--body JSON_FILE|-] [--operation-id GUID]\nLocal ClientHost: network get|set --body binding.json; cluster list; request status --id GUID. Management commands require --cluster and --peer. Archive: archive export --file FILE [--logs true|false]; archive preview --file FILE [--mode merge|replace]; archive import --id GUID --confirmation TOKEN; archive status|reconcile --id GUID. Commands: service run --executable PATH --config TOML (no URL); configuration get|save|activate|impact|status; resources get|history; trace get|set|status; log statistics|retention|retention-set; script analyze --body FILE; workflow parse|validate --yaml FILE|-; status; catalog; conflict list|query|detail|resolve|status; workflow list|query|get|impact|definition-chunk|validate|save|activate|run|run-status|compatibility|running|running-query|cancel|cancel-status|operation|detached|detached-query|detached-detail|detached-resolve|detached-status; execution list|query; source stop; cluster detach|rejoin; secret set --name NAME (--stdin|--env ENV_NAME); snapshot list|query|capture|capture-status|restore|restore-status|recover; file operation|recover; safety list|set|status; update start|status|schedules|schedule-save|schedule-cancel|schedule-status|schedule-operation; log query; operation status\nExit: 0 confirmed, 2 input, 3 HTTP error, 4 failed/partial, 5 unknown/pending, 6 offline, 130 cancelled/read timeout. Detached resolution JSON requires expectedLocalRevision, expectedCurrentRevision (null allowed), and currentRevisionConfirmed:true. No automatic mutation retry.").ConfigureAwait(false);
+            await output.WriteLineAsync("Usage: --url http(s)://127.0.0.1:port [--cluster CLUSTER --peer PEER] [--display-name NAME] COMMAND [--id ID] [--body JSON_FILE|-] [--operation-id GUID]\nLocal ClientHost: network get|set --body binding.json; cluster list; request status --id GUID; fleet preview|start --body FILE; fleet list; fleet status|reconcile --id GUID. Core commands (including archive) require --cluster and --peer. Archive: archive export --file FILE [--logs true|false]; archive preview --file FILE [--mode merge|replace]; archive import --id GUID --confirmation TOKEN; archive status|reconcile --id GUID. Commands: service run --executable PATH --config TOML (no URL); configuration get|save|activate|impact|status; resources get|history; trace get|set|status; log statistics|retention|retention-set; script analyze --body FILE; workflow parse|validate --yaml FILE|-; status; catalog; conflict list|query|detail|resolve|status; workflow list|query|get|impact|definition-chunk|validate|save|activate|run|run-status|compatibility|running|running-query|cancel|cancel-status|operation|detached|detached-query|detached-detail|detached-resolve|detached-status; execution list|query; source stop; cluster detach|rejoin; secret set --name NAME (--stdin|--env ENV_NAME); snapshot list|query|capture|capture-status|restore|restore-status|recover; file operation|recover; safety list|set|status; update start|status|schedules|schedule-save|schedule-cancel|schedule-status|schedule-operation; log query; operation status\nExit: 0 confirmed, 2 input, 3 HTTP error, 4 failed/partial, 5 unknown/pending, 6 offline, 130 cancelled/read timeout. Detached resolution JSON requires expectedLocalRevision, expectedCurrentRevision (null allowed), and currentRevisionConfirmed:true. No automatic mutation retry.").ConfigureAwait(false);
             return 0;
         }
         CliCommand? command = null;
@@ -128,7 +128,7 @@ internal static class CommandLineApplication
             int code = sent ? 5
                             : 2;
             await error.WriteLineAsync(sent ? "API response could not be confirmed"
-                                            : "invalid input; use a loopback ClientHost --url and explicit --cluster/--peer for management commands; JSON bodies use --body file or --body -; secret set uses --name and --stdin or --env").ConfigureAwait(false);
+                                            : "invalid input; use a loopback ClientHost --url and explicit --cluster/--peer for Core commands; JSON bodies use --body file or --body -; secret set uses --name and --stdin or --env").ConfigureAwait(false);
             return code;
         }
     }
@@ -171,7 +171,8 @@ internal static class CommandLineApplication
         }
         string keyCluster = "cluster ";
         string fileRecover = "file recover";
-        if (command.Method == HttpMethod.Get || string.Equals(command.Name, fileRecover, StringComparison.Ordinal) || command.Name.StartsWith(keyCluster, StringComparison.Ordinal))
+        string fleetReconcile = "fleet reconcile";
+        if (string.Equals(command.Name, fleetReconcile, StringComparison.Ordinal) || command.Method == HttpMethod.Get || string.Equals(command.Name, fileRecover, StringComparison.Ordinal) || command.Name.StartsWith(keyCluster, StringComparison.Ordinal))
         {
             return null;
         }

@@ -11,4 +11,4 @@ namespace ReArtWord.Contents.BackgroundService.Contracts.Updates.Fleet;
 /// <param name="Client">全Core成功後に同じインストール先へ適用するClientHost配布です。</param>
 /// <param name="MaximumParallelism">同時更新の上限です。1から3、既定は2で、安全条件により減少します。</param>
 public sealed record FleetReleaseSelection(ReleaseManifest Manifest, string PayloadRoot, bool AllowWhileActive = false,
-    int MaximumAttempts = 3, int PeerTimeoutMilliseconds = 600000, IReadOnlyList<ReleaseVariant>? Variants = null, ReleaseVariant? Client = null, int MaximumParallelism = 2);
+    int MaximumAttempts = 3, int PeerTimeoutMilliseconds = 600000, IReadOnlyList<ReleaseVariant>? Variants = null, ReleaseVariant? Client = null, int MaximumParallelism = 1);

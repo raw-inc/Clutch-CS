@@ -13,7 +13,7 @@ dotnet run --project src/ReArtWord.Contents.BackgroundService.CommandLine -- --u
 
 ## コマンド一覧
 
-以下では実行ファイルを `contents-cli` と表記します。配布物の `files/cli/ReArtWord.Contents.BackgroundService.CommandLine.exe` に読み替えてください。URL はローカル ClientHost の待受に合わせて指定してください。管理操作は `--cluster` と `--peer` の両方が必須です。別のピアへの自動切替はありません。本文は管理 API と同じ camelCase JSON オブジェクト、enum は camelCase 文字列です。
+以下では実行ファイルを `contents-cli` と表記します。配布物の `files/cli/ReArtWord.Contents.BackgroundService.CommandLine.exe` に読み替えてください。URL はローカル ClientHost の待受に合わせて指定してください。CoreServiceに対する操作は `--cluster` と `--peer` の両方が必須です。`fleet` コマンドでは指定しません。別のピアへの自動切替はありません。本文は管理 API と同じ camelCase JSON オブジェクト、enum は camelCase 文字列です。
 
 `--body -` は標準入力、`--body path.json` は UTF-8 ファイルを読みます。
 
@@ -56,6 +56,11 @@ dotnet run --project src/ReArtWord.Contents.BackgroundService.CommandLine -- --u
 | `safety list` | 現ピアのloadedと取込状態を照会 |
 | `safety status` | `--id` で今回の受付結果を読取専用照会 |
 | `safety set` | `--body safety.json` (workflowId,scope,stopped,expectedVersion) |
+| `fleet preview` | `--body fleet-selection.json`。配布物と更新条件を指定し、更新対象と手順を確認 |
+| `fleet start` | `--body fleet-plan.json`。確認した計画で更新を開始 |
+| `fleet list` | ClientHostに保存されたFleet Updateの一覧を表示 |
+| `fleet status` | `--id` で指定した更新の進捗と、対象ごとの結果を表示 |
+| `fleet reconcile` | `--id` で指定した更新の結果を再確認。更新処理は再実行しない |
 | `update start` | `--body update-request.json` (マニフェスト,payloadRoot,peerIds,failurePolicy等。variantsもそのまま送信) |
 | `update status` | `--id` で更新の全体・ピア別結果を照会 |
 | `log query` | `--body log-query.json` (空オブジェクトも可) |
