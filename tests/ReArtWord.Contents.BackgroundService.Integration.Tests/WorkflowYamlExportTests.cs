@@ -7,11 +7,11 @@ using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 
-/// <summary>実Coreの書出し・読込みが、保存や実行を伴わないことを確認します。</summary>
+/// <summary>CoreService経由でYAMLを書き出し、再読み込みできることを検証します。</summary>
 public sealed class WorkflowYamlExportTests
 {
-    /// <summary>未保存の草稿を変換し、同じ管理経路で元の定義へ戻します。</summary>
-    /// <returns>実UDPによる往復と、保存一覧に変更がない確認です。</returns>
+    /// <summary>未保存の編集内容を書き出して読み戻し、Core上の保存済みWFが変わらないことを確認します。</summary>
+    /// <returns>管理APIを使った書き出しと再読み込みの検証。</returns>
     [Fact]
     public async Task ExportAndParseDoNotSaveOrActivateAsync()
     {

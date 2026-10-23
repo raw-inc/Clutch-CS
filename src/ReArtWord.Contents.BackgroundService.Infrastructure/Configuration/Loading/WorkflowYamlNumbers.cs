@@ -6,11 +6,11 @@ using YamlDotNet.Serialization.NodeDeserializers;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Loading;
 
-/// <summary>JSONで扱える数値を浮動小数点へ丸めず、YAMLから契約JSONへ引き継ぎます。</summary>
+/// <summary>YAMLからJSONへ変換する際に、数値の桁数や指数表記を保持します。</summary>
 internal static class WorkflowYamlNumbers
 {
-    /// <summary>JSON以外のYAMLスカラーは既存の型判定へ委譲します。</summary>
-    /// <returns>桁数と指数を保持したJSONです。</returns>
+    /// <summary>数値の丸め誤差を防ぎながら、YAMLをJSONへ変換します。</summary>
+    /// <returns>変換後のJSON文字列。</returns>
     internal static string ReadJson(string text)
     {
         object model = new DeserializerBuilder().WithDuplicateKeyChecking().WithMaximumRecursion(64)
@@ -22,7 +22,7 @@ internal static class WorkflowYamlNumbers
             .WithTypeConverter(new NumberWriter()).Build().Serialize(model);
     }
 
-    /// <summary>JSONの項目名へ数値スカラーを出力せず、共有されたYAMLの参照は一度だけ辿ります。</summary>
+    /// <summary>参照の循環を避けながら、数値のキーをJSONで使用できる文字列に変換します。</summary>
     private static void NormalizeKeys(object? value, HashSet<object> visited)
     {
         if (value is null || !visited.Add(value))
@@ -54,14 +54,14 @@ internal static class WorkflowYamlNumbers
         }
     }
 
-    /// <summary>解析済みのJSON数値だけを表します。</summary>
+    /// <summary>JSON形式で検証済みの数値文字列。</summary>
     private sealed record Number(string Text);
 
-    /// <summary>引用されていないJSON数値を、その字句のまま所有します。</summary>
+    /// <summary>YAMLの数値を浮動小数点数に変換せず、文字列として保持します。</summary>
     private sealed class NumberReader : INodeDeserializer
     {
-        /// <summary>文字列やYAML固有表記は既存の読込みへ渡します。</summary>
-        /// <returns>この読込みで数値を取得したかです。</returns>
+        /// <summary>JSONとして解釈できる数値を読み取ります。その他の値は標準のYAML解析に任せます。</summary>
+        /// <returns>数値を読み取った場合はtrue。</returns>
         public bool Deserialize(IParser parser, Type expectedType, Func<IParser, Type, object?> nestedObjectDeserializer,
             out object? value, ObjectDeserializer rootDeserializer)
         {
@@ -89,18 +89,18 @@ internal static class WorkflowYamlNumbers
         }
     }
 
-    /// <summary>検査済み数値だけをJSON互換のプレーンスカラーへ戻します。</summary>
+    /// <summary>保持した数値文字列を、JSONの数値として出力します。</summary>
     private sealed class NumberWriter : IYamlTypeConverter
     {
-        /// <summary>任意の文字列を生のJSONとして出力しません。</summary>
-        /// <returns>所有する数値型かです。</returns>
+        /// <summary>検証済みの数値文字列を表す型かどうかを判定します。</summary>
+        /// <returns>Number型の場合はtrue。</returns>
         public bool Accepts(Type type) => type == typeof(Number);
 
-        /// <summary>この変換は読込みには使いません。</summary>
-        /// <returns>読込みには使用できません。</returns>
+        /// <summary>書き出し専用のため、このメソッドは使用できません。</summary>
+        /// <returns>常にNotSupportedExceptionを送出するため、値は返しません。</returns>
         public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer) => throw new NotSupportedException();
 
-        /// <summary>検証済みの字句を二重引用や再計算せず出力します。</summary>
+        /// <summary>丸め誤差が生じないよう、読み取り時の数値表記で出力します。</summary>
         public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer)
             => emitter.Emit(new Scalar(AnchorName.Empty, TagName.Empty, ((Number)value!).Text, ScalarStyle.Plain, true, false));
     }

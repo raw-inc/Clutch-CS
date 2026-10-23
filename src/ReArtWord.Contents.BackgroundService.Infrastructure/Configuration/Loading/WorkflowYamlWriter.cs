@@ -9,11 +9,11 @@ using YamlDotNet.RepresentationModel;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Loading;
 
-/// <summary>定義・バイト列・入力の型情報を、読込み可能なYAMLへ書き出します。</summary>
+/// <summary>入力値と型情報を保持して、ワークフロー定義をYAMLへ変換します。</summary>
 public static class WorkflowYamlWriter
 {
-    /// <summary>現在の草稿を保存や有効化せず、通常のYAML構造へ変換します。</summary>
-    /// <returns>WorkflowYamlReaderで読める定義です。</returns>
+    /// <summary>ワークフロー定義を、WorkflowYamlReaderで読み込めるYAMLへ変換します。</summary>
+    /// <returns>ワークフロー定義のYAML文字列。</returns>
     public static string Write(WorkflowDefinition definition)
     {
         ArgumentNullException.ThrowIfNull(definition);
@@ -58,8 +58,8 @@ public static class WorkflowYamlWriter
         return output.ToString();
     }
 
-    /// <summary>文字列を暗黙の真偽値・日時・数値へ変換させません。</summary>
-    /// <returns>値の種類と数値の精度を保持するYAMLノードです。</returns>
+    /// <summary>文字列が数値や日付として読み込まれないよう、型に応じたYAML表現へ変換します。</summary>
+    /// <returns>変換後のYAMLノード。</returns>
     private static YamlNode Convert(JsonNode? value)
     {
         if (value is JsonObject mapping)

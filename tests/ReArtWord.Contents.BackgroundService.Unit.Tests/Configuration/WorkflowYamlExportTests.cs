@@ -10,13 +10,13 @@ using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Configuration;
 
-/// <summary>YAMLの書出しと再読込みで、値と実行・編集の設定を維持します。</summary>
+/// <summary>YAMLへの書き出しと再読み込みで、ワークフローの内容が変わらないことを検証します。</summary>
 public sealed class WorkflowYamlExportTests
 {
     private static readonly string[] yamlLikeStrings = ["true", "null", "001", "yes", "2026-01-01"];
 
-    /// <summary>JSON値、バイト列、型情報と有効状態を同じ定義へ戻します。</summary>
-    /// <returns>元定義を変更せず、契約全体が一致する確認です。</returns>
+    /// <summary>バイト列、型情報、有効状態を含む定義が、再読み込み後も一致することを確認します。</summary>
+    /// <returns>元の定義と再読み込みした定義の比較。</returns>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -47,7 +47,7 @@ public sealed class WorkflowYamlExportTests
         Assert.Equal(new byte[] { 0, 1, 254, 255 }, actual.Nodes[0].Inputs!["packet"].Binary.ToArray());
     }
 
-    /// <summary>引用・改行・特殊なキーを値の一部として保持します。</summary>
+    /// <summary>引用符や改行、特殊文字を含むキーが、再読み込み後も変わらないことを確認します。</summary>
     [Theory]
     [InlineData("true")]
     [InlineData("null")]
@@ -62,7 +62,7 @@ public sealed class WorkflowYamlExportTests
         Assert.Equal(ContractJson.Hash(expected), ContractJson.Hash(WorkflowYamlReader.Read(WorkflowYamlWriter.Write(expected))));
     }
 
-    /// <summary>存在しない入力へ型情報を適用した不正な定義を受け付けません。</summary>
+    /// <summary>存在しない入力に型情報を指定した場合、読み込みを拒否することを確認します。</summary>
     [Fact]
     public void OrphanedInputTypesAreRejected()
     {
@@ -77,7 +77,7 @@ public sealed class WorkflowYamlExportTests
             """));
     }
 
-    /// <summary>従来のYAMLで使える数値のマッピングキーも文字列キーへ引き継ぎます。</summary>
+    /// <summary>数値で記述されたYAMLのキーを、従来どおり文字列のキーとして読み込めることを確認します。</summary>
     [Fact]
     public void NumericMappingKeysRemainReadable()
     {
