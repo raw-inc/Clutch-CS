@@ -16,6 +16,7 @@
     <ProjectReference Include="../../src/ReArtWord.Contents.BackgroundService.CoreService/ReArtWord.Contents.BackgroundService.CoreService.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../src/ReArtWord.Contents.BackgroundService.SignalCapture/ReArtWord.Contents.BackgroundService.SignalCapture.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../src/ReArtWord.Contents.BackgroundService.ClientHost/ReArtWord.Contents.BackgroundService.ClientHost.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../src/ReArtWord.Contents.BackgroundService.CommandLine/ReArtWord.Contents.BackgroundService.CommandLine.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="../../src/ReArtWord.Contents.BackgroundService.Contracts/ReArtWord.Contents.BackgroundService.Contracts.csproj" />
     <ProjectReference Include="../../src/ReArtWord.Contents.BackgroundService.Infrastructure/ReArtWord.Contents.BackgroundService.Infrastructure.csproj" />
     <ProjectReference Include="../../src/ReArtWord.Contents.BackgroundService.Updater/ReArtWord.Contents.BackgroundService.Updater.csproj" ReferenceOutputAssembly="false" />

@@ -1,0 +1,11 @@
+{
+  "Cluster archive": "クラスターのアーカイブ",
+  "Export shared settings and saved and active workflows. Logs retained by the cluster members can be included.": "共通設定とWFの保存版・有効版をまとめて書き出します。クラスター内の各Coreが保持するログも含められます。",
+  "Include retained log entries": "保持中のログ本文・履歴を含める",
+  "Export cluster archive": "アーカイブを書き出す",
+  "Restore archives from the CLI or Setup → Repair.": "復元はCLI、またはセットアップの「修復」から行ってください。",
+  "Preparing the archive…": "アーカイブを作成しています…",
+  "Archive download started.": "アーカイブのダウンロードを開始しました。",
+  "archive.targetUnavailable": "接続先を確認してから、もう一度お試しください。",
+  "archive.exportUnconfirmed": "アーカイブの作成を確認できませんでした。操作IDを使って結果を確認してください。"
+}
