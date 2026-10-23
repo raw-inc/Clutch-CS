@@ -157,13 +157,25 @@
               <CheckBox IsChecked="{Binding Settings.AllowActive}"><TextBlock Classes="note" Text="{Binding Text[Active]}" /></CheckBox>
             </StackPanel>
             <StackPanel Classes="form" IsVisible="{Binding IsRepair}">
-              <RadioButton Content="{Binding Text[AutoRepair]}" IsChecked="{Binding !Settings.Reinstall, Mode=OneWay}" Command="{Binding Settings.ChooseRepairModeCommand}">
-                <RadioButton.CommandParameter><x:Boolean>False</x:Boolean></RadioButton.CommandParameter>
+              <RadioButton GroupName="RepairMode" Content="{Binding Text[AutoRepair]}" IsChecked="{Binding Settings.Repair.Automatic, Mode=OneWay}" Command="{Binding Settings.Repair.ChooseModeCommand}" CommandParameter="{x:Static models:EInstallerRepairMode.Automatic}">
               </RadioButton>
-              <RadioButton Content="{Binding Text[Reinstall]}" IsChecked="{Binding Settings.Reinstall, Mode=OneWay}" Command="{Binding Settings.ChooseRepairModeCommand}">
-                <RadioButton.CommandParameter><x:Boolean>True</x:Boolean></RadioButton.CommandParameter>
+              <RadioButton GroupName="RepairMode" Content="{Binding Text[Reinstall]}" IsChecked="{Binding Settings.Repair.Reinstall, Mode=OneWay}" Command="{Binding Settings.Repair.ChooseModeCommand}" CommandParameter="{x:Static models:EInstallerRepairMode.Reinstall}">
               </RadioButton>
-              <StackPanel Classes="form" IsVisible="{Binding Settings.Reinstall}" Margin="24,0,0,0">
+              <RadioButton x:Name="ArchiveRestoreOption" GroupName="RepairMode" Content="{Binding Text[ArchiveRestore]}" IsChecked="{Binding Settings.Repair.RestoreArchive, Mode=OneWay}" Command="{Binding Settings.Repair.ChooseModeCommand}" CommandParameter="{x:Static models:EInstallerRepairMode.Archive}" />
+              <StackPanel x:Name="ArchiveRestoreFields" Classes="form" IsVisible="{Binding Settings.Repair.RestoreArchive}" Margin="24,0,0,0">
+                <TextBlock Classes="note" Text="{Binding Text[ArchiveRestoreHelp]}" />
+                <TextBlock Text="{Binding Text[ArchiveFile]}" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                  <TextBox x:Name="ArchiveFilePath" Text="{Binding Settings.Repair.Archive.Path}" />
+                  <Button Grid.Column="1" Content="{Binding Text[Browse]}" Command="{Binding BrowseCommand}" CommandParameter="Archive" />
+                </Grid>
+                <TextBlock Text="{Binding Text[ArchiveMode]}" />
+                <ComboBox x:Name="ArchiveImportMode" SelectedIndex="{Binding Settings.Repair.Archive.ModeIndex}" HorizontalAlignment="Stretch">
+                  <ComboBoxItem Content="{Binding Text[ArchiveMerge]}" />
+                  <ComboBoxItem Content="{Binding Text[ArchiveReplace]}" />
+                </ComboBox>
+              </StackPanel>
+              <StackPanel Classes="form" IsVisible="{Binding Settings.Repair.Reinstall}" Margin="24,0,0,0">
                 <RadioButton Content="{Binding Text[KeepDb]}" IsChecked="{Binding Settings.KeepDatabase, Mode=OneWay}" Command="{Binding Settings.ChooseDatabaseRetentionCommand}">
                   <RadioButton.CommandParameter><x:Boolean>True</x:Boolean></RadioButton.CommandParameter>
                 </RadioButton>

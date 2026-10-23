@@ -93,13 +93,13 @@ public sealed class WizardTests
             Dispatcher.UIThread.RunJobs();
             string reinstallLabel = model.Text["Reinstall"];
             Activate(window, reinstallLabel);
-            Assert.True(settings.Reinstall);
+            Assert.True(settings.Repair.Reinstall);
             string resyncLabel = model.Text["Resync"];
             Activate(window, resyncLabel);
             Assert.False(settings.KeepDatabase);
             string automaticLabel = model.Text["AutoRepair"];
             Activate(window, automaticLabel);
-            Assert.False(settings.Reinstall);
+            Assert.False(settings.Repair.Reinstall);
             model.OperationIndex = (int)EInstallerOperation.Uninstall;
             model.Page = EWizardPage.Review;
             settings.Confirmed = false;

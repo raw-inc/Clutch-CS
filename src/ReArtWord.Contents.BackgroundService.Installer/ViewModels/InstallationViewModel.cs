@@ -70,10 +70,6 @@ internal sealed partial class InstallationViewModel : CommunityToolkit.Mvvm.Comp
     [RelayCommand]
     private void ChooseClusterMode(bool create) => NewCluster = create;
 
-    /// <summary>選択した修復方式を反映します。</summary>
-    [RelayCommand]
-    private void ChooseRepairMode(bool reinstall) => Reinstall = reinstall;
-
     /// <summary>再配置時のデータ保持方式を反映します。</summary>
     [RelayCommand]
     private void ChooseDatabaseRetention(bool keep) => KeepDatabase = keep;
@@ -192,12 +188,11 @@ internal sealed partial class InstallationViewModel : CommunityToolkit.Mvvm.Comp
         get; set;
     }
 
-    /// <summary>自動修復か再インストールかです。</summary>
-    [ObservableProperty]
-    public partial bool Reinstall
+    /// <summary>修復の実行方式とアーカイブ入力です。</summary>
+    public RepairViewModel Repair
     {
-        get; set;
-    }
+        get;
+    } = new();
 
     /// <summary>DB保持を選択したかです。</summary>
     [ObservableProperty]
@@ -259,6 +254,7 @@ internal sealed partial class InstallationViewModel : CommunityToolkit.Mvvm.Comp
         string? path = field switch
         {
             "Icon" or "Favicon" => await interaction.PickImageAsync(cancellationToken).ConfigureAwait(true),
+            "Archive" => await interaction.PickArchiveAsync(cancellationToken).ConfigureAwait(true),
             _ => await interaction.PickFolderAsync(cancellationToken).ConfigureAwait(true),
         };
         if (path is not null)
@@ -268,6 +264,7 @@ internal sealed partial class InstallationViewModel : CommunityToolkit.Mvvm.Comp
                 case "Root": Root = path; break;
                 case "Icon": Appearance.Icon = path; break;
                 case "Favicon": Appearance.Favicon = path; break;
+                case "Archive": Repair.Archive.Path = path; break;
             }
         }
     }
