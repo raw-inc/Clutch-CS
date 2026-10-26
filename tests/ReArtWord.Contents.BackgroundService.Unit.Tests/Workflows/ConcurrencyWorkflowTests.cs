@@ -150,6 +150,10 @@ public sealed class ConcurrencyWorkflowTests
 
         internal int Active => Volatile.Read(ref active);
         internal int Released => Volatile.Read(ref released);
+        internal ConcurrentQueue<WorkflowConcurrencyRequest> Requests
+        {
+            get;
+        } = new();
 
         /// <summary>一つの枠を待ち、実行器が後で返す所有権を渡します。</summary>
         /// <returns>明示解放まで有効な枠です。</returns>
@@ -157,6 +161,7 @@ public sealed class ConcurrencyWorkflowTests
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000", Justification = "Leaseの所有権は試験対象の実行器へ渡し、回収を検証します。")]
         public async Task<WorkflowConcurrencyAdmission> AcquireAsync(WorkflowConcurrencyRequest request, CancellationToken cancellationToken = default)
         {
+            Requests.Enqueue(request);
             await available.WaitAsync(cancellationToken).ConfigureAwait(false);
             Interlocked.Increment(ref active);
             return new(new Lease(this));
