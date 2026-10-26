@@ -1,8 +1,8 @@
 <Project>
   <PropertyGroup>
-    <VersionPrefix>0.1.5</VersionPrefix>
-    <VersionSuffix>alpha-patch01</VersionSuffix>
-    <VersionRevision>1</VersionRevision>
+    <VersionPrefix>0.1.6</VersionPrefix>
+    <VersionSuffix>alpha</VersionSuffix>
+    <VersionRevision>0</VersionRevision>
     <!-- CIから同じ製品版を明示した場合も修正番号を維持し、別版の指定には持ち込みません。 -->
     <AssemblyVersion Condition="'$(Version)' == '' or '$(Version)' == '$(VersionPrefix)-$(VersionSuffix)' or ('$(VersionSuffix)' == '' and '$(Version)' == '$(VersionPrefix)')">$(VersionPrefix).$(VersionRevision)</AssemblyVersion>
     <FileVersion Condition="'$(AssemblyVersion)' != ''">$(AssemblyVersion)</FileVersion>
