@@ -38,7 +38,7 @@ internal sealed class ElevenLabsSoundEffectsNode : AiOperationNode
     private static string Properties()
     {
         JsonObject properties = JsonNode.Parse(ElevenLabsSpeechSettings.AudioProperties)!.AsObject();
-        properties["model"] = JsonNode.Parse("""{"type":"string","enum":["eleven_text_to_sound_v2"]}""");
+        properties["model"] = JsonNode.Parse("""{"type":"string","minLength":1,"examples":["eleven_text_to_sound_v2"]}""");
         properties["durationSeconds"] = JsonNode.Parse("""{"type":"number","minimum":0.5,"maximum":30}""");
         properties["promptInfluence"] = JsonNode.Parse("""{"type":"number","minimum":0,"maximum":1}""");
         properties["loop"] = new JsonObject { ["type"] = "boolean" };

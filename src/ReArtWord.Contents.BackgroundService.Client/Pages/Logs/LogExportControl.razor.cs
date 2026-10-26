@@ -62,22 +62,22 @@ public sealed partial class LogExportControl : IAsyncDisposable
     private static bool IsRunning(LogExportStatus? value) => value?.State is "queued" or "running";
 
     /// <summary>所有する非同期処理を登録して開始します。</summary>
-    /// <returns>ZIP生成とダウンロード開始の完了です。</returns>
+    /// <returns>ファイル生成とダウンロード開始の完了です。</returns>
     // 抑制理由: UI callbackは画面寿命のトークンを使用します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "UI callbackから所有トークンを渡します。"),
      System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW511", Justification = "activeへ所有し、イベント呼出元とDisposeAsyncで完了を待ちます。")]
-    private Task StartAsync()
+    private Task StartAsync(ELogExportFormat format)
     {
         if (!working)
         {
-            active = GenerateAsync(lifetime.Token);
+            active = GenerateAsync(format, lifetime.Token);
         }
         return active;
     }
 
     /// <summary>受付直後に標準ダウンロードを開始し、本文を保持せず進捗だけを取得します。</summary>
     /// <returns>一回の出力結果です。</returns>
-    private async Task GenerateAsync(CancellationToken cancellationToken = default)
+    private async Task GenerateAsync(ELogExportFormat format, CancellationToken cancellationToken = default)
     {
         working = true;
         problem = null;
@@ -90,7 +90,7 @@ public sealed partial class LogExportControl : IAsyncDisposable
             {
                 source = new(ClusterId ?? throw new InvalidOperationException(), PeerId ?? throw new InvalidOperationException());
             }
-            status = await Api.PostAsync<LogExportStatus>("/client/log-exports/", new LogExportRequest(filter, DisplayTimeZone.Id, source), cancellationToken).ConfigureAwait(true)
+            status = await Api.PostAsync<LogExportStatus>("/client/log-exports/", new LogExportRequest(filter, DisplayTimeZone.Id, source) { Format = format }, cancellationToken).ConfigureAwait(true)
                 ?? throw new InvalidOperationException("log.export.failed");
             await Js.InvokeVoidAsync("contentsBrowser.downloadUrl", cancellationToken, DownloadUrl).ConfigureAwait(true);
             while (IsRunning(status))

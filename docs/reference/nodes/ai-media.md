@@ -12,8 +12,8 @@ AI による生成・分類と、画像・音声・動画の変換に使うノ�
 | `ai.openai.responses` | OpenAI Responses、`POST /v1/responses`。文字列またはinput配列 | 完了した本文 `value` と応答JSON `response`。保存prompt等による入力省略にも対応 |
 | `ai.openai.chat.message` / `ai.openai.responses.message` | roleとcontentからメッセージ一覧を構築。外部通信なし | `messages` に前の一覧をつなぎ、`value` を次の組立てまたは生成へ渡す |
 | `ai.audio.generate` | OpenAI Speech、`POST /v1/audio/speech`。読み上げ文字列と `voice` | WAV（既定）またはMP3。任意の `endpoint`・`instructions`・`speed` を指定可能 |
-| `ai.audio.qwen.generate` | Qwen3-TTS-VC、`POST /api/v1/services/aigc/multimodal-generation/generation`。読み上げ文字列と登録済み音声ID | WAVファイル。対応モデルは `qwen3-tts-vc-2026-01-22`。リージョンはSingaporeまたはBeijing |
-| `ai.audio.elevenlabs.generate` | ElevenLabs、`POST /v1/text-to-speech/{voice_id}`。読み上げ文字列と利用可能な音声ID | MP3またはWAV。モデルは `eleven_multilingual_v2`。任意の音声設定・速度・seed・正規化・前後文・発音辞書に対応 |
+| `ai.audio.qwen.generate` | Qwen3-TTS-VC、`POST /api/v1/services/aigc/multimodal-generation/generation`。読み上げ文字列と登録済み音声ID | WAVファイル。モデルの初期値は `qwen3-tts-vc-2026-01-22`。リージョンはSingaporeまたはBeijing |
+| `ai.audio.elevenlabs.generate` | ElevenLabs、`POST /v1/text-to-speech/{voice_id}`。読み上げ文字列と利用可能な音声ID | MP3またはWAV。モデルの初期値は `eleven_multilingual_v2`。任意の音声設定・速度・seed・正規化・前後文・発音辞書に対応 |
 | `ai.audio.elevenlabs.v3.generate` | Eleven v3、`POST /v1/text-to-speech/{voice_id}` | MP3またはWAV。v3専用レシピ。安定度は0〜1の小数をそのまま送信 |
 | `ai.audio.elevenlabs.v4.generate` | Eleven v4、`POST /v1/text-to-dialogue`。読み上げ文字列と音声IDを一組の `inputs` にして送信 | MP3またはWAV。安定度・類似度は0〜1の小数。速度・スタイル設定は非対応 |
 | `ai.audio.elevenlabs.soundEffects` | Eleven SoundEffects、`POST /v1/sound-generation` | MP3。長さ（任意0.5～30秒）・プロンプト強度・ループ |
@@ -26,6 +26,8 @@ AI による生成・分類と、画像・音声・動画の変換に使うノ�
 | `media.picture.convert` | 許可されたローカルファイル | PNG・JPEG・WebPへ変換 |
 
 音声生成は、カタログの「音声生成」カテゴリからサービス別のノードを選択してください。`ai.audio.generate` はOpenAI専用です。OpenAIのモデル名は設定で必ず指定し、ノードが使用するAPIと入力形式に対応するモデルを指定してください。モデル名を自動で変更する機能はありません。
+
+モデル名は設定欄の候補から選べます。候補にないモデルを使う場合は、モデル名を持つStringを「モデル」の入力端子へ接続してください。接続した値が設定欄の選択より優先され、そのままAPIへ送信されます。各ノードが使用するAPIに対応したモデルを指定してください。モデル名を変えても、APIの種類やノードの設定項目は変わりません。
 
 指示文・音量・ピッチ・Seedなどの任意API項目は、未指定またはJSON `null` の場合に送信を省略します。成功した入力のObjectに接続先プロパティがない場合も同じです。ForEachの要素に `feature` がない、または `"feature": null` の場合、Qwenの指示文へ接続したまま指示文なしで生成できます。保存欄の古い値へ戻したり、JSONスキーマの `default` を自動補完したりはしません。
 
@@ -113,7 +115,7 @@ Chatの `model` と `value` は必須です。Responsesでは保存 `prompt` に
 
 ### Qwen3-TTS-VC
 
-[ワークフロー例](../../../samples/generic-ai-media/qwen-speech.json)があります。`model` は `qwen3-tts-vc-2026-01-22` に固定です。`region` は `singapore`（既定）または `beijing`、`languageType` は `Auto`（既定）または `Japanese` などを指定します。APIキー、モデル、音声IDのリージョンをそろえてください。
+[ワークフロー例](../../../samples/generic-ai-media/qwen-speech.json)があります。`model` の初期値は `qwen3-tts-vc-2026-01-22` です。`region` は `singapore`（既定）または `beijing`、`languageType` は `Auto`（既定）または `Japanese` などを指定します。APIキー、モデル、音声IDのリージョンをそろえてください。
 
 ```json
 {

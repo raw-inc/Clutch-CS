@@ -2,7 +2,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Observability.Logging;
 
 namespace ReArtWord.Contents.BackgroundService.ClientHost.Logs;
 
-/// <summary>ログZIPの受付・状態・取消・保存を既存のHTTP待受内で提供します。</summary>
+/// <summary>ログ出力の受付・状態・取消・保存を既存のHTTP待受内で提供します。</summary>
 internal static class LogExportRoutes
 {
     /// <summary>本文をブラウザーのヒープへ展開せず、標準ダウンロードへ接続します。</summary>
@@ -38,13 +38,14 @@ internal static class LogExportRoutes
             if (jobs.Read(id) is { } status && string.Equals(status.State, queued, StringComparison.Ordinal))
             {
                 context.Response.Headers["X-Accel-Buffering"] = "no";
-                return Results.Stream(output => SendAsync(jobs, id, output, context, context.RequestAborted), "application/zip", fileDownloadName: status.FileName);
+                string contentType = status.Format switch { ELogExportFormat.Log => "text/plain; charset=utf-8", _ => "application/zip" };
+                return Results.Stream(output => SendAsync(jobs, id, output, context, context.RequestAborted), contentType, fileDownloadName: status.FileName);
             }
             return Results.NotFound();
         });
     }
 
-    /// <summary>不完全なZIPを正常終了として渡さず、切断時は取得処理も終了させます。</summary>
+    /// <summary>送信中の失敗を正常終了として渡さず、切断時は取得処理も終了させます。</summary>
     /// <returns>送信完了または接続の中断です。</returns>
     // 抑制理由: HTTP応答が始まった後はエラー本文へ置換できないため、要求接続を中断します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031", Justification = "出力単位の失敗は状態に記録済みで、HTTP接続を明示的に中断します。")]

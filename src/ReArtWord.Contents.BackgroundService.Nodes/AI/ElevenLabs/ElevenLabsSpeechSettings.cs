@@ -29,7 +29,7 @@ internal static class ElevenLabsSpeechSettings
         properties["outputFormat"]!["description"] = "Select MP3 or WAV and use the matching file extension. WAV at 44.1 kHz requires a Pro plan or above.";
         string model = v3 ? "eleven_v3"
                           : "eleven_multilingual_v2";
-        properties["model"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray(model), ["default"] = model };
+        properties["model"] = new JsonObject { ["type"] = "string", ["minLength"] = 1, ["examples"] = new JsonArray(model), ["default"] = model };
         properties["voice"] = JsonNode.Parse("""{"type":"string","minLength":1,"description":"Voice ID available to this ElevenLabs API key."}""");
         JsonObject common = JsonNode.Parse("""
             {"stability":{"type":"number","minimum":0,"maximum":1},"speed":{"type":"number","minimum":0.7,"maximum":1.2},

@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using ReArtWord.Contents.BackgroundService.Client.Services;
 using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Navigation;
-using ReArtWord.Contents.BackgroundService.Contracts.Management.Discovery;
 using ReArtWord.Contents.BackgroundService.Contracts.Observability.Logging;
 
 namespace ReArtWord.Contents.BackgroundService.Client.Pages.Logs;
@@ -44,7 +43,7 @@ public sealed partial class LogViewer : IAsyncDisposable
     private DateTimeOffset? lastRefresh;
     private Func<string>? inputProblem;
     private LogQuery? query;
-    private LogSearchSession? session;
+    private LogPageHistory? session;
     private ScopedLogEntry? selected;
     private LogStatistics? statistics;
     private bool HasSelection => !string.IsNullOrWhiteSpace(Api.SelectedClusterId) && !string.IsNullOrWhiteSpace(Api.SelectedPeerId);
@@ -95,7 +94,7 @@ public sealed partial class LogViewer : IAsyncDisposable
     private Task ClearRelatedAsync()
     {
         causation = string.Empty;
-        return SearchAsync(false);
+        return SearchAsync(0);
     }
 
     /// <summary>選択した記録と同じ因果IDを、現在の検索範囲で追跡します。</summary>
@@ -111,7 +110,7 @@ public sealed partial class LogViewer : IAsyncDisposable
         text = level = peer = workflow = node = string.Empty;
         from = until = null;
         causation = id.Value.ToString();
-        return SearchAsync(false);
+        return SearchAsync(0);
     }
 
     /// <summary>検索範囲を切り替え、以前のカーソルを持ち越しません。</summary>
@@ -122,7 +121,7 @@ public sealed partial class LogViewer : IAsyncDisposable
     {
         allClusters = args.Value?.ToString() is "all";
         statistics = null;
-        return SearchAsync(false);
+        return SearchAsync(0);
     }
 
     /// <summary>圧縮履歴を含める範囲を変更し、以前のページや自動再取得の条件を引き継ぎません。</summary>
@@ -132,7 +131,7 @@ public sealed partial class LogViewer : IAsyncDisposable
     private Task UncompressedOnlyChangedAsync(ChangeEventArgs args)
     {
         uncompressedOnly = args.Value is true;
-        return SearchAsync(false);
+        return SearchAsync(0);
     }
 
     /// <summary>ページ内だけの自動取得間隔を変更します。</summary>
@@ -148,7 +147,7 @@ public sealed partial class LogViewer : IAsyncDisposable
         refreshSeconds = seconds;
         nextRefresh = Api.UtcNow.AddSeconds(seconds);
         return seconds == 0 ? Task.CompletedTask
-                            : SearchAsync(false, refresh: query is not null);
+                            : SearchAsync(0, refresh: query is not null);
     }
 
     /// <summary>初期の記録状態を取得し、所有する監視だけを開始します。</summary>
@@ -185,12 +184,13 @@ public sealed partial class LogViewer : IAsyncDisposable
                                                                                       : value;
 
     /// <summary>検索条件と取得先を固定し、古い応答は画面へ反映しません。</summary>
-    /// <returns>次ページ、または最新の先頭ページです。</returns>
+    /// <returns>前後のページ、または最新の先頭ページです。</returns>
     // 抑制理由: UIコールバックの固定署名で、取消は要求ごとと画面寿命で管理します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "UIコールバックの固定署名です。")]
-    private async Task SearchAsync(bool next, bool refresh = false)
+    private async Task SearchAsync(int direction, bool refresh = false)
     {
-        if (((next || refresh) && loading) || (next && session is null))
+        bool moving = direction != 0;
+        if (((moving || refresh) && loading) || (moving && (session is null || session.PageIndex + direction < 0 || (0 < direction && !hasMore))))
         {
             return;
         }
@@ -202,36 +202,29 @@ public sealed partial class LogViewer : IAsyncDisposable
         try
         {
             await cancelling.ConfigureAwait(true);
-            if (!next && !refresh)
+            if (!moving && !refresh)
             {
                 inputProblem = null;
                 query = ReadQuery();
                 selected = null;
             }
-            if (next)
+            if (moving)
             {
                 refreshSeconds = 0;
             }
-            LogSearchSession? reader = session;
-            if (!next)
+            LogPageHistory? reader = session;
+            if (!moving)
             {
-                session = null;
-                hasMore = false;
-                LogQuery requested = query ?? ReadQuery();
-                IReadOnlyList<LogSearchSource> sources;
-                if (SearchAllClusters)
+                if (!refresh)
                 {
-                    DiscoveredCluster[] clusters = await Api.GetForPeerAsync<DiscoveredCluster[]>("/client/clusters", null, null, cancellation.Token).ConfigureAwait(true) ?? [];
-                    sources = LogSearchSession.Discover(clusters);
+                    session = null;
+                    hasMore = false;
                 }
-                else
-                {
-                    sources = Api.SelectedClusterId is { Length: > 0 } cluster && Api.SelectedPeerId is { Length: > 0 } target ? [new(cluster, target)]
-                                                                                                                               : [];
-                }
-                reader = new(requested, sources, (source, filter, token) => Api.PostForPeerAsync<LogQueryResult>("/api/logs/query", filter, source.PeerId, source.ClusterId, cancellationToken: token));
+                reader = await LogPageHistory.CreateAsync(Api, query ?? ReadQuery(), SearchAllClusters, cancellation.Token).ConfigureAwait(true);
             }
-            LogSearchPage page = await reader!.NextAsync(cancellation.Token).ConfigureAwait(true);
+            int index = moving ? reader!.PageIndex + direction
+                               : 0;
+            LogSearchPage page = await reader!.ReadAsync(index, cancellation.Token).ConfigureAwait(true);
             if (current != generation)
             {
                 return;
@@ -245,6 +238,8 @@ public sealed partial class LogViewer : IAsyncDisposable
             }
             session = reader;
             entries = page.Entries;
+            inputProblem = null;
+            selected = null;
             hasMore = page.HasMore;
             hasResults = true;
             lastRefresh = Api.UtcNow;
@@ -318,7 +313,7 @@ public sealed partial class LogViewer : IAsyncDisposable
                 }
                 if (0 < refreshSeconds && query is not null && !loading && nextRefresh <= Api.UtcNow)
                 {
-                    await SearchAsync(false, refresh: true).ConfigureAwait(true);
+                    await SearchAsync(0, refresh: true).ConfigureAwait(true);
                     changed = true;
                 }
                 if (changed)

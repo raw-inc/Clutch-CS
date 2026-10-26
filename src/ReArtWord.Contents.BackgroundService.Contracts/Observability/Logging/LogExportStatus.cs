@@ -8,4 +8,11 @@ namespace ReArtWord.Contents.BackgroundService.Contracts.Observability.Logging;
 /// <param name="Problem">失敗理由のコードです。</param>
 /// <param name="FileName">保存用の安全なファイル名です。</param>
 /// <param name="ExpiresAt">未開始の受付または送信状態の保持期限です。ファイルは保持しません。</param>
-public sealed record LogExportStatus(Guid Id, string State, long Entries, bool Complete, string? Problem, string FileName, DateTimeOffset ExpiresAt);
+public sealed record LogExportStatus(Guid Id, string State, long Entries, bool Complete, string? Problem, string FileName, DateTimeOffset ExpiresAt)
+{
+    /// <summary>受付時に固定した保存形式です。</summary>
+    public ELogExportFormat Format
+    {
+        get; init;
+    }
+}

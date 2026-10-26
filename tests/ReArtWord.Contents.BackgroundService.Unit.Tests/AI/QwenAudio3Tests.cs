@@ -1,8 +1,10 @@
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
+using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Data;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Observability;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.AI;
@@ -10,6 +12,82 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.AI;
 /// <summary>新Qwen-Audioの専用HTTP本文とダウンロード境界を検証します。</summary>
 public sealed class QwenAudio3Tests
 {
+    /// <summary>HTTPエラーは結果へ変換し、診断記録の障害でもノード外へ例外を漏らしません。</summary>
+    /// <returns>拒否と結果不明の区別、再送防止、秘密情報の保護です。</returns>
+    [Theory]
+    [InlineData(401, EOutcome.Failed, false)]
+    [InlineData(429, EOutcome.Failed, false)]
+    [InlineData(408, EOutcome.Unknown, false)]
+    [InlineData(502, EOutcome.Unknown, false)]
+    [InlineData(503, EOutcome.Unknown, false)]
+    [InlineData(502, EOutcome.Unknown, true)]
+    public async Task HttpFailuresReturnResultsWithoutRetryingAsync(int status, EOutcome expected, bool logFails)
+    {
+        using MediaTestFiles files = new();
+        AiWireFixture server = new((_, _) => Task.FromResult(AiWireResponse.Json("{\"message\":\"private-provider-detail\"}", status)));
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = server.ConfigureAwait(true);
+        RecordingWorkflowLog log = new() { Throw = logFails };
+        string output = Path.Combine(files.Root, "generated.wav");
+        NodeExecutionContext context = NodeTestContext.Create(AiGeneratorTests.Settings(server, Settings(output)), NodeValue.FromObject("private-prompt")) with { Log = log };
+        NodeResult result = await AiGeneratorTests.Node(server, files, "ai.audio.qwen.audio3.generate").ExecuteAsync(context).ConfigureAwait(true);
+        Assert.Equal(expected, result.Outcome);
+        Assert.Equal("ai.incomplete", result.ReasonCode);
+        Assert.True(result.FileAccessCompleted);
+        Assert.Contains("httpStatus=" + status.ToString(System.Globalization.CultureInfo.InvariantCulture), result.Message, StringComparison.Ordinal);
+        Assert.Contains("stage=httpResponse", result.Message, StringComparison.Ordinal);
+        Assert.Single(server.Requests);
+        Assert.False(File.Exists(output));
+        JsonElement recorded = Assert.Single(log.Entries).Data!.Json;
+        Assert.Equal("ai.incomplete", recorded.GetProperty("reasonCode").GetString());
+        Assert.Equal("System.Net.Http.HttpRequestException", recorded.GetProperty("exception").GetProperty("Type").GetString());
+        Assert.Equal(JsonValueKind.Null, recorded.GetProperty("exception").GetProperty("Message").ValueKind);
+        string diagnostics = JsonSerializer.Serialize(new { result, logs = log.Entries.ToArray() });
+        Assert.DoesNotContain("private-provider-detail", diagnostics, StringComparison.Ordinal);
+        Assert.DoesNotContain("private-prompt", diagnostics, StringComparison.Ordinal);
+        Assert.DoesNotContain("fixture-secret-not-valid", diagnostics, StringComparison.Ordinal);
+    }
+
+    /// <summary>HTTP失敗後も、利用者が開始した次の実行で音声を正常に保存できます。</summary>
+    /// <returns>自動再生成せず、次の実行へ障害状態を持ち越さないことです。</returns>
+    [Fact]
+    public async Task NewExecutionCanSucceedAfterProviderFailureAsync()
+    {
+        using MediaTestFiles files = new();
+        byte[] wave = await File.ReadAllBytesAsync(await files.CreateAsync("audio").ConfigureAwait(true)).ConfigureAwait(true);
+        Uri? origin = null;
+        int generations = 0;
+        AiWireFixture server = new((request, _) =>
+        {
+            string get = "GET";
+            if (string.Equals(request.Method, get, StringComparison.Ordinal))
+            {
+                return Task.FromResult(new AiWireResponse(200, "audio/wav", wave));
+            }
+            if (Interlocked.Increment(ref generations) == 1)
+            {
+                return Task.FromResult(AiWireResponse.Json("{}", 502));
+            }
+            return Task.FromResult(AiWireResponse.Json(JsonSerializer.Serialize(new
+            {
+                output = new { finish_reason = "stop", audio = new { url = new Uri(origin!, "audio").AbsoluteUri } },
+            })));
+        });
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = server.ConfigureAwait(true);
+        origin = server.BaseUri;
+        string output = Path.Combine(files.Root, "generated.wav");
+        IActionNode node = AiGeneratorTests.Node(server, files, "ai.audio.qwen.audio3.generate");
+        NodeExecutionContext context = NodeTestContext.Create(AiGeneratorTests.Settings(server, Settings(output)), NodeValue.FromObject("こんにちは"));
+        NodeResult failed = await node.ExecuteAsync(context).ConfigureAwait(true);
+        Assert.Equal(EOutcome.Unknown, failed.Outcome);
+        Assert.Single(server.Requests);
+        Assert.False(File.Exists(output));
+        NodeResult next = await node.ExecuteAsync(context with { ExecutionId = Guid.NewGuid() }).ConfigureAwait(true);
+        Assert.Equal(EOutcome.Succeeded, next.Outcome);
+        Assert.Equal(2, generations);
+        Assert.Equal(3, server.Requests.Count);
+        Assert.Equal(wave, await File.ReadAllBytesAsync(output).ConfigureAwait(true));
+    }
+
     /// <summary>新APIへ設定を送り、認証を付けず生成URLからWAVまたはMP3を取得します。</summary>
     /// <returns>旧APIの本文と混ざらない生成経路の確認です。</returns>
     [Theory]
@@ -88,7 +166,7 @@ public sealed class QwenAudio3Tests
     public void WorkspaceSelectsOnlyTheDeclaredRegion(string region, string workspace, string? expected)
         => Assert.Equal(expected, AiServiceConnection.Endpoint("ai.audio.qwen.audio3.generate", region, workspace)?.AbsoluteUri);
 
-    /// <summary>旧モデル・不正設定・長すぎる入力を送信前に止めます。</summary>
+    /// <summary>空のモデル名・不正設定・長すぎる入力を送信前に止めます。</summary>
     /// <returns>入力契約を実行時にも検証する確認です。</returns>
     [Fact]
     public async Task InvalidRequestsDoNotDispatchAsync()
@@ -96,7 +174,7 @@ public sealed class QwenAudio3Tests
         using MediaTestFiles files = new();
         AiWireFixture server = new((_, _) => Task.FromResult(AiWireResponse.Json("{}")));
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = server.ConfigureAwait(true);
-        foreach ((string key, object value) in new (string, object)[] { ("model", "qwen3-tts-flash"), ("speed", 0.4), ("seed", 65536), ("workspaceId", "invalid/host"), ("sampleRate", 9999) })
+        foreach ((string key, object value) in new (string, object)[] { ("model", ""), ("speed", 0.4), ("seed", 65536), ("workspaceId", "invalid/host"), ("sampleRate", 9999) })
         {
             Dictionary<string, object> settings = Settings(Path.Combine(files.Root, "generated.wav"));
             settings[key] = value;

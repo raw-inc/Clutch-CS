@@ -27,7 +27,7 @@ public sealed class ElevenLabsSpeechTests(ITestOutputHelper testOutput)
         Assert.Equal("value", Assert.Single(descriptor.Outputs).Name);
         Assert.Equal("value", Assert.Single(descriptor.Inputs).Name);
         JsonElement properties = descriptor.SettingsSchema.GetProperty("properties");
-        Assert.Equal(["eleven_multilingual_v2"], properties.GetProperty("model").GetProperty("enum").EnumerateArray().Select(value => value.GetString()));
+        Assert.Equal(["eleven_multilingual_v2"], properties.GetProperty("model").GetProperty("examples").EnumerateArray().Select(value => value.GetString()));
         Assert.False(properties.TryGetProperty("provider", out _));
         Assert.False(properties.TryGetProperty("apiKey", out _));
         Assert.False(properties.TryGetProperty("baseUrl", out _));
@@ -70,11 +70,10 @@ public sealed class ElevenLabsSpeechTests(ITestOutputHelper testOutput)
         Assert.Empty(Directory.EnumerateFiles(files.Root, "*.partial"));
     }
 
-    /// <summary>非対応モデルと音声ID、秘密やNIC不足を送信前に拒否します。</summary>
+    /// <summary>空のモデル名や不正な音声ID、秘密やNIC不足を送信前に拒否します。</summary>
     /// <returns>課金要求がない未実行境界です。</returns>
     [Theory]
-    [InlineData("model", "eleven_v3_conversational")]
-    [InlineData("model", "eleven_turbo_v2_5")]
+    [InlineData("model", "")]
     [InlineData("voice", "")]
     [InlineData("voice", "../another-endpoint")]
     [InlineData("voice", "voice?output_format=wav_44100")]

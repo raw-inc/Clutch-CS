@@ -95,7 +95,7 @@ public sealed class ElevenLabsV4Tests
     [InlineData("style", "0.5")]
     [InlineData("similarity", "1.01")]
     [InlineData("stability", "-0.01")]
-    [InlineData("model", "\"eleven_v4_turbo\"")]
+    [InlineData("model", "\"\"")]
     [InlineData("voice", "\"../voice\"")]
     public async Task InvalidSettingsDoNotDispatchAsync(string key, string json)
     {

@@ -15,9 +15,9 @@
     @if(inputProblem is not null){<p class="notice" role="status">@inputProblem()</p>}
     <div class="log-search">
         <div class="log-search-main">
-            <div class="search-field"><UiIcon Name="search" /><input aria-label="@Ui["Log content"]" placeholder="@Ui["Search log content"]" @bind="text" @bind:event="oninput" @onkeydown="args => string.Equals(args.Key, EnterKey, StringComparison.Ordinal) ? SearchAsync(false) : Task.CompletedTask" /></div>
+            <div class="search-field"><UiIcon Name="search" /><input aria-label="@Ui["Log content"]" placeholder="@Ui["Search log content"]" @bind="text" @bind:event="oninput" @onkeydown="args => string.Equals(args.Key, EnterKey, StringComparison.Ordinal) ? SearchAsync(0) : Task.CompletedTask" /></div>
             <select aria-label="@Ui["Severity"]" @bind="level"><option value="">@Ui["All severities"]</option>@foreach(var value in new[]{"DEBUG","INFO","WARN","ERROR","FATAL"}){<option value="@value">@value</option>}</select>
-            <button class="primary" @onclick="()=>SearchAsync(false)" disabled="@loading"><UiIcon Name="search" />@(loading ? Ui["Searching…"] : Ui["Search"])</button>
+            <button class="primary" @onclick="()=>SearchAsync(0)" disabled="@loading"><UiIcon Name="search" />@(loading ? Ui["Searching…"] : Ui["Search"])</button>
         </div>
         <div class="log-observation-controls">
             <label>@Ui["log.viewer.scope"]<select value="@(SearchAllClusters ? "all" : "current")" @onchange="ScopeChangedAsync"><option value="current" disabled="@(!HasSelection)">@Ui["log.viewer.current"]</option><option value="all">@Ui["log.viewer.all"]</option></select></label>
@@ -103,7 +103,15 @@
         var omitted = row.Omission!;
         <p class="notice log-missing">@Ui["Omitted log details"]: @row.Source.ClusterId / @omitted.EntryId<br />@Ui["Fields"]: @string.Join(", ", omitted.Fields) · @Ui["Reason"]: @omitted.Reason</p>
     }
-    @if(hasMore){<div class="toolbar section"><button @onclick="()=>SearchAsync(true)" disabled="@loading">@Ui["Next page"]</button>@if(refreshSeconds != 0){<span class="small">@Ui["log.viewer.nextPauses"]</span>}</div>}
+    @if(session is { PageIndex: >= 0 })
+    {
+        <nav class="toolbar section" aria-label="@Ui["log.viewer.pagination"]">
+            <button @onclick="()=>SearchAsync(-1)" disabled="@(loading || session.PageIndex == 0)">@Ui["Previous page"]</button>
+            <span role="status">@Ui.Format("log.viewer.page", session.PageIndex + 1)</span>
+            <button @onclick="()=>SearchAsync(1)" disabled="@(loading || !hasMore)">@Ui["Next page"]</button>
+            @if(refreshSeconds != 0 && (hasMore || 0 < session.PageIndex)){<span class="small">@Ui["log.viewer.nextPauses"]</span>}
+        </nav>
+    }
     @if (statistics is not null)
     {
         <details class="secondary-details">

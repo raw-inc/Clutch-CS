@@ -201,7 +201,7 @@ public sealed class LogViewerAccessTests
     private static async Task SearchAsync(LogViewer viewer, CancellationToken cancellationToken = default)
     {
         MethodInfo search = typeof(LogViewer).GetMethod("SearchAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
-        await ((Task)search.Invoke(viewer, [false, false])!).WaitAsync(cancellationToken).ConfigureAwait(true);
+        await ((Task)search.Invoke(viewer, [0, false])!).WaitAsync(cancellationToken).ConfigureAwait(true);
         await viewer.SetParametersAsync(ParameterView.Empty).ConfigureAwait(true);
     }
 
@@ -215,7 +215,7 @@ public sealed class LogViewerAccessTests
 
     /// <summary>本番への接続を持たず、実レイアウトの依存だけを構成します。</summary>
     /// <returns>描画用サービスです。</returns>
-    private static ServiceCollection Services(ManagementApi api, string uri, ViewerActivator activator)
+    internal static ServiceCollection Services(ManagementApi api, string uri, ViewerActivator activator)
     {
         ServiceCollection services = new();
         services.AddLogging();
@@ -236,7 +236,7 @@ public sealed class LogViewerAccessTests
     }
 
     /// <summary>イベント呼出し対象となる実レイアウトと実ページを保持します。</summary>
-    private sealed class ViewerActivator : IComponentActivator
+    internal sealed class ViewerActivator : IComponentActivator
     {
         internal MainLayout? Layout
         {

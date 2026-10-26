@@ -45,6 +45,10 @@ internal sealed class LogExportJobs : Microsoft.Extensions.Hosting.BackgroundSer
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.Query);
+        if (!Enum.IsDefined(request.Format))
+        {
+            throw new ArgumentException("Unsupported log export format.", nameof(request));
+        }
         _ = TimeZoneInfo.FindSystemTimeZoneById(request.TimeZoneId);
         DateTimeOffset now = clock.GetUtcNow();
         DateTimeOffset until = request.Query.Until ?? now;
@@ -73,8 +77,9 @@ internal sealed class LogExportJobs : Microsoft.Extensions.Hosting.BackgroundSer
                 throw new InvalidOperationException("Log export capacity is in use.");
             }
             Guid id = Guid.NewGuid();
-            string name = "logs-" + now.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture) + "-" + id.ToString("N")[..8] + ".zip";
-            Job job = new(new(id, "queued", 0, false, null, name, now.AddMinutes(2)), fixedRequest, targets);
+            string extension = request.Format switch { ELogExportFormat.Log => ".log", _ => ".zip" };
+            string name = "logs-" + now.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture) + "-" + id.ToString("N")[..8] + extension;
+            Job job = new(new(id, "queued", 0, false, null, name, now.AddMinutes(2)) { Format = request.Format }, fixedRequest, targets);
             jobs.Add(id, job);
             return job.Status;
         }
@@ -111,7 +116,7 @@ internal sealed class LogExportJobs : Microsoft.Extensions.Hosting.BackgroundSer
     }
 
     /// <summary>ブラウザーへの送信中だけ検索し、切断や取消では後続ページを取得しません。</summary>
-    /// <returns>ZIP末尾までの送信です。途中の失敗は呼出元が接続を中断します。</returns>
+    /// <returns>ファイル末尾までの送信です。途中の失敗は呼出元が接続を中断します。</returns>
     // 抑制理由: 一出力の非致命的障害を状態へ記録した後、HTTP境界へ再送出します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031", Justification = "全失敗を出力状態へ記録して再送出し、成功扱いを避けます。"),
      System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW330", Justification = "元の例外を維持してHTTP境界へ通知し、不完全なZIPの送信を中断します。"),
@@ -137,12 +142,23 @@ internal sealed class LogExportJobs : Microsoft.Extensions.Hosting.BackgroundSer
             lifetime.CancelAfter(TimeSpan.FromMinutes(30));
             lifetime.Token.ThrowIfCancellationRequested();
             using LogExportStream stream = new(output, lifetime.Token);
-            (long count, bool complete) = await LogExportArchive.WriteAsync(stream, job.Request, job.Targets.Keys.ToArray(),
-                (source, query, token) => read(job.Targets[source], query, token),
-                (source, query, token) => names(job.Targets[source], query, token),
-                count => Progress(job, count), lifetime.Token).ConfigureAwait(false);
+            (long Entries, bool Complete) result;
+            if (job.Request.Format == ELogExportFormat.Log)
+            {
+                result = await LogExportText.WriteAsync(stream, job.Request, job.Targets.Keys.ToArray(),
+                    (source, query, token) => read(job.Targets[source], query, token),
+                    (source, query, token) => names(job.Targets[source], query, token),
+                    count => Progress(job, count), lifetime.Token).ConfigureAwait(false);
+            }
+            else
+            {
+                result = await LogExportArchive.WriteAsync(stream, job.Request, job.Targets.Keys.ToArray(),
+                    (source, query, token) => read(job.Targets[source], query, token),
+                    (source, query, token) => names(job.Targets[source], query, token),
+                    count => Progress(job, count), lifetime.Token).ConfigureAwait(false);
+            }
             lifetime.Token.ThrowIfCancellationRequested();
-            Finish(job, "completed", complete, null, count);
+            Finish(job, "completed", result.Complete, null, result.Entries);
         }
         catch (OperationCanceledException)
         {

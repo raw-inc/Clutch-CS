@@ -80,7 +80,7 @@ internal sealed class QwenAudioSpeechNode : AiOperationNode
             input["language_hints"] = new JsonArray(language);
         }
         Uri endpoint = ProviderBaseUri(settings);
-        JsonElement response = await session.JsonAsync(endpoint.AbsoluteUri, new JsonObject { ["model"] = "qwen-audio-3.0-tts-flash", ["input"] = input }, cancellationToken: cancellationToken).ConfigureAwait(false);
+        JsonElement response = await session.JsonAsync(endpoint.AbsoluteUri, new JsonObject { ["model"] = settings.ReadText("model"), ["input"] = input }, cancellationToken: cancellationToken).ConfigureAwait(false);
         string codeKey = "code";
         if (response.TryGetProperty(codeKey, out JsonElement code) && code.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(code.GetString()))
         {
@@ -121,7 +121,7 @@ internal sealed class QwenAudioSpeechNode : AiOperationNode
 
     /// <summary>HTTPで対応する項目だけを公開し、ストリーミング専用機能は混ぜません。</summary>
     private static string Properties => """
-        {"model":{"type":"string","enum":["qwen-audio-3.0-tts-flash"],"default":"qwen-audio-3.0-tts-flash"},
+        {"model":{"type":"string","minLength":1,"examples":["qwen-audio-3.0-tts-flash"],"default":"qwen-audio-3.0-tts-flash"},
          "voice":{"type":"string","minLength":1,"description":"Qwen-Audio system voice or registered cloned voice ID. For example longanhuan_v3.6."},
          "endpoint":{"type":"string","description":"Complete API endpoint URL. Leave unset to use the official endpoint."},
          "region":{"type":"string","enum":["singapore","beijing"],"default":"singapore","x-visibleWhen":{"property":"endpoint","values":[""],"default":""}},

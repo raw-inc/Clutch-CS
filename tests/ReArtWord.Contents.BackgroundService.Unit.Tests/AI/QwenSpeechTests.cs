@@ -82,9 +82,7 @@ public sealed class QwenSpeechTests
     /// <returns>APIを呼ばず未実行とする設定境界です。</returns>
     [Theory]
     [InlineData("provider", "unsupported")]
-    [InlineData("model", "qwen3-tts-flash")]
-    [InlineData("model", "qwen3-tts-vc-realtime-2026-01-15")]
-    [InlineData("model", "qwen3-tts-vc-2025-01-01")]
+    [InlineData("model", "")]
     [InlineData("languageType", "unsupported")]
     [InlineData("region", "unsupported")]
     public async Task UnsupportedSettingsDoNotDispatchAsync(string name, string value)

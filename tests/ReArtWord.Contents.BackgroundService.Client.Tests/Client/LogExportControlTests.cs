@@ -22,9 +22,11 @@ public sealed class LogExportControlTests
     /// <summary>未検索のフォーム値も採用し、本文をブラウザーの管理APIで取得しません。</summary>
     /// <returns>選択範囲・受付・ダウンロード開始・完了表示です。</returns>
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task ButtonExportsCurrentFiltersWithoutBufferingZipAsync(bool allClusters)
+    [InlineData(true, ELogExportFormat.Zip)]
+    [InlineData(false, ELogExportFormat.Zip)]
+    [InlineData(true, ELogExportFormat.Log)]
+    [InlineData(false, ELogExportFormat.Log)]
+    public async Task ButtonExportsCurrentFiltersWithoutBufferingFileAsync(bool allClusters, ELogExportFormat format)
     {
         LogExportRequest? received = null;
         Guid id = Guid.NewGuid();
@@ -35,13 +37,13 @@ public sealed class LogExportControlTests
             if (request.Method == HttpMethod.Post)
             {
                 received = await request.Content!.ReadFromJsonAsync<LogExportRequest>(ContractJson.Options, token).ConfigureAwait(false);
-                value = new LogExportStatus(id, "queued", 0, false, null, "logs.zip", DateTimeOffset.UtcNow.AddMinutes(2));
+                value = new LogExportStatus(id, "queued", 0, false, null, "logs", DateTimeOffset.UtcNow.AddMinutes(2)) { Format = format };
             }
             else
             {
                 Assert.Equal("/client/log-exports/" + id, request.RequestUri!.AbsolutePath);
                 Assert.Equal("/client/log-exports/" + id + "/download", script.Url);
-                value = new LogExportStatus(id, "completed", 20, true, null, "logs.zip", DateTimeOffset.UtcNow.AddMinutes(15));
+                value = new LogExportStatus(id, "completed", 20, true, null, "logs", DateTimeOffset.UtcNow.AddMinutes(15)) { Format = format };
             }
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(value, options: ContractJson.Options) };
         });
@@ -69,12 +71,14 @@ public sealed class LogExportControlTests
             });
             Microsoft.AspNetCore.Components.Web.HtmlRendering.HtmlRootComponent output = await renderer.RenderComponentAsync<LogExportControl>(parameters).ConfigureAwait(true);
             Assert.Contains("Download ZIP", output.ToHtmlString(), StringComparison.Ordinal);
+            Assert.Contains("Save .log", output.ToHtmlString(), StringComparison.Ordinal);
             MethodInfo start = typeof(LogExportControl).GetMethod("StartAsync", BindingFlags.NonPublic | BindingFlags.Instance)!;
-            await ((Task)start.Invoke(activator.Component, null)!).ConfigureAwait(true);
+            await ((Task)start.Invoke(activator.Component, [format])!).ConfigureAwait(true);
             Assert.Contains("Check your browser downloads", output.ToHtmlString(), StringComparison.Ordinal);
         });
         Assert.Equal(JsonSerializer.Serialize(query, ContractJson.Options), JsonSerializer.Serialize(received!.Query, ContractJson.Options));
         Assert.Equal("UTC", received.TimeZoneId);
+        Assert.Equal(format, received.Format);
         if (allClusters)
         {
             Assert.Null(received.Source);
