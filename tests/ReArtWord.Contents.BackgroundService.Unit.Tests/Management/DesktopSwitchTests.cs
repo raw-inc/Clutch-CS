@@ -24,11 +24,29 @@ public sealed class DesktopSwitchTests
 
     /// <summary>外部取消をdesktop変更と誤認して取得を再開しません。</summary>
     /// <returns>取消された監視の終了です。</returns>
+    // 抑制理由: 監視を開始してから取り消し、finallyで監視の終了を待ってから取消資源を破棄します。
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2025", Justification = "finallyで監視TaskをawaitしてからCancellationTokenSourceを破棄します。")]
     [Fact]
     public async Task ConnectionCancellationIsNotADesktopTransitionAsync()
     {
-        using CancellationTokenSource capture = new(TimeSpan.FromMilliseconds(150));
-        Assert.False(await DesktopVideo.WatchDesktopAsync(() => true, capture, capture.Token).ConfigureAwait(true));
+        using CancellationTokenSource capture = new();
+        TaskCompletionSource observed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<bool> watching = DesktopVideo.WatchDesktopAsync(() =>
+        {
+            observed.TrySetResult();
+            return true;
+        }, capture, capture.Token);
+        try
+        {
+            await observed.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
+            await capture.CancelAsync().ConfigureAwait(true);
+            Assert.False(await watching.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true));
+        }
+        finally
+        {
+            await capture.CancelAsync().ConfigureAwait(true);
+            await watching.ConfigureAwait(true);
+        }
     }
 
     /// <summary>起動desktopを明示した子processが、そのdesktop名を実際に報告します。</summary>

@@ -263,17 +263,31 @@ public sealed class ClusterFileGateTests
         Assert.Equal(EOutcome.NotExecuted, (await second.Gate.AcquireAsync(Guid.NewGuid(), [Access(second, "/tree", true), Access(second, "/other", true)], EFileConflictPolicy.Fail)).Outcome);
         FileLeaseResult other = await first.Gate.AcquireAsync(Guid.NewGuid(), [Access(first, "/other", true)], EFileConflictPolicy.Fail);
         Assert.Equal(EOutcome.Succeeded, other.Outcome);
-        int receiptsBeforeWait = (await first.Repository.ListAsync("receipts:first")).Count;
-        using CancellationTokenSource waiting = new(TimeSpan.FromMilliseconds(650));
+        string receiptsScope = "receipts:first";
+        int receiptsBeforeWait = (await first.Repository.ListAsync(receiptsScope)).Count;
+        using CancellationTokenSource waiting = new();
+        using CancellationTokenSource deadline = new(TimeSpan.FromSeconds(10));
+        Task<FileLeaseResult> acquiring = second.Gate.AcquireAsync(Guid.NewGuid(), [Access(second, "/tree/child/grandchild", true)], EFileConflictPolicy.Wait, waiting.Token);
         try
         {
-            FileLeaseResult cancelled = await second.Gate.AcquireAsync(Guid.NewGuid(), [Access(second, "/tree/child/grandchild", true)], EFileConflictPolicy.Wait, waiting.Token);
+            while ((await first.Repository.ListAsync(receiptsScope, deadline.Token)).Count == receiptsBeforeWait)
+            {
+                await Task.Delay(10, deadline.Token);
+            }
+            Assert.False(acquiring.IsCompleted);
+            await waiting.CancelAsync();
+            FileLeaseResult cancelled = await acquiring.WaitAsync(TimeSpan.FromSeconds(5));
             Assert.Equal(EOutcome.Unknown, cancelled.Outcome);
             Assert.True(waiting.IsCancellationRequested);
         }
         catch (OperationCanceledException) when (waiting.IsCancellationRequested)
         {
             Assert.True(waiting.IsCancellationRequested);
+        }
+        finally
+        {
+            await waiting.CancelAsync();
+            await ((Task)acquiring).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
         Assert.Equal(receiptsBeforeWait + 1, (await first.Repository.ListAsync("receipts:first")).Count);
         Assert.Equal(3, (await FileReservationLedger.ReadAsync(first.Repository, "file:reservations")).Active.Count);
