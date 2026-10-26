@@ -70,22 +70,29 @@ public sealed class RemoteNodeCompletionTests
     [Fact]
     public async Task LongRemoteExecutionCompletesThroughReadOnlyReceiptQuery()
     {
+        RequestTestClock clock = new();
         int port = Port();
         string id = Guid.NewGuid().ToString("N");
         SqliteRepository firstRepository = Repository();
         SqliteRepository secondRepository = Repository();
-        await using PeerCluster first = Peer(firstRepository, id, "first", port, true);
+        await using PeerCluster first = Peer(firstRepository, id, "first", port, true, clock);
         await first.StartAsync();
-        await using PeerCluster second = Peer(secondRepository, id, "second", port, false);
+        await using PeerCluster second = Peer(secondRepository, id, "second", port, false, clock);
         int executions = 0;
         TaskCompletionSource secondStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource releaseSecond = new(TaskCreationOptions.RunContinuationsAsynchronously);
         second.RemoteExecutionHandler = async (_, token) =>
         {
             if (Interlocked.Increment(ref executions) == 2)
             {
                 secondStarted.TrySetResult();
+                await releaseSecond.Task.WaitAsync(token).ConfigureAwait(false);
             }
-            await Task.Delay(TimeSpan.FromSeconds(1), token).ConfigureAwait(false);
+            else
+            {
+                clock.Advance(TimeSpan.FromMilliseconds(500));
+                await Task.Delay(TimeSpan.FromSeconds(1), token).ConfigureAwait(false);
+            }
             return NodeResult.Success(NodeValue.FromObject(7));
         };
         await second.StartAsync();
@@ -95,10 +102,11 @@ public sealed class RemoteNodeCompletionTests
             await Task.Delay(20, timeout.Token);
         }
         second.SetLocalLogPort(34567);
-        RemoteExecutionRequest request = new(Guid.NewGuid(), Guid.NewGuid(), "demo", "revision", new NodeDefinition("node", "test", NodeSettings.Schema("{}")), new Dictionary<string, NodeValue>(StringComparer.Ordinal), "second", second.LocalInstanceId, DateTimeOffset.UtcNow.AddMilliseconds(200));
+        RemoteExecutionRequest request = new(Guid.NewGuid(), Guid.NewGuid(), "demo", "revision", new NodeDefinition("node", "test", NodeSettings.Schema("{}")), new Dictionary<string, NodeValue>(StringComparer.Ordinal), "second", second.LocalInstanceId, clock.GetUtcNow().AddMilliseconds(200));
         NodeResult result = await first.ExecuteAsync(request, timeout.Token);
         Assert.Equal(EOutcome.Succeeded, result.Outcome);
         Assert.Equal(1, executions);
+        Assert.True(request.ExpiresAt < clock.GetUtcNow());
         Assert.Equal(34567, first.GetPeers().Single(peer => peer.InstanceId == second.LocalInstanceId).LogPort);
         ClusterRequest command = new(request.Id, "node.execute", request.TargetPeerId, request.TargetInstanceId, request.ExpiresAt, NodeValue.FromObject(request));
         ClusterRequestStatus known = await first.QueryRequestAsync(command, timeout.Token);
@@ -108,12 +116,19 @@ public sealed class RemoteNodeCompletionTests
         Assert.Equal("Execution.ReceiptMissing", missing.Reason);
         Assert.Equal(1, executions);
         Assert.Single(await secondRepository.ListAsync("receipts:second"));
-        RemoteExecutionRequest cancelled = request with { Id = Guid.NewGuid(), ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(1) };
+        RemoteExecutionRequest cancelled = request with { Id = Guid.NewGuid(), ExpiresAt = clock.GetUtcNow().AddSeconds(1) };
         using CancellationTokenSource caller = new();
         Task<NodeResult> execution = first.ExecuteAsync(cancelled, caller.Token);
-        await secondStarted.Task.WaitAsync(timeout.Token);
-        await caller.CancelAsync();
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await execution.ConfigureAwait(false));
+        try
+        {
+            await secondStarted.Task.WaitAsync(timeout.Token);
+            await caller.CancelAsync();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await execution.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false));
+        }
+        finally
+        {
+            releaseSecond.TrySetResult();
+        }
         ClusterRequest cancelledCommand = new(cancelled.Id, "node.execute", cancelled.TargetPeerId, cancelled.TargetInstanceId, cancelled.ExpiresAt, NodeValue.FromObject(cancelled));
         ClusterRequestStatus completed = await first.QueryRequestAsync(cancelledCommand, timeout.Token);
         while (completed.Response is null)
@@ -156,7 +171,7 @@ public sealed class RemoteNodeCompletionTests
 
     /// <summary>短い通信待ちだけを設定します。</summary>
     /// <returns>試験Peer。</returns>
-    private static PeerCluster Peer(IDurableRepository repository, string id, string name, int port, bool fresh) => new(new ClusterOptions(id, name, name, "127.0.0.1", "127.255.255.255", port, 1, fresh, Path.GetTempPath()) { RequestTimeout = TimeSpan.FromMilliseconds(300), HeartbeatInterval = TimeSpan.FromMilliseconds(50) }, repository) { ReadinessCheck = token => ValueTask.FromResult(true) };
+    private static PeerCluster Peer(IDurableRepository repository, string id, string name, int port, bool fresh, TimeProvider? clock = null) => new(new ClusterOptions(id, name, name, "127.0.0.1", "127.255.255.255", port, 1, fresh, Path.GetTempPath()) { RequestTimeout = TimeSpan.FromMilliseconds(300), HeartbeatInterval = TimeSpan.FromMilliseconds(50) }, repository, clock) { ReadinessCheck = token => ValueTask.FromResult(true) };
 
     /// <summary>独立した保存先です。</summary>
     /// <returns>SQLite保存先。</returns>
