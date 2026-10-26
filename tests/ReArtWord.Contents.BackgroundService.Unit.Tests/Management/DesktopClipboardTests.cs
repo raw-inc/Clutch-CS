@@ -14,7 +14,7 @@ public sealed class DesktopClipboardTests
 {
     /// <summary>対話ユーザーの実クリップボードを共有しない子プロセスで、製品のnative処理を試します。</summary>
     /// <returns>別window station上の実際の読み書き結果です。</returns>
-    [Database.ExternalRuntimeFact("CONTENTS_TEST_PRIVATE_CLIPBOARD")]
+    [WindowsPrivilegeFact(true, "CONTENTS_TEST_PRIVATE_CLIPBOARD")]
     public async Task NativeTextRoundTripsInAPrivateWindowStationAsync()
     {
         if (!OperatingSystem.IsWindows())

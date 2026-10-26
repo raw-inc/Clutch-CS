@@ -16,7 +16,9 @@ internal static class ClipboardScenario
     {
         IntPtr previousStation = GetProcessWindowStation(), previousDesktop = GetThreadDesktop(GetCurrentThreadId());
 
-        // 管理者の試験でだけ固有名を作成し、CREATE_ONLYで既存領域の共有を拒否します。
+        // 名前付きwindow stationの作成には管理者権限が必要です。呼出元の試験で昇格を確認します。
+        // 名前の省略はログオンセッション共通の領域になるため、固有名とCREATE_ONLYで他の用途との共有を防ぎます。
+        // https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-createwindowstationw
         IntPtr station = CreateWindowStationW("ContentsClipboardTest" + Guid.NewGuid().ToString("N"), 1, 0x000F037F, IntPtr.Zero);
         if (previousStation == IntPtr.Zero || previousDesktop == IntPtr.Zero || station == IntPtr.Zero || station == previousStation)
         {
