@@ -6,6 +6,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Management;
 using ReArtWord.Contents.BackgroundService.Contracts.Management.Discovery;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Desktop;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
@@ -15,7 +16,8 @@ public sealed class DesktopViewerProcessTests
 {
     /// <summary>CoreとClientHostが同居していても、Tunnelの閲覧者を自己接続にしません。</summary>
     /// <returns>音声・入力の循環抑止フラグとsession回収の確認です。</returns>
-    [Theory]
+    // 接続情報の確認中にも補助プロセスが音声取得を開始するため、画面・音声の実機条件を適用します。
+    [HostedDesktopTheory]
     [InlineData(null, true, false)]
     [InlineData("198.51.100.20", false, false)]
     [InlineData("", false, false)]

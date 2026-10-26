@@ -73,6 +73,8 @@ $env:CONTENTS_TEST_FFPROBE = 'C:/tools/ffmpeg/bin/ffprobe.exe'
 
 実デスクトップ試験は、画面と音声出力デバイスが利用できる Windows の対話セッションで実行してください。通知アイコンには Windows Shell、画面取得には Desktop Duplication 対応環境、GPU 実測には対応する GPU が必要です。GitHub ホステッドランナーでは、利用できない画面機能の試験が理由付きでスキップされます。
 
+RemoteDesktopの閲覧端末判定・時刻プローブ・正常切断の実プロセス試験も、接続時に音声取得を開始するため、同じ実機条件が必要です。デバイスを使わない閲覧端末判定や時刻プローブの通信処理は、単体試験で検証します。
+
 - CI での検証：[公開せずに CI を手動実行する](distribution.md#公開せずにciを手動実行する)
 - JavaScript・CSS：[JavaScript の静的解析](javascript.md)・[CSS の静的解析](css.md)
 - 分散処理・負荷・復旧：[性能・復旧試験](performance-tests.md)
