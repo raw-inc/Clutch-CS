@@ -6,6 +6,9 @@ $path = Join-Path $PSScriptRoot 'Version.props'
 [xml] $document = Get-Content -LiteralPath $path -Raw
 $textVersion = [string] $document.Project.PropertyGroup.VersionPrefix
 $suffix = [string] $document.Project.PropertyGroup.VersionSuffix
+$textRevision = [string] $document.Project.PropertyGroup.VersionRevision
+$revision = 0
+if ($textRevision -ne '' -and (-not [int]::TryParse($textRevision, [ref]$revision) -or $revision -lt 0 -or $revision -gt 65534 -or $revision.ToString() -cne $textRevision)) { throw 'VersionRevision must be an integer from 0 to 65534.' }
 $current = [version] $textVersion
 if ($current.Revision -ne -1 -or $current.Build -lt 0 -or $current.ToString(3) -cne $textVersion -or $current.Major -gt 65534 -or $current.Minor -gt 65534 -or $current.Build -gt 65534) { throw 'Version.props must contain a valid major.minor.patch version.' }
 if ($Change -eq 'show') { Write-Output ($current.ToString(3) + $(if ($suffix) { '-' + $suffix })); return }
@@ -22,5 +25,6 @@ $next = "$major.$minor.$patch"
 $text = [IO.File]::ReadAllText($path)
 $text = $text.Replace("<VersionPrefix>$($current.ToString(3))</VersionPrefix>", "<VersionPrefix>$next</VersionPrefix>")
 $text = $text.Replace("<VersionSuffix>$suffix</VersionSuffix>", '<VersionSuffix></VersionSuffix>')
+$text = $text.Replace("<VersionRevision>$textRevision</VersionRevision>", '<VersionRevision>0</VersionRevision>')
 [IO.File]::WriteAllText($path, $text, [Text.UTF8Encoding]::new($false))
 Write-Output "$($current.ToString(3)) -> $next (not committed)"

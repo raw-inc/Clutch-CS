@@ -9,6 +9,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Terminal;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Desktop;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.SignalScope;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Terminal;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
@@ -18,7 +19,8 @@ public sealed class SessionFailureProcessTests
 {
     /// <summary>認証後の正常切断は警告せず、同じCoreで各機能へ再接続できます。</summary>
     /// <returns>画面取得・入力・パケットキャプチャを開始せず、実workerまで含む終了確認です。</returns>
-    [Fact]
+    // 補助プロセスが接続時に音声も初期化するため、画面・音声の実機条件を適用します。
+    [HostedDesktopFact]
     public async Task NormalSessionEndsDoNotLogFailuresAndAllowReconnectAsync()
     {
         if (!OperatingSystem.IsWindows())
@@ -29,26 +31,26 @@ public sealed class SessionFailureProcessTests
         CorePeer peer = new(cluster, "first", CorePeer.AvailablePort(), true, executablePath: PrepareApplication(cluster));
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = peer.ConfigureAwait(true);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(90));
-        await peer.StartAsync(timeout.Token);
-        await CorePeer.WaitAsync(async token => (await peer.GetAsync<JsonElement>("health", token).ConfigureAwait(false)).GetProperty("ready").GetBoolean(), timeout.Token);
-        JsonElement before = await peer.GetAsync<JsonElement>("health", timeout.Token);
-        TerminalRequest create = await TerminalTestRequest.CreateAsync(peer, cancellationToken: timeout.Token);
-        _ = await peer.PostAsync<TerminalView>("terminal.create", create, timeout.Token);
+        await peer.StartAsync(timeout.Token).ConfigureAwait(true);
+        await CorePeer.WaitAsync(async token => (await peer.GetAsync<JsonElement>("health", token).ConfigureAwait(false)).GetProperty("ready").GetBoolean(), timeout.Token).ConfigureAwait(true);
+        JsonElement before = await peer.GetAsync<JsonElement>("health", timeout.Token).ConfigureAwait(true);
+        TerminalRequest create = await TerminalTestRequest.CreateAsync(peer, cancellationToken: timeout.Token).ConfigureAwait(true);
+        _ = await peer.PostAsync<TerminalView>("terminal.create", create, timeout.Token).ConfigureAwait(true);
         for (int attempt = 0; attempt < 2; attempt++)
         {
-            DesktopTicket desktop = await peer.NotifyAsync<DesktopTicket>("desktop.open", Guid.NewGuid(), timeout.Token);
-            await CloseConnectionAsync(desktop.Port, desktop.Token, "desktop", timeout.Token);
-            await CorePeer.WaitAsync(async token => await peer.GetAsync<int>("desktop.status", token).ConfigureAwait(false) == 0, timeout.Token);
-            SignalScopeTicket capture = await peer.NotifyAsync<SignalScopeTicket>("signal-scope.open", Guid.NewGuid(), timeout.Token);
-            await CloseConnectionAsync(capture.Port, capture.Token, "capture", timeout.Token);
-            await CorePeer.WaitAsync(async token => await peer.GetAsync<int>("signal-scope.status", token).ConfigureAwait(false) == 0, timeout.Token);
-            TerminalTicket terminal = await peer.NotifyAsync<TerminalTicket>("terminal.attach", new TerminalAttachRequest(create.SessionId, create.Owner, Guid.NewGuid()), timeout.Token);
-            await CloseConnectionAsync(terminal.Port, terminal.Token, "terminal", timeout.Token);
-            Assert.False(Assert.Single(await peer.GetAsync<TerminalView[]>("terminal.list", timeout.Token)).Exited);
+            DesktopTicket desktop = await peer.NotifyAsync<DesktopTicket>("desktop.open", Guid.NewGuid(), timeout.Token).ConfigureAwait(true);
+            await CloseConnectionAsync(desktop.Port, desktop.Token, "desktop", timeout.Token).ConfigureAwait(true);
+            await CorePeer.WaitAsync(async token => await peer.GetAsync<int>("desktop.status", token).ConfigureAwait(false) == 0, timeout.Token).ConfigureAwait(true);
+            SignalScopeTicket capture = await peer.NotifyAsync<SignalScopeTicket>("signal-scope.open", Guid.NewGuid(), timeout.Token).ConfigureAwait(true);
+            await CloseConnectionAsync(capture.Port, capture.Token, "capture", timeout.Token).ConfigureAwait(true);
+            await CorePeer.WaitAsync(async token => await peer.GetAsync<int>("signal-scope.status", token).ConfigureAwait(false) == 0, timeout.Token).ConfigureAwait(true);
+            TerminalTicket terminal = await peer.NotifyAsync<TerminalTicket>("terminal.attach", new TerminalAttachRequest(create.SessionId, create.Owner, Guid.NewGuid()), timeout.Token).ConfigureAwait(true);
+            await CloseConnectionAsync(terminal.Port, terminal.Token, "terminal", timeout.Token).ConfigureAwait(true);
+            Assert.False(Assert.Single(await peer.GetAsync<TerminalView[]>("terminal.list", timeout.Token).ConfigureAwait(true)).Exited);
         }
-        Assert.True(await peer.PostAsync<bool>("terminal.close", create, timeout.Token));
-        Assert.Empty((await peer.GetAsync<LogQueryResult>("logs.query", new LogQuery(Text: "Session.Failed"), timeout.Token)).Entries);
-        JsonElement after = await peer.GetAsync<JsonElement>("health", timeout.Token);
+        Assert.True(await peer.PostAsync<bool>("terminal.close", create, timeout.Token).ConfigureAwait(true));
+        Assert.Empty((await peer.GetAsync<LogQueryResult>("logs.query", new LogQuery(Text: "Session.Failed"), timeout.Token).ConfigureAwait(true)).Entries);
+        JsonElement after = await peer.GetAsync<JsonElement>("health", timeout.Token).ConfigureAwait(true);
         Assert.True(after.GetProperty("ready").GetBoolean());
         Assert.Equal(before.GetProperty("instanceId").GetGuid(), after.GetProperty("instanceId").GetGuid());
     }
