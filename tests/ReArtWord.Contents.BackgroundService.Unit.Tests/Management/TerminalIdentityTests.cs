@@ -13,35 +13,42 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
 public sealed class TerminalIdentityTests
 {
     /// <summary>Windowsの非管理者Coreは管理者セッションを偽って起動しません。</summary>
-    [Fact]
-    public void WindowsAdministratorModeRequiresAdministratorIdentity()
+    [WindowsPrivilegeFact(false)]
+    public void NonElevatedCoreRejectsAdministratorSessions()
     {
         if (!OperatingSystem.IsWindows())
         {
             return;
         }
         PtyOptions options = new() { App = "shell.exe", Cwd = AppContext.BaseDirectory };
-        if (WindowsInteractiveIdentity.IsAdministrator())
+        Assert.False(WindowsInteractiveIdentity.IsAdministrator());
+        Assert.Throws<InvalidOperationException>(() => TerminalIdentity.Configure(options, true));
+        TerminalIdentity.Configure(options, false);
+        Assert.Equal("shell.exe", options.App);
+        Assert.False(TerminalIdentity.Capabilities().AdministratorAvailable);
+        Assert.True(TerminalIdentity.Capabilities().UserAvailable);
+    }
+
+    /// <summary>昇格したCoreは取得できた管理者IDだけを使用し、利用できない場合は起動を拒否します。</summary>
+    [WindowsPrivilegeFact(true)]
+    public void ElevatedCoreUsesAvailableAdministratorIdentity()
+    {
+        if (!OperatingSystem.IsWindows())
         {
-            if (TerminalIdentity.Capabilities().AdministratorAvailable)
-            {
-                TerminalIdentity.Configure(options, true, "readiness");
-                Assert.Contains(TerminalIdentity.AdministratorShellArgument, options.CommandLine);
-                Assert.Contains("readiness", options.CommandLine);
-                Assert.NotEqual("shell.exe", options.App);
-            }
-            else
-            {
-                Assert.Throws<InvalidOperationException>(() => TerminalIdentity.Configure(options, true));
-            }
+            return;
+        }
+        Assert.True(WindowsInteractiveIdentity.IsAdministrator());
+        PtyOptions options = new() { App = "shell.exe", Cwd = AppContext.BaseDirectory };
+        if (TerminalIdentity.Capabilities().AdministratorAvailable)
+        {
+            TerminalIdentity.Configure(options, true, "readiness");
+            Assert.Contains(TerminalIdentity.AdministratorShellArgument, options.CommandLine);
+            Assert.Contains("readiness", options.CommandLine);
+            Assert.NotEqual("shell.exe", options.App);
         }
         else
         {
             Assert.Throws<InvalidOperationException>(() => TerminalIdentity.Configure(options, true));
-            TerminalIdentity.Configure(options, false);
-            Assert.Equal("shell.exe", options.App);
-            Assert.False(TerminalIdentity.Capabilities().AdministratorAvailable);
-            Assert.True(TerminalIdentity.Capabilities().UserAvailable);
         }
     }
 
