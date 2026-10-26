@@ -77,3 +77,27 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: node .github/scripts/release.mjs publish artifacts/release
+
+  sync-develop:
+    name: Sync released main into develop
+    needs: [version, publish]
+    if: >-
+      !cancelled() && needs.version.result == 'success' &&
+      needs.publish.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: release-sync-develop
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.version.outputs.sha }}
+          persist-credentials: false
+      - name: Merge the published release or open a conflict resolution PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node .github/scripts/release.mjs sync-develop
