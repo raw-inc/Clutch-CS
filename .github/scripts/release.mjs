@@ -50,17 +50,9 @@ export async function releaseAssets(directory, tag) {
 // 完了済みReleaseは変更せず、同じコミットの未完了draftだけを再開する。
 export async function publishRelease(api, upload, repository, plan, assets, runUrl) {
     const root = `/repos/${repository}`;
-    const reference = await api('GET', `${root}/git/ref/tags/${encodeURIComponent(plan.tag)}`);
-    if (reference) {
-        let object = reference.object;
-        while (object.type === 'tag') {
-            const tag = await api('GET', `${root}/git/tags/${object.sha}`);
-            if (!tag) throw new Error('The annotated tag cannot be resolved.');
-            object = tag.object;
-        }
-        if (object.type !== 'commit' || object.sha !== plan.sha) {
-            throw new Error('This version tag already points to a different commit.');
-        }
+    const taggedCommit = await releaseCommit(api, root, plan.tag);
+    if (taggedCommit && taggedCommit !== plan.sha) {
+        throw new Error('This version tag already points to a different commit.');
     }
     // draftも取得できる一覧APIを使い、公開途中で止まった実行を検出する。
     const pageSize = 100;
@@ -72,7 +64,7 @@ export async function publishRelease(api, upload, repository, plan, assets, runU
         if (releases.length < pageSize) break;
     }
     if (release && !release.draft) {
-        if (!reference) throw new Error('The published release has no matching Git tag.');
+        if (!taggedCommit) throw new Error('The published release has no matching Git tag.');
         return { url: release.html_url, alreadyPublished: true };
     }
     if (release && release.target_commitish !== plan.sha) {
@@ -95,6 +87,84 @@ export async function publishRelease(api, upload, repository, plan, assets, runU
     return { url: published.html_url, alreadyPublished: false };
 }
 
+// 公開した版だけを取り込み、CI実行中にmainへ加わった次の版は含めない。
+export async function syncDevelop(api, repository, plan) {
+    const root = `/repos/${repository}`;
+    const release = await api('GET', `${root}/releases/tags/${encodeURIComponent(plan.tag)}`);
+    if (!release || release.draft !== false || release.tag_name !== plan.tag) {
+        throw new Error('The release must be published before merging into develop.');
+    }
+    if (await releaseCommit(api, root, plan.tag) !== plan.sha) {
+        throw new Error('The published release tag does not match the merged commit.');
+    }
+    const main = await api('GET', `${root}/compare/${plan.sha}...main`);
+    if (!main || !['identical', 'ahead'].includes(main.status)) {
+        throw new Error('The released commit is no longer contained in main.');
+    }
+    try {
+        const merged = await api('POST', `${root}/merges`, {
+            base: 'develop', head: plan.sha, commit_message: `chore: merge ${plan.tag} release into develop`,
+        });
+        if (merged !== null && !/^[0-9a-f]{40}$/.test(merged?.sha)) {
+            throw new Error('The merge result could not be confirmed.');
+        }
+        return { alreadyMerged: merged === null, sha: merged?.sha };
+    } catch (error) {
+        if (error.status !== 409) throw error;
+    }
+    return openSyncPullRequest(api, repository, plan, release.html_url);
+}
+
+// 競合時だけPRに切り替える。再実行でPRを重複作成せず、手動の競合解消を上書きしない。
+async function openSyncPullRequest(api, repository, plan, releaseUrl) {
+    const root = `/repos/${repository}`;
+    const branch = `feature/sync-${plan.tag}-to-develop`;
+    const query = new URLSearchParams({ state: 'all', base: 'develop', head: `${repository.split('/')[0]}:${branch}`, per_page: '1' });
+    const pulls = await api('GET', `${root}/pulls?${query}`);
+    if (!Array.isArray(pulls)) throw new Error('Existing develop sync PRs could not be inspected.');
+    const existing = pulls[0];
+    if (existing) {
+        if (!existing.html_url) throw new Error('The existing develop sync PR could not be confirmed.');
+        if (existing.merged_at) {
+            throw new Error(`The previous sync PR was merged, but the released commit still conflicts with develop. Review the merge history: ${existing.html_url}`);
+        }
+        if (existing.state !== 'open') {
+            throw new Error(`The develop sync PR was closed without merging. Review or reopen it: ${existing.html_url}`);
+        }
+        return { alreadyCreated: true, url: existing.html_url };
+    }
+
+    let reference = await api('GET', `${root}/git/ref/heads/${branch}`);
+    if (!reference) {
+        reference = await api('POST', `${root}/git/refs`, { ref: `refs/heads/${branch}`, sha: plan.sha });
+    }
+    if (reference?.object?.type !== 'commit' || reference.object.sha !== plan.sha) {
+        throw new Error('The develop sync branch does not point to the published commit; it was not overwritten.');
+    }
+    const pull = await api('POST', `${root}/pulls`, {
+        base: 'develop', head: branch, title: `chore: merge ${plan.tag} into develop`,
+        body: `公開済みの [Clutch-CS ${plan.tag}](${releaseUrl}) を develop へ自動マージする際に競合が発生しました。\n\n`
+            + `対象コミット: \`${plan.sha}\`\n\n`
+            + '内容を確認し、競合がある場合は解消してから **Create a merge commit** でマージしてください。',
+    });
+    if (pull?.state !== 'open' || !pull.html_url) throw new Error('The develop sync PR could not be confirmed.');
+    return { alreadyCreated: false, url: pull.html_url };
+}
+
+// 軽量タグと注釈付きタグのどちらも、指しているコミットで照合する。
+async function releaseCommit(api, root, name) {
+    const reference = await api('GET', `${root}/git/ref/tags/${encodeURIComponent(name)}`);
+    if (!reference) return null;
+    let object = reference.object;
+    while (object.type === 'tag') {
+        const tag = await api('GET', `${root}/git/tags/${object.sha}`);
+        if (!tag) throw new Error('The annotated tag cannot be resolved.');
+        object = tag.object;
+    }
+    if (object.type !== 'commit') throw new Error('The release tag does not point to a commit.');
+    return object.sha;
+}
+
 // 認証や通信の失敗を「未作成」と区別する。
 async function githubApi(method, path, body) {
     const response = await fetch(`${process.env.GITHUB_API_URL || 'https://api.github.com'}${path}`, {
@@ -108,7 +178,8 @@ async function githubApi(method, path, body) {
         body: body === undefined ? undefined : JSON.stringify(body),
     });
     if (method === 'GET' && response.status === 404) return null;
-    if (!response.ok) throw new Error(`GitHub ${method} ${path} failed: HTTP ${response.status}`);
+    if (!response.ok) throw Object.assign(new Error(`GitHub ${method} ${path} failed: HTTP ${response.status}`), { status: response.status });
+    if (response.status === 204) return null;
     return response.json();
 }
 
@@ -120,8 +191,16 @@ async function main() {
         await appendFile(process.env.GITHUB_OUTPUT, Object.entries(output).map(([key, value]) => `${key}=${value}\n`).join(''));
         return;
     }
-    if (process.argv[2] !== 'publish' || !plan) throw new Error('A merged release/vx.y.z[-suffix] branch is required.');
-    if (!process.env.GH_TOKEN) throw new Error('GH_TOKEN is required to publish a release.');
+    if (!['publish', 'sync-develop'].includes(process.argv[2]) || !plan) throw new Error('A merged release/vx.y.z[-suffix] branch is required.');
+    if (!process.env.GH_TOKEN) throw new Error('GH_TOKEN is required for release operations.');
+    if (process.argv[2] === 'sync-develop') {
+        const result = await syncDevelop(githubApi, event.repository.full_name, plan);
+        const summary = result.alreadyMerged || !result.url
+            ? `${result.alreadyMerged ? 'Already merged' : 'Merged'}: ${plan.tag} into develop`
+            : `${result.alreadyCreated ? 'Existing' : 'Created'} conflict resolution PR: [${plan.tag}](${result.url}) — resolve conflicts and merge manually.`;
+        await appendFile(process.env.GITHUB_STEP_SUMMARY, `${summary}\n`);
+        return;
+    }
     const assets = await releaseAssets(process.argv[3], plan.tag);
     const runUrl = `${process.env.GITHUB_SERVER_URL}/${event.repository.full_name}/actions/runs/${process.env.GITHUB_RUN_ID}`;
     const result = await publishRelease(githubApi, async (tag, files, repository) => {
@@ -131,5 +210,10 @@ async function main() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-    await main();
+    try {
+        await main();
+    } catch (error) {
+        console.error(error);
+        process.exitCode = 1;
+    }
 }
