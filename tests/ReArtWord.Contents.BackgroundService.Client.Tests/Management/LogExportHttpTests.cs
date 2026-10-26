@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using ReArtWord.Contents.BackgroundService.ClientHost.Logs;
 using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Management.Discovery;
+using ReArtWord.Contents.BackgroundService.Contracts.Observability.Logging;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Client.Tests.Management;
@@ -13,13 +14,15 @@ namespace ReArtWord.Contents.BackgroundService.Client.Tests.Management;
 /// <summary>実HTTPの切断が管理検索を停止することを確認します。</summary>
 public sealed class LogExportHttpTests
 {
-    /// <summary>ZIP先頭を受信後にTCP接続を閉じ、取得中の取消と次の受付を確認します。</summary>
+    /// <summary>ファイル先頭を受信後にTCP接続を閉じ、取得中の取消を確認します。</summary>
     /// <returns>要求境界と検索境界の取消連結です。</returns>
     // 抑制理由: JobとWebApplicationは直後のDIコンテナー・非同期寿命へ所有権を移します。
-    [Fact]
+    [Theory]
+    [InlineData(ELogExportFormat.Zip)]
+    [InlineData(ELogExportFormat.Log)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW141", Justification = "DIコンテナーとConfiguredAsyncDisposableが資源の所有者です。"),
      System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000", Justification = "JobsはHostへ登録してHost終了時に破棄します。")]
-    public async Task DisconnectCancelsSearchAndCrossSiteDownloadIsRejectedAsync()
+    public async Task DisconnectCancelsSearchAndCrossSiteDownloadIsRejectedAsync(ELogExportFormat format)
     {
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(20));
         TaskCompletionSource started = new(TaskCreationOptions.RunContinuationsAsynchronously), ended = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -49,7 +52,7 @@ public sealed class LogExportHttpTests
         await app.StartAsync(timeout.Token);
         try
         {
-            Guid id = jobs.Create(new(new())).Id;
+            Guid id = jobs.Create(new(new()) { Format = format }).Id;
             using HttpClient client = new() { BaseAddress = new Uri(Assert.Single(app.Urls)) };
             string url = "/client/log-exports/" + id + "/download";
             using (HttpRequestMessage external = new(HttpMethod.Get, url))
@@ -62,12 +65,25 @@ public sealed class LogExportHttpTests
             using (HttpResponseMessage response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token))
             {
                 response.EnsureSuccessStatusCode();
+                Assert.Equal(jobs.Read(id)!.FileName, response.Content.Headers.ContentDisposition!.FileNameStar);
                 await started.Task.WaitAsync(timeout.Token);
                 using Stream stream = await response.Content.ReadAsStreamAsync(timeout.Token);
                 byte[] header = new byte[4];
                 await stream.ReadExactlyAsync(header, timeout.Token);
-                Assert.Equal((byte)'P', header[0]);
-                Assert.Equal((byte)'K', header[1]);
+                if (format == ELogExportFormat.Log)
+                {
+                    Assert.Equal("text/plain", response.Content.Headers.ContentType!.MediaType);
+                    Assert.Equal("utf-8", response.Content.Headers.ContentType.CharSet);
+                    Assert.EndsWith(".log", jobs.Read(id)!.FileName, StringComparison.Ordinal);
+                    Assert.Equal((byte)'#', header[0]);
+                }
+                else
+                {
+                    Assert.Equal("application/zip", response.Content.Headers.ContentType!.MediaType);
+                    Assert.EndsWith(".zip", jobs.Read(id)!.FileName, StringComparison.Ordinal);
+                    Assert.Equal((byte)'P', header[0]);
+                    Assert.Equal((byte)'K', header[1]);
+                }
             }
             await ended.Task.WaitAsync(timeout.Token);
             string running = "running";

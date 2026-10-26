@@ -11,10 +11,12 @@ namespace ReArtWord.Contents.BackgroundService.Client.Tests.Management;
 /// <summary>接続寿命・手動取消・停止と出力受付の所有関係を検証します。</summary>
 public sealed class LogExportJobTests
 {
-    /// <summary>未開始受付と送信状態を期限で解放し、完了ZIPの再生成を許可しません。</summary>
+    /// <summary>未開始受付と送信状態を期限で解放し、完了ファイルの再生成を許可しません。</summary>
     /// <returns>全件保持なしの一回限りの送信です。</returns>
-    [Fact]
-    public async Task ReceiptsExpireAndDownloadsAreSingleUseAsync()
+    [Theory]
+    [InlineData(ELogExportFormat.Zip)]
+    [InlineData(ELogExportFormat.Log)]
+    public async Task ReceiptsExpireAndDownloadsAreSingleUseAsync(ELogExportFormat format)
     {
         ExportClock clock = new();
         DateTimeOffset? until = null;
@@ -23,7 +25,9 @@ public sealed class LogExportJobTests
             until = query.Until;
             return Task.FromResult<LogQueryResult?>(new([], null, true));
         }, NamesAsync, clock);
-        LogExportStatus created = jobs.Create(new(new(), "UTC"));
+        Assert.Throws<ArgumentException>(() => jobs.Create(new(new()) { Format = (ELogExportFormat)123 }));
+        LogExportStatus created = jobs.Create(new(new(), "UTC") { Format = format });
+        Assert.Equal(format, created.Format);
         Assert.Throws<InvalidOperationException>(() => jobs.Create(new(new())));
         using MemoryStream stream = new();
         await jobs.WriteAsync(created.Id, stream);
@@ -32,9 +36,17 @@ public sealed class LogExportJobTests
         Assert.True(jobs.Read(created.Id)!.Complete);
         Assert.True(stream.CanWrite);
         stream.Position = 0;
-        using (ZipArchive archive = new(stream, ZipArchiveMode.Read, leaveOpen: true))
+        if (format == ELogExportFormat.Zip)
         {
+            using ZipArchive archive = new(stream, ZipArchiveMode.Read, leaveOpen: true);
             Assert.Equal(4, archive.Entries.Count);
+        }
+        else
+        {
+            using StreamReader reader = new(stream, leaveOpen: true);
+            string content = await reader.ReadToEndAsync();
+            Assert.Contains("# Summary: ", content, StringComparison.Ordinal);
+            Assert.Contains("\"entries\":0", content, StringComparison.Ordinal);
         }
         await Assert.ThrowsAsync<InvalidOperationException>(() => jobs.WriteAsync(created.Id, stream));
         clock.Advance(TimeSpan.FromMinutes(16));
@@ -52,10 +64,13 @@ public sealed class LogExportJobTests
     // 抑制理由: finallyで取消と書込みの完了確認を行った後にStreamとTaskを解放します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2025", Justification = "停止を発生させてからfinallyで書込みTaskの完了を待ちます。")]
     [Theory]
-    [InlineData("disconnect")]
-    [InlineData("cancel")]
-    [InlineData("shutdown")]
-    public async Task CancellationReleasesInFlightSearchAsync(string reason)
+    [InlineData("disconnect", ELogExportFormat.Zip)]
+    [InlineData("cancel", ELogExportFormat.Zip)]
+    [InlineData("shutdown", ELogExportFormat.Zip)]
+    [InlineData("disconnect", ELogExportFormat.Log)]
+    [InlineData("cancel", ELogExportFormat.Log)]
+    [InlineData("shutdown", ELogExportFormat.Log)]
+    public async Task CancellationReleasesInFlightSearchAsync(string reason, ELogExportFormat format)
     {
         TaskCompletionSource started = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using CancellationTokenSource disconnected = new(TimeSpan.FromSeconds(15));
@@ -68,7 +83,7 @@ public sealed class LogExportJobTests
         await jobs.StartAsync(CancellationToken.None);
         try
         {
-            LogExportStatus running = jobs.Create(new(new()));
+            LogExportStatus running = jobs.Create(new(new()) { Format = format });
             using MemoryStream output = new();
             using Task writing = jobs.WriteAsync(running.Id, output, disconnected.Token);
             try

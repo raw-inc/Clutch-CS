@@ -1,7 +1,9 @@
 {
   "log.export.button": "ZIPをダウンロード",
-  "log.export.progress": "ZIP送信中 · {0}件",
-  "log.export.complete": "テキストと詳細JSONの送信が完了しました。ブラウザーのダウンロードを確認してください。",
+  "log.export.textButton": ".logで保存",
+  "log.export.progress": "ログ送信中 · {0}件",
+  "log.export.complete": "ログの送信が完了しました。ブラウザーのダウンロードを確認してください。",
+  "log.export.textPartial": "取得できない範囲、または詳細の省略があります。ファイル末尾のSummaryと各ログのomissionを確認してください。",
   "log.export.partial": "取得できない範囲・詳細の省略・出力上限のいずれかがあります。ZIP内のsummary.jsonと各ログのomissionを確認してください。",
   "log.export.failed": "ログを出力できませんでした。検索条件・接続先を確認し、他の出力が終わってから再実行してください。",
   "log.export.cancelled": "ログ出力を取り消したか、生成期限に達しました。",
