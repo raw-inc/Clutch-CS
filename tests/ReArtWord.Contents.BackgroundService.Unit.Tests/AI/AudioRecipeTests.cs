@@ -78,7 +78,7 @@ public sealed class AudioRecipeTests
         Assert.Equal(EOutcome.NotExecuted, (await node.ExecuteAsync(NodeTestContext.Create(AiGeneratorTests.Settings(server, settings), NodeValue.FromObject("hello"))).ConfigureAwait(true)).Outcome);
         Assert.Single(server.Requests);
         NodeDescriptor descriptor = node.Descriptor;
-        Assert.Equal("eleven_v3", Assert.Single(descriptor.SettingsSchema.GetProperty("properties").GetProperty("model").GetProperty("enum").EnumerateArray()).GetString());
+        Assert.Equal("eleven_v3", Assert.Single(descriptor.SettingsSchema.GetProperty("properties").GetProperty("model").GetProperty("examples").EnumerateArray()).GetString());
         Assert.False(descriptor.SettingsSchema.GetProperty("properties").TryGetProperty("speakerBoost", out _));
     }
 

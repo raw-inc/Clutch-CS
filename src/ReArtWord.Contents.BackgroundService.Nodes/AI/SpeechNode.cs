@@ -52,7 +52,7 @@ internal sealed class SpeechNode : AiOperationNode
                 model = "qwen3-tts-flash";
                 properties["voice"]!["description"] = "Built-in Qwen voice name, for example Cherry.";
             }
-            properties["model"] = new JsonObject { ["type"] = "string", ["enum"] = models, ["default"] = model };
+            properties["model"] = new JsonObject { ["type"] = "string", ["minLength"] = 1, ["examples"] = models, ["default"] = model };
             properties["region"] = JsonNode.Parse("""{"type":"string","enum":["singapore","beijing"],"default":"singapore","x-visibleWhen":{"property":"endpoint","values":[""],"default":""}}""");
             properties["languageType"] = JsonNode.Parse("""{"type":"string","enum":["Auto","Chinese","English","German","Italian","Portuguese","Spanish","Japanese","Korean","French","Russian"],"default":"Auto"}""");
         }

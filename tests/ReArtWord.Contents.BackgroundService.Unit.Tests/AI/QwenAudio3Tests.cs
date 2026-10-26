@@ -166,7 +166,7 @@ public sealed class QwenAudio3Tests
     public void WorkspaceSelectsOnlyTheDeclaredRegion(string region, string workspace, string? expected)
         => Assert.Equal(expected, AiServiceConnection.Endpoint("ai.audio.qwen.audio3.generate", region, workspace)?.AbsoluteUri);
 
-    /// <summary>旧モデル・不正設定・長すぎる入力を送信前に止めます。</summary>
+    /// <summary>空のモデル名・不正設定・長すぎる入力を送信前に止めます。</summary>
     /// <returns>入力契約を実行時にも検証する確認です。</returns>
     [Fact]
     public async Task InvalidRequestsDoNotDispatchAsync()
@@ -174,7 +174,7 @@ public sealed class QwenAudio3Tests
         using MediaTestFiles files = new();
         AiWireFixture server = new((_, _) => Task.FromResult(AiWireResponse.Json("{}")));
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = server.ConfigureAwait(true);
-        foreach ((string key, object value) in new (string, object)[] { ("model", "qwen3-tts-flash"), ("speed", 0.4), ("seed", 65536), ("workspaceId", "invalid/host"), ("sampleRate", 9999) })
+        foreach ((string key, object value) in new (string, object)[] { ("model", ""), ("speed", 0.4), ("seed", 65536), ("workspaceId", "invalid/host"), ("sampleRate", 9999) })
         {
             Dictionary<string, object> settings = Settings(Path.Combine(files.Root, "generated.wav"));
             settings[key] = value;

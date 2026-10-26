@@ -73,11 +73,11 @@
     {
         <SecretField NodeId="@NodeId" Value="@raw" Disabled="connected" ValueChanged="v=>CommitAsync(key,v,type)" />
     }
-    else if(schema.TryGetProperty("enum",out var values))
+    else if(schema.TryGetProperty("enum",out var values)||schema.TryGetProperty("examples",out values))
     {
         SettingChoiceValues.TryEnum(values,raw,out var selectedChoice);
-        <select disabled="@connected" value="@raw" @onchange="e=>CommitAsync(key,e.Value?.ToString()??string.Empty,type,values)">
-<option value="" selected="@(raw.Length==0)">@Ui["Not set"]</option>@if(Missing(raw,values)){<option value="@raw" selected>@Ui.SettingChoiceName(Model.Draft.Document.Nodes.FirstOrDefault(node=>node.Id==NodeId)?.Type,key,raw) — @Ui["Not in current choices"]</option>}@foreach(var item in values.EnumerateArray()){<option value="@Text(item)" selected="@(selectedChoice.ValueKind!=JsonValueKind.Undefined&&item.GetRawText()==selectedChoice.GetRawText())">@Ui.SettingChoiceName(Model.Draft.Document.Nodes.FirstOrDefault(node=>node.Id==NodeId)?.Type,key,Text(item))</option>}</select>
+        <select disabled="@connected" value="@raw" @onchange='e=>CommitAsync(key,e.Value?.ToString()??string.Empty,type,schema.TryGetProperty("enum",out _)?values:default)'>
+<option value="" selected="@(raw.Length==0)">@Ui["Not set"]</option>@if(Missing(raw,values)){<option value="@raw" selected>@Ui.SettingChoiceName(Model.Draft.Document.Nodes.FirstOrDefault(node=>node.Id==NodeId)?.Type,key,raw)@if(schema.TryGetProperty("enum",out _)){<text> — @Ui["Not in current choices"]</text>}</option>}@foreach(var item in values.EnumerateArray()){<option value="@Text(item)" selected="@(selectedChoice.ValueKind!=JsonValueKind.Undefined&&item.GetRawText()==selectedChoice.GetRawText())">@Ui.SettingChoiceName(Model.Draft.Document.Nodes.FirstOrDefault(node=>node.Id==NodeId)?.Type,key,Text(item))</option>}</select>
     }
     else if(SettingChoiceProvider.Supports(key))
     {
