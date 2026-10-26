@@ -79,16 +79,33 @@ internal sealed class FileTransferStreams(CommonConfiguration configuration, Pee
         }
         finally
         {
-            await changes.WaitAsync(CancellationToken.None).ConfigureAwait(false);
-            try
-            {
-                stopping = true;
-                await ReapAsync(true, CancellationToken.None).ConfigureAwait(false);
-            }
-            finally
-            {
-                changes.Release();
-            }
+            await CloseSessionsAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>監視タスクの開始前に停止しても、所有する全接続を回収します。</summary>
+    /// <returns>受付停止とセッションの解放完了です。</returns>
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await base.StopAsync(cancellationToken).ConfigureAwait(false);
+
+        // .NET 10では監視が始まらずfinallyも通らない停止があるため、ここでも回収します。
+        await CloseSessionsAsync(CancellationToken.None).ConfigureAwait(false);
+    }
+
+    /// <summary>通常終了と起動取消のどちらからも、所有セッションを一度だけ解放します。</summary>
+    /// <returns>接続と受付の停止完了です。</returns>
+    private async Task CloseSessionsAsync(CancellationToken cancellationToken = default)
+    {
+        await changes.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            stopping = true;
+            await ReapAsync(true, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            changes.Release();
         }
     }
 
