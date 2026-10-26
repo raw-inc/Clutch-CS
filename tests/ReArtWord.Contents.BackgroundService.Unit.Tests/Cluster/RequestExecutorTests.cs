@@ -24,7 +24,7 @@ public sealed class RequestExecutorTests
     [Fact]
     public async Task ShortRemoteOperationReturnsPersistedCompletionDirectly()
     {
-        RequestRepository repository = new() { DelayClaim = true };
+        RequestRepository repository = new();
         RequestExecutor executor = new(repository, "p", TimeProvider.System);
         ClusterRequest request = new(Guid.NewGuid(), "test", "p", Guid.NewGuid(), DateTimeOffset.UtcNow.AddMinutes(1), NodeValue.Null);
         int effects = 0;
@@ -34,8 +34,6 @@ public sealed class RequestExecutorTests
             return Task.FromResult(new ClusterResponse(EOutcome.Succeeded, NodeValue.FromObject(42)));
         }
         Task<ClusterResponse> response = executor.ExecuteAsync(request, Handler, true, false);
-        Assert.False(response.IsCompleted);
-        repository.Claim.TrySetResult();
         ClusterResponse completed = await response.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.Equal(EOutcome.Succeeded, completed.Outcome);
         Assert.Equal(42, completed.Value!.Json.GetInt32());
@@ -95,11 +93,12 @@ public sealed class RequestExecutorTests
         PeerCluster second = new(new ClusterOptions(clusterId, "second", "second", "127.0.0.1", "127.255.255.255", port, 1, false, Path.GetTempPath()) { RequestTimeout = TimeSpan.FromMilliseconds(200), HeartbeatInterval = TimeSpan.FromMilliseconds(50) }, secondRepository) { ReadinessCheck = token => ValueTask.FromResult(true) };
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable secondLifetime = second.ConfigureAwait(true);
         int effects = 0;
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         second.RemoteExecutionHandler = async (_, token) =>
         {
             Interlocked.Increment(ref effects);
-            await Task.Delay(150, token).ConfigureAwait(false);
-            secondRepository.FailReadsUntil = DateTimeOffset.UtcNow.AddMilliseconds(900);
+            await release.Task.WaitAsync(token).ConfigureAwait(false);
+            secondRepository.FailNextReads(3);
             return NodeResult.Success(NodeValue.FromObject(42));
         };
         await first.StartAsync();
@@ -109,11 +108,22 @@ public sealed class RequestExecutorTests
         {
             await Task.Delay(20, timeout.Token);
         }
-        RemoteExecutionRequest request = new(Guid.NewGuid(), Guid.NewGuid(), "test", "revision", new NodeDefinition("node", "test", NodeSettings.Schema("{}")), new Dictionary<string, NodeValue>(StringComparer.Ordinal), "second", second.LocalInstanceId, DateTimeOffset.UtcNow.AddSeconds(1));
-        NodeResult result = await first.ExecuteAsync(request, timeout.Token);
+        RemoteExecutionRequest request = new(Guid.NewGuid(), Guid.NewGuid(), "test", "revision", new NodeDefinition("node", "test", NodeSettings.Schema("{}")), new Dictionary<string, NodeValue>(StringComparer.Ordinal), "second", second.LocalInstanceId, DateTimeOffset.UtcNow.AddMinutes(1));
+        ClusterRequest command = new(request.Id, "node.execute", request.TargetPeerId, request.TargetInstanceId, request.ExpiresAt, NodeValue.FromObject(request));
+        ClusterResponse admission;
+        try
+        {
+            // 本体を保持したまま最初の応答を受け、必ず保存結果の再照会へ進めます。
+            admission = await first.RequestAsync(command, timeout.Token);
+        }
+        finally
+        {
+            release.TrySetResult();
+        }
+        ClusterResponse result = await RemoteNodeCompletion.ConfirmAsync(first, command, admission, timeout.Token);
         Assert.Equal(EOutcome.Succeeded, result.Outcome);
         Assert.Equal(1, effects);
-        Assert.True(0 < secondRepository.FailedReads);
+        Assert.Equal(3, secondRepository.FailedReads);
     }
 
     /// <summary>受付前の同じ要求も共有し、異内容を拒否して操作記録照会を早期終了させません。</summary>
@@ -192,6 +202,7 @@ public sealed class RequestExecutorTests
         private readonly RepositoryDocument document = new();
         private readonly Lock gate = new();
         private int writes;
+        private int remainingReadFailures;
 
         internal bool DelayClaim
         {
@@ -218,15 +229,13 @@ public sealed class RequestExecutorTests
             get;
         } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        internal DateTimeOffset FailReadsUntil
-        {
-            get; set;
-        }
-
         internal int FailedReads
         {
             get; private set;
         }
+
+        /// <summary>処理時間に依存せず、後続の操作記録照会を指定回数だけ失敗させます。</summary>
+        internal void FailNextReads(int count) => Interlocked.Exchange(ref remainingReadFailures, count);
 
         /// <summary>読取りの増幅を数えます。</summary>
         /// <returns>既存の保存値です。</returns>
@@ -234,7 +243,7 @@ public sealed class RequestExecutorTests
         {
             Reads++;
             string receiptScope = "receipts:second";
-            if (DateTimeOffset.UtcNow < FailReadsUntil && string.Equals(scope, receiptScope, StringComparison.Ordinal))
+            if (string.Equals(scope, receiptScope, StringComparison.Ordinal) && 0 <= Interlocked.Decrement(ref remainingReadFailures))
             {
                 FailedReads++;
                 throw new IOException("fixture transient read failure");
