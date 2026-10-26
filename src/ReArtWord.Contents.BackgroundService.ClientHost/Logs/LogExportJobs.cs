@@ -15,6 +15,7 @@ internal sealed class LogExportJobs : Microsoft.Extensions.Hosting.BackgroundSer
     private readonly Lock gate = new();
     private readonly TimeProvider clock;
     private readonly Dictionary<Guid, Job> jobs = [];
+    private readonly TaskCompletionSource initialized = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private CancellationToken stopping;
 
     /// <summary>既存の管理通信で読み取り、追加のポートや一時ファイルを使用しません。</summary>
@@ -176,11 +177,22 @@ internal sealed class LogExportJobs : Microsoft.Extensions.Hosting.BackgroundSer
         }
     }
 
+    /// <summary>起動直後の書き出しにも、Hostの停止通知が届く状態にします。</summary>
+    /// <returns>停止通知の準備完了です。</returns>
+    public override async Task StartAsync(CancellationToken cancellationToken)
+    {
+        await base.StartAsync(cancellationToken).ConfigureAwait(false);
+
+        // .NET 10ではExecuteAsyncが非同期で始まるため、停止通知を設定するまで起動を完了しません。
+        await initialized.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>期限切れの受付を回収し、サービス停止時は送信処理の終了を待ちます。</summary>
     /// <returns>全出力が停止してからの終了です。</returns>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         stopping = stoppingToken;
+        initialized.TrySetResult();
         try
         {
             using PeriodicTimer timer = new(TimeSpan.FromSeconds(30));
