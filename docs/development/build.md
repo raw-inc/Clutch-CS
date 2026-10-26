@@ -78,6 +78,19 @@ $env:CONTENTS_TEST_FFPROBE = 'C:/tools/ffmpeg/bin/ffprobe.exe'
 - 分散処理・負荷・復旧：[性能・復旧試験](performance-tests.md)
 - 実 NIC を使う疎通：[2 NIC の手動試験](../../tests/ReArtWord.Contents.BackgroundService.Integration.Tests/Networking/README.md)
 
+### Windowsの権限別に検証する
+
+権限によって動作が変わる機能は、通常のPowerShellと「管理者として実行」したPowerShellの両方で検証してください。管理者権限と、画面・音声・サインインの有無は別の実行条件です。
+
+クリップボード試験は、利用者のクリップボードを保護するため、専用の領域を作成します。この領域の作成には管理者権限が必要です。端末の権限制御と併せて確認する場合は、それぞれのPowerShellで次を実行してください。
+
+~~~powershell
+$env:CONTENTS_TEST_PRIVATE_CLIPBOARD = '1'
+dotnet test tests/ReArtWord.Contents.BackgroundService.Unit.Tests -c Release --no-build --no-restore --filter 'FullyQualifiedName~DesktopClipboardTests|FullyQualifiedName~TerminalIdentityTests' --logger trx
+~~~
+
+非昇格時は、管理者端末の起動が拒否されることを確認します。昇格時は、管理者権限での端末起動設定と専用領域でのクリップボードの読み書きを確認します。実行時の権限が試験の条件と合わない場合は、理由付きでスキップされます。CIは単体試験でクリップボード試験を有効にし、ランナーの管理者権限・SYSTEM・セッション番号をログとサマリーに記録します。実行できた条件とスキップ理由はTRXでも確認してください。
+
 ## ローカルで起動する
 
 CoreService の設定は[スクリプトによる導入](../guides/manual-install.md)を参考に、開発用の PC・ポート・保存先を指定してください。
