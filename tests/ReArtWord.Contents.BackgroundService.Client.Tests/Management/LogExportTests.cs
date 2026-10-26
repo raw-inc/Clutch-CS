@@ -113,21 +113,31 @@ public sealed class LogExportTests
     /// <summary>低速な受信側を待つ間に、次ページを先読みし続けないことを確認します。</summary>
     /// <returns>受信停止と切断が検索まで伝播する確認です。</returns>
     // 抑制理由: 取消試験はタスクを開始後に停止し、finally内で必ず完了を待ってから資源を破棄します。
-    [Fact]
+    [Theory]
+    [InlineData(ELogExportFormat.Zip)]
+    [InlineData(ELogExportFormat.Log)]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2025", Justification = "finallyで取消し、書込みTaskの終了を検証してからStreamを破棄します。")]
-    public async Task SlowStreamAppliesBackpressureAndCancellationAsync()
+    public async Task SlowStreamAppliesBackpressureAndCancellationAsync(ELogExportFormat format)
     {
         using CancellationTokenSource cancellation = new(TimeSpan.FromSeconds(10));
         using PausingStream output = new();
         using LogExportStream stream = new(output, cancellation.Token);
         int reads = 0;
-        using Task<(long Entries, bool Complete)> writing = LogExportArchive.WriteAsync(stream, new(new()), [new("c", "p")], (_, _, _) =>
+        Func<LogSearchSource, LogQuery, CancellationToken, Task<LogQueryResult?>> read = (_, _, _) =>
         {
             Interlocked.Increment(ref reads);
             output.Pause = true;
             WorkflowLogEntry[] entries = Enumerable.Range(0, 1000).Select(index => new WorkflowLogEntry(Guid.NewGuid(), DateTimeOffset.UnixEpoch.AddSeconds(-index), "INFO", "p", "line")).ToArray();
             return Task.FromResult<LogQueryResult?>(new(entries, "next", true));
-        }, (_, _, _) => throw new InvalidOperationException("No names are needed."), IgnoreProgress, cancellation.Token);
+        };
+        Task<(long Entries, bool Complete)> write = format switch
+        {
+            ELogExportFormat.Log => LogExportText.WriteAsync(stream, new(new()), [new("c", "p")], read,
+                (_, _, _) => throw new InvalidOperationException("No names are needed."), IgnoreProgress, cancellation.Token),
+            _ => LogExportArchive.WriteAsync(stream, new(new()), [new("c", "p")], read,
+                (_, _, _) => throw new InvalidOperationException("No names are needed."), IgnoreProgress, cancellation.Token),
+        };
+        using Task<(long Entries, bool Complete)> writing = write;
         try
         {
             await output.Blocked.Task.WaitAsync(cancellation.Token);
