@@ -52,7 +52,7 @@ internal sealed class ElevenLabsDialogueNode : AiOperationNode
         }
         JsonObject body = new()
         {
-            ["model_id"] = "eleven_v4",
+            ["model_id"] = settings.ReadText("model"),
             ["inputs"] = new JsonArray(new JsonObject { ["text"] = prompt, ["voice_id"] = settings.ReadText("voice") }),
         };
         AiRequestSettings.Copy(context.Settings, body, ("seed", "seed"), ("languageCode", "language_code"),
@@ -85,7 +85,7 @@ internal sealed class ElevenLabsDialogueNode : AiOperationNode
     {
         JsonObject properties = JsonNode.Parse(ElevenLabsSpeechSettings.Properties(true))!.AsObject();
         properties.Remove("speed");
-        properties["model"] = JsonNode.Parse("""{"type":"string","enum":["eleven_v4"],"default":"eleven_v4"}""");
+        properties["model"] = JsonNode.Parse("""{"type":"string","minLength":1,"examples":["eleven_v4"],"default":"eleven_v4"}""");
         properties["similarity"] = JsonNode.Parse("""{"type":"number","minimum":0,"maximum":1}""");
         properties["usePvcAsIvc"] = new JsonObject { ["type"] = "boolean" };
         foreach (string key in new[] { "previousText", "nextText" })
