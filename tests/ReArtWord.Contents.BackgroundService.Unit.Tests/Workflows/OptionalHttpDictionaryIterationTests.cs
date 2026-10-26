@@ -19,14 +19,17 @@ public sealed class OptionalHttpDictionaryIterationTests
     /// <summary>404は本文を解析せず省略し、認証・サーバー障害は集約成功にしません。</summary>
     /// <returns>実C#ワーカーと逐次・並列反復による分岐の確認です。</returns>
     [Theory]
-    [InlineData(false, 404, false)]
-    [InlineData(true, 404, false)]
-    [InlineData(false, 404, true)]
-    [InlineData(true, 404, true)]
-    [InlineData(false, 500, false)]
-    [InlineData(true, 500, false)]
-    [InlineData(false, 401, false)]
-    public async Task OnlyMissingResourcesAreSkippedAsync(bool parallel, int status, bool allMissing)
+    [InlineData(false, 404, false, false)]
+    [InlineData(true, 404, false, false)]
+    [InlineData(false, 404, true, false)]
+    [InlineData(true, 404, true, false)]
+    [InlineData(false, 500, false, false)]
+    [InlineData(true, 500, false, false)]
+    [InlineData(false, 401, false, false)]
+    [InlineData(false, 502, false, false)]
+    [InlineData(true, 502, false, false)]
+    [InlineData(true, 502, false, true)]
+    public async Task OnlyMissingResourcesAreSkippedAsync(bool parallel, int status, bool allMissing, bool limited)
     {
         string worker = "Clutch-CS.CoreService";
         if (OperatingSystem.IsWindows())
@@ -35,8 +38,9 @@ public sealed class OptionalHttpDictionaryIterationTests
         }
         IActionNode script = (IActionNode)ScriptingNodeRegistration.Create(new(Path.Combine(AppContext.BaseDirectory, worker), []))
             .Single(node => node.Descriptor.Type is "script.csharp");
+        using ConcurrencyWorkflowTests.ProbeLimiter limiter = new();
         WorkflowFixture fixture = new(new ForEachNode(), new ForEachNode(true), new ForEachEndNode(), new SerializationNode("json", false),
-            new KeyValueNode(), new PassNode(), new IfElseNode(), script);
+            new KeyValueNode(), new PassNode(), new IfElseNode(), new ConcurrencyLimitNode(), script);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = fixture.ConfigureAwait(true);
         string code = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "optional-http-status.csx")).ConfigureAwait(true);
         ScriptAnalysis analysis = await ScriptAnalysisService.AnalyzeAsync(new("csharp", code)).ConfigureAwait(true);
@@ -64,11 +68,45 @@ public sealed class OptionalHttpDictionaryIterationTests
                 new("parse", "value/first", "first", "value"), new("parse", "value/second", "second", "value"),
                 new("each", "loop", "end", "loop"), new("first", "value", "end", "value"), new("second", "value", "end", "value2"),
                 new("end", "value", "first-result", "value"), new("end", "value2", "second-result", "value")]);
-        ExecutionReport report = await fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, definition)).ConfigureAwait(true);
+        if (limited)
+        {
+            fixture.Engine.ConcurrencyLimiter = limiter;
+            definition = definition with
+            {
+                Nodes = [WorkflowFixture.Definition("limit", ConcurrencyNodeTypes.Start,
+                    "{\"maxConcurrency\":1,\"waitTimeoutMs\":240000,\"timeoutMode\":\"proceed\"}") with
+                {
+                    Inputs = new Dictionary<string, NodeValue> { ["value"] = rows },
+                }, .. definition.Nodes.Select(node => node with { Inputs = null })],
+                Wires = [.. definition.Wires, new("limit", "value", "each", "value")],
+            };
+        }
+        Runtime.Workflows.Compilation.CompiledWorkflow compiled = IterationTests.Compile(fixture, definition);
+        ExecutionReport report = await fixture.Engine.ExecuteAsync(compiled).WaitAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(true);
         if (status != 404)
         {
             Assert.Equal(EOutcome.Failed, report.Outcome);
             Assert.Empty(IterationResultTests.Outputs(report));
+            Assert.Equal("iteration.bodyFailed", IterationTests.Loop(report).Targets.Single().Result.ReasonCode);
+            if (limited)
+            {
+                Assert.Equal("concurrency.body", report.Nodes.Single(node => node.NodeId is "limit").Targets.Single().Result.ReasonCode);
+                Assert.Equal(0, limiter.Active);
+                Assert.Equal(1, limiter.Released);
+                NodeValue recoveredRows = NodeValue.FromObject(new[] { new { id = "available", statusCode = 200, body = "{\"first\":null,\"second\":\"voice-a\"}" } });
+                ExecutionReport recovered = await fixture.Engine.ExecuteAsync(compiled, "limit", new Dictionary<string, NodeValue> { ["value"] = recoveredRows })
+                    .WaitAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(true);
+                Assert.Equal(EOutcome.Succeeded, recovered.Outcome);
+                Assert.Equal(0, limiter.Active);
+                Assert.Equal(2, limiter.Released);
+                Assert.Equal(2, limiter.Requests.Count);
+                Assert.All(limiter.Requests, request =>
+                {
+                    Assert.Equal(1, request.MaximumConcurrency);
+                    Assert.Equal(240000, request.WaitTimeoutMilliseconds);
+                    Assert.True(request.ProceedOnTimeout);
+                });
+            }
             return;
         }
         Assert.Equal(EOutcome.Succeeded, report.Outcome);
