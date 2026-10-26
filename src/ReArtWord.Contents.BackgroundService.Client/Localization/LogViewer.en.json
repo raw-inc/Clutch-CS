@@ -19,5 +19,7 @@
   "log.viewer.settingsContext": "Trace settings, retention, and operation history apply to the selected cluster.",
   "log.viewer.noSources": "No log sources are available in this scope.",
   "log.viewer.unconfirmed": "Unconfirmed sources: {0}",
-  "log.viewer.nextPauses": "Opening the next page turns auto refresh off."
+  "log.viewer.nextPauses": "Changing pages turns auto refresh off.",
+  "log.viewer.pagination": "Search result pages",
+  "log.viewer.page": "Page {0}"
 }
