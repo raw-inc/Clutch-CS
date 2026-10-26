@@ -93,6 +93,13 @@ jobs:
           $drive = [IO.DriveInfo]::new([IO.Path]::GetPathRoot($env:GITHUB_WORKSPACE))
           $memoryGiB = [Math]::Round($system.TotalPhysicalMemory / 1GB, 1)
           $freeGiB = [Math]::Round($drive.AvailableFreeSpace / 1GB, 1)
+          $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+          try {
+            $administrator = [Security.Principal.WindowsPrincipal]::new($identity).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+            $isSystem = $identity.IsSystem
+          } finally {
+            $identity.Dispose()
+          }
           @(
             '### Windows runner'
             "- Runner: $env:RUNNER_NAME"
@@ -101,6 +108,9 @@ jobs:
             "- CPU: $processors"
             "- Memory: $memoryGiB GiB"
             "- Workspace free space: $freeGiB GiB"
+            "- Administrator: $administrator"
+            "- SYSTEM: $isSystem"
+            "- Windows session: $([Diagnostics.Process]::GetCurrentProcess().SessionId)"
           ) | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
           foreach ($volume in [IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady -and $_.DriveType -eq 'Fixed' }) {
             "- Volume $($volume.Name): $([Math]::Round($volume.TotalSize / 1GB, 1)) GiB, $([Math]::Round($volume.AvailableFreeSpace / 1GB, 1)) GiB free" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
@@ -212,6 +222,7 @@ jobs:
         if: github.event_name != 'workflow_dispatch' || !inputs.skip_unit
         env:
           UNIT_TEST_FILTER: ${{ github.event_name == 'workflow_dispatch' && inputs.unit_filter || '' }}
+          CONTENTS_TEST_PRIVATE_CLIPBOARD: '1'
         run: |
           $filter = 'Category!=Performance'
           if (-not [string]::IsNullOrWhiteSpace($env:UNIT_TEST_FILTER)) {
