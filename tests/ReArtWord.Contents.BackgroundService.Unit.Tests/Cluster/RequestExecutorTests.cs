@@ -55,18 +55,26 @@ public sealed class RequestExecutorTests
         TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using CancellationTokenSource caller = new();
         int effects = 0;
-        Task<ClusterResponse> Handler(ClusterRequest _, CancellationToken token)
+        async Task<ClusterResponse> Handler(ClusterRequest _, CancellationToken token)
         {
             Interlocked.Increment(ref effects);
+
+            // 50ミリ秒の応答期限と競合しないよう、受付後、完了待ちへ戻る前に取り消します。
+            await caller.CancelAsync().ConfigureAwait(false);
             Assert.False(token.IsCancellationRequested);
-            return FinishAsync(release.Task, token);
+            return await FinishAsync(release.Task, token).ConfigureAwait(false);
         }
         Task<ClusterResponse> response = executor.ExecuteAsync(request, Handler, true, false, caller.Token);
-        await caller.CancelAsync();
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => response);
-        Assert.True((await executor.ReadStatusAsync(new(request.Id, ContractJson.Hash(request)))).Running);
-        release.TrySetResult();
-        await executor.DrainAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        try
+        {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => response);
+            Assert.True((await executor.ReadStatusAsync(new(request.Id, ContractJson.Hash(request)))).Running);
+        }
+        finally
+        {
+            release.TrySetResult();
+            await executor.DrainAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        }
         Assert.Equal(EOutcome.Succeeded, (await executor.ExecuteAsync(request, Handler, true, false)).Outcome);
         Assert.Equal(1, effects);
     }
