@@ -21,5 +21,7 @@
   "log.viewer.selectForSettings": "接続先を選択せず、観測可能なすべてのクラスタを検索できます。トレース設定・保持設定を変更する場合は接続先を選択してください。",
   "log.viewer.noSources": "この範囲で取得可能なログの取得先がありません。",
   "log.viewer.unconfirmed": "未確認の取得先: {0}",
-  "log.viewer.nextPauses": "次のページを開くと、自動再取得を無効にします。"
+  "log.viewer.nextPauses": "ページを移動すると、自動再取得が無効になります。",
+  "log.viewer.pagination": "検索結果のページ移動",
+  "log.viewer.page": "{0}ページ目"
 }
