@@ -12,6 +12,7 @@ Clutch-CS の製品バージョンは、ルートの `Version.props` で管理�
 | --- | --- | --- |
 | `VersionPrefix` | `major.minor.patch` 形式のバージョン。各番号は `0`～`65534` の整数 | `1.2.3` |
 | `VersionSuffix` | プレリリースの接尾辞。正式版では空にする | `rc.1` |
+| `VersionRevision` | AssemblyVersion／FileVersionの4桁目。通常は `0`、同じ公開番号の修正版では増やす。`0`～`65534` の整数 | `1` |
 
 たとえば、`1.2.3-rc.1` を配布する場合は次のように設定してください。
 
@@ -20,11 +21,14 @@ Clutch-CS の製品バージョンは、ルートの `Version.props` で管理�
   <PropertyGroup>
     <VersionPrefix>1.2.3</VersionPrefix>
     <VersionSuffix>rc.1</VersionSuffix>
+    <VersionRevision>0</VersionRevision>
   </PropertyGroup>
 </Project>
 ```
 
 正式版の `1.2.3` として配布するときは、`VersionSuffix` を空にしてください。
+
+公開版と内部版は別に指定できます。たとえば `VersionPrefix=1.2.3`、`VersionSuffix=alpha-patch01`、`VersionRevision=1` の場合、公開版は `1.2.3-alpha-patch01`、AssemblyVersion／FileVersionは `1.2.3.1` になります。公開版の番号を上げるときは `VersionRevision` を `0` に戻してください。
 
 現在の設定は、リポジトリのルートで次のコマンドを実行すると確認できます。
 
@@ -42,7 +46,7 @@ Clutch-CS の製品バージョンは、ルートの `Version.props` で管理�
 | `./version.ps1 minor` | 互換性を保った機能追加 | `1.3.0` |
 | `./version.ps1 major` | 互換性に影響する変更 | `2.0.0` |
 
-これらのコマンドは `VersionSuffix` も空にします。プレリリースとして配布する場合は、番号を更新したあとで接尾辞を設定してください。
+これらのコマンドは `VersionSuffix` を空にし、`VersionRevision` を `0` に戻します。プレリリースとして配布する場合は、番号を更新したあとで接尾辞を設定してください。
 
 ## ビルドしてリリースする
 
@@ -61,6 +65,8 @@ Clutch-CS の製品バージョンは、ルートの `Version.props` で管理�
 GitHub Release では、設定したバージョンに合わせて `release/v1.2.3` や `release/v1.2.3-rc.1` のようにブランチを作成してください。ブランチの作成から公開までの手順は、[GitHub Release](distribution.md#github-release)を参照してください。
 
 その実行だけ別のバージョンを使う場合は、配布スクリプトの `-Version 1.2.3`、または `dotnet build`・`dotnet publish` の `-p:Version=1.2.3` で指定できます。これらの指定は `Version.props` を書き換えません。
+
+現在と同じ公開版を明示した場合は `VersionRevision` を維持します。異なる公開版を指定した場合、AssemblyVersion／FileVersionの4桁目は `0` になります。
 
 ## 画面に表示されるバージョン
 
