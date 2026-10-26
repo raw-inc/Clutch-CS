@@ -16,6 +16,7 @@ internal sealed class TerminalService(ReArtWord.Contents.BackgroundService.Infra
     private readonly Dictionary<Guid, TerminalSession> sessions = [];
     private readonly SemaphoreSlim changes = new(1, 1);
     private readonly TerminalShellCatalog shellCatalog = new(TerminalShellDiscovery.Discover());
+    private bool stopping;
 
     /// <summary>作成・引継ぎ・終了は永続受付、入力は連番付き一時操作として登録します。</summary>
     internal void Register(ManagementRegistry registry)
@@ -78,6 +79,10 @@ internal sealed class TerminalService(ReArtWord.Contents.BackgroundService.Infra
         await changes.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            if (stopping)
+            {
+                throw new ManagementInputException("Core is stopping.");
+            }
             string shell = shellCatalog.Resolve(request.Shell);
             if (sessions.TryGetValue(request.SessionId, out TerminalSession? existing))
             {
@@ -200,21 +205,39 @@ internal sealed class TerminalService(ReArtWord.Contents.BackgroundService.Infra
 
         finally
         {
-            await changes.WaitAsync(CancellationToken.None).ConfigureAwait(false);
-            try
-            {
-                foreach (TerminalSession session in sessions.Values)
-                {
-                    await session.DisposeAsync().ConfigureAwait(false);
-                }
+            await CloseSessionsAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+    }
 
-                sessions.Clear();
+    /// <summary>監視タスクの開始前に停止しても、所有する全接続を回収します。</summary>
+    /// <returns>受付停止とセッションの解放完了です。</returns>
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await base.StopAsync(cancellationToken).ConfigureAwait(false);
+
+        // .NET 10では監視が始まらずfinallyも通らない停止があるため、ここでも回収します。
+        await CloseSessionsAsync(CancellationToken.None).ConfigureAwait(false);
+    }
+
+    /// <summary>通常終了と起動取消のどちらからも、所有セッションを一度だけ解放します。</summary>
+    /// <returns>接続と受付の停止完了です。</returns>
+    private async Task CloseSessionsAsync(CancellationToken cancellationToken = default)
+    {
+        await changes.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            stopping = true;
+            foreach (TerminalSession session in sessions.Values)
+            {
+                await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = session.ConfigureAwait(false);
             }
 
-            finally
-            {
-                changes.Release();
-            }
+            sessions.Clear();
+        }
+
+        finally
+        {
+            changes.Release();
         }
     }
 

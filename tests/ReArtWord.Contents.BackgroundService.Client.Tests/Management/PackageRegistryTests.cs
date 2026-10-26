@@ -128,15 +128,28 @@ public sealed class PackageRegistryTests : IDisposable
     [Fact]
     public async Task CancelledIndexDoesNotPublishPartialCacheAsync()
     {
+        TaskCompletionSource started = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using ClientHttpHandler handler = new(async (_, token) =>
         {
+            started.TrySetResult();
             await Task.Delay(Timeout.Infinite, token).ConfigureAwait(false);
             return Reply("{}");
         });
         using HttpClient http = new(handler);
         using PackageRegistryClient registry = new(directory, http);
-        using CancellationTokenSource cancel = new(TimeSpan.FromMilliseconds(50));
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => registry.SearchAsync(new(EScriptPackageKind.Pip, "example"), cancel.Token)).ConfigureAwait(true);
+        using CancellationTokenSource cancel = new();
+        Task search = registry.SearchAsync(new(EScriptPackageKind.Pip, "example"), cancel.Token);
+        try
+        {
+            await started.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
+            await cancel.CancelAsync().ConfigureAwait(true);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => search.WaitAsync(TimeSpan.FromSeconds(5))).ConfigureAwait(true);
+        }
+        finally
+        {
+            await cancel.CancelAsync().ConfigureAwait(true);
+            await search.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
         Assert.Empty(Directory.GetFiles(directory));
     }
 

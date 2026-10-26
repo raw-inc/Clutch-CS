@@ -11,6 +11,49 @@ namespace ReArtWord.Contents.BackgroundService.Client.Tests.Management;
 /// <summary>接続寿命・手動取消・停止と出力受付の所有関係を検証します。</summary>
 public sealed class LogExportJobTests
 {
+    /// <summary>バックグラウンド処理の開始が遅れても、停止通知の準備前に起動完了を返しません。</summary>
+    /// <returns>起動直後の書き出しにも停止通知が届くことを保証する起動順序です。</returns>
+    [Fact]
+    public async Task StartupWaitsForShutdownRegistrationAsync()
+    {
+        using ManualResetEventSlim release = new();
+        TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int deferred = 0;
+
+        // ExecuteAsyncの開始だけを遅らせ、ThreadPool全体の設定や製品コードの試験用フックを使いません。
+        AsyncLocal<bool> defer = new(change =>
+        {
+            if (change.ThreadContextChanged && change.CurrentValue && Interlocked.CompareExchange(ref deferred, 1, 0) == 0)
+            {
+                entered.TrySetResult();
+                release.Wait(TimeSpan.FromSeconds(10));
+            }
+        });
+        using LogExportJobs jobs = new(Clusters, (_, _, _) => Task.FromResult<LogQueryResult?>(new([], null, true)), NamesAsync);
+        Task startup;
+        defer.Value = true;
+        try
+        {
+            startup = jobs.StartAsync(CancellationToken.None);
+        }
+        finally
+        {
+            defer.Value = false;
+        }
+        try
+        {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.False(startup.IsCompleted);
+        }
+        finally
+        {
+            release.Set();
+            await startup.WaitAsync(TimeSpan.FromSeconds(5));
+            await jobs.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        Assert.Throws<OperationCanceledException>(() => jobs.Create(new(new())));
+    }
+
     /// <summary>未開始受付と送信状態を期限で解放し、完了ファイルの再生成を許可しません。</summary>
     /// <returns>全件保持なしの一回限りの送信です。</returns>
     [Theory]
@@ -73,7 +116,7 @@ public sealed class LogExportJobTests
     public async Task CancellationReleasesInFlightSearchAsync(string reason, ELogExportFormat format)
     {
         TaskCompletionSource started = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using CancellationTokenSource disconnected = new(TimeSpan.FromSeconds(15));
+        using CancellationTokenSource disconnected = new();
         using LogExportJobs jobs = new(Clusters, async (_, _, token) =>
         {
             started.TrySetResult();
@@ -98,16 +141,18 @@ public sealed class LogExportJobTests
                         await jobs.CancelAsync(running.Id);
                         break;
                     case "shutdown":
-                        await jobs.StopAsync(CancellationToken.None);
+                        await jobs.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(10));
                         break;
                     default:
                         throw new InvalidOperationException("Unknown test case.");
                 }
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() => writing.WaitAsync(TimeSpan.FromSeconds(10)));
             }
             finally
             {
+                // 後始末の取消で停止通知の欠落を隠さないよう、結果の検証は取消前に済ませます。
                 await disconnected.CancelAsync();
-                await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await writing.ConfigureAwait(true));
+                await writing.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
             }
             string shutdown = "shutdown";
             if (!string.Equals(reason, shutdown, StringComparison.Ordinal))

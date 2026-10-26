@@ -109,19 +109,31 @@ public sealed class PeerClusterTests
     {
         string id = Guid.NewGuid().ToString("N");
         SqliteRepository store = new(Path.Combine(Path.GetTempPath(), id, "state.db"));
-        await using PeerCluster peer = Create(id, "one", GetPort(), true, store);
+        RequestTestClock clock = new();
+        await using PeerCluster peer = Create(id, "one", GetPort(), true, store, clock);
+        using CancellationTokenSource cancellation = new();
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
         TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         peer.RegisterHandler("long", async (request, token) =>
         {
-            await release.Task.ConfigureAwait(false);
+            clock.Advance(TimeSpan.FromMilliseconds(100));
+            await cancellation.CancelAsync().ConfigureAwait(false);
+            Assert.False(token.IsCancellationRequested);
+            await release.Task.WaitAsync(token).ConfigureAwait(false);
             return new ClusterResponse(EOutcome.Succeeded, request.Payload);
         });
         await peer.StartAsync();
-        using CancellationTokenSource cancellation = new(TimeSpan.FromMilliseconds(150));
-        ClusterRequest request = new(Guid.NewGuid(), "long", "one", peer.LocalInstanceId, DateTimeOffset.UtcNow.AddMilliseconds(50), NodeValue.FromObject(5));
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await peer.RequestAsync(request, cancellation.Token).ConfigureAwait(false));
-        release.SetResult();
-        Assert.Equal(EOutcome.Succeeded, (await peer.RequestAsync(request)).Outcome);
+        ClusterRequest request = new(Guid.NewGuid(), "long", "one", peer.LocalInstanceId, clock.GetUtcNow().AddMilliseconds(50), NodeValue.FromObject(5));
+        try
+        {
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => peer.RequestAsync(request, cancellation.Token).WaitAsync(TimeSpan.FromSeconds(5)));
+            Assert.True(request.ExpiresAt < clock.GetUtcNow());
+        }
+        finally
+        {
+            release.TrySetResult();
+        }
+        Assert.Equal(EOutcome.Succeeded, (await peer.RequestAsync(request, timeout.Token)).Outcome);
     }
 
     /// <summary>前回起動で開始だけ保存された要求は実行せず結果不明を返します。</summary>
@@ -262,7 +274,7 @@ public sealed class PeerClusterTests
 
     /// <summary>起動時の実必要条件を明示します。</summary>
     /// <returns>検証用Peer。</returns>
-    private static PeerCluster Create(string id, string name, int port, bool fresh, IDurableRepository repository)
+    private static PeerCluster Create(string id, string name, int port, bool fresh, IDurableRepository repository, TimeProvider? clock = null)
     {
         ClusterOptions options = new(id, name, name, "127.0.0.1", "127.255.255.255", port, 1, fresh, Path.GetTempPath())
         {
@@ -270,7 +282,7 @@ public sealed class PeerClusterTests
             PeerTimeout = TimeSpan.FromSeconds(2),
             RequestTimeout = TimeSpan.FromSeconds(4),
         };
-        return new PeerCluster(options, repository) { ReadinessCheck = token => ValueTask.FromResult(true) };
+        return new PeerCluster(options, repository, clock) { ReadinessCheck = token => ValueTask.FromResult(true) };
     }
 
     /// <summary>空いているUDPポートを選びます。</summary>

@@ -54,8 +54,11 @@ public sealed class StateRetentionTests
         Assert.True(await joined.ImportAsync(snapshot).ConfigureAwait(true));
         Assert.Equal(119, (await joined.ReadAsync(NodeStateScope.Cluster, "cue").ConfigureAwait(true))!.Value!.Json.GetInt32());
         Assert.NotEqual(EOutcome.Succeeded, (await joined.ApplyBatchAsync(first, [new(NodeStateScope.Cluster, "cue", null, NodeValue.FromObject(0))]).ConfigureAwait(true)).Outcome);
-        using CancellationTokenSource timeout = new(TimeSpan.FromMilliseconds(50));
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await subscription.ReadAsync(timeout.Token).ConfigureAwait(true)).ConfigureAwait(true);
+        using CancellationTokenSource cancellation = new();
+        Task<DurableEntry> pending = subscription.ReadAsync(cancellation.Token).AsTask();
+        Assert.False(pending.IsCompleted);
+        await cancellation.CancelAsync().ConfigureAwait(true);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending.WaitAsync(TimeSpan.FromSeconds(5))).ConfigureAwait(true);
     }
 
     /// <summary>相互に独立した永続保存先を作ります。</summary>
