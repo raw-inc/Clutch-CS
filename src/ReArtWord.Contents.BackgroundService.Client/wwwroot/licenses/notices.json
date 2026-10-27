@@ -1752,15 +1752,29 @@
     ]
   },
   {
-    "name": "SQLitePCLRaw.bundle_e_sqlite3",
-    "version": "2.1.12",
-    "license": "Apache-2.0",
-    "authors": "Eric Sink",
-    "project": "https://github.com/ericsink/SQLitePCL.raw",
-    "copyright": "Copyright 2014-2024 SourceGear, LLC",
+    "name": "SQLite",
+    "version": "3.54.1",
+    "license": "Public Domain",
+    "authors": "SQLite",
+    "project": "https://sqlite.org/",
+    "copyright": "Copyright 2014-2026 SourceGear, LLC",
     "notices": [
       {
         "label": "License",
+        "href": "/licenses/SQLite-3.54.1-license.txt"
+      }
+    ]
+  },
+  {
+    "name": "SQLitePCLRaw.config.e_sqlite3",
+    "version": "3.0.5",
+    "license": "Apache-2.0",
+    "authors": "Eric Sink",
+    "project": "https://github.com/ericsink/SQLitePCL.raw",
+    "copyright": "Copyright 2014-2026 SourceGear, LLC",
+    "notices": [
+      {
+        "label": "SQLitePCLRaw",
         "href": "/licenses/NuGet-7.9.0-license.txt"
       },
       {
@@ -1771,32 +1785,14 @@
   },
   {
     "name": "SQLitePCLRaw.core",
-    "version": "2.1.12",
+    "version": "3.0.5",
     "license": "Apache-2.0",
     "authors": "Eric Sink",
     "project": "https://github.com/ericsink/SQLitePCL.raw",
-    "copyright": "Copyright 2014-2024 SourceGear, LLC",
+    "copyright": "Copyright 2014-2025 SourceGear, LLC",
     "notices": [
       {
-        "label": "License",
-        "href": "/licenses/NuGet-7.9.0-license.txt"
-      },
-      {
-        "label": "SQLitePCLRaw-notices",
-        "href": "/licenses/SQLitePCLRaw-notices.txt"
-      }
-    ]
-  },
-  {
-    "name": "SQLitePCLRaw.lib.e_sqlite3",
-    "version": "2.1.12",
-    "license": "Apache-2.0",
-    "authors": "Eric Sink",
-    "project": "https://github.com/ericsink/SQLitePCL.raw",
-    "copyright": "Copyright 2014-2024 SourceGear, LLC",
-    "notices": [
-      {
-        "label": "License",
+        "label": "SQLitePCLRaw",
         "href": "/licenses/NuGet-7.9.0-license.txt"
       },
       {
@@ -1807,14 +1803,14 @@
   },
   {
     "name": "SQLitePCLRaw.provider.e_sqlite3",
-    "version": "2.1.12",
+    "version": "3.0.5",
     "license": "Apache-2.0",
     "authors": "Eric Sink",
     "project": "https://github.com/ericsink/SQLitePCL.raw",
-    "copyright": "Copyright 2014-2024 SourceGear, LLC",
+    "copyright": "Copyright 2014-2025 SourceGear, LLC",
     "notices": [
       {
-        "label": "License",
+        "label": "SQLitePCLRaw",
         "href": "/licenses/NuGet-7.9.0-license.txt"
       },
       {

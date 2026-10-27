@@ -10,7 +10,9 @@
     <PackageReference Include="Tomlyn" />
     <PackageReference Include="CsvHelper" />
     <PackageReference Include="JsonSchema.Net" />
-    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
+    <PackageReference Include="SQLitePCLRaw.config.e_sqlite3" />
+    <PackageReference Include="SQLite" />
     <PackageReference Include="Npgsql" />
     <PackageReference Include="NuGet.Commands" />
     <PackageReference Include="System.Security.Cryptography.Pkcs" />

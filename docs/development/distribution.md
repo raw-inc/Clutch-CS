@@ -37,6 +37,10 @@ Clutch-CS-win-x64/
 
 ## ネイティブライブラリを用意する
 
+SQLiteは、`Directory.Packages.props`で指定したNuGetの`SQLite`パッケージから取得します。
+`Microsoft.Data.Sqlite.Core`と`SQLitePCLRaw.config.e_sqlite3`を組み合わせ、対象OS・CPUに対応するライブラリをSQLiteを使うコンポーネントへ同梱します。SQLiteを別途インストールしたり、DLLを手動で差し替えたりする必要はありません。
+依存パッケージを更新する場合は、組込み拡張・公開API・外部キー制約などの既定動作を確認し、`installer/ThirdParty`とWeb UIのライセンス一覧も更新してください。
+
 Skia は、DNG SDK と piex を無効にした固定版のソースからビルドします。
 初回のビルドには Git、Python 3、C++ ツールチェーン、Ninja が必要です。
 

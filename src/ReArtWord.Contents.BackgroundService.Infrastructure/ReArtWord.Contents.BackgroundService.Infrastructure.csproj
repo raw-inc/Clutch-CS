@@ -14,7 +14,9 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="YamlDotNet" />
     <PackageReference Include="Tomlyn" />
-    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
+    <PackageReference Include="SQLitePCLRaw.config.e_sqlite3" />
+    <PackageReference Include="SQLite" />
     <PackageReference Include="ZstdSharp.Port" />
     <PackageReference Include="ZLinq" />
   </ItemGroup>
