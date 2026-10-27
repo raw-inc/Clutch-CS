@@ -4,7 +4,7 @@
 
 **RemoteDesktop** では、Windows PC の画面・再生音声を確認し、マウスやキーボードで操作できます。
 接続先はログイン中の Windows デスクトップです。
-映像コーデックの既定は VP9 です。H.264・H.265 は `/desktop?experimental=true` で開いた場合だけ選択できます。
+映像コーデックの既定は VP9 です。H.264・H.265 は `/desktop?experimental=true` で開くか、[試験的な機能を常時有効にする](web-client.md#試験的な機能を有効にする)と選択できます。
 
 ## 接続する
 

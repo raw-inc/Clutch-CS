@@ -2,6 +2,7 @@ import { createTerminalStream } from './terminal-stream.js';
 import { createTerminalLayout } from './terminal-layout.js';
 import { createTerminalKeys } from './terminal-keys.js';
 import { createTerminalFullscreen } from './terminal-fullscreen.js';
+import { experimentalEnabled } from './experimental.js';
 
 /** ターミナルの接続・入出力・セッション表示を構成します。
  * @returns 処理の完了と結果を伝えるPromiseです。
@@ -9,7 +10,7 @@ import { createTerminalFullscreen } from './terminal-fullscreen.js';
  */
 export async function terminalView(root, ctx)
 {
-    const experimental = new URLSearchParams(location.search).get('experimental') === 'true';
+    const experimental = experimentalEnabled();
     root.className = 'terminal-workspace';
     const sidebar = document.createElement('aside');
     sidebar.className = 'remote-sidebar';

@@ -1,0 +1,9 @@
+{
+  "experimental.settings.title": "Experimental features",
+  "experimental.settings.enabled": "Always enable experimental features in this browser",
+  "experimental.settings.help": "Applies to all pages. Saved in this browser for this WebUI and kept when you reopen it. Reopen pages in other tabs to apply changes there.",
+  "experimental.settings.save": "Save",
+  "experimental.settings.saved": "Settings saved for this browser.",
+  "experimental.settings.readFailed": "The setting could not be read.",
+  "experimental.settings.writeFailed": "The setting could not be saved."
+}

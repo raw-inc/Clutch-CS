@@ -60,7 +60,7 @@ CoreService が LocalSystem で動き、コンソールにログイン中のユ�
 
 ### 厳密な非昇格（試験的設定）
 
-`/terminal?experimental=true` を開くと、`厳密な非昇格: OFF / ON` を選べます。既定は OFF です。ON では必要に応じて本人のトークンを Windows の LUA 規則で制限し、通常シェルを Medium 整合性で起動します。子プロセスを起動するためのアクセス権も、その起動用トークンに設定します。
+`/terminal?experimental=true` を開くか、[試験的な機能を常時有効にする](web-client.md#試験的な機能を有効にする)と、`厳密な非昇格: OFF / ON` を選べます。既定は OFF です。ON では必要に応じて本人のトークンを Windows の LUA 規則で制限し、通常シェルを Medium 整合性で起動します。子プロセスを起動するためのアクセス権も、その起動用トークンに設定します。
 
 設定は選択した CoreService に保存され、次に作成するセッションへ適用されます。CoreService の再起動やブラウザーの変更後も有効で、URL から `experimental=true` を外しても保存値は変わりません。起動済みのセッション、Windows と CoreService 自体のセキュリティ設定は変更しません。
 

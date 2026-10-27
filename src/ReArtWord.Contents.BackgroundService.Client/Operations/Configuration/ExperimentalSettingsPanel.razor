@@ -1,0 +1,7 @@
+<section class="card section">
+    <h2>@Ui["experimental.settings.title"]</h2>
+    <label class="check"><input type="checkbox" @bind="enabled" disabled="@busy" />@Ui["experimental.settings.enabled"]</label>
+    <p class="small muted">@Ui["experimental.settings.help"]</p>
+    <button type="button" @onclick="SaveAsync" disabled="@busy">@Ui["experimental.settings.save"]</button>
+    @if(message is not null){<p class="notice" role="status">@Ui[message]</p>}
+</section>
