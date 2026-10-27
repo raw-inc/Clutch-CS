@@ -103,21 +103,43 @@ public sealed class HttpRequestAuthenticationTests
         Assert.Contains("NIC", result.Message, StringComparison.Ordinal);
     }
 
-    /// <summary>接続後の期限切れは理由を示し、相手側の実行結果を未実行へ変更しません。</summary>
+    /// <summary>要求送信後の期限切れと取消を区別し、相手側の実行結果を未実行へ変更しません。</summary>
     /// <returns>実際に受理済みの要求を自動再送しない確認です。</returns>
-    [Fact]
-    public async Task TimeoutAfterConnectionRetainsUnknownOutcomeAsync()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task InterruptionAfterDispatchRetainsUnknownOutcomeAsync(bool cancel)
     {
-        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
+        using CancellationTokenSource timeout = new(TimeSpan.FromMinutes(1));
+        using CancellationTokenSource requestLifetime = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token);
         using TcpListener server = new(IPAddress.Loopback, 0);
         server.Start();
-        JsonElement settings = SocketNodeTests.Settings(new { url = "http://127.0.0.1:" + ((IPEndPoint)server.LocalEndpoint).Port.ToString(System.Globalization.CultureInfo.InvariantCulture), method = "GET", timeoutMs = 200 });
-        Task<NodeResult> pending = RequestNode(new RecordingSecrets()).ExecuteAsync(SocketNodeTests.Context(settings), timeout.Token).AsTask();
-        using TcpClient accepted = await server.AcceptTcpClientAsync(timeout.Token).ConfigureAwait(true);
-        NodeResult result = await pending.ConfigureAwait(true);
-        Assert.Equal(EOutcome.Unknown, result.Outcome);
-        Assert.Equal("http.request.timeout", result.ReasonCode);
-        Assert.False(server.Pending());
+        JsonElement settings = SocketNodeTests.Settings(new { url = "http://127.0.0.1:" + ((IPEndPoint)server.LocalEndpoint).Port.ToString(System.Globalization.CultureInfo.InvariantCulture), method = "GET" });
+        Task<NodeResult> pending = RequestNode(new RecordingSecrets()).ExecuteAsync(SocketNodeTests.Context(settings), requestLifetime.Token).AsTask();
+        try
+        {
+            using TcpClient accepted = await server.AcceptTcpClientAsync(timeout.Token).ConfigureAwait(true);
+            using NetworkStream stream = accepted.GetStream();
+            using StreamReader reader = new(stream, Encoding.ASCII, false, 1024, true);
+            Assert.StartsWith("GET / HTTP/", await reader.ReadLineAsync(timeout.Token).ConfigureAwait(true), StringComparison.Ordinal);
+
+            // HTTP要求の到着後も応答を返さず、呼出元取消と通常の操作期限を別々に検証します。
+            if (cancel)
+            {
+                await requestLifetime.CancelAsync().ConfigureAwait(true);
+            }
+            NodeResult result = await pending.WaitAsync(timeout.Token).ConfigureAwait(true);
+            Assert.False(timeout.IsCancellationRequested);
+            Assert.Equal(EOutcome.Unknown, result.Outcome);
+            Assert.Equal(cancel ? "http.request.cancelled"
+                                : "http.request.timeout", result.ReasonCode);
+            Assert.False(server.Pending());
+        }
+        finally
+        {
+            await requestLifetime.CancelAsync().ConfigureAwait(true);
+            await pending.ConfigureAwait(true);
+        }
     }
 
     /// <summary>401を認証設定の強制と取り違えないよう、実際に受けたHTTPステータスを示します。</summary>
