@@ -14,20 +14,25 @@ const stages = {
     avx2_tests: 'Installation without AVX2',
 };
 
-// continue-on-errorで成功へ変換される前の成否を集計します。
-export function validationReport(steps) {
+// continue-on-errorで成功へ変換される前の成否を集計し、前のジョブの失敗も引き継ぎます。
+export function validationReport(steps, previous = {}) {
     const results = Object.entries(stages).map(([id, name]) => {
-        const outcome = steps[id]?.outcome ?? 'skipped';
-        if (!['success', 'failure', 'cancelled', 'skipped'].includes(outcome)) {
-            throw new Error(`Unexpected test outcome for ${id}: ${outcome}`);
+        const outcomes = [steps[id]?.outcome ?? 'skipped', previous[id] ?? 'skipped'];
+        const precedence = ['failure', 'cancelled', 'success', 'skipped'];
+        for (const outcome of outcomes) {
+            if (!precedence.includes(outcome)) {
+                throw new Error(`Unexpected test outcome for ${id}: ${outcome}`);
+            }
         }
+        const outcome = precedence.find(value => outcomes.includes(value));
         return { id, name, outcome };
     });
     return { failed: results.some(result => result.outcome === 'failure' || result.outcome === 'cancelled'), results };
 }
 
 async function main() {
-    const report = validationReport(JSON.parse(process.env.VALIDATION_STEPS));
+    const report = validationReport(JSON.parse(process.env.VALIDATION_STEPS),
+        JSON.parse(process.env.PREVIOUS_VALIDATION_RESULTS ?? '{}'));
     const outcomes = Object.fromEntries(report.results.map(result => [result.id, result.outcome]));
     await appendFile(process.env.GITHUB_OUTPUT, `tests_failed=${report.failed}\ntest_results=${JSON.stringify(outcomes)}\n`);
     const summary = ['### Test results', '', '| Stage | Result |', '| --- | --- |',
