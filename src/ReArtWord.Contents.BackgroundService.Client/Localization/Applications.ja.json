@@ -1,4 +1,10 @@
 {
+  "Remove registration": "登録を削除",
+  "Removing this registration disables automatic monitoring, recovery and scheduled starts. A running application will not be stopped.": "登録を削除すると、自動監視・自動復旧・起動スケジュールが解除されます。実行中のアプリケーションは停止しません。",
+  "Workflows that use this registration will no longer be able to operate it.": "この登録を参照するワークフローは、アプリケーションを操作できなくなります。",
+  "Application registration removed.": "アプリケーションの登録を削除しました。",
+  "Registration was not removed. Refresh the list and check the current registration.": "登録を削除できませんでした。一覧を更新して登録内容を確認してください。",
+  "Removal could not be confirmed. Refresh the list to check the registration.": "削除結果を確認できません。一覧を更新して登録状態を確認してください。",
   "Application name": "アプリケーション名",
   "Application host": "アプリケーションのホスト",
   "Automatic monitoring": "自動監視",
