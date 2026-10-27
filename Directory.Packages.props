@@ -16,7 +16,9 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="YamlDotNet" Version="18.1.0" />
     <PackageVersion Include="Tomlyn" Version="2.10.1" />
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="10.0.12" />
+    <PackageVersion Include="SQLitePCLRaw.config.e_sqlite3" Version="3.0.5" />
+    <PackageVersion Include="SQLite" Version="3.54.1" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="NuGet.Commands" Version="7.9.0" />
     <PackageVersion Include="ZstdSharp.Port" Version="0.8.8" />
