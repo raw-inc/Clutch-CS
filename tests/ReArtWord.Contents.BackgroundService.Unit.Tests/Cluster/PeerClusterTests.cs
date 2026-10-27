@@ -116,13 +116,14 @@ public sealed class PeerClusterTests
         TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         peer.RegisterHandler("long", async (request, token) =>
         {
-            clock.Advance(TimeSpan.FromMilliseconds(100));
+            clock.AdvanceAndResume(TimeSpan.FromMilliseconds(100));
             await cancellation.CancelAsync().ConfigureAwait(false);
             Assert.False(token.IsCancellationRequested);
             await release.Task.WaitAsync(token).ConfigureAwait(false);
             return new ClusterResponse(EOutcome.Succeeded, request.Payload);
         });
         await peer.StartAsync();
+        clock.Freeze();
         ClusterRequest request = new(Guid.NewGuid(), "long", "one", peer.LocalInstanceId, clock.GetUtcNow().AddMilliseconds(50), NodeValue.FromObject(5));
         try
         {
