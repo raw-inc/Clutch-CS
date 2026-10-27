@@ -131,7 +131,7 @@ public sealed class ClientSelfUpdateProcessTests
             {
                 try
                 {
-                    status = await scope.Http.GetFromJsonAsync<FleetUpdateStatus>(new Uri("client/updates/" + plan!.OperationId.ToString("D"), UriKind.Relative), ContractJson.Options, token).ConfigureAwait(true);
+                    status = await scope.ReadAsync<FleetUpdateStatus>("client/updates/" + plan!.OperationId.ToString("D"), token).ConfigureAwait(true);
                     return status?.Completed == true;
                 }
                 catch (HttpRequestException)
@@ -143,13 +143,15 @@ public sealed class ClientSelfUpdateProcessTests
                     requestTimeouts++;
                     return false;
                 }
-            }, timeout.Token).ConfigureAwait(true);
+            }, Timeout.InfiniteTimeSpan, timeout.Token).ConfigureAwait(true);
         }
-        catch (OperationCanceledException) when (!timeout.IsCancellationRequested)
+        catch (OperationCanceledException)
         {
+            // 更新の完了待ちは試験全体の期限を使い、期限切れ後の診断だけを別の短い期限で取得します。
+            using CancellationTokenSource diagnosis = new(TimeSpan.FromSeconds(5));
             FleetUpdateStatus? saved = await UpdateProgressFile.ReadAsync<FleetUpdateStatus>(
-                Path.Combine(scope.State, "fleet-updates", plan!.OperationId.ToString("N") + ".json"), timeout.Token).ConfigureAwait(true);
-            ClientUpdateProgress? client = await ClientUpdateFiles.ReadAsync(scope.State, plan.OperationId, timeout.Token).ConfigureAwait(true);
+                Path.Combine(scope.State, "fleet-updates", plan!.OperationId.ToString("N") + ".json"), diagnosis.Token).ConfigureAwait(true);
+            ClientUpdateProgress? client = await ClientUpdateFiles.ReadAsync(scope.State, plan.OperationId, diagnosis.Token).ConfigureAwait(true);
             Assert.Fail(JsonSerializer.Serialize(new
             {
                 Reason = "Fleet update did not complete within the test deadline.",
