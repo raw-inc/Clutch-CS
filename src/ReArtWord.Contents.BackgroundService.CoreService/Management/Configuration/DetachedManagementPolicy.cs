@@ -21,7 +21,7 @@ internal static class DetachedManagementPolicy
             return null;
         }
         string[] edits = ["workflows.save", "workflows.merge", "workflows.activate", "configuration.save",
-            "configuration.activate", "collaboration.changes", "processes.register", "secrets.set", "internal-data.write", "internal-data.compare-exchange", "host-manager.apply", "host.power-schedules.save", "scripts.packages.change"];
+            "configuration.activate", "collaboration.changes", "processes.register", "processes.remove", "secrets.set", "internal-data.write", "internal-data.compare-exchange", "host-manager.apply", "host.power-schedules.save", "scripts.packages.change"];
         if (edits.Contains(operation, StringComparer.Ordinal))
         {
             return "Detached.EditDenied";

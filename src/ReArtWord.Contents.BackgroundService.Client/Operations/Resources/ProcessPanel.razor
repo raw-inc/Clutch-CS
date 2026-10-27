@@ -2,7 +2,7 @@
 <section class="applications-panel">
     <div class="section-heading"><h2>@Ui["Applications"]</h2><div class="toolbar"><button class="quiet" disabled="@busy" @onclick="()=>RefreshAsync(UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh"]</button><button disabled="@(busy||target is null)" @onclick="()=>Edit(null)"><UiIcon Name="add" />@Ui["Register application"]</button></div></div>
     <div class="application-target card">
-        <label>@Ui["Application host"]<select value="@peer" disabled="@(busy||refreshing||registrationOpen||selected is not null)" @onchange="e=>SelectPeerAsync(e.Value?.ToString(),UiCancellation)">
+        <label>@Ui["Application host"]<select value="@peer" disabled="@(busy||refreshing||registrationOpen||selected is not null||removing is not null)" @onchange="e=>SelectPeerAsync(e.Value?.ToString(),UiCancellation)">
             @foreach(var item in (Connection.Current?.Peers??[]).OrderBy(item=>item.HostId,StringComparer.CurrentCulture))
             {
                 <option value="@item.PeerId">@item.HostId · @item.PeerId</option>
@@ -17,12 +17,12 @@
             <td><span class="badge @(item.Observed.Status?.Running is true?"good":"muted")">@Ui[State(item)]</span>@if(item.Observed.Status?.Identity is {} identity){<div class="small muted">PID @identity.ProcessId</div>}</td>
             <td>@Ui[item.Definition.AutomaticMonitoring?"Enabled":"Disabled"]<div class="small muted">@Ui[item.Definition.Mode.ToString()]</div>@if(item.Observed.Status?.RecoveryExhausted is true){<span class="small error">@Ui["Restart limit reached"]</span>}@if(item.Observed.Status?.RecoverySuppressed is true){<span class="small muted">@Ui["Recovery suppressed"]</span>}</td>
             <td>@((item.Definition.Schedules??[]).Count(schedule=>schedule.Enabled))@foreach(var schedule in (item.Schedules??[]).Where(schedule=>schedule.NextAt is not null).Take(1)){<div class="small muted">@FormatTime(schedule.NextAt)</div>}</td>
-            <td><button disabled="@(busy||target is null)" @onclick="()=>selected=item">@Ui["Details and actions"]</button><button class="quiet" disabled="@(busy||target is null)" @onclick="()=>Edit(item)">@Ui["Edit"]</button></td>
+            <td><button disabled="@(busy||target is null)" @onclick="()=>selected=item">@Ui["Details and actions"]</button><button class="quiet" disabled="@(busy||target is null)" @onclick="()=>Edit(item)">@Ui["Edit"]</button><button class="quiet danger" disabled="@(busy||refreshing||target is null)" @onclick="()=>ConfirmRemoval(item)">@Ui["Remove registration"]</button></td>
         </tr>}</tbody></table>
         @if(processes.Count==0){<div class="empty">@Ui["No applications registered on this host."]</div>}
     </div>
 </section>
-<Modal Open="@(selected is not null&&!registrationOpen)" Title='@(selected?.Definition.DisplayName??Ui["Application state"])' Close="()=>selected=null">
+<Modal Open="@(selected is not null&&!registrationOpen&&removing is null)" Title='@(selected?.Definition.DisplayName??Ui["Application state"])' Close="()=>selected=null">
     @if(selected is {} item)
     {
         <p class="small muted">@Owner</p>
@@ -44,9 +44,16 @@
                 <button class="quiet" @onclick="()=>resolveOpen=true">@Ui["Resolve an unknown launch"]</button>
             </div></fieldset>
         }
-        <button class="section quiet" disabled="@busy" @onclick="()=>Edit(item)">@Ui["Edit registration"]</button>
+        <div class="toolbar section"><button class="quiet" disabled="@busy" @onclick="()=>Edit(item)">@Ui["Edit registration"]</button><button class="quiet danger" disabled="@(busy||refreshing||target is null)" @onclick="()=>ConfirmRemoval(item)">@Ui["Remove registration"]</button></div>
         @if(result is not null){<JsonDetails Value="result" Title='@Ui["Actual operation result"]' />}
     }
+</Modal>
+<Modal Open="@(removing is not null)" Title='@Ui["Remove registration"]' Close="CloseRemoval">
+    <p>@Owner · <strong>@removing?.Definition.DisplayName</strong></p>
+    <p>@Ui["Removing this registration disables automatic monitoring, recovery and scheduled starts. A running application will not be stopped."]</p>
+    <p>@Ui["Workflows that use this registration will no longer be able to operate it."]</p>
+    @if(message is not null){<p class="notice" role="status">@message()</p>}
+    <div class="toolbar"><button class="danger" disabled="@(busy||refreshing||target is null)" @onclick="()=>RemoveAsync(UiCancellation)">@Ui["Remove registration"]</button><button class="quiet" disabled="@busy" @onclick="CloseRemoval">@Ui["Cancel"]</button></div>
 </Modal>
 <Modal Open="stopOpen" Title='@Ui[restarting?"Restart application":"Stop application"]' Close="()=>stopOpen=false">
     <p>@Owner · <strong>@selected?.Definition.DisplayName</strong></p>

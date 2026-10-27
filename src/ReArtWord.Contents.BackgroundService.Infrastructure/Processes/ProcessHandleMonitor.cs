@@ -135,6 +135,15 @@ internal sealed class ProcessHandleMonitor(IProcessPlatform platform) : IDisposa
         handles[id] = next;
     }
 
+    /// <summary>削除した登録のハンドルだけを解放し、プロセスは停止しません。</summary>
+    internal void Forget(string id)
+    {
+        if (handles.TryRemove(id, out TrackedProcess? removed))
+        {
+            using Process process = removed.Process;
+        }
+    }
+
     /// <summary>所有したハンドルを解放し、起動済みアプリケーションは維持します。</summary>
     public void Dispose()
     {

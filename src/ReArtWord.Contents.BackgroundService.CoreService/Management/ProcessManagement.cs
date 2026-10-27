@@ -24,6 +24,11 @@ internal static class ProcessManagement
             ProcessRegistrationRequest request = ManagementRegistry.Body<ProcessRegistrationRequest>(value);
             return new { outcome = await service.Processes.RegisterAsync(request.Definition, request.ExpectedVersion, cancellation).ConfigureAwait(false) };
         });
+        registry.Write("processes.remove", async (value, cancellation) =>
+        {
+            ProcessRemovalRequest request = ManagementRegistry.Body<ProcessRemovalRequest>(value);
+            return new { outcome = await service.Processes.RemoveAsync(request.Id, request.ExpectedVersion, cancellation).ConfigureAwait(false) };
+        });
         registry.Write("processes.resolve-launch", async (value, cancellation) =>
         {
             ResolveProcessLaunchRequest request = ManagementRegistry.Body<ResolveProcessLaunchRequest>(value);

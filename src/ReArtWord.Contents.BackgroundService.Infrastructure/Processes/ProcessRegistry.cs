@@ -69,6 +69,25 @@ internal sealed class ProcessRegistry
         return receipt.Outcome;
     }
 
+    /// <summary>登録・監視状態・起動予定の受付位置を同じ比較保存で削除します。</summary>
+    /// <returns>確認した登録版に対する削除結果です。</returns>
+    internal async ValueTask<EOutcome> RemoveAsync(string id, string expectedVersion, DateTimeOffset now, CancellationToken cancellationToken = default)
+    {
+        ProcessDefinition? previous = await DefinitionAsync(id, cancellationToken).ConfigureAwait(false);
+        if (previous is null)
+        {
+            return EOutcome.NotExecuted;
+        }
+        List<DurableMutation> mutations = [new(definitionsScope, id, expectedVersion, null)];
+        DurableEntry? state = await repository.ReadAsync(statesScope, id, cancellationToken).ConfigureAwait(false);
+        if (state?.Value is not null)
+        {
+            mutations.Add(new(statesScope, id, state.Version, null));
+        }
+        mutations.AddRange(await Schedules.RegistrationAsync(previous with { Schedules = [] }, previous, now, cancellationToken).ConfigureAwait(false));
+        return (await repository.ApplyBatchAsync(Guid.CreateVersion7(), mutations, cancellationToken).ConfigureAwait(false)).Outcome;
+    }
+
     /// <summary>故障状態と比較保存用の版を読みます。</summary>
     /// <returns>保存済み状態です。未作成時は既存プロセス登録から初期化します。</returns>
     internal async ValueTask<(string? Version, ProcessStateRecord State)> ReadStateAsync(ProcessDefinition definition, CancellationToken cancellationToken = default)

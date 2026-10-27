@@ -123,6 +123,32 @@ public sealed class ProcessService : IProcessService, IDisposable
         }
     }
 
+    /// <summary>起動・復旧と直列化して登録を削除し、実行中のアプリケーションは維持します。</summary>
+    /// <returns>確認した登録版に対する削除結果です。</returns>
+    // 抑制理由: 同じ登録を操作中の呼出しが使うため、共有gateはサービス終了時に解放します。
+    [SuppressMessage("SourceQuality", "RAW141", Justification = "登録を削除しても、待機中の操作が使用するgateは破棄しません。")]
+    public async ValueTask<EOutcome> RemoveAsync(string id, string expectedVersion, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentException.ThrowIfNullOrWhiteSpace(expectedVersion);
+        SemaphoreSlim gate = Gate(id);
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            EOutcome result = await registry.RemoveAsync(id, expectedVersion, clock.GetUtcNow(), cancellationToken).ConfigureAwait(false);
+            if (result == EOutcome.Succeeded)
+            {
+                Interlocked.Increment(ref registrationRevision);
+                monitor.Forget(id);
+            }
+            return result;
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
     /// <summary>登録した管理対象だけを起動します。</summary>
     /// <returns>実起動の結果です。</returns>
     public ValueTask<ProcessOperationResult> StartAsync(string id, CancellationToken cancellationToken = default)

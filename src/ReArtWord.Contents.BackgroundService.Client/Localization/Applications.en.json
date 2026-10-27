@@ -1,4 +1,10 @@
 {
+  "Remove registration": "Remove registration",
+  "Removing this registration disables automatic monitoring, recovery and scheduled starts. A running application will not be stopped.": "Removing this registration disables automatic monitoring, recovery and scheduled starts. A running application will not be stopped.",
+  "Workflows that use this registration will no longer be able to operate it.": "Workflows that use this registration will no longer be able to operate it.",
+  "Application registration removed.": "Application registration removed.",
+  "Registration was not removed. Refresh the list and check the current registration.": "Registration was not removed. Refresh the list and check the current registration.",
+  "Removal could not be confirmed. Refresh the list to check the registration.": "Removal could not be confirmed. Refresh the list to check the registration.",
   "Application name": "Application name",
   "Application host": "Application host",
   "Automatic monitoring": "Automatic monitoring",
