@@ -45,13 +45,13 @@
     "file": "Zstandard.txt"
   },
   {
-    "url": "https://raw.githubusercontent.com/ericsink/SQLitePCL.raw/v2.1.12/LICENSE.TXT",
+    "url": "https://raw.githubusercontent.com/ericsink/SQLitePCL.raw/v3.0.5/LICENSE.TXT",
     "sha256": "CFC7749B96F63BD31C3C42B5C471BF756814053E847C10F3EB003417BC523D30",
     "file": "SQLitePCLRaw.txt"
   },
   {
-    "url": "https://raw.githubusercontent.com/ericsink/SQLitePCL.raw/v2.1.12/NOTICE.TXT",
-    "sha256": "485B276B3D2BFAA26DF348E1E5C84DF3648981E09B88531A6A53006F0705C24B",
+    "url": "https://raw.githubusercontent.com/ericsink/SQLitePCL.raw/v3.0.5/NOTICE.TXT",
+    "sha256": "5A1AB2F670F86DD2F8D42E40A8459CC278CA6D5225A7E2A5FA3EA0184396A6D9",
     "file": "SQLitePCLRaw-notices.txt"
   },
   {
