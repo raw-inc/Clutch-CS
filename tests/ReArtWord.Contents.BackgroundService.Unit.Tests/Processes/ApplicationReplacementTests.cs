@@ -88,7 +88,11 @@ public sealed class ApplicationReplacementTests
         using Process one = StartSuccessor(app, false);
         using Process two = StartSuccessor(app, true);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
-        ProcessOperationResult observed = await WaitAsync(service, definition.Id, value => value.Status?.ReplacementProblem is not null, timeout.Token);
+        while (app.Starts().Length != 3)
+        {
+            await Task.Delay(10, timeout.Token);
+        }
+        ProcessOperationResult observed = await WaitAsync(service, definition.Id, value => value.Status?.ReplacementProblem is "process.replacementAmbiguous", timeout.Token);
         Assert.Equal("process.replacementAmbiguous", observed.Status!.ReplacementProblem);
         await Task.Delay(600, timeout.Token);
         ProcessOperationResult recovery = await service.RecoverAsync(definition.Id);
