@@ -63,7 +63,7 @@
     @if(view=="Snapshots" && HasSelection){<div class="dashboard-operations"><SnapshotPanel /></div>}
     @if(view=="Resolve conflicts" && HasSelection){<div class="dashboard-operations"><ConflictPanel /><DetachedWorkflowPanel /></div>}
     @if(view=="Safety" && HasSelection){<div class="dashboard-operations"><SafetyPanel /></div>}
-    @if(view=="Settings & maintenance"){<div class="dashboard-operations"><DisplaySettingsPanel />@if(fleetUpdates is not null){<FleetUpdatePanel Updates="@fleetUpdates.Updates" ProgressUnavailable="@fleetUpdates.Unavailable" RefreshProgress="RefreshAsync" />}</div>}
+    @if(view=="Settings & maintenance"){<div class="dashboard-operations"><DisplaySettingsPanel /><ExperimentalSettingsPanel />@if(fleetUpdates is not null){<FleetUpdatePanel Updates="@fleetUpdates.Updates" ProgressUnavailable="@fleetUpdates.Unavailable" RefreshProgress="RefreshAsync" />}</div>}
     @if(view=="Settings & maintenance" && HasSelection){<div class="dashboard-operations"><ConfigurationPanel /><details class="secondary-details"><summary>@Ui["Inspect and edit internal data"]</summary><InternalDataPanel /></details><details class="secondary-details"><summary>@Ui["Application updates"]</summary><UpdatePanel /></details><details class="secondary-details"><summary>@Ui["Connection secrets"]</summary><div class="toolbar"><button @onclick="SecretsAsync">@Ui["List registered names"]</button><button @onclick="()=>secretOpen=true">@Ui["Register a secret"]</button></div>@if(secretNames.Count!=0){<p>@string.Join(", ",secretNames)</p>}</details></div>}
     @if(view=="Operations" && HasSelection){<div class="dashboard-operations"><OperationList /></div>}
     @if(result is not null){<JsonDetails Value="result" Title='@Ui["Actual operation result"]' />}

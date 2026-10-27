@@ -1,5 +1,6 @@
 import { scopeSources } from './signal-scope-sources.js';
 import { scopeTable } from './signal-scope-table.js';
+import { experimentalEnabled } from './experimental.js';
 
 /** キャプチャの操作・描画だけを所有し、保持と検索はWorkerへ渡します。
  * @returns 画面終了時に取得接続を回収する操作です。
@@ -95,8 +96,7 @@ export async function signalScopeViewAsync(container, ctx)
     /** 通常画面を複雑にせず、保持量をセッション内で調整します。 */
     function advanced()
     {
-        const experimental = new URL(location.href).searchParams.get('experimental');
-        if (!['true', '1'].includes(experimental))
+        if (!experimentalEnabled(true))
         {
             return;
         }

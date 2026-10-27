@@ -175,6 +175,32 @@ async function mountAsync(page, experimental)
 
 for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' }], ['Firefox', firefox, {}]])
 {
+    test(`${name}: saved experimental preference applies without a query and can be disabled`, { timeout: 30000 }, async context =>
+    {
+        const browser = await engine.launch({ headless: true, ...options });
+        context.after(() => browser.close());
+        const page = await browser.newPage();
+        await page.goto(origin);
+        await page.evaluate(async () => (await import('/experimental.js')).saveExperimentalPreference(true));
+        await mountAsync(page, false);
+        assert.equal(await page.getByText('Advanced Search', { exact: true }).count(), 1);
+        assert.equal(await page.getByText('Capture limits', { exact: true }).count(), 1);
+        await page.evaluate(async () =>
+        {
+            window.scopeLifetime.abort();
+            await window.scope.dispose();
+            (await import('/experimental.js')).saveExperimentalPreference(false);
+        });
+        await mountAsync(page, false);
+        assert.equal(await page.getByText('Advanced Search', { exact: true }).count(), 0);
+        assert.equal(await page.getByText('Capture limits', { exact: true }).count(), 0);
+        await page.evaluate(async () =>
+        {
+            window.scopeLifetime.abort();
+            await window.scope.dispose();
+        });
+    });
+
     test(`${name}: host aggregation and independent folding preserve selected capture sources`, { timeout: 30000 }, async context =>
     {
         const browser = await engine.launch({ headless: true, ...options });

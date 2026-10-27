@@ -280,7 +280,7 @@ function frame(kind, id, data, key = false, timestamp = 0)
  */
 async function fixtureAsync(t, videoCodec = null, settings = {})
 {
-    const names = ['document', 'window', 'location', 'WebSocket', 'VideoDecoder', 'EncodedVideoChunk', 'requestAnimationFrame', 'cancelAnimationFrame', 'AudioContext', 'AudioWorkletNode', 'performance', 'setInterval', 'clearInterval', 'ResizeObserver', 'getComputedStyle', 'navigator', 'Worker', 'AudioDecoder', 'EncodedAudioChunk'];
+    const names = ['document', 'window', 'location', 'localStorage', 'WebSocket', 'VideoDecoder', 'EncodedVideoChunk', 'requestAnimationFrame', 'cancelAnimationFrame', 'AudioContext', 'AudioWorkletNode', 'performance', 'setInterval', 'clearInterval', 'ResizeObserver', 'getComputedStyle', 'navigator', 'Worker', 'AudioDecoder', 'EncodedAudioChunk'];
     const before = Object.fromEntries(names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
     const sockets = [], decoders = [], notices = [], callbacks = [], contexts = [], audioNodes = [], timers = [], documentEvents = {}, windowEvents = {};
 
@@ -296,6 +296,7 @@ async function fixtureAsync(t, videoCodec = null, settings = {})
     };
 
     Object.defineProperty(globalThis, 'navigator', { value: {}, configurable: true });
+    Object.defineProperty(globalThis, 'localStorage', { value: { getItem: key => key === 'contents.ui.experimental' && settings.alwaysExperimental ? 'true' : null }, configurable: true });
     if (settings.chromium)
     {
         navigator.userAgent = 'Chrome/140';
@@ -3549,6 +3550,15 @@ for (const query of ['?extra=true', '?experimeltal=true', '?experimental=True', 
         assert.equal(f.socket.sent.findLast(input => input[0] === 6)[2], 1);
     });
 }
+
+test('browser preference enables desktop controls even with a false URL value', async t =>
+{
+    const f = await fixtureAsync(t, null, { query: '?experimental=false', alwaysExperimental: true });
+    const codec = descendants(f.root).find(item => item.getAttribute('aria-label') === 'Video codec');
+    assert.deepEqual(codec.options.map(option => option.value), ['vp9', 'h264', 'h265']);
+    assert.equal(f.initialCodec, 'vp9');
+    assert(descendants(f.root).some(item => item.getAttribute('aria-label') === 'Codec details'));
+});
 
 test('experimental mode keeps VP9 as default and permits H264 and H265 explicitly', async t =>
 {

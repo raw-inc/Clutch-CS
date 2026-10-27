@@ -7,6 +7,16 @@ namespace ReArtWord.Contents.BackgroundService.Client.Services;
 /// <summary>ブラウザーの保存領域とファイル書出しだけを委譲します。</summary>
 internal sealed class BrowserStorage(IJSRuntime script)
 {
+    /// <summary>このWebUIで試験的な機能を常時有効にする設定を読みます。</summary>
+    /// <returns>ブラウザーに保存された選択です。</returns>
+    internal ValueTask<bool> ReadExperimentalPreferenceAsync(bool ignoreReadFailure = false, CancellationToken cancellationToken = default)
+        => script.InvokeAsync<bool>("contentsBrowser.readExperimentalPreferenceAsync", cancellationToken, ignoreReadFailure);
+
+    /// <summary>試験的な機能の選択をブラウザーへ保存します。</summary>
+    /// <returns>保存の完了です。</returns>
+    internal ValueTask SaveExperimentalPreferenceAsync(bool enabled, CancellationToken cancellationToken = default)
+        => script.InvokeVoidAsync("contentsBrowser.saveExperimentalPreferenceAsync", cancellationToken, enabled);
+
     /// <summary>再読み込みでは草稿領域を再利用し、稼働中の別タブだけを分離します。</summary>
     /// <returns>ブラウザーがこの画面へ確保した草稿所有者です。</returns>
     internal ValueTask<Guid> ClaimDraftOwnerAsync(Guid? previous, Guid proposed, CancellationToken cancellationToken = default)

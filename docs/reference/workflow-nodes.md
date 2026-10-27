@@ -42,7 +42,7 @@
 
 ## WFDashboard
 
-`/editor?experimental=true` でワークフロー追加の「新規」を右クリックすると、「新しいWorkflowを作成」「新しいWFDashboardを作成」を選べます。WFDashboardは同じクラスター内の保存済みワークフロー・サブワークフローにあるPreview、Progress、Button、ToggleButton、値、同時実行制限を参照する操作画面です。
+`/editor?experimental=true` でワークフロー追加の「新規」を右クリックすると、「新しいWorkflowを作成」「新しいWFDashboardを作成」を選べます。[試験的な機能の常時有効化](../guides/web-client.md#試験的な機能を有効にする)でも同じ操作を利用できます。WFDashboardは同じクラスター内の保存済みワークフロー・サブワークフローにあるPreview、Progress、Button、ToggleButton、値、同時実行制限を参照する操作画面です。
 
 作成後にワークフローとWFDashboardの種類を相互変換することはできません。作成済みのWFDashboardは通常表示からも利用できます。
 

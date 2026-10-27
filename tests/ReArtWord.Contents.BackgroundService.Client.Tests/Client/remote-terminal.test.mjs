@@ -126,10 +126,11 @@ const turnsAsync = async() =>
 /** 対象機能のブラウザー境界と操作可能な試験状態を構成します。
  * @returns 処理の完了と結果を伝えるPromiseです。
  */
-async function fixtureAsync(t, custom, experimental = false)
+async function fixtureAsync(t, custom, experimental = false, alwaysExperimental = false)
 {
-    const names = ['document', 'window', 'ResizeObserver', 'setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame', 'location', 'WebSocket'];
+    const names = ['document', 'window', 'ResizeObserver', 'setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame', 'location', 'localStorage', 'WebSocket'];
     const saved = names.map(name => [name, Object.getOwnPropertyDescriptor(globalThis, name)]);
+    Object.defineProperty(globalThis, 'localStorage', { value: { getItem: key => key === 'contents.ui.experimental' && alwaysExperimental ? 'true' : null }, configurable: true });
     const timers = new Map(), calls = [], terms = [], notices = [], sockets = [], controller = new AbortController();
     let id = 0;
     const values = new Map([['peer-a', [shell('shared-id')]], ['peer-b', [shell('shared-id')]]]);
@@ -431,6 +432,16 @@ test('experimental token policy is saved on the chosen Core and refreshed withou
     assert(f.button('Strict unelevated: ON'));
     assert.equal(f.terms[0].disposed, false);
     assert.equal(f.calls.filter(c => c.path.endsWith('/create')).length, 0);
+});
+
+test('browser preference enables the token policy without a URL opt-in', async t =>
+{
+    const f = await fixtureAsync(t, undefined, false, true);
+    await f.mounting;
+    f.setCapabilityRead(async() => ({ userAvailable: true, administratorAvailable: true, settings: { strictUserToken: false, version: 'one' } }));
+    await f.button('host-a / peer-a').onclick();
+    assert(f.button('Strict unelevated: OFF'));
+    assert.equal(f.calls.filter(call => call.path.endsWith('/settings') && call.body).length, 0);
 });
 
 test('a failed token policy save reloads actual Core state without claiming the optimistic value', async t =>

@@ -1,0 +1,9 @@
+{
+  "experimental.settings.title": "試験的な機能（experimental）",
+  "experimental.settings.enabled": "このブラウザーで試験的な機能を常に有効にする",
+  "experimental.settings.help": "すべての画面に適用します。設定はこのブラウザーに保存され、同じWebUIを開き直した後も有効です。開いている別のタブには、画面を開き直すと反映されます。",
+  "experimental.settings.save": "保存",
+  "experimental.settings.saved": "このブラウザーの設定を保存しました。",
+  "experimental.settings.readFailed": "設定を読み込めませんでした。",
+  "experimental.settings.writeFailed": "設定を保存できませんでした。"
+}
