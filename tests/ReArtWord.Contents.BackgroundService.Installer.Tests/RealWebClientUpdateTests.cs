@@ -1,8 +1,11 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Installation;
+using ReArtWord.Contents.BackgroundService.Contracts.Management;
+using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Contracts.Updates.Releases;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Installation;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Health;
@@ -70,6 +73,8 @@ public sealed class RealWebClientUpdateTests
                 UpdateObserver observer = new(settings.Network, settings.ClusterId);
                 await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = observer.ConfigureAwait(true);
                 PeerInfo peer = await observer.FindAsync(settings.PeerId, cancellationToken: timeout.Token).ConfigureAwait(true);
+                await VerifyPreparationCompatibilityAsync(observer, peer, client, previous, timeout.Token).ConfigureAwait(true);
+                Assert.Equal(before.Health.Process, (await WebClientUpdateProbe.ReadAsync(client, timeout.Token).ConfigureAwait(true)).Health.Process);
                 ObservedTarget target = new(settings.ClusterId, settings.PeerId, settings.Network, peer, record);
                 result = await InstallerClientUpdates.RemoteAsync(new(client, target), Path.Combine(package, "client"), cancellationToken: timeout.Token).ConfigureAwait(true);
                 Assert.True(core.Running);
@@ -100,5 +105,21 @@ public sealed class RealWebClientUpdateTests
             string state = WebClientStartup.StateDirectory(client);
             InstallationFiles.DeleteDirectory(Path.GetDirectoryName(state)!, client.InstallationId.ToString("N"));
         }
+    }
+
+    /// <summary>新経路は操作IDだけを返し、旧Installer向けのジョブ応答も維持します。</summary>
+    /// <returns>実Coreと配布物の契約確認です。</returns>
+    private static async Task VerifyPreparationCompatibilityAsync(UpdateObserver observer, PeerInfo peer, WebClientInstallation client, ReleaseManifest manifest, CancellationToken cancellationToken = default)
+    {
+        WebClientUpdateRequest request = new(Guid.NewGuid(), client.InstallationId, manifest);
+        ManagementReply compact = await observer.SendAsync(peer.PeerId, peer.InstanceId, "setup.client.stage", UpdateObserver.Payload(request), false, cancellationToken).ConfigureAwait(false);
+        Assert.Equal(EOutcome.Succeeded, compact.Outcome);
+        Assert.Equal(request.OperationId, compact.Value!.Json.GetGuid());
+        ManagementReply legacy = await observer.SendAsync(peer.PeerId, peer.InstanceId, "setup.client.prepare", UpdateObserver.Payload(request), false, cancellationToken).ConfigureAwait(false);
+        Assert.Equal(EOutcome.Succeeded, legacy.Outcome);
+        WebClientUpdateJob job = legacy.Value!.Json.Deserialize<WebClientUpdateJob>(ContractJson.Options)!;
+        Assert.Equal(request.OperationId, job.OperationId);
+        Assert.Equal(client, job.Installation);
+        Assert.Equal(ContractJson.Hash(manifest), ContractJson.Hash(job.Manifest));
     }
 }
