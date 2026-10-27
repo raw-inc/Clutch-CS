@@ -30,6 +30,8 @@ public sealed class AllClustersOverviewTests
     [Fact]
     public async Task FullHistoryLoadsInSmallBatchesAndRetainsDeltaCursors()
     {
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
+        TaskCompletionSource overlapping = new(TaskCreationOptions.RunContinuationsAsynchronously);
         DateTimeOffset now = DateTimeOffset.UtcNow;
         DiscoveredCluster[] catalog = Enumerable.Range(0, 12).Select(index => Cluster(index.ToString("D2", System.Globalization.CultureInfo.InvariantCulture), [Peer("peer")])).ToArray();
         int active = 0, maximum = 0, calls = 0, cursors = 0;
@@ -53,10 +55,15 @@ public sealed class AllClustersOverviewTests
                 maximum = Math.Max(maximum, ++active);
                 calls++;
                 cursors += queries.Count(query => query.After is not null);
+                if (2 <= active)
+                {
+                    overlapping.TrySetResult();
+                }
             }
             try
             {
-                await Task.Delay(20, token).ConfigureAwait(false);
+                // 2件目の開始まで応答を保留し、実行速度に依存せず並行取得を確認します。
+                await overlapping.Task.WaitAsync(token).ConfigureAwait(false);
                 using HttpResponseMessage original = await ResponseAsync(request, catalog, Guid.NewGuid(), now, token).ConfigureAwait(false);
                 DashboardPeerSnapshot[] snapshots = (await original.Content.ReadFromJsonAsync<DashboardPeerSnapshot[]>(ContractJson.Options, token).ConfigureAwait(false))!;
                 return Json(snapshots.Select(snapshot => snapshot with
@@ -74,12 +81,12 @@ public sealed class AllClustersOverviewTests
         });
         using HttpClient client = new(handler) { BaseAddress = new Uri("http://localhost/") };
         AllClustersTelemetry overview = new(new(client));
-        await overview.RefreshAsync();
+        await overview.RefreshAsync(timeout.Token);
         Assert.Equal(3, calls);
         Assert.InRange(maximum, 2, 3);
         Assert.Equal(12, overview.Peers.Count);
         Assert.All(overview.Peers, item => Assert.Equal(121, item.Peer.Samples.Count));
-        await overview.RefreshAsync();
+        await overview.RefreshAsync(timeout.Token);
         Assert.Equal(12, cursors);
         Assert.All(catalog, cluster => Assert.Equal(("Ready", 1, 1), HealthCounts(overview, cluster, DateTimeOffset.UtcNow)));
     }

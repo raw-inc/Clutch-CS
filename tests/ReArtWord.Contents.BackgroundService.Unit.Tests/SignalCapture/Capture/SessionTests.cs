@@ -1,4 +1,5 @@
 using System.Globalization;
+using ReArtWord.Contents.BackgroundService.SignalCapture.Packets;
 using ReArtWord.Contents.BackgroundService.SignalCapture.Protocol;
 using Xunit;
 
@@ -7,6 +8,46 @@ namespace ReArtWord.Contents.BackgroundService.SignalCapture.Capture.Tests;
 /// <summary>取得元数、除外・欠落計数、停止時の所有権を検証します。</summary>
 public sealed class SessionTests
 {
+    /// <summary>再開時に前回の受信・欠落・除外件数と待機パケットを持ち越しません。</summary>
+    [Fact]
+    public void RestartsWithResetCountersAndAnEmptyQueue()
+    {
+        var captures = new List<TestCapture>();
+        var queue = new PacketQueue(maximumCount: 1);
+        using var session = new WorkerSession(new CaptureFactory(true), queue, _ =>
+        {
+            var capture = new TestCapture();
+            captures.Add(capture);
+            return capture;
+        });
+        var command = new PipeCommand("start", new[] { new SourceRequest("demo", "demo0") }, new[] { new EndpointRequest("127.0.0.2", 80) });
+        Assert.True(session.Start(command).Running);
+        TestCapture first = Assert.Single(captures);
+        first.Emit(DemoCapture.Create(0));
+        first.Emit(DemoCapture.Create(1));
+        first.Emit(new PacketRecord { Data = new byte[9001] });
+        first.Emit(DemoCapture.Create(2));
+        Assert.Equal(7, session.Statistics().Received);
+        Assert.Equal(4, session.Statistics().Dropped);
+        Assert.Equal(4, session.Statistics().Suppressed);
+        Assert.False(session.Stop().Running);
+
+        Assert.True(session.Start(command).Running);
+        Assert.Equal(2, captures.Count);
+        Assert.Equal(1, first.Stops);
+        Assert.Equal(1, first.Disposals);
+        Assert.Null(queue.Read());
+        Assert.Equal(0, queue.Dropped);
+
+        // 新しい取得元が報告するネイティブ側の件数だけが残ります。
+        Assert.Equal(3, session.Statistics().Received);
+        Assert.Equal(2, session.Statistics().Dropped);
+        Assert.Equal(3, session.Statistics().Suppressed);
+        captures[1].Emit(DemoCapture.Create(0));
+        Assert.Equal(4, session.Statistics().Received);
+        Assert.NotNull(session.Encode(Assert.IsType<QueuedPacket>(queue.Read())));
+    }
+
     /// <summary>後続 NIC の列挙待ちが先行 NIC の解析と状態通知を止めません。</summary>
     /// <returns>開始中の並行動作の検証。</returns>
     [Fact]
