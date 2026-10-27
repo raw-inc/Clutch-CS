@@ -59,9 +59,9 @@ public sealed class ClusterConcurrencyTests
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstCleanup = first.Lease.ConfigureAwait(true);
         string key = ContractJson.Hash(new WorkflowConcurrencyTarget("workflow", "limit"));
         Infrastructure.Persistence.DurableEntry? before = await fixture.FirstRepository.ReadAsync("execution:concurrency:permits", key, timeout.Token).ConfigureAwait(true);
-        Task<WorkflowConcurrencyAdmission> leaving = fixture.SecondLimit.AcquireAsync(Fixture.Request(fixture.Second), cancelled.Token);
+        Task<WorkflowConcurrencyAdmission> leaving = fixture.SecondLimit.AcquireAsync(Fixture.Request(fixture.Second) with { WaitTimeoutMilliseconds = 0 }, cancelled.Token);
         await fixture.WaitAsync(value => value.WaitingCount == 1, timeout.Token).ConfigureAwait(true);
-        WorkflowConcurrencyRequest following = Fixture.Request(fixture.First);
+        WorkflowConcurrencyRequest following = Fixture.Request(fixture.First) with { WaitTimeoutMilliseconds = 0 };
         Task<WorkflowConcurrencyAdmission> waiting = fixture.FirstLimit.AcquireAsync(following, timeout.Token);
         await fixture.WaitAsync(value => value.WaitingCount == 2, timeout.Token).ConfigureAwait(true);
         for (int index = 0; index < 10; index++)
@@ -70,12 +70,15 @@ public sealed class ClusterConcurrencyTests
         }
         Infrastructure.Persistence.DurableEntry? after = await fixture.FirstRepository.ReadAsync("execution:concurrency:permits", key, timeout.Token).ConfigureAwait(true);
         Assert.Equal(before!.Version, after!.Version);
-        long cancelling = TimeProvider.System.GetTimestamp();
         await cancelled.CancelAsync().ConfigureAwait(true);
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => leaving).ConfigureAwait(true);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => leaving.WaitAsync(timeout.Token)).ConfigureAwait(true);
         await fixture.WaitAsync(value => value.WaitingCount == 1, timeout.Token).ConfigureAwait(true);
-        Assert.True(TimeProvider.System.GetElapsedTime(cancelling) < TimeSpan.FromSeconds(2));
-        Assert.Equal(following.TicketId, Assert.Single((await fixture.ReadAsync(timeout.Token).ConfigureAwait(true)).Waiting).TicketId);
+
+        // 取消は元の枠の解放を待たず完了し、次の待機者は実際に空くまで開始しません。
+        WorkflowConcurrencySnapshot remaining = await fixture.ReadAsync(timeout.Token).ConfigureAwait(true);
+        Assert.Equal(1, remaining.ActiveCount);
+        Assert.False(waiting.IsCompleted);
+        Assert.Equal(following.TicketId, Assert.Single(remaining.Waiting).TicketId);
         await first.Lease.DisposeAsync().ConfigureAwait(true);
         WorkflowConcurrencyAdmission last = await waiting.WaitAsync(timeout.Token).ConfigureAwait(true);
         Assert.NotNull(last.Lease);
