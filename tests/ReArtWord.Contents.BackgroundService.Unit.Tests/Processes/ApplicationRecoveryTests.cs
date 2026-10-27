@@ -13,7 +13,7 @@ public sealed class ApplicationRecoveryTests
 {
     /// <summary>短時間の自明終了でも引数と終了コードを失わず、遅延前には再起動しません。</summary>
     /// <returns>実終了から有限再起動までの確認です。</returns>
-    [Theory]
+    [Theory(Skip = "起動成功で復旧回数をリセットする仕様へ変更。ApplicationRecoveryAttemptTests.SuccessfulSelfExitsRespectDelayWithoutAccruingAttemptsAsyncで検証します。")]
     [InlineData(0, false)]
     [InlineData(0, true)]
     [InlineData(23, false)]

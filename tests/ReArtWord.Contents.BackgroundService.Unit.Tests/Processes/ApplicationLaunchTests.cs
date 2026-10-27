@@ -15,6 +15,23 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Processes;
 /// <summary>OS実体の表示・アカウント・引数と、起動拒否時に再操作できる状態を検証します。</summary>
 public sealed class ApplicationLaunchTests(ITestOutputHelper output)
 {
+    /// <summary>存在する不正な実行物をWindowsが拒否した場合は、起動試行済みとして通知します。</summary>
+    /// <returns>ログイン条件の不足とOSによる起動失敗を区別する確認です。</returns>
+    [SupportedOSPlatform("windows")]
+    [ExternalRuntimeFact("CONTENTS_TEST_APPLICATION_LAUNCH")]
+    public void InvalidExecutableReportsAnAttemptedWindowsLaunch()
+    {
+        using ProcessTestScope scope = new();
+        string executable = Path.Combine(scope.Root, "invalid.exe");
+        File.WriteAllText(executable, "This is not a Windows executable.");
+        ProcessDefinition definition = scope.Definition with { ExecutablePath = executable, WorkingDirectory = scope.Root, Launch = new() };
+        WindowsApplicationPlatform platform = new();
+        Assert.True(platform.IsLaunchUserAvailable(definition));
+        ProcessLaunchRejectedException rejected = Assert.Throws<ProcessLaunchRejectedException>(() => platform.Start(definition));
+        Assert.True(rejected.LaunchAttempted);
+        Assert.Equal("process.interactiveLaunchRejected", rejected.Message);
+    }
+
     /// <summary>対話起動のOS境界を直接通し、低レベルの失敗も内側の診断を保持します。</summary>
     /// <returns>実ランチャーと一回だけのアプリケーション起動です。</returns>
     [SupportedOSPlatform("windows")]

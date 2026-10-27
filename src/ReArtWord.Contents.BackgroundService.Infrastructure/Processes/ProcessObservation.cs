@@ -38,7 +38,8 @@ internal static class ProcessObservation
             {
                 replacements.Clear(definition.Id);
                 return (state with { Identity = successor, InstanceId = Guid.NewGuid(), ExitCounted = false, ExitCode = null, ExitedAt = null,
-                    NextRecoveryAt = null, Ready = null, Healthy = null, RestartRequested = true, ExitUnobserved = false, Replacement = null, ReplacementProblem = null }, true, "process.selfRestarted");
+                    NextRecoveryAt = null, Ready = null, Healthy = null, RecoveryAttempts = 0, RecoveryExhausted = false,
+                    RestartRequested = true, ExitUnobserved = false, Replacement = null, ReplacementProblem = null }, true, "process.selfRestarted");
             }
             if (successor is not null)
             {

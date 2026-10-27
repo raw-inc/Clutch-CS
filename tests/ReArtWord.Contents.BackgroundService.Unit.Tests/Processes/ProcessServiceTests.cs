@@ -62,7 +62,7 @@ public sealed class ProcessServiceTests
 
     /// <summary>再起動しても故障回数と有限復旧試行数を失いません。</summary>
     /// <returns>検証が終了するまでの非同期処理。</returns>
-    [Fact]
+    [Fact(Skip = "起動成功後も試行を累積する旧仕様です。ApplicationRecoveryAttemptTestsで起動成功時のリセットとCore再起動時の未確定試行の保持を検証します。")]
     public async Task FailureEpisodeSurvivesServiceRestartUntilHumanConfirmation()
     {
         using ProcessTestScope scope = new();
@@ -169,7 +169,8 @@ public sealed class ProcessServiceTests
         scope.Track(recovered);
         Assert.Equal(EOutcome.Succeeded, recovered.Outcome);
         Assert.NotEqual(started.Status.Identity, recovered.Status!.Identity);
-        Assert.Equal(1, recovered.Status.RecoveryAttempts);
+        Assert.Equal(0, recovered.Status.RecoveryAttempts);
+        Assert.Equal(1, recovered.Status.FailureCount);
         ProcessOperationResult stable = await service.SignalAsync(definition.Id, new ProcessSignal(recovered.Status.InstanceId, true, true, true));
         Assert.Equal(0, stable.Status!.RecoveryAttempts);
         await ProcessTestScope.CrashAsync(recovered.Status.Identity!).ConfigureAwait(true);

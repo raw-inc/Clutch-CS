@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
+using ReArtWord.Contents.BackgroundService.Contracts.Observability.Logging;
 using ReArtWord.Contents.BackgroundService.Contracts.Processes;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Processes;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Observability.Events;
@@ -33,7 +34,8 @@ public sealed class ApplicationReplacementTests
         Assert.NotNull(waiting.Status.ReplacementDeadline);
         Assert.Equal(0, waiting.Status.FailureCount);
         Assert.Equal(1, events.Statistics.Published);
-        Assert.Empty(log.Entries);
+        Assert.DoesNotContain(log.Entries, entry => entry.Message is "Application.Stopped" or "Application.Restarted");
+        await ApplicationRecoveryAttemptTests.SeedAttemptsAsync(scope, definition.Id);
         using Process successor = StartSuccessor(app, changed);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
         ProcessOperationResult observed = await WaitAsync(service, definition.Id, value => value.Status?.Identity?.ProcessId == successor.Id, timeout.Token);
@@ -42,12 +44,13 @@ public sealed class ApplicationReplacementTests
         Assert.NotEqual(initial.Status!.InstanceId, observed.Status.InstanceId);
         Assert.Equal(0, observed.Status.FailureCount);
         Assert.Equal(0, observed.Status.RecoveryAttempts);
+        Assert.False(observed.Status.RecoveryExhausted);
         Assert.Equal(2, events.Statistics.Published);
         Assert.Equal(successor.Id, (await service.RecoverAsync(definition.Id)).Status!.Identity!.ProcessId);
         Assert.Equal(2, app.Starts().Length);
-        Assert.Equal("Application.Restarted", Assert.Single(log.Entries).Message);
-        Assert.Equal("INFO", log.Entries.Single().Level);
-        Assert.Equal(successor.Id, log.Entries.Single().Data!.Json.GetProperty("pid").GetInt32());
+        WorkflowLogEntry restarted = Assert.Single(log.Entries, entry => entry.Message is "Application.Restarted");
+        Assert.Equal("INFO", restarted.Level);
+        Assert.Equal(successor.Id, restarted.Data!.Json.GetProperty("pid").GetInt32());
     }
 
     /// <summary>厳密照合では引数が異なる実体を引き継がず、確認期限後だけ終了を確定します。</summary>
@@ -88,7 +91,11 @@ public sealed class ApplicationReplacementTests
         using Process one = StartSuccessor(app, false);
         using Process two = StartSuccessor(app, true);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
-        ProcessOperationResult observed = await WaitAsync(service, definition.Id, value => value.Status?.ReplacementProblem is not null, timeout.Token);
+        while (app.Starts().Length != 3)
+        {
+            await Task.Delay(10, timeout.Token);
+        }
+        ProcessOperationResult observed = await WaitAsync(service, definition.Id, value => value.Status?.ReplacementProblem is "process.replacementAmbiguous", timeout.Token);
         Assert.Equal("process.replacementAmbiguous", observed.Status!.ReplacementProblem);
         await Task.Delay(600, timeout.Token);
         ProcessOperationResult recovery = await service.RecoverAsync(definition.Id);

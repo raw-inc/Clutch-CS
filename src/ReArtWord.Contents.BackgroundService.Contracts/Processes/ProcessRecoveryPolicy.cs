@@ -1,7 +1,7 @@
 namespace ReArtWord.Contents.BackgroundService.Contracts.Processes;
 
 /// <summary>アプリケーションごとの明示復旧条件です。</summary>
-/// <param name="MaximumAttempts">有限上限。未指定は共通値です。</param>
+/// <param name="MaximumAttempts">起動成功までの復旧試行上限。未指定は共通値です。</param>
 /// <param name="Unlimited">このアプリケーションの復旧回数を明示的に無制限にします。</param>
 /// <param name="DelayMilliseconds">復旧間隔。未指定は共通値です。</param>
 /// <param name="RecoverWhenUnhealthy">生存中の確認済み利用不能も復旧開始条件にします。</param>
