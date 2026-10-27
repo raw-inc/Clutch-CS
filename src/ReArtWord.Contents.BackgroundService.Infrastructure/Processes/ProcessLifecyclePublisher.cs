@@ -7,13 +7,18 @@ using ReArtWord.Contents.BackgroundService.Runtime.Observability;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Processes;
 
-/// <summary>保存を確認した状態変化を一回通知し、自動起動の結果と観測済み終了を運用ログに残します。</summary>
+/// <summary>保存を確認した状態変化を一回通知し、起動の試行・結果と観測済み終了を運用ログに残します。</summary>
 internal sealed class ProcessLifecyclePublisher(string peerId, IWorkflowEvents? events, TimeProvider clock, IWorkflowLog? log)
 {
     /// <summary>同じ状態の再観測や起動意図だけでは通知しません。</summary>
     /// <returns>現在の購読者への有限な配信試行です。</returns>
     internal async ValueTask ChangedAsync(ProcessDefinition definition, ProcessStateRecord previous, ProcessStateRecord current, bool automatic, CancellationToken cancellationToken = default)
     {
+        if (!previous.RecoveryExhausted && current.RecoveryExhausted)
+        {
+            await WriteAsync(definition, current, "WARN", "Application.RecoveryExhausted", "recover", automatic,
+                EOutcome.NotExecuted, "process.recoveryExhausted", null, cancellationToken).ConfigureAwait(false);
+        }
         string? kind = null;
         if (!current.LaunchPending && current.Identity is not null && previous.LaunchPending && current.InstanceId == previous.InstanceId)
         {
@@ -37,33 +42,42 @@ internal sealed class ProcessLifecyclePublisher(string peerId, IWorkflowEvents? 
         string stoppedKind = "stopped", restartedKind = "restarted";
         bool stopped = string.Equals(kind, stoppedKind, StringComparison.Ordinal);
         bool automaticTransition = automatic || (string.Equals(kind, restartedKind, StringComparison.Ordinal) && !previous.LaunchPending);
-        if (stopped || automaticTransition)
+        string level = "INFO";
+        if (stopped)
         {
-            string level = "INFO";
-            if (stopped)
-            {
-                level = "WARN";
-            }
-            string message = kind switch { "started" => "Application.Started", "restarted" => "Application.Restarted", _ => "Application.Stopped" };
-            await WriteAsync(definition, current, level, message, kind, automaticTransition, EOutcome.Succeeded, null, null, cancellationToken).ConfigureAwait(false);
+            level = "WARN";
         }
+        string message = kind switch { "started" => "Application.Started", "restarted" => "Application.Restarted", _ => "Application.Stopped" };
+        await WriteAsync(definition, current, level, message, kind, automaticTransition, EOutcome.Succeeded, null, null, cancellationToken).ConfigureAwait(false);
         if (events is not null)
         {
             await events.PublishAsync(new WorkflowEvent(Guid.NewGuid(), "application." + kind, now, peerId, NodeValue.FromObject(detail)), cancellationToken).ConfigureAwait(false);
         }
     }
 
-    /// <summary>一回の自動起動の失敗を、未実行・結果不明の区別を残して記録します。</summary>
+    /// <summary>起動意図の保存後、OSへ起動を依頼する直前に一回記録します。</summary>
+    /// <returns>起動完了とは区別した試行の記録です。</returns>
+    internal ValueTask StartAttemptedAsync(ProcessDefinition definition, ProcessStateRecord state, bool automatic, CancellationToken cancellationToken = default)
+        => WriteAsync(definition, state, "INFO", state.RestartRequested ? "Application.RestartAttempted"
+                                                                        : "Application.StartAttempted",
+            state.RestartRequested ? "restart"
+                                   : "start", automatic, EOutcome.Unknown, null, null, cancellationToken);
+
+    /// <summary>一回の起動の失敗を、未実行・結果不明の区別を残して記録します。</summary>
     /// <returns>起動処理の成否へ波及させない記録です。</returns>
-    internal ValueTask StartFailedAsync(ProcessDefinition definition, ProcessStateRecord state, bool restarting, EOutcome outcome, string? reason,
-        string? exceptionType = null, CancellationToken cancellationToken = default)
+    internal ValueTask StartFailedAsync(ProcessDefinition definition, ProcessStateRecord state, bool restarting, bool automatic, EOutcome outcome, string? reason,
+        string? exceptionType = null, Guid? attemptId = null, CancellationToken cancellationToken = default)
     {
+        if (attemptId.HasValue)
+        {
+            state = state with { InstanceId = attemptId.Value, Identity = null };
+        }
         string operation = "start";
         if (restarting)
         {
             operation = "restart";
         }
-        return WriteAsync(definition, state, "ERROR", "Application.StartFailed", operation, true, outcome, reason, exceptionType, cancellationToken);
+        return WriteAsync(definition, state, "ERROR", "Application.StartFailed", operation, automatic, outcome, reason, exceptionType, cancellationToken);
     }
 
     /// <summary>実行引数やパスを複製せず、登録名・実体・終了コードと失敗理由で追跡できます。</summary>

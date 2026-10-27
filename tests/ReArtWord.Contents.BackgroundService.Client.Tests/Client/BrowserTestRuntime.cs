@@ -66,6 +66,30 @@ internal sealed class BrowserTestRuntime : IJSRuntime
         {
             return ValueTask.FromResult((TValue)(object)JsonSerializer.Serialize(Operations.Values, ContractJson.Options));
         }
+        string experimentalRead = "contentsBrowser.readExperimentalPreferenceAsync", experimentalSave = "contentsBrowser.saveExperimentalPreferenceAsync";
+        string preferenceKey = "contents.ui.experimental";
+        if (string.Equals(identifier, experimentalRead, StringComparison.Ordinal))
+        {
+            if (RejectRead?.Invoke(preferenceKey) == true)
+            {
+                if (args?[0] is true)
+                {
+                    return ValueTask.FromResult((TValue)(object)false);
+                }
+                throw new JSException("storage read unavailable");
+            }
+            return ValueTask.FromResult((TValue)(object)string.Equals(Local.GetValueOrDefault(preferenceKey), "true", StringComparison.Ordinal));
+        }
+        if (string.Equals(identifier, experimentalSave, StringComparison.Ordinal))
+        {
+            if (FailWrites)
+            {
+                throw new JSException("quota");
+            }
+            Local[preferenceKey] = args?[0] is true ? "true"
+                                                    : "false";
+            return ValueTask.FromResult(default(TValue)!);
+        }
         ArgumentNullException.ThrowIfNull(args);
         string claimOwner = "contentsEditorStore.owner";
         if (string.Equals(identifier, claimOwner, StringComparison.Ordinal))

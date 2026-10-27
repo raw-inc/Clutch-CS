@@ -33,17 +33,18 @@ public sealed partial class WorkflowEditorPage
         get; set;
     } = null!;
 
-    /// <summary>RemoteDesktopと同じく、experimental=trueだけで追加操作を表示します。</summary>
+    /// <summary>この画面だけで試験的な機能を有効にするURL指定です。</summary>
     [Parameter, SupplyParameterFromQuery(Name = "experimental")]
     public string? Experimental
     {
         get; set;
     }
 
-    private bool ExperimentalEnabled => string.Equals(Experimental, "true", StringComparison.Ordinal);
+    private bool alwaysExperimental;
+    private bool ExperimentalEnabled => alwaysExperimental || string.Equals(Experimental, "true", StringComparison.Ordinal);
     private GraphViewOptions EffectiveView => viewOptions.ForEditor(ExperimentalEnabled);
 
-    /// <summary>URLの切替後も非公開の表示選択を通常画面へ漏らしません。</summary>
+    /// <summary>URLの切替後も、試験的な機能の有効状態に合わせて共有操作を制限します。</summary>
     protected override void OnParametersSet() => Collaboration.RealtimePointer = EffectiveView.RealtimePointer;
 
     /// <summary>クラスタ共通の自動反映だけを明示変更します。</summary>
@@ -137,6 +138,7 @@ public sealed partial class WorkflowEditorPage
     {
         try
         {
+            alwaysExperimental = await Storage.ReadExperimentalPreferenceAsync(ignoreReadFailure: true, cancellationToken: lifetime.Token).ConfigureAwait(true);
             GraphViewOptions? saved = await Storage.ReadAsync<GraphViewOptions>("contents.editor.view.v1", cancellationToken: lifetime.Token).ConfigureAwait(true);
             if (saved is not null && Enum.IsDefined(saved.WireShape))
             {

@@ -17,6 +17,7 @@ internal sealed class ProcessSession
     private readonly bool automatic;
     private string? version;
     private ProcessStateRecord state;
+    private Guid? launchAttempt;
 
     /// <summary>未ログイン待機では起動意図や復旧回数を書き込みません。</summary>
     /// <returns>設定したユーザーを起動に使用できるかです。</returns>
@@ -55,29 +56,30 @@ internal sealed class ProcessSession
     /// <returns>実プロセスと保存の両方を確認した結果です。</returns>
     // 抑制理由: 失敗ログを残した後も、既存のサービス境界での結果判定と例外のスタックを維持します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW330", Justification = "ログ追加で既存の例外処理や操作結果を変更しないため、元の例外をサービス境界へ戻します。")]
-    internal async ValueTask<ProcessOperationResult> StartAsync(bool restarting = false, CancellationToken cancellationToken = default)
+    internal async ValueTask<ProcessOperationResult> StartAsync(bool restarting = false, bool recovering = false, CancellationToken cancellationToken = default)
     {
+        launchAttempt = null;
         ProcessOperationResult result;
         try
         {
-            result = await StartCoreAsync(restarting, cancellationToken).ConfigureAwait(false);
+            result = await StartCoreAsync(restarting, recovering, cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception exception) when (automatic && exception is not OutOfMemoryException and not StackOverflowException and not OperationCanceledException)
+        catch (Exception exception) when ((!recovering || launchAttempt.HasValue) && exception is not OutOfMemoryException and not StackOverflowException and not OperationCanceledException)
         {
-            await events.StartFailedAsync(definition, state, restarting, EOutcome.Unknown, "process.launchUnconfirmed", exception.GetType().FullName, CancellationToken.None).ConfigureAwait(false);
+            await events.StartFailedAsync(definition, state, restarting, automatic, EOutcome.Unknown, "process.launchUnconfirmed", exception.GetType().FullName, launchAttempt, CancellationToken.None).ConfigureAwait(false);
             throw;
         }
         string waiting = "process.replacementWaiting", observeOnly = "process.observeOnly";
-        if (automatic && result.Outcome != EOutcome.Succeeded && !string.Equals(result.Reason, waiting, StringComparison.Ordinal) && !string.Equals(result.Reason, observeOnly, StringComparison.Ordinal))
+        if ((!recovering || launchAttempt.HasValue) && result.Outcome != EOutcome.Succeeded && !string.Equals(result.Reason, waiting, StringComparison.Ordinal) && !string.Equals(result.Reason, observeOnly, StringComparison.Ordinal))
         {
-            await events.StartFailedAsync(definition, state, restarting, result.Outcome, result.Reason, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+            await events.StartFailedAsync(definition, state, restarting, automatic, result.Outcome, result.Reason, attemptId: launchAttempt, cancellationToken: CancellationToken.None).ConfigureAwait(false);
         }
         return result;
     }
 
     /// <summary>起動前の確認と実操作を行い、既起動や確認待ちでは副作用を繰り返しません。</summary>
     /// <returns>起動を開始できなかった理由も区別した結果です。</returns>
-    private async ValueTask<ProcessOperationResult> StartCoreAsync(bool restarting, CancellationToken cancellationToken = default)
+    private async ValueTask<ProcessOperationResult> StartCoreAsync(bool restarting, bool recovering, CancellationToken cancellationToken = default)
     {
         if (definition.Mode != EProcessMode.Managed)
         {
@@ -103,7 +105,11 @@ internal sealed class ProcessSession
         }
         cancellationToken.ThrowIfCancellationRequested();
         ProcessStateRecord previous = state;
+
+        // 復旧回数は起動直前に加算し、事前条件で拒否された場合は元に戻します。
         ProcessStateRecord pending = state with { InstanceId = Guid.NewGuid(), Identity = null, LaunchPending = true, PlannedStop = false, ExitCounted = false,
+            RecoveryAttempts = recovering ? checked(state.RecoveryAttempts + 1)
+                                          : state.RecoveryAttempts,
             Ready = null, Healthy = null, ExitCode = null, ExitedAt = null, NextRecoveryAt = null, RestartRequested = restarting, ExitUnobserved = false, Replacement = null, ReplacementProblem = null };
         if (!await SaveAsync(pending, cancellationToken).ConfigureAwait(false))
         {
@@ -112,10 +118,16 @@ internal sealed class ProcessSession
         ProcessIdentity identity;
         try
         {
+            launchAttempt = state.InstanceId;
+            await events.StartAttemptedAsync(definition, state, automatic, CancellationToken.None).ConfigureAwait(false);
             identity = monitor.Start(definition);
         }
         catch (ProcessLaunchRejectedException exception)
         {
+            if (recovering && exception.LaunchAttempted)
+            {
+                previous = previous with { RecoveryAttempts = state.RecoveryAttempts };
+            }
             if (!await SaveAsync(previous, CancellationToken.None).ConfigureAwait(false))
             {
                 return Result(EOutcome.Unknown, "process.stateSaveUnconfirmed", false);
@@ -126,7 +138,7 @@ internal sealed class ProcessSession
         {
             return Result(EOutcome.Unknown, "process.launchUnconfirmed");
         }
-        if (!await SaveAsync(state with { Identity = identity, LaunchPending = false }, CancellationToken.None).ConfigureAwait(false))
+        if (!await SaveAsync(state with { Identity = identity, LaunchPending = false, RecoveryAttempts = 0, RecoveryExhausted = false }, CancellationToken.None).ConfigureAwait(false))
         {
             return Result(EOutcome.Unknown, "process.startedStateUnconfirmed", true);
         }
@@ -267,6 +279,10 @@ internal sealed class ProcessSession
             }
             return Result(EOutcome.NotExecuted, "process.recoveryExhausted", observed.Status.Running);
         }
+        if (!IsLaunchUserAvailable())
+        {
+            return Result(EOutcome.NotExecuted, "process.interactiveUserUnavailable", observed.Status.Running);
+        }
         if (observed.Status.Running == true)
         {
             if (!policy.UnhealthyStopPolicy.HasValue)
@@ -279,12 +295,12 @@ internal sealed class ProcessSession
                 return stopped;
             }
         }
-        ProcessStateRecord next = state with { RecoveryAttempts = checked(state.RecoveryAttempts + 1), PlannedStop = false, NextRecoveryAt = now.AddMilliseconds(policy.DelayMilliseconds ?? options.RecoveryDelayMilliseconds) };
+        ProcessStateRecord next = state with { PlannedStop = false, NextRecoveryAt = now.AddMilliseconds(policy.DelayMilliseconds ?? options.RecoveryDelayMilliseconds) };
         if (!await SaveAsync(next, cancellationToken).ConfigureAwait(false))
         {
             return Result(EOutcome.Unknown, "process.recoveryIntentUnconfirmed");
         }
-        return await StartAsync(restarting: true, cancellationToken).ConfigureAwait(false);
+        return await StartAsync(restarting: true, recovering: true, cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>人が現物確認した起動結果を未確定意図へ反映します。</summary>
@@ -300,6 +316,8 @@ internal sealed class ProcessSession
             return Result(EOutcome.NotExecuted, "process.confirmedIdentityUnavailable");
         }
         if (!await SaveAsync(state with { Identity = identity, LaunchPending = false, PlannedStop = identity is null, Ready = null, Healthy = null,
+            RecoveryAttempts = identity is null ? state.RecoveryAttempts
+                                                : 0, RecoveryExhausted = identity is null && state.RecoveryExhausted,
             ExitCode = null, ExitedAt = null, NextRecoveryAt = null, Replacement = null, ReplacementProblem = null }, cancellationToken).ConfigureAwait(false))
         {
             return Result(EOutcome.Unknown, "process.resolutionSaveUnconfirmed");
@@ -333,8 +351,6 @@ internal sealed class ProcessSession
     /// <summary>履歴を含む共通観測結果を組み立てます。</summary>
     /// <returns>生の例外や引数をそのまま出力しない操作結果です。</returns>
     private ProcessOperationResult Result(EOutcome outcome, string? reason = null, bool? running = null)
-    {
-        return new ProcessOperationResult(outcome, new ProcessStatus(definition.Id, definition.Mode, state.InstanceId, state.Identity, running, state.Ready, state.Healthy, state.RecoverySuppressed, state.PlannedStop, state.FailureCount, state.RecoveryAttempts, state.RecoveryExhausted, reason,
+        => new(outcome, new ProcessStatus(definition.Id, definition.Mode, state.InstanceId, state.Identity, running, state.Ready, state.Healthy, state.RecoverySuppressed, state.PlannedStop, state.FailureCount, state.RecoveryAttempts, state.RecoveryExhausted, reason,
             state.ExitCode, state.ExitedAt, state.NextRecoveryAt, state.ExitUnobserved, state.Replacement?.Deadline, state.ReplacementProblem), reason);
-    }
 }

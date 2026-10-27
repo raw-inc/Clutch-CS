@@ -305,7 +305,7 @@ HostsはOS既定ファイルの版を確認し、原文退避と原子的置換�
 
 一括操作は元対象と各操作IDをClientHostで保持し、CoreServiceは同一PCの排他、OS変更前の永続開始記録、変更後の照合を行います。通信断、途中失敗、未実行、不明を区別し、再起動で副作用を再送しません。不明結果の照会は参照専用とします。現地確認後の新規操作は明示した確認を要求し、過去の不明結果は保持します。
 
-Windowsの[RemoteDesktop](remote-desktop.md)はVP9を既定とし、Intel QSV、CPU（libvpx）の順に実際の符号化を試してエンコーダーを選びます。H.264・H.265は `experimental=true` の場合だけ選択でき、NVIDIA NVENC、AMD AMF、Intel QSV、CPUの順に試します。VBRを通常機能として既定にし、`experimental=false` でも利用できます。接続設定のCBR／VBRトグルで方式を選び、次の接続に反映します。
+Windowsの[RemoteDesktop](remote-desktop.md)はVP9を既定とし、Intel QSV、CPU（libvpx）の順に実際の符号化を試してエンコーダーを選びます。H.264・H.265はURLの `experimental=true` または[ブラウザーの常時有効化設定](../guides/web-client.md#試験的な機能を有効にする)で選択でき、NVIDIA NVENC、AMD AMF、Intel QSV、CPUの順に試します。VBRを通常機能として既定にし、`experimental=false` でも利用できます。接続設定のCBR／VBRトグルで方式を選び、次の接続に反映します。
 
 VBRでは設定した映像最大ビットレートを目標最大値、平均目標をその半分として扱います。品質指定とは併用しません。瞬間的な通信量や音声・ヘッダー込みの帯域上限を保証する設定ではなく、画面上の注意書きはツールチップへ集約します。
 

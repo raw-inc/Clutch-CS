@@ -11,7 +11,7 @@ namespace ReArtWord.Contents.BackgroundService.Infrastructure.Processes;
 /// <param name="RecoverySuppressed">人が設定した復旧抑止です。</param>
 /// <param name="PlannedStop">予定停止を要求済みかです。</param>
 /// <param name="FailureCount">区切り未確認の故障回数です。</param>
-/// <param name="RecoveryAttempts">同じ故障で試行した復旧回数です。</param>
+/// <param name="RecoveryAttempts">起動成功を確認するまで保持する復旧試行回数です。</param>
 /// <param name="ExitCounted">現起動回の終了を故障回数へ反映したかです。</param>
 /// <param name="RecoveryExhausted">有限復旧の上限へ達したかです。</param>
 /// <param name="NextRecoveryAt">明示した復旧間隔の次の境界です。</param>

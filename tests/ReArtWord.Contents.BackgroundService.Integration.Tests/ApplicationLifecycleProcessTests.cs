@@ -18,7 +18,7 @@ namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 public sealed class ApplicationLifecycleProcessTests
 {
     /// <summary>スケジュールから始まった自動復旧でも、同じユーザーと非表示指定を使用します。</summary>
-    /// <returns>実Coreが二回だけ起動し、設定した遅延と上限で停止する確認です。</returns>
+    /// <returns>予定起動と自動復旧で起動設定を保持し、明示停止で検証を終える確認です。</returns>
     [ApplicationDesktopFact]
     public async Task InteractiveRecoveryAndScheduleKeepLaunchOptionsAsync()
     {
@@ -34,8 +34,9 @@ public sealed class ApplicationLifecycleProcessTests
             Schedules = [new("initial", "once", At: DateTimeOffset.UtcNow.AddSeconds(2).ToString("O", CultureInfo.InvariantCulture))],
         };
         await RegisterAsync(peer, definition, timeout.Token).ConfigureAwait(true);
-        await CorePeer.WaitAsync(async token => Assert.Single(await peer.GetAsync<ApplicationView[]>("processes.list", token).ConfigureAwait(false)).Observed.Status?.RecoveryExhausted == true, timeout.Token).ConfigureAwait(true);
-        string[][] starts = app.Starts().OrderBy(item => item[1], StringComparer.Ordinal).ToArray();
+        await CorePeer.WaitAsync(_ => Task.FromResult(2 <= app.Starts().Length && app.Starts().Take(2).All(start => File.Exists(Path.Combine(app.Root, start[0] + ".window.json")))), timeout.Token).ConfigureAwait(true);
+        Assert.Equal(EOutcome.Succeeded, (await ActionAsync(peer, "process.stop", definition.Id, timeout.Token).ConfigureAwait(true)).Outcome);
+        string[][] starts = app.Starts().OrderBy(item => item[1], StringComparer.Ordinal).Take(2).ToArray();
         Assert.Equal(2, starts.Length);
         Assert.True(TimeSpan.FromMilliseconds(500) <= DateTimeOffset.Parse(starts[1][1], CultureInfo.InvariantCulture) - DateTimeOffset.Parse(starts[0][1], CultureInfo.InvariantCulture));
         foreach (string[] start in starts)
@@ -107,7 +108,7 @@ public sealed class ApplicationLifecycleProcessTests
 
     /// <summary>ブラウザやWFがなくても、引数を保って遅延後だけ再起動し、指定回数で止まります。</summary>
     /// <returns>正常・異常の自明終了から永続した試行上限までの確認です。</returns>
-    [Theory]
+    [Theory(Skip = "起動成功後も試行を累積する旧仕様です。ApplicationRecoveryProcessTestsで起動成功時のリセットと復旧遅延を検証します。")]
     [InlineData(0, false)]
     [InlineData(0, true)]
     [InlineData(17, false)]
@@ -237,7 +238,7 @@ public sealed class ApplicationLifecycleProcessTests
 
     /// <summary>試験Coreの準備完了を実観測します。</summary>
     /// <returns>運用開始可能な状態です。</returns>
-    private static async Task ReadyAsync(CorePeer peer, CancellationToken cancellationToken = default)
+    internal static async Task ReadyAsync(CorePeer peer, CancellationToken cancellationToken = default)
     {
         await peer.StartAsync(cancellationToken).ConfigureAwait(false);
         await CorePeer.WaitAsync(async token => (await peer.GetAsync<JsonElement>("status", token).ConfigureAwait(false)).GetProperty("status").GetString() is "ready"
@@ -246,7 +247,7 @@ public sealed class ApplicationLifecycleProcessTests
 
     /// <summary>明示Peerへ実登録を送信します。</summary>
     /// <returns>比較保存済みの登録です。</returns>
-    private static async Task RegisterAsync(CorePeer peer, ProcessDefinition definition, CancellationToken cancellationToken = default)
+    internal static async Task RegisterAsync(CorePeer peer, ProcessDefinition definition, CancellationToken cancellationToken = default)
     {
         JsonElement result = await peer.PostAsync<JsonElement>("processes.register", new ProcessRegistrationRequest(definition, null), cancellationToken).ConfigureAwait(false);
         Assert.Equal("succeeded", result.GetProperty("outcome").GetString());
@@ -254,7 +255,7 @@ public sealed class ApplicationLifecycleProcessTests
 
     /// <summary>実管理経路から登録対象の操作Nodeを一度だけ実行します。</summary>
     /// <returns>PID出力を含む実結果です。</returns>
-    private static async Task<NodeResult> ActionAsync(CorePeer peer, string type, string id, CancellationToken cancellationToken = default)
+    internal static async Task<NodeResult> ActionAsync(CorePeer peer, string type, string id, CancellationToken cancellationToken = default)
     {
         JsonElement status = await peer.GetAsync<JsonElement>("status", cancellationToken).ConfigureAwait(false);
         string peerId = status.GetProperty("peerId").GetString()!;

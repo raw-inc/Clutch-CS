@@ -9,6 +9,10 @@ window.contentsBrowser = {
 
     write: (key, value, session = false) => !session && window.contentsEditorStore.owns(key) ? window.contentsEditorStore.write(key, value) : (session ? sessionStorage : localStorage).setItem(key, value),
 
+    readExperimentalPreferenceAsync: async (ignoreReadFailure = false) => (await import('./experimental.js')).readExperimentalPreference(ignoreReadFailure),
+
+    saveExperimentalPreferenceAsync: async enabled => (await import('./experimental.js')).saveExperimentalPreference(enabled),
+
     download: (name, text, type = 'application/json') =>
     {
         const url = URL.createObjectURL(new Blob([text], { type })), link = document.createElement('a');

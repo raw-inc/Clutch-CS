@@ -11,6 +11,7 @@ import { createAnnotationState, createAnnotationPointer, drawAnnotations } from 
 import { createDesktopReconnect, parseDesktopReconnectDelays, desktopDisconnectReason } from './remote-desktop-reconnect.js';
 import { createDesktopLatency } from './remote-desktop-latency.js';
 import { createDesktopClipboard, readDesktopClipboardTextAsync } from './remote-desktop-clipboard.js';
+import { experimentalEnabled } from './experimental.js';
 
 /** リモートデスクトップの接続・表示・入力操作を構成します。
  * @returns 処理の完了と結果を伝えるPromiseです。
@@ -19,7 +20,7 @@ import { createDesktopClipboard, readDesktopClipboardTextAsync } from './remote-
 export async function desktopView(root, ctx)
 {
     root.className = 'desktop-workspace';
-    const experimental = new URLSearchParams(location.search).get('experimental') === 'true';
+    const experimental = experimentalEnabled();
     let viewOnly = false, viewOnlySupported = false;
     let clipboard = null, clipboardSupported = false, clipboardPointerInside = false;
     let annotationsSupported = false, annotationFrame = 0;
