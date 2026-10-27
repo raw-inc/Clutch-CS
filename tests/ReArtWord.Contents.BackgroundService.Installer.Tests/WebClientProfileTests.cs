@@ -45,7 +45,7 @@ public sealed class WebClientProfileTests
         }
         finally
         {
-            InstallationFiles.DeleteDirectory(Path.GetDirectoryName(state)!, client.InstallationId.ToString("N"));
+            await InstallationFiles.DeleteDirectoryAsync(Path.GetDirectoryName(state)!, client.InstallationId.ToString("N"), CancellationToken.None).ConfigureAwait(true);
         }
     }
 }

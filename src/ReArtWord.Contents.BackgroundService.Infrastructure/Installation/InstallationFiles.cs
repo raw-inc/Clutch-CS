@@ -81,6 +81,17 @@ public static class InstallationFiles
         await JsonSerializer.SerializeAsync(file, record, ContractJson.Options, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>所有範囲を毎回確認し、停止後の一時的なファイル占有だけを有限回待ちます。</summary>
+    /// <returns>既存の移動先を上書きしないディレクトリ移動です。</returns>
+    internal static Task MoveDirectoryAsync(string root, string source, string destination, CancellationToken cancellationToken = default)
+    {
+        FileAccessPolicy policy = new(new FileSystemOptions([Root(root)]));
+
+        // Windowsでは配下ファイルの占有もアクセス拒否になります。通常更新と同じ未適用確認を使います。
+        return Updates.Local.UpdateDirectorySwitch.MoveAsync(policy.ResolvePath(source), policy.ResolvePath(destination),
+            path => policy.ValidatePath(path), cancellationToken);
+    }
+
     /// <summary>削除直前に全子孫のreparse pointを確認します。</summary>
     public static void DeleteDirectory(string root, string child)
     {
@@ -95,29 +106,82 @@ public static class InstallationFiles
         Directory.Delete(path, true);
     }
 
-    /// <summary>停止直後のWindowsファイルロックを有限時間待ち、所有範囲内の一ファイルだけを削除します。</summary>
-    /// <returns>ファイルの削除確認です。</returns>
-    public static async Task DeleteFileAsync(string root, string relativePath, CancellationToken cancellationToken = default)
+    /// <summary>削除途中の共有違反を待ち、残った対象を再検証して削除します。</summary>
+    /// <returns>所有範囲内のディレクトリ削除です。</returns>
+    public static Task DeleteDirectoryAsync(string root, string child, CancellationToken cancellationToken = default)
     {
         FileAccessPolicy policy = new(new FileSystemOptions([Root(root)]));
+        string path = policy.ResolvePath(Path.Combine(root, child));
+        return CompleteFileOperationAsync(path, () =>
+        {
+            if (Directory.Exists(path))
+            {
+                Directory.Delete(path, recursive: true);
+            }
+        }, () =>
+        {
+            policy.ValidatePath(path);
+            if (Directory.Exists(path))
+            {
+                ValidateTree(path, policy);
+            }
+        }, cancellationToken);
+    }
+
+    /// <summary>停止直後のWindowsファイルロックを有限時間待ち、所有範囲内の一ファイルだけを削除します。</summary>
+    /// <returns>ファイルの削除確認です。</returns>
+    public static Task DeleteFileAsync(string root, string relativePath, CancellationToken cancellationToken = default)
+    {
+        FileAccessPolicy policy = new(new FileSystemOptions([Root(root)]));
+        string path = policy.ResolvePath(Path.Combine(root, relativePath));
+        return CompleteFileOperationAsync(path, () => File.Delete(path), () => policy.ValidatePath(path), cancellationToken);
+    }
+
+    /// <summary>削除済みの導入記録への切替も、読み取り側の一時占有を待って確定します。</summary>
+    /// <returns>所有範囲内での記録の移動です。</returns>
+    internal static Task MoveFileAsync(string root, string sourceName, string destinationName, CancellationToken cancellationToken = default)
+    {
+        FileAccessPolicy policy = new(new FileSystemOptions([Root(root)]));
+        string source = policy.ResolvePath(Path.Combine(root, sourceName));
+        string destination = policy.ResolvePath(Path.Combine(root, destinationName));
+        return CompleteFileOperationAsync(source, () => File.Move(source, destination, overwrite: true), () =>
+        {
+            policy.ValidatePath(source);
+            policy.ValidatePath(destination);
+        }, cancellationToken);
+    }
+
+    /// <summary>Windowsの占有エラーだけを待ち、最後の失敗には操作対象とOSのエラー番号を残します。</summary>
+    /// <returns>成功した一回の操作、または保持した最終エラーです。</returns>
+    private static async Task CompleteFileOperationAsync(string path, Action operation, Action validate, CancellationToken cancellationToken = default)
+    {
         System.Diagnostics.Stopwatch elapsed = System.Diagnostics.Stopwatch.StartNew();
-        while (elapsed.Elapsed < InstallationDefaults.StopTimeout)
+        Exception? failure = null;
+        do
         {
             cancellationToken.ThrowIfCancellationRequested();
-            string path = policy.ResolvePath(Path.Combine(root, relativePath), true);
+
+            // 境界・リンクの検証失敗は、OSの一時占有として再試行しません。
+            validate();
             try
             {
-                File.Delete(path);
+                operation();
                 return;
             }
-            catch (Exception exception) when (OperatingSystem.IsWindows() && elapsed.Elapsed < InstallationDefaults.StopTimeout
-                && exception is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
-                await Task.Delay(InstallationDefaults.PollInterval, cancellationToken).ConfigureAwait(false);
+                failure = exception;
             }
+            if (!OperatingSystem.IsWindows() || (failure.HResult & 0xffff) is not (5 or 32 or 33) || InstallationDefaults.StopTimeout <= elapsed.Elapsed)
+            {
+                break;
+            }
+            await Task.Delay(InstallationDefaults.PollInterval, cancellationToken).ConfigureAwait(false);
         }
+        while (elapsed.Elapsed < InstallationDefaults.StopTimeout);
         cancellationToken.ThrowIfCancellationRequested();
-        File.Delete(policy.ResolvePath(Path.Combine(root, relativePath), true));
+        string code = failure!.HResult.ToString("X8", System.Globalization.CultureInfo.InvariantCulture);
+        throw new IOException("The file operation could not finish at '" + path + "' (0x" + code + "). " + failure.Message, failure);
     }
 
     /// <summary>リンク先へ降りる前に検証します。</summary>

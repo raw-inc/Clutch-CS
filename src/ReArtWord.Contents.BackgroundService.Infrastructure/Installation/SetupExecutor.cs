@@ -127,7 +127,7 @@ public sealed class SetupExecutor
                     await progress.BeginAsync("unregister", cancellationToken).ConfigureAwait(false);
                     await platform.UnregisterAsync(record, cancellationToken).ConfigureAwait(false);
                     await progress.BeginAsync("remove", cancellationToken).ConfigureAwait(false);
-                    Uninstall(record, owned);
+                    await UninstallAsync(record, owned, cancellationToken).ConfigureAwait(false);
                     await progress.CompleteAsync(cancellationToken).ConfigureAwait(false);
                     return await operation.CompleteAsync(new(owned.OperationId, EOutcome.Succeeded, "uninstalled", "The selected service was removed. Data and configuration retention followed the selected options.", root), cancellationToken).ConfigureAwait(false);
                 }
@@ -245,7 +245,7 @@ public sealed class SetupExecutor
             string source = InstallationFiles.Root(Path.Combine(record.Settings.Root, component));
             if (Directory.Exists(source))
             {
-                Directory.Move(source, Path.Combine(backup, component));
+                await InstallationFiles.MoveDirectoryAsync(record.Settings.Root, source, Path.Combine(backup, component), cancellationToken).ConfigureAwait(false);
             }
         }
         if (!job.KeepDatabase)
@@ -253,7 +253,7 @@ public sealed class SetupExecutor
             string data = InstallationFiles.Root(Path.Combine(record.Settings.Root, "data"));
             if (Directory.Exists(data))
             {
-                Directory.Move(data, Path.Combine(backup, "data"));
+                await InstallationFiles.MoveDirectoryAsync(record.Settings.Root, data, Path.Combine(backup, "data"), cancellationToken).ConfigureAwait(false);
             }
         }
         InstallationRecord replacement = record with { Settings = record.Settings with { PackageRoot = job.Settings.PackageRoot } };
@@ -296,40 +296,43 @@ public sealed class SetupExecutor
     }
 
     /// <summary>登録されたcomponentだけを削除し、ワークスペースとログは保持します。</summary>
-    private static void Uninstall(InstallationRecord record, SetupJob job)
+    /// <returns>明示した保持設定に従う削除の完了です。</returns>
+    private static async Task UninstallAsync(InstallationRecord record, SetupJob job, CancellationToken cancellationToken = default)
     {
         bool retainedClient = File.Exists(Path.Combine(record.Settings.Root, "client", WebClientCatalog.RecordName));
         bool retainedClientConfiguration = File.Exists(Path.Combine(record.Settings.Root, "client", WebClientCatalog.RemovedRecordName));
         foreach (string directory in new[] { "core", "updater", "cli", "staging", "backups", "recovery" })
         {
-            InstallationFiles.DeleteDirectory(record.Settings.Root, directory);
+            await InstallationFiles.DeleteDirectoryAsync(record.Settings.Root, directory, cancellationToken).ConfigureAwait(false);
         }
         if (record.Settings.WebClient is null && !retainedClient && !retainedClientConfiguration)
         {
-            InstallationFiles.DeleteDirectory(record.Settings.Root, "client");
+            await InstallationFiles.DeleteDirectoryAsync(record.Settings.Root, "client", cancellationToken).ConfigureAwait(false);
         }
         if (!job.KeepDatabase)
         {
-            InstallationFiles.DeleteDirectory(record.Settings.Root, "data");
+            await InstallationFiles.DeleteDirectoryAsync(record.Settings.Root, "data", cancellationToken).ConfigureAwait(false);
         }
         if (!job.KeepConfiguration)
         {
             if (retainedClient && record.Settings.WebClient is null)
             {
-                File.Delete(Path.Combine(record.Settings.Root, "config", "contents.toml"));
+                await InstallationFiles.DeleteFileAsync(record.Settings.Root, Path.Combine("config", "contents.toml"), cancellationToken).ConfigureAwait(false);
             }
             else
             {
-                InstallationFiles.DeleteDirectory(record.Settings.Root, "config");
+                await InstallationFiles.DeleteDirectoryAsync(record.Settings.Root, "config", cancellationToken).ConfigureAwait(false);
             }
-            InstallationFiles.DeleteDirectory(record.Settings.Root, "client-state");
+            await InstallationFiles.DeleteDirectoryAsync(record.Settings.Root, "client-state", cancellationToken).ConfigureAwait(false);
         }
-        File.Move(Path.Combine(record.Settings.Root, InstallationFiles.RecordName), Path.Combine(record.Settings.Root, "uninstalled.json"), true);
         if (!retainedClient)
         {
-            File.Delete(Path.Combine(record.Settings.Root, "Open-Client.cmd"));
-            File.Delete(Path.Combine(record.Settings.Root, "open-client.sh"));
+            await InstallationFiles.DeleteFileAsync(record.Settings.Root, "Open-Client.cmd", cancellationToken).ConfigureAwait(false);
+            await InstallationFiles.DeleteFileAsync(record.Settings.Root, "open-client.sh", cancellationToken).ConfigureAwait(false);
         }
+
+        // 削除途中の中断を、削除完了の記録に置き換えません。
+        await InstallationFiles.MoveFileAsync(record.Settings.Root, InstallationFiles.RecordName, "uninstalled.json", cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>新形式ではPC共通のクライアントをCoreの再配置に含めません。</summary>

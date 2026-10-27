@@ -55,28 +55,31 @@ public sealed class WebClientRemoval(IInstallationPlatform platform)
             {
                 await InstallationFiles.DeleteFileAsync(program, file.Path.Replace('/', Path.DirectorySeparatorChar), cancellationToken).ConfigureAwait(false);
             }
-            File.Delete(Path.Combine(client.Root, "Open-Client.cmd"));
-            File.Delete(Path.Combine(client.Root, "Start-Client.ps1"));
-            File.Delete(Path.Combine(client.Root, "open-client.sh"));
+            await InstallationFiles.DeleteFileAsync(client.Root, "Open-Client.cmd", cancellationToken).ConfigureAwait(false);
+            await InstallationFiles.DeleteFileAsync(client.Root, "Start-Client.ps1", cancellationToken).ConfigureAwait(false);
+            await InstallationFiles.DeleteFileAsync(client.Root, "open-client.sh", cancellationToken).ConfigureAwait(false);
             foreach (string legacyFile in legacyFiles)
             {
-                File.Delete(legacyFile);
+                string parent = Path.GetDirectoryName(client.Root)!;
+                await InstallationFiles.DeleteFileAsync(parent, Path.GetRelativePath(parent, legacyFile), cancellationToken).ConfigureAwait(false);
             }
-            File.Delete(Path.Combine(program, LocalUpdateExecutor.ManifestFileName));
+            await InstallationFiles.DeleteFileAsync(program, LocalUpdateExecutor.ManifestFileName, cancellationToken).ConfigureAwait(false);
+            if (!owned.KeepConfiguration)
+            {
+                await InstallationFiles.DeleteDirectoryAsync(client.Root, "config", cancellationToken).ConfigureAwait(false);
+                string state = WebClientStartup.StateDirectory(client);
+                await InstallationFiles.DeleteDirectoryAsync(Path.GetDirectoryName(state)!, Path.GetFileName(state), cancellationToken).ConfigureAwait(false);
+            }
+
+            // 設定・状態の削除も完了してから、導入記録を削除済みへ切り替えます。
             string marker = Path.Combine(client.Root, WebClientCatalog.RecordName);
             if (File.Exists(marker))
             {
-                File.Move(marker, Path.Combine(client.Root, WebClientCatalog.RemovedRecordName), true);
+                await InstallationFiles.MoveFileAsync(client.Root, WebClientCatalog.RecordName, WebClientCatalog.RemovedRecordName, cancellationToken).ConfigureAwait(false);
             }
             else
             {
                 await InstallationFiles.WriteAsync(Path.Combine(client.Root, WebClientCatalog.RemovedRecordName), client, cancellationToken).ConfigureAwait(false);
-            }
-            if (!owned.KeepConfiguration)
-            {
-                InstallationFiles.DeleteDirectory(client.Root, "config");
-                string state = WebClientStartup.StateDirectory(client);
-                InstallationFiles.DeleteDirectory(Path.GetDirectoryName(state)!, Path.GetFileName(state));
             }
             await progress.CompleteAsync(cancellationToken).ConfigureAwait(false);
             return await journal.CompleteAsync(new(owned.OperationId, EOutcome.Succeeded, "uninstalled", "The web client was removed. Core services were not changed.", client.Root), cancellationToken).ConfigureAwait(false);

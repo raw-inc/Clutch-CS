@@ -34,7 +34,7 @@ public sealed class FirewallCleanupTests
         }
         finally
         {
-            InstallationFiles.DeleteDirectory(Path.GetDirectoryName(workspace)!, Path.GetFileName(workspace));
+            await InstallationFiles.DeleteDirectoryAsync(Path.GetDirectoryName(workspace)!, Path.GetFileName(workspace), CancellationToken.None).ConfigureAwait(true);
         }
     }
 
@@ -148,7 +148,7 @@ public sealed class FirewallCleanupTests
         }
         finally
         {
-            InstallationFiles.DeleteDirectory(Path.GetDirectoryName(workspace)!, Path.GetFileName(workspace));
+            await InstallationFiles.DeleteDirectoryAsync(Path.GetDirectoryName(workspace)!, Path.GetFileName(workspace), CancellationToken.None).ConfigureAwait(true);
         }
     }
 

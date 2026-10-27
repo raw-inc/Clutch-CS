@@ -102,9 +102,9 @@ public sealed class WebClientInstaller
             await InstallationFiles.WriteAsync(Path.Combine(pending, WebClientCatalog.RecordName), client, cancellationToken).ConfigureAwait(false);
             if (retained is not null)
             {
-                Directory.Move(root, backup);
+                await InstallationFiles.MoveDirectoryAsync(parent, root, backup, cancellationToken).ConfigureAwait(false);
             }
-            Directory.Move(pending, root);
+            await InstallationFiles.MoveDirectoryAsync(parent, pending, root, cancellationToken).ConfigureAwait(false);
             await ClientLaunchFiles.WriteClientAsync(client, cancellationToken).ConfigureAwait(false);
             await platform.RegisterWebClientAsync(client, cancellationToken).ConfigureAwait(false);
             return client;
@@ -113,11 +113,11 @@ public sealed class WebClientInstaller
         {
             if (Directory.Exists(backup) && !Directory.Exists(root))
             {
-                Directory.Move(backup, root);
+                await InstallationFiles.MoveDirectoryAsync(parent, backup, root, CancellationToken.None).ConfigureAwait(false);
             }
             if (Directory.Exists(pending))
             {
-                InstallationFiles.DeleteDirectory(parent, Path.GetFileName(pending));
+                await InstallationFiles.DeleteDirectoryAsync(parent, Path.GetFileName(pending), CancellationToken.None).ConfigureAwait(false);
             }
         }
     }
