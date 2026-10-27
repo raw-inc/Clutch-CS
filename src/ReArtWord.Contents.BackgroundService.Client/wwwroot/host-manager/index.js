@@ -61,7 +61,7 @@ export async function mount(element, labels)
     const screen = { abort: new AbortController(), hosts: [], selected: new Set(), area: 'network', generation: 0, dialogs: new Set(), views: new Map(), history: [], pending: new Set() };
     screens.set(element, screen);
     const title = node('div', '', 'hm-page-heading'), titleCopy = node('div'), titleTools = node('div', '', 'hm-actions');
-    titleCopy.append(node('h1', 'HostManager (β)'), node('p', labels['Manage operating system settings across discovered hosts.'], 'hm-muted'));
+    titleCopy.append(node('h1', 'HostManager'), node('p', labels['Manage operating system settings across discovered hosts.'], 'hm-muted'));
     title.append(titleCopy, titleTools);
     const workspace = node('div', '', 'hm-workspace'), sidebar = node('aside', '', 'hm-sidebar'), main = node('div', '', 'hm-main');
     const tabs = node('div', '', 'hm-tabs');

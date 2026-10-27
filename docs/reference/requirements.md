@@ -285,7 +285,7 @@ APIキー、モデル、Qwen音声ID、再照会するWanジョブは同じリ�
 
 ## 8. ログ・秘密値・操作画面
 
-[HostManager (β)](pc-management.md)は全発見クラスターのピアをホスト単位にまとめ、NetworkIF、Hosts、Firewall、PATH、Display、Power、Windows Update、Loginを管理します。NetworkIF・Firewall・永続環境変数・DisplayはWindows、hosts編集はWindows/Linux/macOSに対応します。各ホストへ能力を照会し、専用機能で非対応ホストを選択できないようにします。
+[HostManager](pc-management.md)は全発見クラスターのピアをホスト単位にまとめ、NetworkIF、Hosts、Firewall、PATH、Display、Power、Windows Update、Loginを管理します。NetworkIF・Firewall・永続環境変数・DisplayはWindows、hosts編集はWindows/Linux/macOSに対応します。各ホストへ能力を照会し、専用機能で非対応ホストを選択できないようにします。
 
 Displayはコンソールに接続されたディスプレイごとに、ドライバーが公開する解像度・リフレッシュレートの組を選択します。設定確認から接続や現在値が変わっていた場合は開始せず、変更後も現在値を照合します。配置・回転・主画面は維持し、サービス実行時は接続主体を検証する補助プロセスで対話セッションへ処理を渡します。
 

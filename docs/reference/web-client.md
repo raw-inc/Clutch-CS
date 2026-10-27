@@ -119,5 +119,4 @@ Dashboardの折りたたみ式状態表示は、Ready以外で自動展開し、
 
 フッターの「OSS License」から、Clutch-CS の依存ライブラリ、著作権、ライセンス本文を名前順で参照できます。選択式のライセンスには採用した条件を併記します。FFmpeg は別途用意した配布物の条件を確認してください。
 
-HostManager・SignalScopeは `(β)`、両FileTransferは `(α)` と表示します。WorkflowEditor・Terminal・LogViewer・RemoteDesktopには段階表示を付けません。
 Dashboard・ピア list・クラスター更新の日本語表示では、ピア状態のReadyを「正常」、Ready peersを「正常なピア」と表記します。ワークフローのプロセス準備完了とは区別します。
