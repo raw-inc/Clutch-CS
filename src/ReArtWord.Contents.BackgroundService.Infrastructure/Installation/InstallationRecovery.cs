@@ -71,9 +71,9 @@ public static class InstallationRecovery
         await LocalUpdateExecutor.WriteManifestAsync(manifest, temporary, cancellationToken).ConfigureAwait(false);
         if (Directory.Exists(destination))
         {
-            Directory.Move(destination, previous);
+            await InstallationFiles.MoveDirectoryAsync(recovery, destination, previous, cancellationToken).ConfigureAwait(false);
         }
-        Directory.Move(temporary, destination);
+        await InstallationFiles.MoveDirectoryAsync(recovery, temporary, destination, cancellationToken).ConfigureAwait(false);
         InstallationFiles.DeleteDirectory(recovery, Path.GetFileName(previous));
     }
 

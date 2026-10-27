@@ -81,6 +81,17 @@ public static class InstallationFiles
         await JsonSerializer.SerializeAsync(file, record, ContractJson.Options, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>所有範囲を毎回確認し、停止後の一時的なファイル占有だけを有限回待ちます。</summary>
+    /// <returns>既存の移動先を上書きしないディレクトリ移動です。</returns>
+    internal static Task MoveDirectoryAsync(string root, string source, string destination, CancellationToken cancellationToken = default)
+    {
+        FileAccessPolicy policy = new(new FileSystemOptions([Root(root)]));
+
+        // Windowsでは配下ファイルの占有もアクセス拒否になります。通常更新と同じ未適用確認を使います。
+        return Updates.Local.UpdateDirectorySwitch.MoveAsync(policy.ResolvePath(source), policy.ResolvePath(destination),
+            path => policy.ValidatePath(path), cancellationToken);
+    }
+
     /// <summary>削除直前に全子孫のreparse pointを確認します。</summary>
     public static void DeleteDirectory(string root, string child)
     {

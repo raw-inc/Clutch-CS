@@ -245,7 +245,7 @@ public sealed class SetupExecutor
             string source = InstallationFiles.Root(Path.Combine(record.Settings.Root, component));
             if (Directory.Exists(source))
             {
-                Directory.Move(source, Path.Combine(backup, component));
+                await InstallationFiles.MoveDirectoryAsync(record.Settings.Root, source, Path.Combine(backup, component), cancellationToken).ConfigureAwait(false);
             }
         }
         if (!job.KeepDatabase)
@@ -253,7 +253,7 @@ public sealed class SetupExecutor
             string data = InstallationFiles.Root(Path.Combine(record.Settings.Root, "data"));
             if (Directory.Exists(data))
             {
-                Directory.Move(data, Path.Combine(backup, "data"));
+                await InstallationFiles.MoveDirectoryAsync(record.Settings.Root, data, Path.Combine(backup, "data"), cancellationToken).ConfigureAwait(false);
             }
         }
         InstallationRecord replacement = record with { Settings = record.Settings with { PackageRoot = job.Settings.PackageRoot } };
