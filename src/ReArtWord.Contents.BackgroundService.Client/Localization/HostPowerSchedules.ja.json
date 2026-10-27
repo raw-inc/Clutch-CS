@@ -1,5 +1,5 @@
 {
-  "powerSchedule.title": "電源スケジュール",
+  "powerSchedule.title": "Power schedule",
   "powerSchedule.help": "毎日・曜日指定で電源を管理します。ブラウザーを閉じてもCoreが処理します。停止中に過ぎた時刻は遡って実行しません。WoLは同クラスタに稼働中のCoreが必要で、送信成功は起動完了の保証ではありません。シャットダウンは強制終了せず通常のOS要求を送ります。",
   "powerSchedule.cluster": "このHostの予定を管理するクラスタ",
   "powerSchedule.add": "予定を追加",
