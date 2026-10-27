@@ -117,7 +117,7 @@ public sealed class WebClientInstaller
             }
             if (Directory.Exists(pending))
             {
-                InstallationFiles.DeleteDirectory(parent, Path.GetFileName(pending));
+                await InstallationFiles.DeleteDirectoryAsync(parent, Path.GetFileName(pending), CancellationToken.None).ConfigureAwait(false);
             }
         }
     }

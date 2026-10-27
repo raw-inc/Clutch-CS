@@ -1,4 +1,3 @@
-using System.Runtime.ExceptionServices;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Installation;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Installation;
@@ -29,7 +28,7 @@ public sealed class SetupRepairFileTests
         string name = component + ".exe";
         await File.WriteAllTextAsync(Path.Combine(directory, name), "damaged");
         SetupJob job = new(Guid.NewGuid(), ESetupAction.Reinstall, record.Settings, record.InstallationId);
-        SetupResult result = await AfterBlockedMoveAsync(directory, name, reader => reader.Dispose(),
+        SetupResult result = await InstallationFileLock.RunAsync(directory, name, reader => reader.Dispose(),
             () => fixture.RunAsync(job, "repair"));
         Assert.True(result.Outcome == EOutcome.Succeeded, result.Detail);
         Assert.Equal("fixture:" + component, await File.ReadAllTextAsync(Path.Combine(directory, name)));
@@ -78,7 +77,7 @@ public sealed class SetupRepairFileTests
         string directory = Path.Combine(record.Settings.Root, "core");
         SetupJob job = new(Guid.NewGuid(), ESetupAction.Reinstall, record.Settings, record.InstallationId);
         using CancellationTokenSource cancellation = new(TimeSpan.FromSeconds(10));
-        SetupResult result = await AfterBlockedMoveAsync(directory, "core.exe", _ => cancellation.Cancel(),
+        SetupResult result = await InstallationFileLock.RunAsync(directory, "core.exe", _ => cancellation.Cancel(),
             () => fixture.RunAsync(job, "repair", cancellation.Token));
         Assert.Equal(EOutcome.Unknown, result.Outcome);
         Assert.Equal("backup", result.Stage);
@@ -100,7 +99,7 @@ public sealed class SetupRepairFileTests
         string directory = Path.Combine(record.Settings.Root, "recovery", "core");
         string core = Path.Combine(record.Settings.Root, "core");
         Contracts.Updates.Releases.ReleaseManifest manifest = (await LocalUpdateExecutor.ReadManifestAsync(core)) with { ReleaseId = "fixture-v2" };
-        await AfterBlockedMoveAsync(directory, "core.exe", reader => reader.Dispose(), async () =>
+        await InstallationFileLock.RunAsync(directory, "core.exe", reader => reader.Dispose(), async () =>
         {
             await InstallationRecovery.RefreshCoreAsync(core, manifest).ConfigureAwait(false);
             return true;
@@ -126,7 +125,7 @@ public sealed class SetupRepairFileTests
         string appearancePath = Path.Combine(client.Root, "config", "appearance.json");
         string appearance = await File.ReadAllTextAsync(appearancePath);
         await InstallationFiles.WriteAsync(Path.Combine(client.Root, WebClientCatalog.RecordName), client with { AutomaticStartup = false });
-        WebClientInstallation? replacement = await AfterBlockedMoveAsync(client.Root, Path.Combine("app", client.EntryPoint), reader => reader.Dispose(),
+        WebClientInstallation? replacement = await InstallationFileLock.RunAsync(client.Root, Path.Combine("app", client.EntryPoint), reader => reader.Dispose(),
             () => installer.InstallAsync(record));
         Assert.NotNull(replacement);
         Assert.Equal(client.InstallationId, replacement.InstallationId);
@@ -149,7 +148,7 @@ public sealed class SetupRepairFileTests
         string directory = Path.Combine(record.Settings.Root, "data");
         string backup = Path.Combine(record.Settings.Root, "backups", "saved-data");
         await File.WriteAllTextAsync(Path.Combine(directory, "state.db"), "retained database");
-        await AfterBlockedMoveAsync(directory, "state.db", reader => reader.Dispose(), async () =>
+        await InstallationFileLock.RunAsync(directory, "state.db", reader => reader.Dispose(), async () =>
         {
             await InstallationFiles.MoveDirectoryAsync(record.Settings.Root, directory, backup).ConfigureAwait(false);
             return true;
@@ -188,30 +187,4 @@ public sealed class SetupRepairFileTests
         return await InstallationFiles.ReadAsync(fixture.Settings.Root).ConfigureAwait(false);
     }
 
-    /// <summary>実際の移動失敗を観測してから占有を解放し、処理速度に依存させません。</summary>
-    /// <returns>占有を受けた操作の結果です。</returns>
-    private static async Task<T> AfterBlockedMoveAsync<T>(string directory, string name, Action<FileStream> onBlocked, Func<Task<T>> operation)
-    {
-        using FileStream reader = new(Path.Combine(directory, name), FileMode.Open, FileAccess.Read, FileShare.Read);
-        int failures = 0;
-        void Observe(object? sender, FirstChanceExceptionEventArgs args)
-        {
-            if (args.Exception is IOException exception && (exception.HResult & 0xffff) is 5 or 32 or 33
-                && exception.Message.Contains(directory, StringComparison.OrdinalIgnoreCase) && Interlocked.Increment(ref failures) == 1)
-            {
-                onBlocked(reader);
-            }
-        }
-        AppDomain.CurrentDomain.FirstChanceException += Observe;
-        try
-        {
-            T result = await operation().ConfigureAwait(false);
-            Assert.True(0 < failures, "The operation must encounter the real Windows file lock.");
-            return result;
-        }
-        finally
-        {
-            AppDomain.CurrentDomain.FirstChanceException -= Observe;
-        }
-    }
 }

@@ -72,4 +72,24 @@ public sealed class InstallationFileTests
         await deleting.ConfigureAwait(true);
         Assert.False(File.Exists(path));
     }
+
+    /// <summary>削除・記録移動の範囲を限定し、導入ルート自体や範囲外へは作用しません。</summary>
+    /// <returns>境界外ファイルの保持と消失済み対象の扱いの確認です。</returns>
+    [Fact]
+    public async Task CleanupRejectsRootAndOutsidePathsAsync()
+    {
+        using SetupFixture fixture = new();
+        await fixture.InitializeAsync();
+        string root = Directory.CreateDirectory(Path.Combine(fixture.Root, "owned")).FullName;
+        string outside = Directory.CreateDirectory(Path.Combine(fixture.Root, "outside")).FullName;
+        await File.WriteAllTextAsync(Path.Combine(root, "payload.txt"), "owned");
+        await File.WriteAllTextAsync(Path.Combine(outside, "payload.txt"), "outside");
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InstallationFiles.DeleteDirectoryAsync(root, "."));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InstallationFiles.DeleteDirectoryAsync(root, Path.Combine("..", "outside")));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InstallationFiles.DeleteFileAsync(root, Path.Combine("..", "outside", "payload.txt")));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => InstallationFiles.MoveFileAsync(root, "payload.txt", Path.Combine("..", "outside", "moved.txt")));
+        await InstallationFiles.DeleteDirectoryAsync(root, "already-removed");
+        Assert.Equal("owned", await File.ReadAllTextAsync(Path.Combine(root, "payload.txt")));
+        Assert.Equal("outside", await File.ReadAllTextAsync(Path.Combine(outside, "payload.txt")));
+    }
 }

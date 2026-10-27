@@ -74,7 +74,7 @@ public static class InstallationRecovery
             await InstallationFiles.MoveDirectoryAsync(recovery, destination, previous, cancellationToken).ConfigureAwait(false);
         }
         await InstallationFiles.MoveDirectoryAsync(recovery, temporary, destination, cancellationToken).ConfigureAwait(false);
-        InstallationFiles.DeleteDirectory(recovery, Path.GetFileName(previous));
+        await InstallationFiles.DeleteDirectoryAsync(recovery, Path.GetFileName(previous), cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>保存元が現在版と異なるとき、暗黙の旧版復帰を拒否します。</summary>
