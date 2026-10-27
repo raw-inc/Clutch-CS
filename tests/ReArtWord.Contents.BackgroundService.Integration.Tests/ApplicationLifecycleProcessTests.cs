@@ -41,7 +41,7 @@ public sealed class ApplicationLifecycleProcessTests
         foreach (string[] start in starts)
         {
             Assert.Equal(definition.Arguments, start.Skip(2));
-            JsonElement window = JsonSerializer.Deserialize<JsonElement>(await File.ReadAllTextAsync(Path.Combine(app.Root, start[0] + ".window.json"), timeout.Token).ConfigureAwait(true));
+            JsonElement window = JsonSerializer.Deserialize<JsonElement>(await PublishedFixtureFile.ReadAllTextAsync(Path.Combine(app.Root, start[0] + ".window.json"), timeout.Token).ConfigureAwait(true));
             Assert.False(window.GetProperty("Visible").GetBoolean());
             Assert.False(window.GetProperty("HasConsole").GetBoolean());
             Assert.NotEqual(0, window.GetProperty("SessionId").GetInt32());
@@ -76,7 +76,7 @@ public sealed class ApplicationLifecycleProcessTests
         int pid = started.Outputs["pid"].Json.GetInt32();
         string path = Path.Combine(app.Root, pid + ".window.json");
         await CorePeer.WaitAsync(_ => Task.FromResult(File.Exists(path)), timeout.Token).ConfigureAwait(false);
-        JsonElement window = JsonSerializer.Deserialize<JsonElement>(await File.ReadAllTextAsync(path, timeout.Token).ConfigureAwait(false));
+        JsonElement window = JsonSerializer.Deserialize<JsonElement>(await PublishedFixtureFile.ReadAllTextAsync(path, timeout.Token).ConfigureAwait(false));
         Assert.NotEqual(0, window.GetProperty("SessionId").GetInt32());
         Assert.NotEqual("S-1-5-18", window.GetProperty("UserId").GetString());
         Assert.Equal(mode == EProcessWindowMode.Default, window.GetProperty("Visible").GetBoolean());

@@ -51,7 +51,7 @@ internal sealed class ApplicationProcessFixture : IDisposable
 
     /// <summary>起動回ごとのOS識別子と実際の引数を読みます。</summary>
     /// <returns>原子的に完成した起動記録だけです。</returns>
-    internal string[][] Starts() => Directory.GetFiles(Root, "*.started").Select(File.ReadAllLines).ToArray();
+    internal string[][] Starts() => Directory.GetFiles(Root, "*.started").Select(PublishedFixtureFile.ReadAllLines).ToArray();
 
     /// <summary>長時間動く試験アプリケーションを自明終了させます。</summary>
     internal void Release() => File.WriteAllText(Path.Combine(Root, "release"), string.Empty);
