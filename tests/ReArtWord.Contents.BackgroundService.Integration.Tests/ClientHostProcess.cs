@@ -57,6 +57,11 @@ internal sealed class ClientHostProcess : IAsyncDisposable
             {
                 return false;
             }
+            catch (OperationCanceledException) when (!token.IsCancellationRequested)
+            {
+                // HTTP一回の期限だけでは、起動確認全体を終了しません。
+                return false;
+            }
         }, cancellationToken).ConfigureAwait(false);
     }
 

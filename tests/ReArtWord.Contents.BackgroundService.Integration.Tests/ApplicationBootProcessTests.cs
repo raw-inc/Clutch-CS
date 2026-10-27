@@ -27,8 +27,8 @@ public sealed class ApplicationBootProcessTests
         CorePeer peer = new(Guid.NewGuid().ToString("N"), "a", CorePeer.AvailablePort(), true, redirectErrors: false);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = peer.ConfigureAwait(true);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(90));
-        await ReadyAsync(peer, timeout.Token);
-        await peer.StopHostOnlyAsync(timeout.Token);
+
+        // 前回のOS起動記録を先に保存し、Coreの初回起動から起動検出を検証します。
         string directory = Path.Combine(peer.DirectoryPath, "state");
         Directory.CreateDirectory(directory);
         SqliteRepository repository = new(Path.Combine(directory, "state.db"));
@@ -37,6 +37,7 @@ public sealed class ApplicationBootProcessTests
         {
             Assert.Equal(EOutcome.Succeeded, await registration.RegisterAsync(definition, cancellationToken: timeout.Token));
         }
+        Assert.Empty(app.Starts());
         await ReadyAsync(peer, timeout.Token);
         await CorePeer.WaitAsync(_ => Task.FromResult(app.Starts().Length == 1), timeout.Token);
         int pid = int.Parse(Assert.Single(app.Starts())[0], CultureInfo.InvariantCulture);

@@ -19,6 +19,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Receipts;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Routing;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Workflows;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -226,14 +227,17 @@ public sealed class PreparedSnapshotTests(ITestOutputHelper output)
         await SeedAsync(repository, 1).ConfigureAwait(true);
         SyncRecoveryPeer peer = new(new([], []));
         await using ConfiguredAsyncDisposable peerLifetime = peer.ConfigureAwait(true);
-        SyncExportStore exports = Create(peer, repository, sessions: 1, lifetime: TimeSpan.FromMilliseconds(100));
+
+        // 書出しの寿命だけを制御し、Peerの生存確認や実I/Oの所要時間から切り離します。
+        IterationTestClock clock = new();
+        SyncExportStore exports = Create(peer, repository, sessions: 1, lifetime: TimeSpan.FromMilliseconds(100), clock: clock);
         await using ConfiguredAsyncDisposable exportLifetime = exports.ConfigureAwait(true);
         PeerInfo local = Assert.Single(peer.Target.GetPeers());
         using (SyncPreparedExport prepared = Assert.IsType<SyncPreparedExport>(await exports.PrepareAsync(local).ConfigureAwait(true)))
         {
             if (expire)
             {
-                await Task.Delay(200).ConfigureAwait(true);
+                clock.Advance(100);
                 SyncFailureException failure = await Assert.ThrowsAsync<SyncFailureException>(() => exports.MaterializeAsync(prepared, null)).ConfigureAwait(true);
                 Assert.Equal("Sync.SessionExpired", failure.Code);
             }
@@ -245,6 +249,7 @@ public sealed class PreparedSnapshotTests(ITestOutputHelper output)
             }
         }
         using SyncPreparedExport next = Assert.IsType<SyncPreparedExport>(await exports.PrepareAsync(local).ConfigureAwait(true));
+        clock.Advance(99);
         SyncManifest manifest = await exports.MaterializeAsync(next, next.Request.Hashes).ConfigureAwait(true);
         await exports.ReleaseAsync(manifest.Id).ConfigureAwait(true);
     }
@@ -276,7 +281,7 @@ public sealed class PreparedSnapshotTests(ITestOutputHelper output)
 
     /// <summary>試験専用Peerと実ループバック上で固定書出しを提供します。</summary>
     /// <returns>呼出元が非同期破棄する所有Storeです。</returns>
-    private static SyncExportStore Create(SyncRecoveryPeer peer, IDurableRepository repository, long capacity = 16777216, int sessions = 4, TimeSpan? lifetime = null)
+    private static SyncExportStore Create(SyncRecoveryPeer peer, IDurableRepository repository, long capacity = 16777216, int sessions = 4, TimeSpan? lifetime = null, TimeProvider? clock = null)
     {
         PeerInfo local = Assert.Single(peer.Target.GetPeers());
         ClusterOptions options = new(peer.Target.LocalClusterId, local.PeerId, local.HostId, local.Address, "127.255.255.255", local.Port, 1, true, ".")
@@ -284,7 +289,7 @@ public sealed class PreparedSnapshotTests(ITestOutputHelper output)
             MaximumSyncSnapshotBytes = capacity, MaximumSyncSessions = sessions, SyncSessionLifetime = lifetime ?? TimeSpan.FromSeconds(15),
         };
         string network = NetworkInterface.GetAllNetworkInterfaces().Single(item => item.GetIPProperties().UnicastAddresses.Any(address => address.Address.Equals(IPAddress.Loopback))).Id;
-        return new(peer.Target, repository, options, TimeProvider.System, () => new(network, local.Address));
+        return new(peer.Target, repository, options, clock ?? TimeProvider.System, () => new(network, local.Address));
     }
 
     /// <summary>受信可能な固定マニフェストの全バイトを読み取り、実際のJSONを確認します。</summary>

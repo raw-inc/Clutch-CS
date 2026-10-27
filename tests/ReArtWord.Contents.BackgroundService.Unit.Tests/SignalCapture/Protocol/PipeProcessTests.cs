@@ -16,7 +16,7 @@ public sealed class PipeProcessTests
         using var client = new PipeTestClient();
         await client.ReadEventAsync("hello", timeout.Token).ConfigureAwait(true);
         await client.SendAsync("{\"type\":\"start\",\"sources\":[{\"backend\":\"demo\",\"adapterId\":\"demo0\"}]}", timeout.Token).ConfigureAwait(true);
-        await client.ReadEventAsync("state", timeout.Token).ConfigureAwait(true);
+        await client.ReadStateAsync(true, timeout.Token).ConfigureAwait(true);
         await client.SendAsync("{\"type\":\"exclusions\",\"excludedEndpoints\":[{\"transport\":\"udp\",\"address\":\"127.0.0.2\",\"port\":9000},{\"transport\":\"udp\",\"address\":\"127.0.0.2\",\"port\":9001}]}", timeout.Token).ConfigureAwait(true);
         await client.ReadEventAsync("exclusions", timeout.Token).ConfigureAwait(true);
         int packets = 0;
@@ -49,29 +49,42 @@ public sealed class PipeProcessTests
         Assert.Equal(0, await client.ExitAsync(timeout.Token).ConfigureAwait(true));
     }
 
-    /// <summary>読み手が遅い場合の欠落を通知し、停止後の再開では統計を初期化します。</summary>
+    /// <summary>読み手が遅い場合の欠落を通知し、停止後も再開してパケットを出力できます。</summary>
     /// <returns>過負荷と再開のプロセス試験。</returns>
     [Fact]
-    public async Task ReportsOverloadAndRestartsWithResetCountersAsync()
+    public async Task ReportsOverloadAndRestartsAsync()
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         using var client = new PipeTestClient(demoRate: 20000);
         await client.ReadEventAsync("hello", timeout.Token).ConfigureAwait(true);
         await client.SendAsync("{\"type\":\"start\",\"sources\":[{\"backend\":\"demo\",\"adapterId\":\"demo0\"}]}", timeout.Token).ConfigureAwait(true);
-        await client.ReadEventAsync("state", timeout.Token).ConfigureAwait(true);
-        await Task.Delay(400, timeout.Token).ConfigureAwait(true);
-        await client.SendAsync("{\"type\":\"stop\"}", timeout.Token).ConfigureAwait(true);
-        JsonElement statistics = await client.ReadEventAsync("stats", timeout.Token).ConfigureAwait(true);
-        long previousReceived = statistics.GetProperty("received").GetInt64();
-        Assert.True(512 < previousReceived);
-        Assert.True(0 < statistics.GetProperty("dropped").GetInt64());
-        Assert.Equal(0, statistics.GetProperty("suppressed").GetInt64());
-        Assert.False((await client.ReadEventAsync("state", timeout.Token).ConfigureAwait(true)).GetProperty("running").GetBoolean());
-        await client.SendAsync("{\"type\":\"start\",\"sources\":[{\"backend\":\"demo\",\"adapterId\":\"demo0\"}]}", timeout.Token).ConfigureAwait(true);
-        Assert.True((await client.ReadEventAsync("state", timeout.Token).ConfigureAwait(true)).GetProperty("running").GetBoolean());
+        await client.ReadStateAsync(true, timeout.Token).ConfigureAwait(true);
+        JsonElement statistics;
+        long received, dropped;
+        do
+        {
+            // 出力を一時停止して過負荷を作り、発生は通知された統計で確認します。
+            await Task.Delay(400, timeout.Token).ConfigureAwait(true);
+            statistics = await client.ReadEventAsync("stats", timeout.Token).ConfigureAwait(true);
+            received = statistics.GetProperty("received").GetInt64();
+            dropped = statistics.GetProperty("dropped").GetInt64();
+        }
+        while (received <= 512 || dropped == 0);
         await client.SendAsync("{\"type\":\"stop\"}", timeout.Token).ConfigureAwait(true);
         statistics = await client.ReadEventAsync("stats", timeout.Token).ConfigureAwait(true);
-        Assert.True(statistics.GetProperty("received").GetInt64() < previousReceived);
+        Assert.True(512 < statistics.GetProperty("received").GetInt64());
+        Assert.True(0 < statistics.GetProperty("dropped").GetInt64());
+        Assert.Equal(0, statistics.GetProperty("suppressed").GetInt64());
+        await client.ReadStateAsync(false, timeout.Token).ConfigureAwait(true);
+        await client.SendAsync("{\"type\":\"start\",\"sources\":[{\"backend\":\"demo\",\"adapterId\":\"demo0\"}]}", timeout.Token).ConfigureAwait(true);
+        await client.ReadStateAsync(true, timeout.Token).ConfigureAwait(true);
+
+        // 統計の初期化は SessionTests で入力件数を固定して検証します。
+        while ((await client.ReadAsync(timeout.Token).ConfigureAwait(true)).Kind != 2)
+        {
+        }
+        await client.SendAsync("{\"type\":\"stop\"}", timeout.Token).ConfigureAwait(true);
+        await client.ReadStateAsync(false, timeout.Token).ConfigureAwait(true);
         client.CloseInput();
         Assert.Equal(0, await client.ExitAsync(timeout.Token).ConfigureAwait(true));
     }
@@ -92,7 +105,7 @@ public sealed class PipeProcessTests
         Assert.Equal("demo0", adapter.GetProperty("id").GetString());
         Assert.Equal(JsonValueKind.Null, adapter.GetProperty("interfaceId").ValueKind);
         await client.SendAsync("{\"type\":\"start\",\"sources\":[{\"backend\":\"demo\",\"adapterId\":\"demo0\"}]}", timeout.Token).ConfigureAwait(true);
-        Assert.True((await client.ReadEventAsync("state", timeout.Token).ConfigureAwait(true)).GetProperty("running").GetBoolean());
+        await client.ReadStateAsync(true, timeout.Token).ConfigureAwait(true);
         var protocols = new HashSet<string>(StringComparer.Ordinal);
         while (protocols.Count < 3)
         {
@@ -118,14 +131,7 @@ public sealed class PipeProcessTests
         Assert.Contains("UDP", protocols);
         Assert.Contains("HTTP", protocols);
         await client.SendAsync("{\"type\":\"stop\"}", timeout.Token).ConfigureAwait(true);
-        JsonElement state;
-        bool running;
-        do
-        {
-            state = await client.ReadEventAsync("state", timeout.Token).ConfigureAwait(true);
-            running = state.GetProperty("running").GetBoolean();
-        }
-        while (running);
+        await client.ReadStateAsync(false, timeout.Token).ConfigureAwait(true);
         await client.SendAsync("{\"type\":\"list\"}", timeout.Token).ConfigureAwait(true);
         PipeFrame next = await client.ReadAsync(timeout.Token).ConfigureAwait(true);
         Assert.Equal(1, next.Kind);
@@ -143,7 +149,7 @@ public sealed class PipeProcessTests
         using var client = new PipeTestClient();
         await client.ReadEventAsync("hello", timeout.Token).ConfigureAwait(true);
         await client.SendAsync("{\"type\":\"start\",\"sources\":[{\"backend\":\"demo\",\"adapterId\":\"demo0\"}],\"excludedTcpEndpoints\":[{\"address\":\"127.0.0.2\",\"port\":80}]}", timeout.Token).ConfigureAwait(true);
-        await client.ReadEventAsync("state", timeout.Token).ConfigureAwait(true);
+        await client.ReadStateAsync(true, timeout.Token).ConfigureAwait(true);
         int packets = 0;
         bool observedSuppression = false;
         while (!observedSuppression)
@@ -177,7 +183,7 @@ public sealed class PipeProcessTests
         using var client = new PipeTestClient();
         await client.ReadEventAsync("hello", timeout.Token).ConfigureAwait(true);
         await client.SendAsync("{\"type\":\"start\",\"sources\":[{\"backend\":\"demo\",\"adapterId\":\"demo0\"}]}", timeout.Token).ConfigureAwait(true);
-        await client.ReadEventAsync("state", timeout.Token).ConfigureAwait(true);
+        await client.ReadStateAsync(true, timeout.Token).ConfigureAwait(true);
         if (closeOutput)
         {
             client.CloseOutput();
@@ -219,7 +225,7 @@ public sealed class PipeProcessTests
         using var client = new PipeTestClient();
         await client.ReadEventAsync("hello", timeout.Token).ConfigureAwait(true);
         await client.SendAsync("{\"type\":\"start\",\"sources\":[{\"backend\":\"demo\",\"adapterId\":\"demo0\"}]}", timeout.Token).ConfigureAwait(true);
-        await client.ReadEventAsync("state", timeout.Token).ConfigureAwait(true);
+        await client.ReadStateAsync(true, timeout.Token).ConfigureAwait(true);
         Assert.Equal(0, await client.ExitAsync(timeout.Token).ConfigureAwait(true));
     }
 }

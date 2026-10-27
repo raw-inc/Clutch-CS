@@ -18,6 +18,49 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Updates;
 /// <summary>更新書込みの応答消失と、操作記録照会自体の一時欠測を区別します。</summary>
 public sealed class UpdateObserverTests
 {
+    /// <summary>接続先の稼働照会が期限切れになっても、その失敗応答を通信欠測へ置き換えません。</summary>
+    /// <returns>内部照会より遅れて届く失敗応答の確認です。</returns>
+    [Fact]
+    public async Task ReadReceivesFailureAfterTheRemoteHealthProbeTimesOutAsync()
+    {
+        using UdpClient reservation = new(new IPEndPoint(IPAddress.Loopback, 0));
+        int port = ((IPEndPoint)reservation.Client.LocalEndPoint!).Port;
+        reservation.Close();
+        string nic = ObserverNetwork.GetInterfaces().Single(item => item.Addresses.Any(address => string.Equals(address.Address, "127.0.0.1", StringComparison.Ordinal))).InterfaceId;
+        ClientNetworkBinding binding = new(nic, "127.0.0.1", "127.255.255.255", port);
+        string cluster = Guid.NewGuid().ToString("N");
+        Guid instance = Guid.NewGuid();
+        UdpTransport target = new(new("target", binding.BindAddress, binding.BroadcastAddress, port, cluster), instance, TimeProvider.System);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable targetLifetime = ((IAsyncDisposable)target).ConfigureAwait(true);
+        target.Initialize(nic);
+        UpdateObserver observer = new(binding, cluster, TimeSpan.FromSeconds(10));
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable observerLifetime = observer.ConfigureAwait(true);
+        target.Received = async (message, _, token) =>
+        {
+            string inspection = "inspect";
+            if (string.Equals(message.Kind, inspection, StringComparison.Ordinal))
+            {
+                await Task.Delay(Infrastructure.Installation.InstallationDefaults.RequestTimeout + TimeSpan.FromMilliseconds(250), token).ConfigureAwait(false);
+                ClusterResponse response = new(EOutcome.NotExecuted, Reason: "Cluster.InspectionFailed");
+                await target.SendAsync(WireMessage.Reply(message, "target", instance, JsonSerializer.SerializeToElement(response)), token).ConfigureAwait(false);
+            }
+        };
+        target.Start();
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
+        Task<PeerInfo> found = observer.FindAsync("target", instance, timeout.Token);
+        long sequence = 0;
+        while (!found.IsCompleted)
+        {
+            PeerInfo peer = new("target", instance, "host", binding.BindAddress, port, EPeerStatus.Ready, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+            await target.SendAsync(new(Guid.NewGuid(), cluster, "target", instance, "hello", null, null, JsonSerializer.SerializeToElement(new PeerAnnouncement(peer, "digest", "target", null, ++sequence))), timeout.Token).ConfigureAwait(true);
+            await Task.Delay(20, timeout.Token).ConfigureAwait(true);
+        }
+        await found.ConfigureAwait(true);
+        ManagementReply reply = await observer.SendAsync("target", instance, "setup.client.info", null, true, timeout.Token).ConfigureAwait(true);
+        Assert.Equal(EOutcome.NotExecuted, reply.Outcome);
+        Assert.Equal("Cluster.InspectionFailed", reply.Reason);
+    }
+
     /// <summary>照会パケットの消失後も元結果だけを読み、既知の未完了記録は再実行しません。</summary>
     /// <returns>実UDPで一度の副作用と照会だけの回復を確認します。</returns>
     [Theory]

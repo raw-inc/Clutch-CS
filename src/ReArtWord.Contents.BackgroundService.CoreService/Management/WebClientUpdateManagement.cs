@@ -34,6 +34,11 @@ internal sealed class WebClientUpdateManagement : Microsoft.Extensions.Hosting.B
     internal void Register(ManagementRegistry registry)
     {
         registry.Read("setup.client.info", async (_, token) => await WebClientUpdateProbe.ReadAsync(await ClientAsync(token).ConfigureAwait(false), token).ConfigureAwait(false));
+
+        // 送信済みのマニフェストを載せ直さず、UDPの準備確認は操作IDだけにします。
+        registry.Write("setup.client.stage", async (body, token) => (await PrepareAsync(ManagementRegistry.Body<WebClientUpdateRequest>(body), token).ConfigureAwait(false)).OperationId);
+
+        // 旧Installerには従来の応答を維持します。新しい経路は準備した操作IDだけを返します。
         registry.Write("setup.client.prepare", async (body, token) => await PrepareAsync(ManagementRegistry.Body<WebClientUpdateRequest>(body), token).ConfigureAwait(false));
         registry.ReadValue("setup.client.stream.capabilities", _ => stream.Capabilities);
         registry.Write("setup.client.stream.open", async (body, token) => await stream.OpenAsync(ManagementRegistry.OperationId(body),

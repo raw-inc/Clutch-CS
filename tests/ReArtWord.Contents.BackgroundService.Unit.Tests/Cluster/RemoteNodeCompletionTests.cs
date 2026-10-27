@@ -17,6 +17,29 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Cluster;
 /// <summary>通信待ち期限と開始済み処理の寿命を分けます。</summary>
 public sealed class RemoteNodeCompletionTests
 {
+    /// <summary>初回の準備確認に失敗しても、要求送信前の復旧待ちでは試験時計を止めません。</summary>
+    /// <returns>二台が実通信で参加を完了する確認です。</returns>
+    [Fact]
+    public async Task RequestClockAllowsInitialParticipationToRecoverAsync()
+    {
+        RequestTestClock clock = new();
+        ClusterOptions options = new(Guid.NewGuid().ToString("N"), "first", "first", "127.0.0.1", "127.255.255.255", Port(), 1, true, Path.GetTempPath())
+        {
+            PeerTimeout = TimeSpan.FromSeconds(1), HeartbeatInterval = TimeSpan.FromMilliseconds(50), RequestTimeout = TimeSpan.FromMilliseconds(300),
+        };
+        PeerCluster first = new(options, Repository(), clock) { ReadinessCheck = _ => ValueTask.FromResult(false) };
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = first.ConfigureAwait(true);
+        PeerCluster second = new(options with { PeerId = "second", HostId = "second", NewCluster = false }, Repository(), clock)
+        { ReadinessCheck = _ => ValueTask.FromResult(true) };
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable secondLifetime = second.ConfigureAwait(true);
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
+        await first.StartAsync(timeout.Token);
+        await second.StartAsync(timeout.Token);
+        Assert.DoesNotContain(first.GetPeers(), peer => peer.Status == EPeerStatus.Ready);
+        first.ReadinessCheck = _ => ValueTask.FromResult(true);
+        await WaitForParticipationAsync(first, second, timeout.Token);
+    }
+
     /// <summary>準備状態が下がっても、同じ実体で開始済みの実処理は元の結果だけを照会します。</summary>
     /// <returns>新規実行を許可せず、未完了結果を実体喪失と誤判定しない確認です。</returns>
     [Fact]
@@ -85,23 +108,22 @@ public sealed class RemoteNodeCompletionTests
         {
             if (Interlocked.Increment(ref executions) == 2)
             {
+                clock.AdvanceAndResume(TimeSpan.Zero);
                 secondStarted.TrySetResult();
                 await releaseSecond.Task.WaitAsync(token).ConfigureAwait(false);
             }
             else
             {
-                clock.Advance(TimeSpan.FromMilliseconds(500));
+                clock.AdvanceAndResume(TimeSpan.FromMilliseconds(500));
                 await Task.Delay(TimeSpan.FromSeconds(1), token).ConfigureAwait(false);
             }
             return NodeResult.Success(NodeValue.FromObject(7));
         };
         await second.StartAsync();
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
-        while (first.GetPeers().Count(peer => peer.Status == EPeerStatus.Ready) != 2)
-        {
-            await Task.Delay(20, timeout.Token);
-        }
+        await WaitForParticipationAsync(first, second, timeout.Token);
         second.SetLocalLogPort(34567);
+        clock.Freeze();
         RemoteExecutionRequest request = new(Guid.NewGuid(), Guid.NewGuid(), "demo", "revision", new NodeDefinition("node", "test", NodeSettings.Schema("{}")), new Dictionary<string, NodeValue>(StringComparer.Ordinal), "second", second.LocalInstanceId, clock.GetUtcNow().AddMilliseconds(200));
         NodeResult result = await first.ExecuteAsync(request, timeout.Token);
         Assert.Equal(EOutcome.Succeeded, result.Outcome);
@@ -116,6 +138,7 @@ public sealed class RemoteNodeCompletionTests
         Assert.Equal("Execution.ReceiptMissing", missing.Reason);
         Assert.Equal(1, executions);
         Assert.Single(await secondRepository.ListAsync("receipts:second"));
+        clock.Freeze();
         RemoteExecutionRequest cancelled = request with { Id = Guid.NewGuid(), ExpiresAt = clock.GetUtcNow().AddSeconds(1) };
         using CancellationTokenSource caller = new();
         Task<NodeResult> execution = first.ExecuteAsync(cancelled, caller.Token);
@@ -167,6 +190,25 @@ public sealed class RemoteNodeCompletionTests
         Assert.False(interrupted.Running);
         Assert.Null(interrupted.Response);
         Assert.Equal("Execution.StartedWithoutResult", interrupted.Reason);
+    }
+
+    /// <summary>参加できなかった場合は、両側の状態と同期失敗の理由を残します。</summary>
+    /// <returns>通常参加の観測です。</returns>
+    private static async Task WaitForParticipationAsync(PeerCluster first, PeerCluster second, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            while (first.GetPeers().Count(peer => peer.Status == EPeerStatus.Ready) != 2)
+            {
+                await Task.Delay(20, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            string firstPeers = string.Join(", ", first.GetPeers().Select(peer => $"{peer.PeerId}:{peer.Status}"));
+            string secondPeers = string.Join(", ", second.GetPeers().Select(peer => $"{peer.PeerId}:{peer.Status}"));
+            Assert.Fail($"Peer participation did not complete. first=[{firstPeers}] sync={first.SynchronizationProblem}; second=[{secondPeers}] sync={second.SynchronizationProblem}");
+        }
     }
 
     /// <summary>短い通信待ちだけを設定します。</summary>

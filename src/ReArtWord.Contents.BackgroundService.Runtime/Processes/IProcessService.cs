@@ -20,6 +20,10 @@ public interface IProcessService
     /// <returns>永続化の確定結果です。</returns>
     public ValueTask<EOutcome> RegisterAsync(ProcessDefinition definition, string? expectedVersion = null, CancellationToken cancellationToken = default);
 
+    /// <summary>確認した版の登録を削除し、実行中のプロセスは維持します。</summary>
+    /// <returns>登録と監視状態の削除結果です。</returns>
+    public ValueTask<EOutcome> RemoveAsync(string id, string expectedVersion, CancellationToken cancellationToken = default);
+
     /// <summary>登録した管理対象を一回だけ起動します。</summary>
     /// <returns>実起動と保存の確認結果です。</returns>
     public ValueTask<ProcessOperationResult> StartAsync(string id, CancellationToken cancellationToken = default);

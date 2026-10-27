@@ -17,12 +17,12 @@ public sealed class UpdateObserver : IAsyncDisposable
     private readonly string clusterId;
 
     /// <summary>明示NICと固定クラスタを使用しCore Peerとして参加しません。</summary>
-    public UpdateObserver(ClientNetworkBinding binding, string clusterId)
+    public UpdateObserver(ClientNetworkBinding binding, string clusterId, TimeSpan? requestTimeout = null)
     {
         ArgumentNullException.ThrowIfNull(binding);
         ArgumentException.ThrowIfNullOrWhiteSpace(clusterId);
         this.clusterId = clusterId;
-        observer = new(new ObserverOptions("updater-" + Guid.NewGuid().ToString("N"), binding) { RequestTimeout = TimeSpan.FromSeconds(2) });
+        observer = new(new ObserverOptions("updater-" + Guid.NewGuid().ToString("N"), binding) { RequestTimeout = requestTimeout ?? TimeSpan.FromSeconds(2) });
     }
 
     /// <summary>共通更新設定から明示通信範囲を取り出します。</summary>

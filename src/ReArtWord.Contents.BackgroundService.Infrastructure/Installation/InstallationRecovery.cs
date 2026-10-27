@@ -71,10 +71,10 @@ public static class InstallationRecovery
         await LocalUpdateExecutor.WriteManifestAsync(manifest, temporary, cancellationToken).ConfigureAwait(false);
         if (Directory.Exists(destination))
         {
-            Directory.Move(destination, previous);
+            await InstallationFiles.MoveDirectoryAsync(recovery, destination, previous, cancellationToken).ConfigureAwait(false);
         }
-        Directory.Move(temporary, destination);
-        InstallationFiles.DeleteDirectory(recovery, Path.GetFileName(previous));
+        await InstallationFiles.MoveDirectoryAsync(recovery, temporary, destination, cancellationToken).ConfigureAwait(false);
+        await InstallationFiles.DeleteDirectoryAsync(recovery, Path.GetFileName(previous), cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>保存元が現在版と異なるとき、暗黙の旧版復帰を拒否します。</summary>

@@ -156,7 +156,7 @@ public sealed class ApplicationLaunchTests(ITestOutputHelper output)
         {
             await Task.Delay(20, timeout.Token).ConfigureAwait(false);
         }
-        return JsonSerializer.Deserialize<JsonElement>(await File.ReadAllTextAsync(path, timeout.Token).ConfigureAwait(false));
+        return JsonSerializer.Deserialize<JsonElement>(await PublishedFixtureFile.ReadAllTextAsync(path, timeout.Token).ConfigureAwait(false));
     }
 
     /// <summary>プロセス作成前の未ログインを模擬します。</summary>

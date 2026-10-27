@@ -47,10 +47,10 @@ on:
     outputs:
       tests_failed:
         description: 'Whether any validation stage failed'
-        value: ${{ jobs.windows.outputs.tests_failed }}
+        value: ${{ jobs.package.outputs.tests_failed || jobs.tests.outputs.tests_failed }}
       test_results:
         description: 'Validation stage outcomes for release notes'
-        value: ${{ jobs.windows.outputs.test_results }}
+        value: ${{ jobs.package.outputs.test_results || jobs.tests.outputs.test_results }}
     inputs:
       tag:
         required: true
@@ -70,8 +70,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  windows:
-    runs-on: ${{ vars.RELEASE_WINDOWS_RUNNER || 'windows-latest' }}
+  tests:
+    name: Regression and performance tests (4 vCPU)
+    runs-on: ${{ vars.TEST_WINDOWS_RUNNER || 'windows-latest' }}
     timeout-minutes: 210
     outputs:
       tests_failed: ${{ steps.validation_summary.outputs.tests_failed }}
@@ -81,54 +82,16 @@ jobs:
       RELEASE_TAG: ${{ inputs.tag }}
       RELEASE_VERSION: ${{ inputs.version }}
       RELEASE_SHA: ${{ inputs.sha || github.sha }}
-      PACKAGE_RUNTIME_VERSION: '10.0.13'
     defaults:
       run:
         shell: pwsh
     steps:
-      - name: Record Windows runner resources
-        run: |
-          $system = Get-CimInstance Win32_ComputerSystem
-          $processors = (Get-CimInstance Win32_Processor | Select-Object -ExpandProperty Name -Unique) -join ', '
-          $drive = [IO.DriveInfo]::new([IO.Path]::GetPathRoot($env:GITHUB_WORKSPACE))
-          $memoryGiB = [Math]::Round($system.TotalPhysicalMemory / 1GB, 1)
-          $freeGiB = [Math]::Round($drive.AvailableFreeSpace / 1GB, 1)
-          $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-          try {
-            $administrator = [Security.Principal.WindowsPrincipal]::new($identity).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-            $isSystem = $identity.IsSystem
-          } finally {
-            $identity.Dispose()
-          }
-          @(
-            '### Windows runner'
-            "- Runner: $env:RUNNER_NAME"
-            "- Image: $env:ImageOS $env:ImageVersion"
-            "- Logical CPUs: $([Environment]::ProcessorCount)"
-            "- CPU: $processors"
-            "- Memory: $memoryGiB GiB"
-            "- Workspace free space: $freeGiB GiB"
-            "- Administrator: $administrator"
-            "- SYSTEM: $isSystem"
-            "- Windows session: $([Diagnostics.Process]::GetCurrentProcess().SessionId)"
-          ) | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          foreach ($volume in [IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady -and $_.DriveType -eq 'Fixed' }) {
-            "- Volume $($volume.Name): $([Math]::Round($volume.TotalSize / 1GB, 1)) GiB, $([Math]::Round($volume.AvailableFreeSpace / 1GB, 1)) GiB free" | Tee-Object -FilePath $env:GITHUB_STEP_SUMMARY -Append
-          }
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ inputs.sha || github.sha }}
           persist-credentials: false
-      - name: Resolve manual validation version
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          [xml]$properties = Get-Content -LiteralPath Version.props -Raw
-          $prefix = [string]$properties.Project.PropertyGroup.VersionPrefix
-          $suffix = [string]$properties.Project.PropertyGroup.VersionSuffix
-          $version = $prefix
-          if (-not [string]::IsNullOrWhiteSpace($suffix)) { $version += "-$suffix" }
-          @("RELEASE_VERSION=$version", "RELEASE_TAG=v$version") | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "Validation only: commit $env:RELEASE_SHA, version $version. No tag or GitHub Release will be created." | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+      - name: Prepare Windows build tools
+        uses: ./.github/actions/prepare-windows
       - name: Record manual validation scope
         if: github.event_name == 'workflow_dispatch'
         env:
@@ -160,26 +123,6 @@ jobs:
             $summary += @('', 'Performance test filter:', '', '```text', $selection.performance_filter, '```')
           }
           $summary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
-      - name: Use preinstalled .NET SDK
-        run: |
-          dotnet --version
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          dotnet --info
-      - name: Ensure WebAssembly tools
-        run: |
-          $workloads = dotnet workload list
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $workloads
-          if (-not ($workloads -match '^\s*wasm-tools\s')) {
-            dotnet workload install wasm-tools --skip-manifest-update
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
-        with:
-          node-version: '24'
-          package-manager-cache: false
-      - name: Restore JavaScript tooling
-        run: npm ci --ignore-scripts
       - name: Test release and validation rules
         id: release_rules
         continue-on-error: true
@@ -203,7 +146,7 @@ jobs:
           & $probe -version
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           @("CONTENTS_TEST_FFPROBE=$probe", "CONTENTS_TEST_FFMPEG=$encoder") | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-      - name: Test versioning, source packaging and platform scripts
+      - name: Test versioning, packaging, platform scripts and JavaScript
         id: platform_tests
         continue-on-error: true
         if: github.event_name != 'workflow_dispatch' || !inputs.skip_scripts
@@ -215,7 +158,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & "$env:WINDIR/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tests/ReArtWord.Contents.BackgroundService.Installer.Tests/Test-WindowsUserStartup.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --test tests/ReArtWord.Contents.BackgroundService.Client.Tests/Client/graph-connections.test.mjs
+          node --test eng/javascript/tests/*.test.mjs eng/css/tests/*.test.mjs tests/ReArtWord.Contents.BackgroundService.Client.Tests/Client/*.test.mjs
       - name: Run unit regression tests
         id: unit_tests
         continue-on-error: true
@@ -317,8 +260,69 @@ jobs:
             Receive-Job -Job $monitor, $processMonitor -ErrorAction Continue
             Remove-Job -Job $monitor, $processMonitor
           }
+      - name: Summarize validation results
+        id: validation_summary
+        if: always()
+        env:
+          VALIDATION_STEPS: ${{ toJSON(steps) }}
+        run: node .github/scripts/validation.mjs
+      - name: Retain test results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: test-results
+          overwrite: true
+          path: |
+            artifacts/TestResults/**
+            .work/integration/**/startup-error.txt
+            .work/integration/**/state/logs/**/*.jsonl
+            .work/integration/**/random-restarts.json
+            .work/integration/**/audio-workload.json
+            .work/integration/**/heartbeat-timing.json
+            .work/integration/**/latency.json
+            .work/integration/**/*-measurement.json
+            .work/performance/**/*.json
+            .work/workflow-latency/**/*.json
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Fail manual validation when tests fail
+        if: >-
+          !cancelled() && github.event_name == 'workflow_dispatch' && inputs.skip_package &&
+          steps.validation_summary.outputs.tests_failed == 'true'
+        run: throw 'Validation stages failed. See the test results summary.'
+
+  package:
+    name: Package and installation tests (8 vCPU)
+    needs: tests
+    if: github.event_name != 'workflow_dispatch' || !inputs.skip_package
+    runs-on: ${{ vars.RELEASE_WINDOWS_RUNNER || 'windows-latest' }}
+    timeout-minutes: 210
+    outputs:
+      tests_failed: ${{ steps.validation_summary.outputs.tests_failed }}
+      test_results: ${{ steps.validation_summary.outputs.test_results }}
+    env:
+      ContinuousIntegrationBuild: 'true'
+      RELEASE_TAG: ${{ inputs.tag }}
+      RELEASE_VERSION: ${{ inputs.version }}
+      RELEASE_SHA: ${{ inputs.sha || github.sha }}
+      PACKAGE_RUNTIME_VERSION: '10.0.13'
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.sha || github.sha }}
+          persist-credentials: false
+      - name: Prepare Windows build tools
+        uses: ./.github/actions/prepare-windows
+      - name: Build the installation test host
+        run: |
+          dotnet restore Clutch-CS.slnx
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet build tests/ReArtWord.Contents.BackgroundService.Installer.Tests/ReArtWord.Contents.BackgroundService.Installer.Tests.csproj -c Release --no-restore -warnaserror "-p:Version=$env:RELEASE_VERSION"
       - name: Ensure the publishing runtime
-        if: github.event_name != 'workflow_dispatch' || !inputs.skip_package
         run: |
           $required = [version]$env:PACKAGE_RUNTIME_VERSION
           function Test-PublishingRuntime {
@@ -342,13 +346,11 @@ jobs:
           if (-not (Test-PublishingRuntime)) { throw 'The .NET runtime required by the publishing tools is unavailable.' }
           dotnet --list-runtimes
       - name: Build the bundled Windows installer
-        if: github.event_name != 'workflow_dispatch' || !inputs.skip_package
         run: |
           ./installer/New-InstallPackage.ps1 -OutputRoot (Join-Path $PWD 'artifacts/package') -ReleaseId $env:RELEASE_TAG -Version $env:RELEASE_VERSION -RuntimeIdentifier win-x64 -RuntimeVersion $env:PACKAGE_RUNTIME_VERSION
       - name: Test install, update, repair and uninstall in an isolated cluster
         id: install_tests
         continue-on-error: true
-        if: github.event_name != 'workflow_dispatch' || !inputs.skip_package
         run: |
           $env:CLUTCH_TEST_PACKAGE = Join-Path $PWD 'artifacts/package/files'
           dotnet test tests/ReArtWord.Contents.BackgroundService.Installer.Tests/ReArtWord.Contents.BackgroundService.Installer.Tests.csproj -c Release --no-build --no-restore --filter 'FullyQualifiedName~RealInstallationTests|FullyQualifiedName~RealWebClientTests|FullyQualifiedName~RealWebClientUpdateTests' --settings eng/testing/ci.runsettings --logger trx --logger 'console;verbosity=normal' --results-directory artifacts/InstallTestResults -- RunConfiguration.TreatNoTestsAsError=true
@@ -374,13 +376,11 @@ jobs:
       - name: Verify installation without AVX2 in isolated processes
         id: avx2_tests
         continue-on-error: true
-        if: github.event_name != 'workflow_dispatch' || !inputs.skip_package
         env:
           DOTNET_EnableAVX2: '0'
         run: |
           ./tests/ReArtWord.Contents.BackgroundService.Unit.Tests/Updates/Test-InstallFlow.ps1 -InstallerPath (Join-Path $PWD 'installer/Install-Offline.ps1') -CoreExecutablePath (Join-Path $PWD 'artifacts/package/files/core/Clutch-CS.CoreService.exe') -VerifierExecutablePath (Join-Path $PWD 'artifacts/package/files/updater/ReArtWord.Contents.BackgroundService.Updater.exe') -RequireAvx2Disabled
       - name: Archive installer and corresponding source
-        if: github.event_name != 'workflow_dispatch' || !inputs.skip_package
         run: |
           $directory = Join-Path $PWD 'artifacts/release'
           [void][IO.Directory]::CreateDirectory($directory)
@@ -392,7 +392,6 @@ jobs:
           ./tests/ReArtWord.Contents.BackgroundService.Installer.Tests/Test-SetupPackage.ps1 -ArchivePath $archive
           ./installer/New-SourcePackage.ps1 -OutputDirectory $directory -ReleaseId $env:RELEASE_TAG -Revision $env:RELEASE_SHA
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        if: github.event_name != 'workflow_dispatch' || !inputs.skip_package
         with:
           name: ${{ github.event_name == 'workflow_dispatch' && 'validation-windows' || 'release-windows' }}
           path: artifacts/release/*
@@ -405,25 +404,18 @@ jobs:
         if: always()
         env:
           VALIDATION_STEPS: ${{ toJSON(steps) }}
+          PREVIOUS_VALIDATION_RESULTS: ${{ needs.tests.outputs.test_results }}
         run: node .github/scripts/validation.mjs
       - name: Retain test results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: test-results
+          name: installation-test-results
           overwrite: true
           path: |
-            artifacts/TestResults/**
             artifacts/InstallTestResults/**
             .work/integration/**/startup-error.txt
             .work/integration/**/state/logs/**/*.jsonl
-            .work/integration/**/random-restarts.json
-            .work/integration/**/audio-workload.json
-            .work/integration/**/heartbeat-timing.json
-            .work/integration/**/latency.json
-            .work/integration/**/*-measurement.json
-            .work/performance/**/*.json
-            .work/workflow-latency/**/*.json
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 7

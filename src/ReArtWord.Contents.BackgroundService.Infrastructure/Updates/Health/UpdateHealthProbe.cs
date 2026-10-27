@@ -56,9 +56,10 @@ internal static class UpdateHealthProbe
                         }
                     }
                 }
-                catch (Exception exception) when (exception is JsonException or IOException or TaskCanceledException or InvalidOperationException)
+                catch (Exception exception) when (exception is JsonException or IOException or InvalidOperationException
+                    || exception is OperationCanceledException && !linked.IsCancellationRequested)
                 {
-                    // 起動中の一時応答不能は全体の有限期限内だけ再観測します。
+                    // 探索一回の期限切れだけを再観測し、起動期限と呼び出し元のキャンセルは外側へ伝えます。
                 }
                 await Task.Delay(100, linked.Token).ConfigureAwait(false);
             }

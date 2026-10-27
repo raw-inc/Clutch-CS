@@ -32,7 +32,7 @@ export async function mount(element, mode, language, timeZone = 'UTC')
     message.className = 'remote-message';
     message.setAttribute('role', 'status');
     const heading = document.createElement('h1');
-    const titles = { desktop: 'RemoteDesktop', files: 'FileTransfer · Cluster (α)', 'browser-files': 'FileTransfer · Browser ↔ Host (α)', licenses: 'OSS License', 'signal-scope': 'SignalScope (β)' };
+    const titles = { desktop: 'RemoteDesktop', files: 'FileTransfer · Cluster', 'browser-files': 'FileTransfer · Browser ↔ Host', licenses: 'OSS License', 'signal-scope': 'SignalScope' };
     heading.textContent = titles[mode] ?? 'Terminal';
     const title = document.createElement('div');
     title.className = 'page-title';

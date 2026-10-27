@@ -81,8 +81,7 @@ public sealed class AudioWorkloadProcessTests(ITestOutputHelper output)
             foreach (string failure in new[] { "error", "timeout" })
             {
                 string path = Path.Combine(cluster.Peers[1].DirectoryPath, "content", "recovery", failure + ".wav");
-                int timeout = failure switch { "timeout" => 250, _ => 10000 };
-                WorkflowDefinition definition = Definition(failure, [new(failure, path)], cluster.Peers[1].InterfaceId, server.Url, timeout);
+                WorkflowDefinition definition = Definition(failure, [new(failure, path)], cluster.Peers[1].InterfaceId, server.Url);
                 WorkflowSaveResult saved = await SaveAsync(cluster.Peers[0], definition, deadline.Token).ConfigureAwait(true);
                 Guid operation = Guid.NewGuid();
                 WorkflowRunStatus failed = await cluster.Peers[0].PostAsync<WorkflowRunStatus>("runs.start", new WorkflowRunRequest(operation, definition.Id, saved.Revision), deadline.Token).ConfigureAwait(true);
@@ -93,7 +92,8 @@ public sealed class AudioWorkloadProcessTests(ITestOutputHelper output)
                 }, deadline.Token).ConfigureAwait(true);
                 Assert.NotEqual(EOutcome.Succeeded, failed.Outcome);
                 Assert.False(File.Exists(path));
-                Assert.Equal(1, server.Requests[failure]);
+                Assert.True(server.Requests.TryGetValue(failure, out int attempts), "The simulated API did not receive the request.");
+                Assert.Equal(1, attempts);
                 string text = failure + "-recovered";
                 WorkflowDefinition recovery = Definition(text, [new(text, path)], cluster.Peers[1].InterfaceId, server.Url);
                 WorkflowSaveResult recoverySaved = await SaveAsync(cluster.Peers[0], recovery, deadline.Token).ConfigureAwait(true);
@@ -124,7 +124,7 @@ public sealed class AudioWorkloadProcessTests(ITestOutputHelper output)
 
     /// <summary>反復の値を遠隔音声ノードに渡し、終了時まで出力の所有を維持します。</summary>
     /// <returns>外部URL・本番保存先を含まないWFです。</returns>
-    private static WorkflowDefinition Definition(string id, AudioItem[] items, string nic, string url, int timeout = 10000)
+    private static WorkflowDefinition Definition(string id, AudioItem[] items, string nic, string url)
     {
         JsonElement empty = JsonSerializer.SerializeToElement(new { });
         return new(id, id, [
@@ -133,7 +133,7 @@ public sealed class AudioWorkloadProcessTests(ITestOutputHelper output)
             new("speech", "ai.audio.qwen.generate", JsonSerializer.SerializeToElement(new
             {
                 endpoint = url + "generate", model = "qwen3-tts-vc-2026-01-22", voice = "fixture-voice",
-                interfaceId = nic, localAddress = "127.0.0.1", timeoutMs = timeout,
+                interfaceId = nic, localAddress = "127.0.0.1", timeoutMs = 10000,
             }), Target: new(EExecutionScope.One, ["b"])),
             new("end", "control.forEach.end", empty, Target: new(EExecutionScope.One, ["a"]))],
             [new("loop", "item", "speech", "value", Path: "/Text"), new("loop", "item", "speech", "$settings.outputPath", Path: "/Path"),

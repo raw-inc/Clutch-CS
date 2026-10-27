@@ -87,6 +87,21 @@ internal sealed class PipeTestClient : IDisposable
         return new PipeFrame(body[0], body[1..]);
     }
 
+    /// <summary>以前の定期通知を読み飛ばし、指定した稼働状態を確認します。</summary>
+    /// <returns>指定した状態の通知。</returns>
+    internal async Task<JsonElement> ReadStateAsync(bool running, CancellationToken cancellationToken = default)
+    {
+        JsonElement state;
+        bool observedRunning;
+        do
+        {
+            state = await ReadEventAsync("state", cancellationToken).ConfigureAwait(false);
+            observedRunning = state.GetProperty("running").GetBoolean();
+        }
+        while (observedRunning != running);
+        return state;
+    }
+
     /// <summary>指定した制御応答まで読み進めます。</summary>
     /// <returns>独立して所有する JSON 値。</returns>
     internal async Task<JsonElement> ReadEventAsync(string type, CancellationToken cancellationToken = default)

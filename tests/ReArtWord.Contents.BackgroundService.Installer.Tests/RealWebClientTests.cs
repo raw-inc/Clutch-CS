@@ -81,7 +81,7 @@ public sealed class RealWebClientTests
             await WebClientStartup.StopAsync(client, CancellationToken.None).ConfigureAwait(true);
             await WebClientStartup.UnregisterAsync(client, CancellationToken.None).ConfigureAwait(true);
             string state = WebClientStartup.StateDirectory(client);
-            InstallationFiles.DeleteDirectory(Path.GetDirectoryName(state)!, client.InstallationId.ToString("N"));
+            await InstallationFiles.DeleteDirectoryAsync(Path.GetDirectoryName(state)!, client.InstallationId.ToString("N"), CancellationToken.None).ConfigureAwait(true);
         }
     }
 }

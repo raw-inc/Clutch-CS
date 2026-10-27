@@ -37,6 +37,10 @@ Clutch-CS-win-x64/
 
 ## ネイティブライブラリを用意する
 
+SQLiteは、`Directory.Packages.props`で指定したNuGetの`SQLite`パッケージから取得します。
+`Microsoft.Data.Sqlite.Core`と`SQLitePCLRaw.config.e_sqlite3`を組み合わせ、対象OS・CPUに対応するライブラリをSQLiteを使うコンポーネントへ同梱します。SQLiteを別途インストールしたり、DLLを手動で差し替えたりする必要はありません。
+依存パッケージを更新する場合は、組込み拡張・公開API・外部キー制約などの既定動作を確認し、`installer/ThirdParty`とWeb UIのライセンス一覧も更新してください。
+
 Skia は、DNG SDK と piex を無効にした固定版のソースからビルドします。
 初回のビルドには Git、Python 3、C++ ツールチェーン、Ninja が必要です。
 
@@ -71,7 +75,7 @@ ZIP にはコミットされたソースと `SOURCE-INFO.json` が入り、Git �
 
 たとえば、`release/v1.2.3` は正式版のタグ `v1.2.3`、`release/v1.2.3-rc.1` はプレリリースのタグ `v1.2.3-rc.1` になります。CI はブランチ名から `release/v` を除いたバージョンをビルドに使用します。タグは CI が作成するため、先に作成する必要はありません。
 
-テストに失敗しても、ビルドと配布物の生成・整合性確認が成功していれば公開されます。テストの失敗は `Report test failures` ジョブの失敗として残り、Windows ジョブの Summary と `test-results` に結果が保存されます。Release の公開だけでは全試験の通過を意味しないため、導入前に結果を確認してください。ビルド・配布物の生成・保存に失敗した場合や、実行をキャンセルした場合は公開されません。
+テストに失敗しても、ビルドと配布物の生成・整合性確認が成功していれば公開されます。テストの失敗は `Report test failures` ジョブの失敗として残ります。各ジョブの Summary と、通常の試験結果を保存する `test-results`、実インストール試験の結果を保存する `installation-test-results` を確認してください。Release の公開だけでは全試験の通過を意味しないため、導入前に結果を確認してください。ビルド・配布物の生成・保存に失敗した場合や、実行をキャンセルした場合は公開されません。
 
 `develop` への自動取り込みも公開成功を条件とし、テストの成否とは分けて実行されます。公開したコミットだけが対象で、その後 `main` に加わった変更は含まれません。既に取り込み済みの場合は変更せずに完了します。
 
@@ -122,14 +126,21 @@ gh workflow run validate.yml --ref feature/my-change -f skip_scripts=true -f ski
 空欄の場合は、その分類の試験をすべて実行します。単体・結合試験は条件に一致する試験が0件の場合に失敗します。性能試験は、全プロジェクトを通じて一致する試験が0件の場合に失敗します。
 
 ビルドとアナライザーは毎回実行されます。スキップ・絞り込み指定は手動実行にのみ適用され、リリース時は全工程・全試験が実行されます。
-選択した工程は実行結果の Summary で確認できます。試験・診断結果は `test-results`、配布物を生成した場合は `validation-windows` から取得できます。
+選択した工程は実行結果の Summary で確認できます。通常の試験・診断結果は `test-results`、実インストール試験の結果は `installation-test-results`、配布物を生成した場合は `validation-windows` から取得できます。
 テストに失敗しても後続の工程と結果の保存を続け、手動実行全体の結果は失敗になります。
 
 ### Windows ランナーを変更する
 
-Windows ジョブは、リポジトリの Actions 変数 `RELEASE_WINDOWS_RUNNER` に指定したラベルのランナーを使用します。未設定時は `windows-latest` を使用します。
+Windows の検証は、次の2つのジョブで順に実行します。リポジトリの Actions 変数で、それぞれのランナーを指定できます。変数が未設定の場合は `windows-latest` を使用します。
 
-変更する場合は、組織の Actions 設定で `Windows Server 2025 with VS2026` イメージの Windows x64 ランナーを作成し、このリポジトリに利用を許可してください。そのラベルを `RELEASE_WINDOWS_RUNNER` に設定すると、次回から使用されます。ランナーには `global.json` に対応する .NET SDK が必要です。
+| ジョブ | 工程 | Actions 変数 |
+| --- | --- | --- |
+| `Regression and performance tests (4 vCPU)` | ビルド・静的解析・スクリプト試験・単体試験・Client試験・Installer通常試験・結合試験・性能試験 | `TEST_WINDOWS_RUNNER` |
+| `Package and installation tests (8 vCPU)` | 配布物生成・実インストール試験・AVX2無効時の検証・配布物の保存 | `RELEASE_WINDOWS_RUNNER` |
+
+配布物生成のジョブも同じコミットを取得し、必要なツールと実インストール試験の実行物を用意します。前のジョブの試験結果を引き継いで集計し、テスト失敗を最終結果に残します。`skip_package=true` の手動実行では、配布物生成のジョブを起動しません。
+
+変更する場合は、組織の Actions 設定で `Windows Server 2025 with VS2026` イメージの Windows x64 ランナーを作成し、このリポジトリに利用を許可してください。そのラベルを対象の Actions 変数に設定すると、次回から使用されます。ランナーには `global.json` に対応する .NET SDK が必要です。
 
 ## OS ごとの確認範囲
 

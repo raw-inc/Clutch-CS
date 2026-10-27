@@ -135,6 +135,7 @@ internal static class DomainRoutes
         ManagementFacade.MapRoute(app, "POST", "/api/sources/stop", "sources.stop", body: true);
         ManagementFacade.MapRoute(app, "GET", "/api/processes", "processes.list", readOnly: true);
         ManagementFacade.MapRoute(app, "POST", "/api/processes/register", "processes.register", body: true);
+        ManagementFacade.MapRoute(app, "POST", "/api/processes/remove", "processes.remove", body: true);
         ManagementFacade.MapRoute(app, "POST", "/api/processes/resolve-launch", "processes.resolve-launch", body: true);
         ManagementFacade.MapRoute(app, "POST", "/api/nodes/execute", "nodes.execute", body: true);
         ManagementFacade.MapRoute(app, "GET", "/api/resources", "resources.capture", readOnly: true);

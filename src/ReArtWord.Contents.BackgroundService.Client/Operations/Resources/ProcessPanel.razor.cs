@@ -34,6 +34,7 @@ public sealed partial class ProcessPanel
 
     private readonly List<ProcessView> processes = [];
     private ProcessView? selected;
+    private ProcessView? removing;
     private ServiceStatus? target;
     private ProcessDefinition? editing;
     private string? editVersion;
@@ -200,6 +201,48 @@ public sealed partial class ProcessPanel
         await LoadAsync(token).ConfigureAwait(true);
     }, cancellationToken);
 
+    /// <summary>削除対象の登録版を確認画面へ固定します。</summary>
+    private void ConfirmRemoval(ProcessView item)
+    {
+        removing = item;
+        message = null;
+    }
+
+    /// <summary>送信中の削除操作は維持し、それ以外は確認を取り消します。</summary>
+    private void CloseRemoval()
+    {
+        if (!busy)
+        {
+            removing = null;
+        }
+    }
+
+    /// <summary>確認画面を開いた時点の登録版だけを削除します。</summary>
+    /// <returns>登録削除と一覧更新の完了です。</returns>
+    private Task RemoveAsync(CancellationToken cancellationToken = default) => GuardAsync(async token =>
+    {
+        if (removing is not { } item || refreshing || target is null)
+        {
+            return;
+        }
+        RegistrationResult response = await Api.PostForPeerAsync<RegistrationResult>("/api/processes/remove", new ProcessRemovalRequest(item.Definition.Id, item.Version), peer, cluster, cancellationToken: token).ConfigureAwait(true);
+        if (response.Outcome != EOutcome.Succeeded)
+        {
+            message = Ui.Deferred("Registration was not removed. Refresh the list and check the current registration.");
+            if (response.Outcome is null or EOutcome.Unknown)
+            {
+                message = Ui.Deferred("Removal could not be confirmed. Refresh the list to check the registration.");
+            }
+            return;
+        }
+        processes.RemoveAll(value => string.Equals(value.Definition.Id, item.Definition.Id, StringComparison.Ordinal));
+        removing = null;
+        selected = null;
+        result = null;
+        message = Ui.Deferred("Application registration removed.");
+        await LoadAsync(token).ConfigureAwait(true);
+    }, cancellationToken);
+
     /// <summary>人が確認した実体だけで、結果不明の起動意図を解決します。</summary>
     /// <returns>未確定起動の確認結果です。</returns>
     private Task ResolveAsync(CancellationToken cancellationToken = default) => GuardAsync(async token =>
@@ -233,5 +276,5 @@ public sealed partial class ProcessPanel
                                                                                                            : item.Observed.Status?.Running switch { true => "Running", false => "Stopped", _ => "Unknown" };
 
     /// <summary>登録操作の公開応答です。</summary>
-    private readonly record struct RegistrationResult(EOutcome Outcome);
+    private readonly record struct RegistrationResult(EOutcome? Outcome);
 }

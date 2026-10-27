@@ -7,8 +7,11 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.Json;
+using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Management;
+using ReArtWord.Contents.BackgroundService.Contracts.Management.Discovery;
+using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Processes;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Contracts.Updates;
@@ -18,6 +21,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Updates.Releases;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Health;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Local;
+using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Updates;
@@ -59,6 +63,70 @@ public sealed class UdpCoreUpdateTests
         {
             Directory.Delete(root, true);
         }
+    }
+
+    /// <summary>探索一回の期限と試験全体のキャンセルを区別し、稼働確認だけを再観測します。</summary>
+    /// <returns>遅れて届く実UDP応答と呼び出し元キャンセルの確認です。</returns>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task HealthObservationPreservesTheCallerDeadlineAsync(bool cancel)
+    {
+        using UdpClient reservation = new(new IPEndPoint(IPAddress.Loopback, 0));
+        int port = ((IPEndPoint)reservation.Client.LocalEndPoint!).Port;
+        reservation.Close();
+        string nic = NetworkInterface.GetAllNetworkInterfaces().Single(item => item.GetIPProperties().UnicastAddresses.Any(address => address.Address.Equals(IPAddress.Loopback))).Id;
+        ClientNetworkBinding binding = new(nic, "127.0.0.1", "127.255.255.255", port);
+        string cluster = Guid.NewGuid().ToString("N");
+        Guid instance = Guid.NewGuid();
+        UpdateObserver observer = new(binding, cluster);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable observerLifetime = observer.ConfigureAwait(true);
+        UdpTransport target = new(new("target", binding.BindAddress, binding.BroadcastAddress, port, cluster), instance, TimeProvider.System);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable targetLifetime = ((IAsyncDisposable)target).ConfigureAwait(true);
+        target.Initialize(nic);
+        ProcessIdentity identity = new(1234, DateTimeOffset.UtcNow);
+        int inspections = 0;
+        int mutations = 0;
+        target.Received = async (message, _, token) =>
+        {
+            string inspect = "inspect";
+            if (!string.Equals(message.Kind, inspect, StringComparison.Ordinal))
+            {
+                Interlocked.Increment(ref mutations);
+            }
+            Interlocked.Increment(ref inspections);
+            ManagementReply reply = new(EOutcome.Succeeded, UpdateObserver.Payload(new { ready = true, instanceId = instance, processId = identity.ProcessId, processStartedAt = identity.StartedAt }));
+            ClusterResponse response = new(EOutcome.Succeeded, NodeValue.FromObject(reply));
+            await target.SendAsync(WireMessage.Reply(message, "target", instance, JsonSerializer.SerializeToElement(response)), token).ConfigureAwait(false);
+        };
+        target.Start();
+        using CancellationTokenSource deadline = new(TimeSpan.FromSeconds(30));
+        List<ProcessIdentity> owned = [];
+        Task<JsonElement> observation = HealthAsync(observer, "target", owned, deadline.Token);
+        if (cancel)
+        {
+            await deadline.CancelAsync().ConfigureAwait(true);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => observation).ConfigureAwait(true);
+            Assert.Empty(owned);
+            Assert.Equal(0, inspections);
+            Assert.Equal(0, mutations);
+            return;
+        }
+
+        // 探索一回の上限（10秒）を超えるまで存在通知を止め、更新中の一時的な不在を再現します。
+        await Task.Delay(TimeSpan.FromSeconds(11), deadline.Token).ConfigureAwait(true);
+        long sequence = 0;
+        while (!observation.IsCompleted)
+        {
+            PeerInfo peer = new("target", instance, "host", binding.BindAddress, port, EPeerStatus.Ready, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+            await target.SendAsync(new(Guid.NewGuid(), cluster, "target", instance, "hello", null, null, JsonSerializer.SerializeToElement(new PeerAnnouncement(peer, "digest", "target", null, ++sequence))), deadline.Token).ConfigureAwait(true);
+            await Task.Delay(20, deadline.Token).ConfigureAwait(true);
+        }
+        JsonElement health = await observation.ConfigureAwait(true);
+        Assert.Equal(instance, health.GetProperty("instanceId").GetGuid());
+        Assert.Equal(identity, Assert.Single(owned));
+        Assert.True(0 < inspections);
+        Assert.Equal(0, mutations);
     }
 
     /// <summary>固定対象とRID選択から自身入替・新実体確認までUDPだけで完了します。</summary>
@@ -159,16 +227,23 @@ public sealed class UdpCoreUpdateTests
             ClusterUpdateStatus? result = null;
             while (!deadline.IsCancellationRequested)
             {
-                foreach (string peer in previous.Keys)
+                try
                 {
-                    await HealthAsync(observer, peer, owned, deadline.Token).ConfigureAwait(true);
+                    foreach (string peer in previous.Keys)
+                    {
+                        await HealthAsync(observer, peer, owned, deadline.Token).ConfigureAwait(true);
+                    }
+                    Contracts.Cluster.PeerInfo current = await observer.FindAsync("update-a", cancellationToken: deadline.Token).ConfigureAwait(true);
+                    ManagementReply status = await observer.SendAsync("update-a", current.InstanceId, "updates.read", UpdateObserver.Payload(request.OperationId), true, deadline.Token).ConfigureAwait(true);
+                    result = status.Value?.Json.Deserialize<ClusterUpdateStatus>(ContractJson.Options);
+                    if (result?.Completed == true)
+                    {
+                        break;
+                    }
                 }
-                Contracts.Cluster.PeerInfo current = await observer.FindAsync("update-a", cancellationToken: deadline.Token).ConfigureAwait(true);
-                ManagementReply status = await observer.SendAsync("update-a", current.InstanceId, "updates.read", UpdateObserver.Payload(request.OperationId), true, deadline.Token).ConfigureAwait(true);
-                result = status.Value?.Json.Deserialize<ClusterUpdateStatus>(ContractJson.Options);
-                if (result?.Completed == true)
+                catch (OperationCanceledException) when (!deadline.IsCancellationRequested)
                 {
-                    break;
+                    // 稼働確認後に担当Coreが再起動しても、更新要求は再送せず同じ操作の結果だけを再照会します。
                 }
                 await Task.Delay(200, deadline.Token).ConfigureAwait(true);
             }
@@ -219,7 +294,16 @@ public sealed class UdpCoreUpdateTests
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            Contracts.Cluster.PeerInfo peer = await observer.FindAsync(peerId, cancellationToken: cancellationToken).ConfigureAwait(false);
+            PeerInfo peer;
+            try
+            {
+                peer = await observer.FindAsync(peerId, cancellationToken: cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                // 更新中は探索一回の期限を超えてPeerが不在になり得るため、試験全体の期限内だけ再観測します。
+                continue;
+            }
             ManagementReply reply = await observer.SendAsync(peerId, peer.InstanceId, "health", null, true, cancellationToken).ConfigureAwait(false);
             if (reply.Value is not null)
             {
