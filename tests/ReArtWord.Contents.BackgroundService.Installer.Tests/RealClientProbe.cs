@@ -49,9 +49,9 @@ internal static class RealClientProbe
         using Process process = Process.Start(start)!;
         try
         {
-            using HttpClient client = new() { BaseAddress = address };
+            using HttpClient client = new() { BaseAddress = address, Timeout = InstallationDefaults.RequestTimeout };
             using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(InstallationDefaults.StopTimeout);
+            timeout.CancelAfter(InstallationDefaults.ReadyTimeout);
             bool received = false;
             while (!received)
             {
@@ -64,7 +64,8 @@ internal static class RealClientProbe
                     Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("headerLogo").ValueKind);
                     received = true;
                 }
-                catch (HttpRequestException)
+                catch (Exception exception) when (exception is HttpRequestException
+                    || exception is OperationCanceledException && !timeout.IsCancellationRequested)
                 {
                     Assert.False(process.HasExited);
                     await Task.Delay(InstallationDefaults.PollInterval, timeout.Token).ConfigureAwait(false);

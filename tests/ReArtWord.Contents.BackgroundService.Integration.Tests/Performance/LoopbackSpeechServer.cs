@@ -100,7 +100,9 @@ internal sealed class LoopbackSpeechServer : IAsyncDisposable
                 using JsonDocument request = await JsonDocument.ParseAsync(context.Request.InputStream, cancellationToken: cancellationToken).ConfigureAwait(false);
                 string key = request.RootElement.GetProperty("input").GetProperty("text").GetString()!;
                 requests.AddOrUpdate(key, 1, (_, count) => count + 1);
-                int delay = key switch { "timeout" => 2000, _ => 40 };
+
+                // 期限切れのケースは応答を返さず、準備や通信が特定の短時間で終わることを要求しません。
+                int delay = key switch { "timeout" => Timeout.Infinite, _ => 40 };
                 await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
                 context.Response.ContentType = "application/json";
                 if (string.Equals(key, failureKey, StringComparison.Ordinal))
