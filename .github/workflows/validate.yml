@@ -203,7 +203,7 @@ jobs:
           & $probe -version
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           @("CONTENTS_TEST_FFPROBE=$probe", "CONTENTS_TEST_FFMPEG=$encoder") | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-      - name: Test versioning, source packaging and platform scripts
+      - name: Test versioning, packaging, platform scripts and JavaScript
         id: platform_tests
         continue-on-error: true
         if: github.event_name != 'workflow_dispatch' || !inputs.skip_scripts
@@ -215,7 +215,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & "$env:WINDIR/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tests/ReArtWord.Contents.BackgroundService.Installer.Tests/Test-WindowsUserStartup.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --test tests/ReArtWord.Contents.BackgroundService.Client.Tests/Client/graph-connections.test.mjs
+          node --test eng/javascript/tests/*.test.mjs eng/css/tests/*.test.mjs tests/ReArtWord.Contents.BackgroundService.Client.Tests/Client/*.test.mjs
       - name: Run unit regression tests
         id: unit_tests
         continue-on-error: true
