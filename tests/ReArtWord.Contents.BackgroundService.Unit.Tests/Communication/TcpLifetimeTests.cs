@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Threading.Channels;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
+using ReArtWord.Contents.BackgroundService.Runtime.Networking;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using Xunit;
 
@@ -53,19 +54,40 @@ public sealed class TcpLifetimeTests
         Assert.Equal(EOutcome.Succeeded, (await run.ConfigureAwait(true)).Outcome);
     }
 
-    /// <summary>要求送信済みで返信が来ない期限切れは結果不明です。</summary>
+    /// <summary>要求本文を送信した後の期限切れと取消は、いずれも結果不明です。</summary>
     /// <returns>試験が終了するまでの非同期処理。</returns>
-    [Fact]
-    public async Task ReplyTimeoutAfterSendIsUnknownAsync()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task InterruptedReplyAfterSendIsUnknownAsync(bool cancel)
     {
-        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
+        using CancellationTokenSource timeout = new(TimeSpan.FromMinutes(1));
+        using CancellationTokenSource requestLifetime = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token);
         using TcpListener listener = new(IPAddress.Loopback, 0);
         listener.Start();
         int port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        NodeExecutionContext request = SocketNodeTests.Context(SocketNodeTests.Settings(new { remoteAddress = "127.0.0.1", remotePort = port, awaitReply = true, timeoutMs = 100 }), input: NodeValue.FromObject("input"));
-        Task<NodeResult> execution = ((IActionNode)SocketNodeTests.Find("tcp.request")).ExecuteAsync(request, timeout.Token).AsTask();
-        using TcpClient accepted = await listener.AcceptTcpClientAsync(timeout.Token).ConfigureAwait(true);
-        NodeResult result = await execution.ConfigureAwait(true);
-        Assert.Equal(EOutcome.Unknown, result.Outcome);
+        NodeExecutionContext request = SocketNodeTests.Context(SocketNodeTests.Settings(new { remoteAddress = "127.0.0.1", remotePort = port, awaitReply = true }), input: NodeValue.FromObject("input"));
+        Task<NodeResult> execution = ((IActionNode)SocketNodeTests.Find("tcp.request")).ExecuteAsync(request, requestLifetime.Token).AsTask();
+        try
+        {
+            using TcpClient accepted = await listener.AcceptTcpClientAsync(timeout.Token).ConfigureAwait(true);
+            using NetworkStream stream = accepted.GetStream();
+            Assert.Equal("input"u8.ToArray(), await TcpFrame.ReadAsync(stream, "lengthPrefix", 1024, timeout.Token).ConfigureAwait(true));
+
+            // 接続だけでなく本文の到着を確認し、返信を返さず通常の操作期限または明示取消を待ちます。
+            if (cancel)
+            {
+                await requestLifetime.CancelAsync().ConfigureAwait(true);
+            }
+            NodeResult result = await execution.WaitAsync(timeout.Token).ConfigureAwait(true);
+            Assert.False(timeout.IsCancellationRequested);
+            Assert.Equal(EOutcome.Unknown, result.Outcome);
+            Assert.False(listener.Pending());
+        }
+        finally
+        {
+            await requestLifetime.CancelAsync().ConfigureAwait(true);
+            await execution.ConfigureAwait(true);
+        }
     }
 }

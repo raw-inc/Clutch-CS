@@ -26,11 +26,11 @@ internal sealed class ClientUpdateInstallation : IAsyncDisposable
         get;
     } = Path.Combine(Path.GetTempPath(), "clutch-client-update-" + Guid.NewGuid().ToString("N"));
 
-    /// <summary>同じ待受へ再接続するHTTPクライアントです。</summary>
+    /// <summary>変更操作は呼び出し元の試験期限まで待ち、短い照会期限を適用しません。</summary>
     internal HttpClient Http 
     {
         get;
-    } = new() { BaseAddress = new Uri($"http://127.0.0.1:{CorePeer.AvailablePort(tcp: true)}/"), Timeout = TimeSpan.FromSeconds(3) };
+    } = new() { BaseAddress = new Uri($"http://127.0.0.1:{CorePeer.AvailablePort(tcp: true)}/"), Timeout = Timeout.InfiniteTimeSpan };
 
     /// <summary>入替から独立した状態保存先です。</summary>
     internal string State => Path.Combine(Root, "state");
@@ -85,8 +85,17 @@ internal sealed class ClientUpdateInstallation : IAsyncDisposable
     /// <summary>直接経路で応答中の実体と稼働版を確認します。</summary>
     /// <returns>現在のClientHostです。</returns>
     internal async Task<ClientUpdateHealth> HealthAsync(CancellationToken cancellationToken = default)
-        => await Http.GetFromJsonAsync<ClientUpdateHealth>(new Uri("client/health", UriKind.Relative), ContractJson.Options, cancellationToken).ConfigureAwait(false)
+        => await ReadAsync<ClientUpdateHealth>("client/health", cancellationToken).ConfigureAwait(false)
             ?? throw new IOException("ClientHost health is missing.");
+
+    /// <summary>再接続中の照会は一回ごとに打ち切り、呼び出し元の期限内で再確認できるようにします。</summary>
+    /// <returns>確認できた応答です。</returns>
+    internal async Task<T?> ReadAsync<T>(string path, CancellationToken cancellationToken = default)
+    {
+        using CancellationTokenSource request = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        request.CancelAfter(TimeSpan.FromSeconds(3));
+        return await Http.GetFromJsonAsync<T>(new Uri(path, UriKind.Relative), ContractJson.Options, request.Token).ConfigureAwait(false);
+    }
 
     /// <summary>実行せず独立Updaterの固定jobと候補を用意します。</summary>
     /// <returns>一回のjobです。</returns>
