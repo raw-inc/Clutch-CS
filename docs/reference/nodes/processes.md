@@ -50,7 +50,7 @@ await processes.RegisterAsync(definition);
 
 起動の成功はOS プロセスを作成して状態を保存できたことを表し、アプリケーションのready成功ではありません。通信受信・条件判定などで得た状態を、起動結果の `instanceId` と照合して `process.signal` へ渡します。`ready` / `healthy` のnullは判定不能であり、異常成立ではありません。準備完了後にだけ次の処理を始める場合は `process.waitReady` を間に配置します。
 
-故障回数、復旧試行数、人の抑止、予定停止意図はピアローカルの共通リポジトリへ保存します。アプリケーション／サービス／クラスター再起動や日付変更では回数をリセットしません。現起動回の明示 `stable=true` または人の `ConfirmRecoveryAsync` で区切る。stableは実生存を確認できる起動回だけに適用します。
+故障回数、復旧試行数、人の抑止、予定停止意図はピアローカルの共通リポジトリへ保存します。復旧試行数は、自動復旧を含むアプリケーションの起動成功時に0へ戻します。サービス／クラスターの再起動や日付変更だけではリセットしません。現起動回の明示 `stable=true` または人の `ConfirmRecoveryAsync` では、故障回数と復旧試行数をリセットできます。stableは実生存を確認できる起動回だけに適用します。
 
 生存中の確認済み利用不能も復旧する場合は、登録 `Recovery.RecoverWhenUnhealthy=true` と `UnhealthyStopPolicy` を明示します。通常終了の上限は `StopTimeoutMilliseconds`（既定30000）。未知の通信状態を復旧条件へ広げない。上限到達後は `RecoveryExhausted=true` となり、watch出力とフックから通知・後続処理へつなぐ。
 

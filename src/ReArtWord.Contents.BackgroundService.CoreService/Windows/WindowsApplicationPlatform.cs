@@ -77,6 +77,7 @@ internal sealed class WindowsApplicationPlatform : IProcessPlatform
     {
         Exception? rejected = null;
         bool created = false;
+        bool attempted = false;
         string reason = "process.interactiveUserUnavailable";
         try
         {
@@ -90,11 +91,13 @@ internal sealed class WindowsApplicationPlatform : IProcessPlatform
             if (!current.IsSystem && !WindowsInteractiveIdentity.IsAdministrator())
             {
                 reason = "process.interactiveLaunchRejected";
+                attempted = true;
                 return WindowsProcessLaunch.Start(null, definition.ExecutablePath, definition.Arguments, definition.WorkingDirectory,
                     noWindow: noWindow, hideWindow: noWindow, createdCallback: () => created = true);
             }
             using SafeAccessTokenHandle token = WindowsInteractiveIdentity.UserToken(strictUserToken: true);
             reason = "process.interactiveLaunchRejected";
+            attempted = true;
             return WindowsProcessLaunch.Start(token, definition.ExecutablePath, definition.Arguments, definition.WorkingDirectory,
                 noWindow: noWindow, hideWindow: noWindow, createdCallback: () => created = true);
         }
@@ -102,6 +105,6 @@ internal sealed class WindowsApplicationPlatform : IProcessPlatform
         {
             rejected = exception;
         }
-        throw new ProcessLaunchRejectedException(reason, rejected!);
+        throw new ProcessLaunchRejectedException(reason, rejected!, attempted);
     }
 }

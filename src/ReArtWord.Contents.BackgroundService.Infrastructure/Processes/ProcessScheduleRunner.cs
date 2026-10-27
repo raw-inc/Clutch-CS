@@ -132,7 +132,7 @@ internal sealed class ProcessScheduleRunner(ProcessScheduleStore store, TimeProv
         {
             result = await session.StopAsync(schedule.StopPolicy!.Value, schedule.StopTimeoutMilliseconds, cancellationToken).ConfigureAwait(false);
         }
-        return result.Outcome == EOutcome.Succeeded ? await session.StartAsync(restart, cancellationToken).ConfigureAwait(false)
+        return result.Outcome == EOutcome.Succeeded ? await session.StartAsync(restart, cancellationToken: cancellationToken).ConfigureAwait(false)
                                                     : result;
     }
 }

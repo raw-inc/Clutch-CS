@@ -54,6 +54,12 @@ internal sealed class ApplicationBootFixture : IDisposable, IProcessPlatform
         set;
     }
 
+    internal bool RejectAfterLaunchAttempt
+    {
+        get;
+        set;
+    }
+
     internal int StartAttempts
     {
         get;
@@ -149,6 +155,10 @@ internal sealed class ApplicationBootFixture : IDisposable, IProcessPlatform
         if (RejectNextStart)
         {
             RejectNextStart = false;
+            if (RejectAfterLaunchAttempt)
+            {
+                throw new ProcessLaunchRejectedException("process.interactiveLaunchRejected", new InvalidOperationException("fixture-launch-rejected"), true);
+            }
             throw new ProcessLaunchRejectedException("process.interactiveUserUnavailable");
         }
         if (UnknownStart)

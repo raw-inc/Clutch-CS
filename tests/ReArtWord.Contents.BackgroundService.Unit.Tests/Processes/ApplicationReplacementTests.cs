@@ -34,6 +34,7 @@ public sealed class ApplicationReplacementTests
         Assert.Equal(0, waiting.Status.FailureCount);
         Assert.Equal(1, events.Statistics.Published);
         Assert.Empty(log.Entries);
+        await ApplicationRecoveryAttemptTests.SeedAttemptsAsync(scope, definition.Id);
         using Process successor = StartSuccessor(app, changed);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
         ProcessOperationResult observed = await WaitAsync(service, definition.Id, value => value.Status?.Identity?.ProcessId == successor.Id, timeout.Token);
@@ -42,6 +43,7 @@ public sealed class ApplicationReplacementTests
         Assert.NotEqual(initial.Status!.InstanceId, observed.Status.InstanceId);
         Assert.Equal(0, observed.Status.FailureCount);
         Assert.Equal(0, observed.Status.RecoveryAttempts);
+        Assert.False(observed.Status.RecoveryExhausted);
         Assert.Equal(2, events.Statistics.Published);
         Assert.Equal(successor.Id, (await service.RecoverAsync(definition.Id)).Status!.Identity!.ProcessId);
         Assert.Equal(2, app.Starts().Length);

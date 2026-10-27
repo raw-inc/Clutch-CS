@@ -178,7 +178,7 @@ public sealed class ProcessService : IProcessService, IDisposable
         return ExecuteAsync(id, async (session, token) =>
         {
             ProcessOperationResult stopped = await session.StopAsync(policy, gracefulTimeoutMilliseconds, token).ConfigureAwait(false);
-            return stopped.Outcome == EOutcome.Succeeded ? await session.StartAsync(restarting: true, token).ConfigureAwait(false)
+            return stopped.Outcome == EOutcome.Succeeded ? await session.StartAsync(restarting: true, cancellationToken: token).ConfigureAwait(false)
                                                          : stopped;
         }, cancellationToken: cancellationToken);
     }
