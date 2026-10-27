@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using ReArtWord.Contents.BackgroundService.Runtime.Processes.Commands;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
@@ -266,7 +267,7 @@ public sealed class BoundedProcessRunnerTests
             }
             try
             {
-                string value = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
+                string value = await PublishedFixtureFile.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
                 if (!string.IsNullOrWhiteSpace(value))
                 {
                     return int.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
