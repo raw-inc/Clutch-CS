@@ -42,7 +42,9 @@ internal static class InstallerClientUpdates
     internal static async Task<SetupResult> RemoteAsync(ObservedWebClient target, string payload, Action<OperationProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         ObservedTarget core = target.Core ?? throw new InvalidDataException("Select the web client's Core service.");
-        UpdateObserver observer = new(core.Binding, core.ClusterId);
+
+        // Core内のHTTP稼働照会は最大2秒かかるため、その失敗応答を受け取る余裕も確保します。
+        UpdateObserver observer = new(core.Binding, core.ClusterId, TimeSpan.FromSeconds(10));
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = observer.ConfigureAwait(false);
         PeerInfo peer = await observer.FindAsync(core.PeerId, core.Peer?.InstanceId, cancellationToken).ConfigureAwait(false);
         WebClientUpdateInfo current = await SendAsync<WebClientUpdateInfo>(observer, peer, "setup.client.info", null, true, cancellationToken).ConfigureAwait(false);
