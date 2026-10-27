@@ -17,6 +17,7 @@ internal sealed class ProcessSession
     private readonly bool automatic;
     private string? version;
     private ProcessStateRecord state;
+    private Guid? launchAttempt;
 
     /// <summary>未ログイン待機では起動意図や復旧回数を書き込みません。</summary>
     /// <returns>設定したユーザーを起動に使用できるかです。</returns>
@@ -57,20 +58,21 @@ internal sealed class ProcessSession
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW330", Justification = "ログ追加で既存の例外処理や操作結果を変更しないため、元の例外をサービス境界へ戻します。")]
     internal async ValueTask<ProcessOperationResult> StartAsync(bool restarting = false, bool recovering = false, CancellationToken cancellationToken = default)
     {
+        launchAttempt = null;
         ProcessOperationResult result;
         try
         {
             result = await StartCoreAsync(restarting, recovering, cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception exception) when (automatic && exception is not OutOfMemoryException and not StackOverflowException and not OperationCanceledException)
+        catch (Exception exception) when ((!recovering || launchAttempt.HasValue) && exception is not OutOfMemoryException and not StackOverflowException and not OperationCanceledException)
         {
-            await events.StartFailedAsync(definition, state, restarting, EOutcome.Unknown, "process.launchUnconfirmed", exception.GetType().FullName, CancellationToken.None).ConfigureAwait(false);
+            await events.StartFailedAsync(definition, state, restarting, automatic, EOutcome.Unknown, "process.launchUnconfirmed", exception.GetType().FullName, launchAttempt, CancellationToken.None).ConfigureAwait(false);
             throw;
         }
         string waiting = "process.replacementWaiting", observeOnly = "process.observeOnly";
-        if (automatic && result.Outcome != EOutcome.Succeeded && !string.Equals(result.Reason, waiting, StringComparison.Ordinal) && !string.Equals(result.Reason, observeOnly, StringComparison.Ordinal))
+        if ((!recovering || launchAttempt.HasValue) && result.Outcome != EOutcome.Succeeded && !string.Equals(result.Reason, waiting, StringComparison.Ordinal) && !string.Equals(result.Reason, observeOnly, StringComparison.Ordinal))
         {
-            await events.StartFailedAsync(definition, state, restarting, result.Outcome, result.Reason, cancellationToken: CancellationToken.None).ConfigureAwait(false);
+            await events.StartFailedAsync(definition, state, restarting, automatic, result.Outcome, result.Reason, attemptId: launchAttempt, cancellationToken: CancellationToken.None).ConfigureAwait(false);
         }
         return result;
     }
@@ -116,6 +118,8 @@ internal sealed class ProcessSession
         ProcessIdentity identity;
         try
         {
+            launchAttempt = state.InstanceId;
+            await events.StartAttemptedAsync(definition, state, automatic, CancellationToken.None).ConfigureAwait(false);
             identity = monitor.Start(definition);
         }
         catch (ProcessLaunchRejectedException exception)

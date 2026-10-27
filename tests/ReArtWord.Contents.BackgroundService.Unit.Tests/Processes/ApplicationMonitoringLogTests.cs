@@ -18,7 +18,7 @@ public sealed class ApplicationMonitoringLogTests
 
     /// <summary>正常・異常終了をWARNにし、実際の自動起動・復旧だけをINFOで一度記録します。</summary>
     /// <returns>遅延・上限到達・再観測でログを水増ししない確認です。</returns>
-    [Theory(Skip = "起動成功後も試行を累積する旧仕様です。ApplicationRecoveryAttemptTestsで新しい回数と上限の扱いを検証します。")]
+    [Theory(Skip = "起動成功後も回数を累積する旧仕様です。ApplicationRecoveryLoggingTestsで起動試行・成功・停止・上限の記録を検証します。")]
     [InlineData(0)]
     [InlineData(17)]
     public async Task ScheduledStartExitAndRecoveryUseRequestedLevelsAsync(int exitCode)
@@ -117,16 +117,17 @@ public sealed class ApplicationMonitoringLogTests
             return;
         }
         await fixture.WaitForStartsAsync(1);
-        Assert.Equal("INFO", Assert.Single(log.Entries).Level);
+        Assert.Equal("INFO", Assert.Single(log.Entries, entry => entry.Message is "Application.Started").Level);
+        Assert.Single(log.Entries, entry => entry.Message is "Application.StartAttempted");
         fixture.RestartCore();
         await fixture.Automation.TickAsync(true);
-        Assert.Single(log.Entries);
+        Assert.Equal(2, log.Entries.Count);
         await fixture.Service.StopAsync(fixture.Definition.Id, EProcessStopPolicy.Force, 1);
         Assert.Equal("WARN", log.Entries.Last().Level);
         Assert.True(log.Entries.Last().Data!.Json.GetProperty("plannedStop").GetBoolean());
         fixture.RestartCore();
         await fixture.Automation.TickAsync(true);
-        Assert.Equal(2, log.Entries.Count);
+        Assert.Equal(3, log.Entries.Count);
     }
 
     /// <summary>OSに拒否された起動と結果不明の起動をERRORで区別します。</summary>
@@ -146,7 +147,7 @@ public sealed class ApplicationMonitoringLogTests
         {
             await fixture.Automation.TickAsync(true);
         }
-        WorkflowLogEntry entry = Assert.Single(log.Entries);
+        WorkflowLogEntry entry = Assert.Single(log.Entries, item => item.Message is "Application.StartFailed");
         Assert.Equal("Application.StartFailed", entry.Message);
         Assert.Equal("ERROR", entry.Level);
         Assert.Equal(unknown ? "unknown"
@@ -166,6 +167,7 @@ public sealed class ApplicationMonitoringLogTests
         await fixture.Automation.TickAsync(true);
         await fixture.WaitForStartsAsync(1);
         Assert.Equal(EOutcome.Succeeded, (await fixture.StatusAsync()).Outcome);
-        Assert.Equal("Application.Started", Assert.Single(log.Entries).Message);
+        Assert.Single(log.Entries, entry => entry.Message is "Application.Started");
+        Assert.Single(log.Entries, entry => entry.Message is "Application.StartAttempted");
     }
 }

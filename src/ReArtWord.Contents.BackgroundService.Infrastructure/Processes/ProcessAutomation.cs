@@ -94,6 +94,19 @@ public sealed class ProcessAutomation
             if (definition.AutomaticMonitoring)
             {
                 ProcessOperationResult result = await service.MonitorAsync(application.Registration, cancellationToken).ConfigureAwait(false);
+                if (!application.MonitoringStarted && result.Status is not null)
+                {
+                    application.MonitoringStarted = true;
+                    await WorkflowLogBoundary.WriteAsync(log, new(Guid.NewGuid(), clock.GetUtcNow(), "INFO", peerId, "Application.MonitoringStarted",
+                        Data: NodeValue.FromObject(new { applicationId = definition.Id, applicationName = definition.DisplayName,
+                            instanceId = result.Status.InstanceId, pid = result.Status.Identity?.ProcessId, recoveryAttempts = result.Status.RecoveryAttempts })), cancellationToken).ConfigureAwait(false);
+                }
+                string missingExecutable = "process.executableUnavailable", missingUser = "process.interactiveUserUnavailable";
+                if (result.Reason is { } unavailable && (string.Equals(unavailable, missingExecutable, StringComparison.Ordinal) || string.Equals(unavailable, missingUser, StringComparison.Ordinal)))
+                {
+                    await ReportAsync(application, unavailable, cancellationToken).ConfigureAwait(false);
+                    return;
+                }
                 if (result.Outcome == EOutcome.Unknown)
                 {
                     await ReportAsync(application, result.Reason ?? "process.operationUnconfirmed", cancellationToken).ConfigureAwait(false);
@@ -169,6 +182,12 @@ public sealed class ProcessAutomation
         } = new(StringComparer.Ordinal);
 
         internal bool SchedulesLoaded
+        {
+            get;
+            set;
+        }
+
+        internal bool MonitoringStarted
         {
             get;
             set;
