@@ -62,7 +62,8 @@ internal sealed class WorkflowExecutionJournal(IDurableRepository repository, st
 
             // 完了順で循環スロットから外れても、開始順の表示範囲に残る保存済みIDを再記録しません。
             persisted.IntersectWith(recent.Select(Identity));
-            ExecutionResultView[] pending = recent.Take(256).Where(view => !persisted.Contains(Identity(view))).Reverse().ToArray();
+            ExecutionResultView[] pending = recent.OrderByDescending(view => WorkflowHistoryCodec.State(view).CompletedAt)
+                .Take(256).Where(view => !persisted.Contains(Identity(view))).Reverse().ToArray();
             int batchSize = repository is ILocalSnapshotBatches ? 256
                                                                 : 1;
             foreach (ExecutionResultView[] batch in pending.Chunk(batchSize))
