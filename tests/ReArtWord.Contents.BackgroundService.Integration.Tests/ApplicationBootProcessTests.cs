@@ -18,10 +18,12 @@ public sealed class ApplicationBootProcessTests
     /// <summary>Core停止中にアプリが終了しても、同じPC起動の予定を再実行しません。</summary>
     /// <returns>実OSの起動識別、管理通信、引数、Core再起動をまたぐ確認です。</returns>
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
-    public async Task RealCoreClaimsCurrentBootOnceAcrossRestartAsync(bool arguments, bool exitWhileOffline)
+    [InlineData(false, false, false)]
+    [InlineData(true, false, false)]
+    [InlineData(true, true, false)]
+    [InlineData(false, false, true)]
+    [InlineData(true, true, true)]
+    public async Task RealCoreClaimsCurrentBootOnceAcrossRestartAsync(bool arguments, bool exitWhileOffline, bool automatic)
     {
         using ApplicationProcessFixture app = new(delayMilliseconds: -1, withArguments: arguments);
         CorePeer peer = new(Guid.NewGuid().ToString("N"), "a", CorePeer.AvailablePort(), true, redirectErrors: false);
@@ -32,7 +34,7 @@ public sealed class ApplicationBootProcessTests
         string directory = Path.Combine(peer.DirectoryPath, "state");
         Directory.CreateDirectory(directory);
         SqliteRepository repository = new(Path.Combine(directory, "state.db"));
-        ProcessDefinition definition = app.Definition with { AutomaticMonitoring = false, Schedules = [new("boot", "boot")] };
+        ProcessDefinition definition = app.Definition with { AutomaticMonitoring = automatic, Schedules = [new("boot", "boot")] };
         using (ProcessService registration = new(repository, "a", new(), bootSession: () => new SystemBootSession("previous-isolated-boot", TimeSpan.Zero)))
         {
             Assert.Equal(EOutcome.Succeeded, await registration.RegisterAsync(definition, cancellationToken: timeout.Token));
