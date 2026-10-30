@@ -33,7 +33,8 @@
         @if(message is not null){<p class="notice" role="status">@message()</p>}
         <dl class="application-state"><dt>@Ui["Observed state"]</dt><dd>@Ui[State(item)]</dd><dt>PID</dt><dd>@(item.Observed.Status?.Identity?.ProcessId.ToString(CultureInfo.InvariantCulture)??"—")</dd><dt>@Ui["Exit code"]</dt><dd>@(item.Observed.Status?.ExitCode?.ToString(CultureInfo.InvariantCulture)??"—")</dd><dt>@Ui["Restart attempts"]</dt><dd>@item.Observed.Status?.RecoveryAttempts</dd><dt>@Ui["Next restart"]</dt><dd>@FormatTime(item.Observed.Status?.NextRecoveryAt)</dd></dl>
         @if(item.Observed.Status?.RecoveryExhausted is true){<p class="notice">@Ui["Restart limit reached"]</p>}
-        @if(item.Observed.Status?.ReplacementDeadline is {} deadline){<p class="notice">@Ui["Self-restart confirmation deadline"]: @FormatTime(deadline) @item.Observed.Status.ReplacementProblem</p>}
+        @if(item.Observed.Status?.ReplacementDeadline is {} deadline){<p class="notice">@Ui["Self-restart confirmation deadline"]: @FormatTime(deadline) @Ui[item.Observed.Status.ReplacementProblem??string.Empty]</p>}
+        else if(item.Observed.Status?.ReplacementProblem is {} replacementProblem){<p class="notice">@Ui[replacementProblem]</p>}
         @if(item.Observed.Status?.ExitUnobserved is true){<p class="notice">@Ui["This process exited while it was not being observed. No exit signal or automatic restart was replayed."]</p>}
         @foreach(var schedule in item.Schedules??[]){<p class="small">@Ui["Next scheduled start"]: @FormatTime(schedule.NextAt) · @Ui["Last result"]: @schedule.Outcome @Ui[schedule.Reason??string.Empty]</p>}
         @if(item.Definition.Mode==EProcessMode.Managed)

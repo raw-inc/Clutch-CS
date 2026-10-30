@@ -133,7 +133,7 @@ public sealed class ApplicationReplacementTests
 
     /// <summary>Coreを経由しない監督プロセスからの起動を再現します。</summary>
     /// <returns>試験所有者が終了させる後継プロセスです。</returns>
-    private static Process StartSuccessor(ApplicationProcessFixture app, bool changed)
+    internal static Process StartSuccessor(ApplicationProcessFixture app, bool changed)
     {
         File.WriteAllText(Path.Combine(app.Root, "application-fixture.json"), "{\"exitCode\":0,\"delayMs\":-1}");
         ProcessStartInfo start = new(app.Definition.ExecutablePath) { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = app.Root };
@@ -150,7 +150,7 @@ public sealed class ApplicationReplacementTests
 
     /// <summary>固定sleepだけで成立したと見なさず、有限の実観測で状態を確認します。</summary>
     /// <returns>条件を満たした現在状態です。</returns>
-    private static async Task<ProcessOperationResult> WaitAsync(ProcessService service, string id, Func<ProcessOperationResult, bool> expected, CancellationToken cancellationToken = default)
+    internal static async Task<ProcessOperationResult> WaitAsync(ProcessService service, string id, Func<ProcessOperationResult, bool> expected, CancellationToken cancellationToken = default)
     {
         ProcessOperationResult result = await service.ObserveAsync(id, cancellationToken).ConfigureAwait(false);
         while (!expected(result))

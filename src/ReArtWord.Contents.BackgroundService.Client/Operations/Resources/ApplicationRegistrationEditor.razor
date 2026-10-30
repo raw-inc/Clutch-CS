@@ -32,7 +32,7 @@
                 <label>@Ui["Self-restart confirmation timeout (ms)"]<input type="number" min="0" max="3600000" @bind="draft.RestartWait" @bind:event="oninput" /></label>
                 <label>@Ui["Successor process matching"]<select @bind="draft.RestartMatch"><option value="ExecutableAndArguments">@Ui["Executable and arguments"]</option><option value="ExecutableOnly">@Ui["Executable only (allow changed arguments)"]</option></select></label>
             </div>
-            <p class="small muted">@Ui["0 confirms exits immediately. Otherwise, wait for a unique successor before emitting a stopped signal or restarting. Ambiguous or unverifiable matches inhibit automatic recovery."]</p>
+            <p class="small muted">@Ui["0 confirms exits immediately. Successor checks also run during the restart delay. Automatic recovery waits if a successor cannot be identified uniquely."]</p>
             @if(draft.Mode==EProcessMode.Managed)
             {
                 <div class="application-fields">
