@@ -137,7 +137,7 @@ Dashboardの **Settings & maintenance → Update all discovered peers** を使�
 
 画面を閉じたり再読み込みしたりしても、ClientHostが更新を続けます。ClientHost自体が停止した場合は、再起動後に結果を再確認してください。中断した更新は自動で再開されません。未更新の対象を更新するには、結果を確認してから新しい計画を作成してください。
 
-画面には直近20件の操作を表示します。操作記録の保存先は、ClientHostの `--state` で指定したフォルダー内の `fleet-updates` です。
+画面には直近20件の操作を表示します。最新の操作は詳細を開き、それ以外は折りたたんで表示します。見出しを選択すると詳細を開閉できます。操作記録の保存先は、ClientHostの `--state` で指定したフォルダー内の `fleet-updates` です。
 
 ### ClientHostと自動起動の維持
 
