@@ -10,7 +10,7 @@ internal sealed class RepositoryRoutes
     private static readonly string[] configurationScopes = ["workflows", "workflow.activation", "snapshots", "secrets", "configuration"];
     private static readonly string[] runtimePrefixes = ["workflow:", "execution:", "file:", "cluster:replication-", "cluster:operations"];
     private static readonly string[] runtimeScopes = ["manual-runs", "updates", NodeStateScope.Cluster];
-    private static readonly string[] processNames = ["processDefinitions", "processStates", "processSchedules"];
+    private static readonly string[] processNames = ["processDefinitions", "processStates", "processSchedules", "processGroups", "processGroupStates", "processGroupMembers"];
     private static readonly string[] diagnosticNames = ["resources", "log-index", "log-forward"];
     private static readonly string[] configurationNames = ["effective", "operational-effective", "trace-operations", "snapshot-draft-requests", "detached-workflows", "detached-snapshots"];
 

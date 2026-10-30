@@ -45,7 +45,7 @@ internal sealed class ProcessScheduleRunner(ProcessScheduleStore store, TimeProv
         }
         else
         {
-            ProcessOperationResult observed = await session.ObserveAsync(cancellationToken).ConfigureAwait(false);
+            ProcessOperationResult observed = await session.ObserveAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
             result = await ExecuteAsync(schedule, session, observed, cancellationToken).ConfigureAwait(false);
         }
         (string? confirmed, _) = await store.ReadAsync(application, schedule.Id, CancellationToken.None).ConfigureAwait(false);
@@ -78,7 +78,7 @@ internal sealed class ProcessScheduleRunner(ProcessScheduleStore store, TimeProv
         {
             return status;
         }
-        ProcessOperationResult observed = await session.ObserveAsync(cancellationToken).ConfigureAwait(false);
+        ProcessOperationResult observed = await session.ObserveAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
         bool needsLaunch = observed.Outcome == EOutcome.Succeeded && observed.Status?.Running is { } running
             && (!running || schedule.AlreadyRunning == EProcessRunningPolicy.Restart);
         bool userAvailable = !needsLaunch || session.IsLaunchUserAvailable();

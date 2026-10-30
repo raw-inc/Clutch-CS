@@ -152,8 +152,11 @@ public sealed class WorkflowExecutionJournalTests
 
     /// <summary>開始順と完了順が前後しても、循環保存から外れた既知結果を再記録しません。</summary>
     /// <returns>一件ずつ追加した後の保存回数と、元処理の実行回数です。</returns>
-    [Fact]
-    public async Task LateCompletionDoesNotRequeuePreviouslyPersistedResultsAsync()
+    [Theory]
+    [InlineData(255)]
+    [InlineData(300)]
+    [InlineData(550)]
+    public async Task LateCompletionDoesNotRequeuePreviouslyPersistedResultsAsync(int interveningRuns)
     {
         MemoryRepository repository = new();
         TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -176,7 +179,7 @@ public sealed class WorkflowExecutionJournalTests
         try
         {
             await entered.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
-            for (int index = 0; index < 255; index++)
+            for (int index = 0; index < interveningRuns; index++)
             {
                 await fixture.Engine.ExecuteAsync(plan, cancellationToken: timeout.Token).ConfigureAwait(true);
             }
@@ -187,7 +190,10 @@ public sealed class WorkflowExecutionJournalTests
             finish.TrySetResult();
             await delayed.ConfigureAwait(true);
         }
+        ExecutionReport completed = await delayed.ConfigureAwait(true);
+        Assert.NotNull(fixture.Engine.Find(completed.Id));
         await journal.FlushAsync(timeout.Token).ConfigureAwait(true);
+        Assert.Contains(journal.Recent(), view => WorkflowExecutionJournal.Identity(view) == completed.Id);
         await fixture.Engine.ExecuteAsync(plan, cancellationToken: timeout.Token).ConfigureAwait(true);
         await journal.FlushAsync(timeout.Token).ConfigureAwait(true);
         int writes = repository.Writes;
@@ -196,7 +202,7 @@ public sealed class WorkflowExecutionJournalTests
             await journal.FlushAsync(timeout.Token).ConfigureAwait(true);
         }
         Assert.Equal(writes, repository.Writes);
-        Assert.Equal(257, effects);
+        Assert.Equal(interveningRuns + 2, effects);
         Assert.Equal(256, journal.Recent().Count);
     }
 

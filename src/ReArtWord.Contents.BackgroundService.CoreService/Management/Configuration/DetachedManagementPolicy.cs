@@ -11,6 +11,11 @@ internal static class DetachedManagementPolicy
     public static string? GetProblem(string operation, bool detached, DetachedOperationOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
+        string processGroupCommand = "processes.groups.command";
+        if (detached && !options.ProcessChange && string.Equals(operation, processGroupCommand, StringComparison.Ordinal))
+        {
+            return "Detached.ProcessChangeDenied";
+        }
         string transferStart = "transfer.open";
         if (detached && !options.FileChange && string.Equals(operation, transferStart, StringComparison.Ordinal))
         {
@@ -21,7 +26,8 @@ internal static class DetachedManagementPolicy
             return null;
         }
         string[] edits = ["workflows.save", "workflows.merge", "workflows.activate", "configuration.save",
-            "configuration.activate", "collaboration.changes", "processes.register", "processes.remove", "secrets.set", "internal-data.write", "internal-data.compare-exchange", "host-manager.apply", "host.power-schedules.save", "scripts.packages.change"];
+            "configuration.activate", "collaboration.changes", "processes.register", "processes.remove", "processes.groups.register", "processes.groups.remove",
+            "secrets.set", "internal-data.write", "internal-data.compare-exchange", "host-manager.apply", "host.power-schedules.save", "scripts.packages.change"];
         if (edits.Contains(operation, StringComparer.Ordinal))
         {
             return "Detached.EditDenied";

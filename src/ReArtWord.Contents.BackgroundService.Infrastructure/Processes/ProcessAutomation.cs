@@ -57,6 +57,7 @@ public sealed class ProcessAutomation
         activatedAt ??= clock.GetUtcNow();
         try
         {
+            await service.Groups.InitializeAsync(cancellationToken).ConfigureAwait(false);
             long current = service.RegistrationRevision;
             if (current != revision)
             {
@@ -91,9 +92,15 @@ public sealed class ProcessAutomation
         try
         {
             ProcessDefinition definition = application.Registration.Definition;
-            if (definition.AutomaticMonitoring)
+            bool initialRead = !application.SchedulesLoaded;
+            if (definition.Mode == EProcessMode.Managed && initialRead)
             {
-                ProcessOperationResult result = await service.MonitorAsync(application.Registration, cancellationToken).ConfigureAwait(false);
+                await LoadSchedulesAsync(application, cancellationToken).ConfigureAwait(false);
+            }
+            if (definition.AutomaticMonitoring && !service.Groups.Managed(definition.Id))
+            {
+                bool deferRecovery = definition.Mode == EProcessMode.Managed && AwaitingBootSchedule(application);
+                ProcessOperationResult result = await service.MonitorAsync(application.Registration, deferRecovery, cancellationToken).ConfigureAwait(false);
                 if (!application.MonitoringStarted && result.Status is not null)
                 {
                     application.MonitoringStarted = true;
@@ -115,26 +122,17 @@ public sealed class ProcessAutomation
             }
             if (definition.Mode == EProcessMode.Managed)
             {
-                bool initialRead = !application.SchedulesLoaded;
-                if (!application.SchedulesLoaded)
-                {
-                    Dictionary<string, ProcessScheduleStatus> schedules = new(StringComparer.Ordinal);
-                    await foreach (ProcessScheduleStatus status in service.ReadSchedulesAsync(definition, cancellationToken).ConfigureAwait(false))
-                    {
-                        schedules.Add(status.Id, status);
-                    }
-                    application.Schedules.Clear();
-                    foreach ((string id, ProcessScheduleStatus status) in schedules)
-                    {
-                        application.Schedules.Add(id, status);
-                    }
-                    application.SchedulesLoaded = true;
-                }
                 foreach (ProcessSchedule schedule in definition.Schedules ?? [])
                 {
                     if (service.IsScheduleDue(definition, schedule, application.Schedules[schedule.Id], initialRead))
                     {
-                        application.Schedules[schedule.Id] = await service.RunScheduleAsync(application.Registration, schedule, activatedAt!.Value, cancellationToken).ConfigureAwait(false);
+                        ProcessScheduleStatus next = await service.RunScheduleAsync(application.Registration, schedule, activatedAt!.Value, cancellationToken).ConfigureAwait(false);
+                        string groupBusy = "process.groupOperationInProgress";
+                        if (string.Equals(next.Reason, groupBusy, StringComparison.Ordinal))
+                        {
+                            continue;
+                        }
+                        application.Schedules[schedule.Id] = next;
                         if (application.Schedules[schedule.Id].Outcome == EOutcome.Unknown)
                         {
                             await ReportAsync(application, application.Schedules[schedule.Id].Reason ?? "process.scheduleUnconfirmed", cancellationToken).ConfigureAwait(false);
@@ -149,6 +147,44 @@ public sealed class ProcessAutomation
         {
             await ReportAsync(application, exception.GetType().FullName ?? exception.GetType().Name, cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    /// <summary>初回と登録変更後だけ、起動予定の受付状態をまとめて読みます。</summary>
+    /// <returns>予定状態をすべて確認した時点の完了です。</returns>
+    private async ValueTask LoadSchedulesAsync(Application application, CancellationToken cancellationToken = default)
+    {
+        Dictionary<string, ProcessScheduleStatus> schedules = new(StringComparer.Ordinal);
+        await foreach (ProcessScheduleStatus status in service.ReadSchedulesAsync(application.Registration.Definition, cancellationToken).ConfigureAwait(false))
+        {
+            schedules.Add(status.Id, status);
+        }
+        application.Schedules.Clear();
+        foreach ((string id, ProcessScheduleStatus status) in schedules)
+        {
+            application.Schedules.Add(id, status);
+        }
+        application.SchedulesLoaded = true;
+    }
+
+    /// <summary>最初のPC起動予定を待つ間は、前回の故障からの自動復旧で起動しません。</summary>
+    /// <returns>監視を続け、自動復旧だけを保留するかです。</returns>
+    private static bool AwaitingBootSchedule(Application application)
+    {
+        bool pending = false;
+        foreach (ProcessSchedule schedule in application.Registration.Definition.Schedules ?? [])
+        {
+            if (!schedule.Enabled || !ProcessSchedulePlan.IsBoot(schedule))
+            {
+                continue;
+            }
+            ProcessScheduleStatus status = application.Schedules[schedule.Id];
+            if (status.NextAt is null && status.Outcome.HasValue && status.Outcome != EOutcome.Unknown)
+            {
+                return false;
+            }
+            pending |= status.NextAt.HasValue || status.Outcome == EOutcome.Unknown;
+        }
+        return pending;
     }
 
     /// <summary>同じ失敗が継続する間は重複記録しません。</summary>

@@ -143,6 +143,22 @@ public sealed class DashboardOverviewTests
         Assert.Empty(window.Read(now.AddSeconds(61)));
     }
 
+    /// <summary>Host側の保持上限に達した要約を、全体の活動件数と表示しません。</summary>
+    [Fact]
+    public void ActivityAtTheHostRetentionLimitIsMarkedAsPartial()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        OverviewActivityWindow window = new();
+        ExecutionResultView[] entries = Enumerable.Range(0, 2000).Select(_ => new ExecutionResultView(null,
+            new(Guid.NewGuid(), "workflow", "revision", EOutcome.Succeeded, now.AddSeconds(-1), now, [], 0, 0))).ToArray();
+        window.Add(entries, now);
+        Assert.True(window.CapacityLimited);
+        Assert.Equal(2000, Assert.Single(window.Read(now)).Completed);
+        window.Add([], now.AddSeconds(61));
+        Assert.False(window.CapacityLimited);
+        Assert.Empty(window.Read(now.AddSeconds(61)));
+    }
+
     /// <summary>遅れた旧クラスタの応答を新選択へコミットせず、全要求の対象を固定します。</summary>
     /// <returns>実ManagementApiを通した遅延返信の検証です。</returns>
     [Fact]

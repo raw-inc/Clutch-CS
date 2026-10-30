@@ -33,6 +33,7 @@ public sealed partial class ProcessPanel
     } = null!;
 
     private readonly List<ProcessView> processes = [];
+    private ApplicationGroupPanel? groupPanel;
     private ProcessView? selected;
     private ProcessView? removing;
     private ServiceStatus? target;
@@ -95,6 +96,10 @@ public sealed partial class ProcessPanel
         try
         {
             await LoadAsync(cancellationToken).ConfigureAwait(true);
+            if (groupPanel is not null)
+            {
+                await groupPanel.RefreshAsync(cancellationToken).ConfigureAwait(true);
+            }
         }
         catch (Exception exception) when (exception is HttpRequestException or JsonException or InvalidOperationException)
         {
@@ -272,8 +277,18 @@ public sealed partial class ProcessPanel
 
     /// <summary>状態を論理名の一覧に短く表示します。</summary>
     /// <returns>翻訳可能な状態ラベルです。</returns>
-    private static string State(ProcessView item) => item.Observed.Status?.ReplacementDeadline is not null ? "Waiting for self-restart"
-                                                                                                           : item.Observed.Status?.Running switch { true => "Running", false => "Stopped", _ => "Unknown" };
+    private static string State(ProcessView item)
+    {
+        if (item.Observed.Status?.ReplacementDeadline is not null)
+        {
+            return "Waiting for self-restart";
+        }
+        if (item.Observed.Status?.ReplacementProblem is not null)
+        {
+            return "Unknown";
+        }
+        return item.Observed.Status?.Running switch { true => "Running", false => "Stopped", _ => "Unknown" };
+    }
 
     /// <summary>登録操作の公開応答です。</summary>
     private readonly record struct RegistrationResult(EOutcome? Outcome);

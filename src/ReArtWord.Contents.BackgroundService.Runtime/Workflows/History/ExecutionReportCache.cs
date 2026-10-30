@@ -55,11 +55,12 @@ internal sealed class ExecutionReportCache
             {
                 bytes -= previous.Size;
             }
-            entries.Add(report.Id, new Entry(report.Id, report.StartedAt, retained, view, size));
+            entries.Add(report.Id, new Entry(report.Id, report.StartedAt, report.CompletedAt, retained, view, size));
             bytes += size;
             while (maximumCount < entries.Count || maximumBytes < bytes)
             {
-                Entry oldest = entries.Values.MinBy(static entry => entry.StartedAt)!;
+                // 長時間実行した結果も、完了直後は診断できるように残します。
+                Entry oldest = entries.Values.MinBy(static entry => entry.CompletedAt)!;
                 entries.Remove(oldest.Id);
                 bytes -= oldest.Size;
             }
@@ -97,5 +98,5 @@ internal sealed class ExecutionReportCache
     }
 
     /// <summary>再計算せず保持サイズを解放するための一項目です。</summary>
-    private sealed record Entry(Guid Id, DateTimeOffset StartedAt, ExecutionReport? Report, ExecutionResultView View, long Size);
+    private sealed record Entry(Guid Id, DateTimeOffset StartedAt, DateTimeOffset CompletedAt, ExecutionReport? Report, ExecutionResultView View, long Size);
 }
