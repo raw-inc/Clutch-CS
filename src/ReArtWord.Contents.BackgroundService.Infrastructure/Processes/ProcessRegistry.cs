@@ -62,7 +62,7 @@ internal sealed class ProcessRegistry
         {
             (string? stateVersion, ProcessStateRecord state) = await ReadStateAsync(definition, cancellationToken).ConfigureAwait(false);
             ProcessStateRecord changed = state with { InstanceId = Guid.NewGuid(), Identity = definition.ExistingProcess, LaunchPending = false,
-                Ready = null, Healthy = null, ExitCounted = false, ExitCode = null, ExitedAt = null, NextRecoveryAt = null, ExitUnobserved = false, Replacement = null, ReplacementProblem = null };
+                Ready = null, Healthy = null, ExitCounted = false, ExitCode = null, ExitedAt = null, NextRecoveryAt = null, ExitUnobserved = false, Replacement = null, ReplacementProblem = null, RecoveryReplacement = null };
             mutations.Add(new DurableMutation(statesScope, definition.Id, stateVersion, Encode(changed)));
         }
         DurableReceipt receipt = await repository.ApplyBatchAsync(Guid.CreateVersion7(), mutations, cancellationToken).ConfigureAwait(false);

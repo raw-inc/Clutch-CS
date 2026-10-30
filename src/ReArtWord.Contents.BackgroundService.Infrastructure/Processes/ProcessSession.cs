@@ -41,9 +41,9 @@ internal sealed class ProcessSession
 
     /// <summary>実終了を同じ起動回について一度だけ故障履歴へ反映します。</summary>
     /// <returns>取得不能も明示した観測結果です。</returns>
-    internal async ValueTask<ProcessOperationResult> ObserveAsync(CancellationToken cancellationToken = default)
+    internal async ValueTask<ProcessOperationResult> ObserveAsync(bool preparingLaunch = false, CancellationToken cancellationToken = default)
     {
-        (ProcessStateRecord next, bool? running, string? reason) = await ProcessObservation.ReadAsync(definition, state, options, monitor, replacements, clock, cancellationToken).ConfigureAwait(false);
+        (ProcessStateRecord next, bool? running, string? reason) = await ProcessObservation.ReadAsync(definition, state, options, monitor, replacements, clock, preparingLaunch, cancellationToken).ConfigureAwait(false);
         if ((version is null || next != state) && !await SaveAsync(next, cancellationToken).ConfigureAwait(false))
         {
             return Result(EOutcome.Unknown, "process.stateSaveUnconfirmed", running);
@@ -85,7 +85,10 @@ internal sealed class ProcessSession
         {
             return Result(EOutcome.NotExecuted, "process.observeOnly");
         }
-        ProcessOperationResult observed = await ObserveAsync(cancellationToken).ConfigureAwait(false);
+
+        // 起動直前は、待機中に得た「候補なし」を再利用しません。
+        replacements.Clear(definition.Id);
+        ProcessOperationResult observed = await ObserveAsync(true, cancellationToken).ConfigureAwait(false);
         if (observed.Outcome != EOutcome.Succeeded || observed.Status?.Running is null)
         {
             return Result(EOutcome.Unknown, "process.previousStateUnconfirmed");
@@ -110,7 +113,7 @@ internal sealed class ProcessSession
         ProcessStateRecord pending = state with { InstanceId = Guid.NewGuid(), Identity = null, LaunchPending = true, PlannedStop = false, ExitCounted = false,
             RecoveryAttempts = recovering ? checked(state.RecoveryAttempts + 1)
                                           : state.RecoveryAttempts,
-            Ready = null, Healthy = null, ExitCode = null, ExitedAt = null, NextRecoveryAt = null, RestartRequested = restarting, ExitUnobserved = false, Replacement = null, ReplacementProblem = null };
+            Ready = null, Healthy = null, ExitCode = null, ExitedAt = null, NextRecoveryAt = null, RestartRequested = restarting, ExitUnobserved = false, Replacement = null, ReplacementProblem = null, RecoveryReplacement = null };
         if (!await SaveAsync(pending, cancellationToken).ConfigureAwait(false))
         {
             return Result(EOutcome.Unknown, "process.launchIntentUnconfirmed");
@@ -157,7 +160,7 @@ internal sealed class ProcessSession
         {
             return Result(EOutcome.Unknown, "process.launchUnconfirmed");
         }
-        if (!await SaveAsync(state with { PlannedStop = true, Replacement = null, ReplacementProblem = null }, cancellationToken).ConfigureAwait(false))
+        if (!await SaveAsync(state with { PlannedStop = true, Replacement = null, ReplacementProblem = null, RecoveryReplacement = null }, cancellationToken).ConfigureAwait(false))
         {
             return Result(EOutcome.Unknown, "process.stopIntentUnconfirmed");
         }
@@ -235,7 +238,7 @@ internal sealed class ProcessSession
     /// <returns>復旧実行、抑止、上限到達または判定不能です。</returns>
     internal async ValueTask<ProcessOperationResult> RecoverAsync(CancellationToken cancellationToken = default)
     {
-        ProcessOperationResult observed = await ObserveAsync(cancellationToken).ConfigureAwait(false);
+        ProcessOperationResult observed = await ObserveAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
         if (state.Replacement is not null || definition.Mode != EProcessMode.Managed || state.RecoverySuppressed || state.PlannedStop || state.RecoveryExhausted || state.LaunchPending)
         {
             return Result(EOutcome.NotExecuted, "process.recoveryInhibited", observed.Status?.Running);
@@ -250,9 +253,7 @@ internal sealed class ProcessSession
         {
             return observed;
         }
-        if (observed.Status.Running == false && !(state.ExitCode is null ? policy.RestartOnUnknownExit
-                                                                         : state.ExitCode == 0 ? policy.RestartOnNormalExit
-                                                                                               : policy.RestartOnAbnormalExit))
+        if (observed.Status.Running == false && !ProcessObservation.RecoveryEnabled(policy, state.ExitCode))
         {
             return Result(EOutcome.NotExecuted, "process.exitRecoveryDisabled", false);
         }
@@ -295,7 +296,7 @@ internal sealed class ProcessSession
                 return stopped;
             }
         }
-        ProcessStateRecord next = state with { PlannedStop = false, NextRecoveryAt = now.AddMilliseconds(policy.DelayMilliseconds ?? options.RecoveryDelayMilliseconds) };
+        ProcessStateRecord next = ProcessObservation.RecoveryIntent(definition, state, options, monitor, now);
         if (!await SaveAsync(next, cancellationToken).ConfigureAwait(false))
         {
             return Result(EOutcome.Unknown, "process.recoveryIntentUnconfirmed");
@@ -318,7 +319,7 @@ internal sealed class ProcessSession
         if (!await SaveAsync(state with { Identity = identity, LaunchPending = false, PlannedStop = identity is null, Ready = null, Healthy = null,
             RecoveryAttempts = identity is null ? state.RecoveryAttempts
                                                 : 0, RecoveryExhausted = identity is null && state.RecoveryExhausted,
-            ExitCode = null, ExitedAt = null, NextRecoveryAt = null, Replacement = null, ReplacementProblem = null }, cancellationToken).ConfigureAwait(false))
+            ExitCode = null, ExitedAt = null, NextRecoveryAt = null, Replacement = null, ReplacementProblem = null, RecoveryReplacement = null }, cancellationToken).ConfigureAwait(false))
         {
             return Result(EOutcome.Unknown, "process.resolutionSaveUnconfirmed");
         }
