@@ -90,7 +90,7 @@ public sealed class ApplicationRecoveryReplacementTests
         using Process successor = ApplicationReplacementTests.StartSuccessor(app, false);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
         ProcessOperationResult adopted = await ApplicationReplacementTests.WaitAsync(service, definition.Id,
-            result => result.Status?.Identity?.ProcessId == successor.Id, timeout.Token);
+            result => result.Status?.Identity?.ProcessId == successor.Id && app.Starts().Length == 2, timeout.Token);
         Assert.True(adopted.Status!.Running);
         Assert.Null(adopted.Status.NextRecoveryAt);
         Assert.Null(adopted.Status.ExitedAt);
@@ -118,7 +118,8 @@ public sealed class ApplicationRecoveryReplacementTests
         using Process successor = ApplicationReplacementTests.StartSuccessor(app, false);
         using ProcessService restarted = new(scope.Repository, "peer", scope.Options, clock);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
-        await ApplicationReplacementTests.WaitAsync(restarted, app.Definition.Id, result => result.Status?.Identity?.ProcessId == successor.Id, timeout.Token);
+        await ApplicationReplacementTests.WaitAsync(restarted, app.Definition.Id,
+            result => result.Status?.Identity?.ProcessId == successor.Id && app.Starts().Length == 2, timeout.Token);
         Assert.Equal(2, app.Starts().Length);
     }
 
@@ -218,6 +219,11 @@ public sealed class ApplicationRecoveryReplacementTests
         RegisteredProcess registration = Assert.Single(await service.ListAsync());
         await service.RegisterAsync(definition with { RestartDetection = new(0, EProcessRestartMatch.ExecutableOnly) }, registration.Version);
         using Process successor = ApplicationReplacementTests.StartSuccessor(app, true);
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
+        while (app.Starts().Length < 2)
+        {
+            await Task.Delay(10, timeout.Token);
+        }
         ProcessOperationResult observed = await service.ObserveAsync(definition.Id);
         Assert.Equal(initial.Status!.Identity, observed.Status!.Identity);
         Assert.False(observed.Status.Running);

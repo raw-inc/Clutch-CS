@@ -275,6 +275,7 @@ jobs:
           path: |
             artifacts/TestResults/**
             .work/integration/**/startup-error.txt
+            .work/integration/**/startup-failure.json
             .work/integration/**/state/logs/**/*.jsonl
             .work/integration/**/random-restarts.json
             .work/integration/**/audio-workload.json
@@ -415,6 +416,7 @@ jobs:
           path: |
             artifacts/InstallTestResults/**
             .work/integration/**/startup-error.txt
+            .work/integration/**/startup-failure.json
             .work/integration/**/state/logs/**/*.jsonl
           include-hidden-files: true
           if-no-files-found: ignore
