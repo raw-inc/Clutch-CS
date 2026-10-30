@@ -18,6 +18,7 @@ internal static class ProcessManagement
     /// <summary>汎用ノードと同じ実プロセス・資源境界を使用します。</summary>
     public static void Register(ManagementRegistry registry, ServiceRuntime service)
     {
+        ProcessGroupManagement.Register(registry, service);
         registry.Read("processes.list", (_, cancellation) => ListAsync(service, cancellation));
         registry.Write("processes.register", async (value, cancellation) =>
         {

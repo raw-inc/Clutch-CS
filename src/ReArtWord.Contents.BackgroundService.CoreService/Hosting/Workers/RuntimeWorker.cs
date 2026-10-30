@@ -12,6 +12,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Observability.Events;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Observability.Logging;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Resources;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Processes;
+using ReArtWord.Contents.BackgroundService.Infrastructure.Processes.Groups;
 using ReArtWord.Contents.BackgroundService.Runtime.Observability;
 
 namespace ReArtWord.Contents.BackgroundService.CoreService.Hosting.Workers;
@@ -100,6 +101,8 @@ internal sealed class RuntimeWorker : Microsoft.Extensions.Hosting.BackgroundSer
         Task history = runtime.ExecutionJournal.RunAsync(workers.Token);
         ProcessAutomation applicationAutomation = new(runtime.Processes, runtime.Cluster.LocalPeerId, log);
         Task applications = applicationAutomation.RunAsync(() => runtime.ManagementStarted && !runtime.Maintenance.IsClosed && PeerStatusRules.CanParticipate(runtime.Status), workers.Token);
+        ProcessGroupAutomation groupAutomation = new(runtime.Processes, runtime.Cluster.LocalPeerId, log);
+        Task applicationGroups = groupAutomation.RunAsync(() => runtime.ManagementStarted && !runtime.Maintenance.IsClosed && PeerStatusRules.CanParticipate(runtime.Status), workers.Token);
         try
         {
             await runtime.ManualSafety.RefreshAsync(stoppingToken).ConfigureAwait(false);
@@ -114,7 +117,7 @@ internal sealed class RuntimeWorker : Microsoft.Extensions.Hosting.BackgroundSer
             await workers.CancelAsync().ConfigureAwait(false);
             try
             {
-                await Task.WhenAll(resources, updates, schedules, events, network, history, applications).ConfigureAwait(false);
+                await Task.WhenAll(resources, updates, schedules, events, network, history, applications, applicationGroups).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (workers.IsCancellationRequested)
             {
