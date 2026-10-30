@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <VersionPrefix>0.2.1</VersionPrefix>
+    <VersionPrefix>0.2.2</VersionPrefix>
     <VersionSuffix>alpha</VersionSuffix>
     <VersionRevision>0</VersionRevision>
     <!-- CIから同じ製品版を明示した場合も修正番号を維持し、別版の指定には持ち込みません。 -->
