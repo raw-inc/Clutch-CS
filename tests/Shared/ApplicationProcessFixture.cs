@@ -18,22 +18,28 @@ internal sealed class ApplicationProcessFixture : IDisposable
         string configuration = new DirectoryInfo(AppContext.BaseDirectory).Parent!.Name;
         string repository = Path.GetFullPath("../../../../../", AppContext.BaseDirectory);
         string source = Path.Combine(repository, "tests", "ReArtWord.Contents.BackgroundService.Unit.Tests", "CommandLine", "FixtureHost", "bin", configuration, "net10.0");
-        foreach (string file in Directory.GetFiles(source))
-        {
-            File.Copy(file, Path.Combine(Root, Path.GetFileName(file)));
-        }
-        File.WriteAllText(Path.Combine(Root, "application-fixture.json"), JsonSerializer.Serialize(new { exitCode, delayMs = delayMilliseconds }, ContractJson.Options));
         string suffix = string.Empty;
         if (OperatingSystem.IsWindows())
         {
             suffix = ".exe";
         }
+
+        // 並列の別試験を後継候補へ入れないよう、実行ファイル名も分離します。
+        string original = "ContentsCommandLineFixture" + suffix;
+        string executable = "app-" + Guid.NewGuid().ToString("N")[..10] + suffix;
+        foreach (string file in Directory.GetFiles(source))
+        {
+            string name = Path.GetFileName(file);
+            File.Copy(file, Path.Combine(Root, string.Equals(name, original, StringComparison.Ordinal) ? executable
+                                                                                                       : name));
+        }
+        File.WriteAllText(Path.Combine(Root, "application-fixture.json"), JsonSerializer.Serialize(new { exitCode, delayMs = delayMilliseconds }, ContractJson.Options));
         IReadOnlyList<string> arguments = [];
         if (withArguments)
         {
             arguments = ["--scene", "日本語 space", "quoted\"value", string.Empty];
         }
-        Definition = new("fixture-app", EProcessMode.Managed, Path.Combine(Root, "ContentsCommandLineFixture" + suffix), arguments, Root,
+        Definition = new("fixture-app", EProcessMode.Managed, Path.Combine(Root, executable), arguments, Root,
             LogicalName: "Test application", AutomaticMonitoring: true);
     }
 

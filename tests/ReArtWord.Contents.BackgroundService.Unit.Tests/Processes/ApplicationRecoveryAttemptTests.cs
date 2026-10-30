@@ -41,7 +41,7 @@ public sealed class ApplicationRecoveryAttemptTests
             clock.Advance(TimeSpan.FromMilliseconds(1));
             ProcessOperationResult next = await service.RecoverAsync(definition.Id);
             scope.Track(next);
-            Assert.Equal(EOutcome.Succeeded, next.Outcome);
+            Assert.True(next.Outcome == EOutcome.Succeeded, System.Text.Json.JsonSerializer.Serialize(next));
             Assert.NotEqual(current.Status!.InstanceId, next.Status!.InstanceId);
             Assert.Equal(0, next.Status.RecoveryAttempts);
             Assert.False(next.Status.RecoveryExhausted);
