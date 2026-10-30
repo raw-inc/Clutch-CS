@@ -25,7 +25,8 @@ public sealed class ApplicationReplacementTests
         using ProcessTestScope scope = new();
         WorkflowEventHub events = new();
         RecordingWorkflowLog log = new();
-        using ProcessService service = new(scope.Repository, "peer", scope.Options, events: events, log: log);
+        LogTestClock clock = new();
+        using ProcessService service = new(scope.Repository, "peer", scope.Options, clock, events: events, log: log);
         ProcessDefinition definition = app.Definition with { RestartDetection = new(10000, match), Recovery = new(DelayMilliseconds: 0) };
         await service.RegisterAsync(definition);
         ProcessOperationResult initial = await service.StartAsync(definition.Id);
@@ -38,7 +39,8 @@ public sealed class ApplicationReplacementTests
         await ApplicationRecoveryAttemptTests.SeedAttemptsAsync(scope, definition.Id);
         using Process successor = StartSuccessor(app, changed);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
-        ProcessOperationResult observed = await WaitAsync(service, definition.Id, value => value.Status?.Identity?.ProcessId == successor.Id, timeout.Token);
+        ProcessOperationResult observed = await WaitAsync(service, definition.Id,
+            value => value.Status?.Identity?.ProcessId == successor.Id && app.Starts().Length == 2, timeout.Token);
         Assert.True(observed.Status!.Running);
         Assert.Null(observed.Status.ReplacementDeadline);
         Assert.NotEqual(initial.Status!.InstanceId, observed.Status.InstanceId);
@@ -60,20 +62,37 @@ public sealed class ApplicationReplacementTests
     {
         using ApplicationProcessFixture app = new(exitCode: 9, withArguments: true);
         using ProcessTestScope scope = new();
-        using ProcessService service = scope.CreateService();
+        LogTestClock clock = new();
+        using ProcessService service = new(scope.Repository, "peer", scope.Options, clock);
         ProcessDefinition definition = app.Definition with { RestartDetection = new(1500), Recovery = new(DelayMilliseconds: 500) };
         await service.RegisterAsync(definition);
         ProcessOperationResult original = await service.StartAsync(definition.Id);
         ProcessOperationResult waiting = await ApplicationRecoveryTests.WaitForExitAsync(service, definition.Id);
         using Process unrelated = StartSuccessor(app, true);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
-        ProcessOperationResult stopped = await WaitAsync(service, definition.Id, value => value.Status?.ExitedAt is not null, timeout.Token);
+        while (app.Starts().Length != 2)
+        {
+            await Task.Delay(10, timeout.Token);
+        }
+        clock.Advance(TimeSpan.FromMilliseconds(1499));
+        ProcessOperationResult confirming = await service.ObserveAsync(definition.Id, timeout.Token);
+        Assert.Null(confirming.Status!.ExitedAt);
+        Assert.Equal(original.Status!.Identity, confirming.Status.Identity);
+        clock.Advance(TimeSpan.FromMilliseconds(1));
+        ProcessOperationResult stopped = await service.ObserveAsync(definition.Id, timeout.Token);
         Assert.Equal(original.Status!.Identity, stopped.Status!.Identity);
-        Assert.True(waiting.Status!.ReplacementDeadline <= stopped.Status.ExitedAt);
+        Assert.Equal(waiting.Status!.ReplacementDeadline, stopped.Status.ExitedAt);
         Assert.Equal(9, stopped.Status.ExitCode);
         Assert.Equal(1, stopped.Status.FailureCount);
         Assert.Equal("process.recoveryDelay", (await service.RecoverAsync(definition.Id)).Reason);
-        Assert.True(stopped.Status.ExitedAt!.Value.AddMilliseconds(500) <= stopped.Status.NextRecoveryAt);
+        Assert.Equal(stopped.Status.ExitedAt!.Value.AddMilliseconds(500), stopped.Status.NextRecoveryAt);
+        clock.Advance(TimeSpan.FromMilliseconds(499));
+        Assert.Equal("process.recoveryDelay", (await service.RecoverAsync(definition.Id)).Reason);
+        clock.Advance(TimeSpan.FromMilliseconds(1));
+        ProcessOperationResult recovered = await service.RecoverAsync(definition.Id);
+        scope.Track(recovered);
+        Assert.Equal(EOutcome.Succeeded, recovered.Outcome);
+        Assert.NotEqual(unrelated.Id, recovered.Status!.Identity!.ProcessId);
     }
 
     /// <summary>候補が複数なら確認期限後も勝手に選ばず、自動復旧による第三の起動を抑止します。</summary>
@@ -83,7 +102,8 @@ public sealed class ApplicationReplacementTests
     {
         using ApplicationProcessFixture app = new(exitCode: 3);
         using ProcessTestScope scope = new();
-        using ProcessService service = scope.CreateService();
+        LogTestClock clock = new();
+        using ProcessService service = new(scope.Repository, "peer", scope.Options, clock);
         ProcessDefinition definition = app.Definition with { RestartDetection = new(500, EProcessRestartMatch.ExecutableOnly), Recovery = new(DelayMilliseconds: 0) };
         await service.RegisterAsync(definition);
         await service.StartAsync(definition.Id);
@@ -97,7 +117,7 @@ public sealed class ApplicationReplacementTests
         }
         ProcessOperationResult observed = await WaitAsync(service, definition.Id, value => value.Status?.ReplacementProblem is "process.replacementAmbiguous", timeout.Token);
         Assert.Equal("process.replacementAmbiguous", observed.Status!.ReplacementProblem);
-        await Task.Delay(600, timeout.Token);
+        clock.Advance(TimeSpan.FromMilliseconds(500));
         ProcessOperationResult recovery = await service.RecoverAsync(definition.Id);
         Assert.NotEqual(EOutcome.Succeeded, recovery.Outcome);
         Assert.Equal(0, recovery.Status!.RecoveryAttempts);
@@ -114,7 +134,8 @@ public sealed class ApplicationReplacementTests
     {
         using ApplicationProcessFixture app = new();
         using ProcessTestScope scope = new();
-        using ProcessService service = scope.CreateService();
+        LogTestClock clock = new();
+        using ProcessService service = new(scope.Repository, "peer", scope.Options, clock);
         await service.RegisterAsync(app.Definition with { RestartDetection = new(milliseconds, EProcessRestartMatch.ExecutableOnly) });
         await service.StartAsync(app.Definition.Id);
         ProcessOperationResult first = await ApplicationRecoveryTests.WaitForExitAsync(service, app.Definition.Id);
@@ -125,9 +146,11 @@ public sealed class ApplicationReplacementTests
         else
         {
             Assert.Null(first.Status!.ExitedAt);
-            using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
-            ProcessOperationResult final = await WaitAsync(service, app.Definition.Id, value => value.Status?.ExitedAt is not null, timeout.Token);
-            Assert.True(first.Status.ReplacementDeadline <= final.Status!.ExitedAt);
+            clock.Advance(TimeSpan.FromMilliseconds(milliseconds - 1));
+            Assert.Null((await service.ObserveAsync(app.Definition.Id)).Status!.ExitedAt);
+            clock.Advance(TimeSpan.FromMilliseconds(1));
+            ProcessOperationResult final = await service.ObserveAsync(app.Definition.Id);
+            Assert.Equal(first.Status.ReplacementDeadline, final.Status!.ExitedAt);
         }
     }
 
