@@ -6,6 +6,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Processes;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
+using ReArtWord.Contents.BackgroundService.Infrastructure.Processes.Groups;
 using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 using ReArtWord.Contents.BackgroundService.Runtime.Observability;
 
@@ -22,6 +23,7 @@ public sealed class ProcessService : IProcessService, IDisposable
     private readonly ProcessLifecyclePublisher events;
     private readonly Func<SystemBootSession?> boot;
     private long registrationRevision;
+    private readonly ProcessGroupOwnership ownership = new();
 
     /// <summary>この所有者で確定した登録変更だけを監視ループへ通知します。</summary>
     internal long RegistrationRevision => Volatile.Read(ref registrationRevision);
@@ -43,6 +45,7 @@ public sealed class ProcessService : IProcessService, IDisposable
         this.events = new(peerId, events, clock, log);
         monitor = new(platform ?? new DefaultProcessPlatform());
         Options = options;
+        Groups = new(repository, peerId, this, ownership, clock, log);
     }
 
     /// <summary>現在の明示共通既定です。</summary>
@@ -51,12 +54,16 @@ public sealed class ProcessService : IProcessService, IDisposable
         get;
     }
 
+    /// <summary>同じPCの登録アプリケーションを連携して復旧するグループです。</summary>
+    public ProcessGroupService Groups
+    {
+        get;
+    }
+
     /// <summary>GUIとCLIで登録版を確認する一覧です。</summary>
     /// <returns>Peerローカルの登録一覧です。</returns>
     public ValueTask<IReadOnlyList<RegisteredProcess>> ListAsync(CancellationToken cancellationToken = default)
-    {
-        return registry.ListAsync(cancellationToken);
-    }
+        => registry.ListAsync(cancellationToken);
 
     /// <summary>保存時は実行物の実在を要求せず登録内容の意味だけを確認します。</summary>
     /// <returns>期待版に対する登録結果です。</returns>
@@ -64,52 +71,20 @@ public sealed class ProcessService : IProcessService, IDisposable
     [SuppressMessage("SourceQuality", "RAW141", Justification = "service所有の共有gateをここで破棄すると後続操作を壊します。")]
     public async ValueTask<EOutcome> RegisterAsync(ProcessDefinition definition, string? expectedVersion = null, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(definition);
-        ArgumentException.ThrowIfNullOrWhiteSpace(definition.Id);
-        ArgumentNullException.ThrowIfNull(definition.Arguments);
-        ProcessRecoveryPolicy? recovery = definition.Recovery;
-        bool invalid = !Enum.IsDefined(definition.Mode) || string.IsNullOrWhiteSpace(definition.ExecutablePath) || string.IsNullOrWhiteSpace(definition.WorkingDirectory) || definition.Arguments.Any(argument => argument is null) || recovery?.MaximumAttempts is < 0 || recovery?.DelayMilliseconds is < 0 || recovery?.StopTimeoutMilliseconds is <= 0 || definition.ExistingProcess?.ProcessId is <= 0;
-        if (definition.Launch is { } launch && (!Enum.IsDefined(launch.Session) || !Enum.IsDefined(launch.Window)))
-        {
-            invalid = true;
-        }
-        if (definition.RestartDetection is { } detection && (detection.TimeoutMilliseconds is < 0 or > 3600000 || !Enum.IsDefined(detection.Match)))
-        {
-            invalid = true;
-        }
-        if (definition.Mode == EProcessMode.ObserveOnly && definition.ExistingProcess is null)
-        {
-            invalid = true;
-        }
-        if (definition.LogicalName is { Length: > 160 } || 32 < definition.Schedules?.Count
-            || (definition.Schedules ?? []).Select(schedule => schedule.Id).Distinct(StringComparer.Ordinal).Count() != (definition.Schedules?.Count ?? 0))
-        {
-            invalid = true;
-        }
-        if (invalid)
+        if (!ProcessDefinitionValidation.IsValid(definition, clock, boot))
         {
             return EOutcome.NotExecuted;
         }
-        try
-        {
-            foreach (ProcessSchedule schedule in definition.Schedules ?? [])
-            {
-                _ = ProcessSchedulePlan.Create(schedule, clock.GetUtcNow());
-                if (ProcessSchedulePlan.IsBoot(schedule) && boot() is null)
-                {
-                    return EOutcome.NotExecuted;
-                }
-            }
-        }
-        catch (Exception exception) when (exception is FormatException or ArgumentException or TimeZoneNotFoundException or InvalidTimeZoneException)
-        {
-            return EOutcome.NotExecuted;
-        }
+        await Groups.InitializeAsync(cancellationToken).ConfigureAwait(false);
         ProcessDefinition owned = ContractJson.Copy(definition);
         SemaphoreSlim gate = Gate(definition.Id);
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            if (ownership.Check(definition.Id, EProcessGroupAccess.Edit, null) is not null)
+            {
+                return EOutcome.NotExecuted;
+            }
             EOutcome result = await registry.RegisterAsync(owned, expectedVersion, clock.GetUtcNow(), cancellationToken).ConfigureAwait(false);
             if (result == EOutcome.Succeeded)
             {
@@ -131,10 +106,15 @@ public sealed class ProcessService : IProcessService, IDisposable
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(expectedVersion);
+        await Groups.InitializeAsync(cancellationToken).ConfigureAwait(false);
         SemaphoreSlim gate = Gate(id);
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            if (ownership.Check(id, EProcessGroupAccess.Remove, null) is not null)
+            {
+                return EOutcome.NotExecuted;
+            }
             EOutcome result = await registry.RemoveAsync(id, expectedVersion, clock.GetUtcNow(), cancellationToken).ConfigureAwait(false);
             if (result == EOutcome.Succeeded)
             {
@@ -187,14 +167,14 @@ public sealed class ProcessService : IProcessService, IDisposable
     /// <returns>故障履歴を含む状態です。</returns>
     public ValueTask<ProcessOperationResult> ObserveAsync(string id, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(id, static (session, token) => session.ObserveAsync(token), cancellationToken: cancellationToken);
+        return ExecuteAsync(id, static (session, token) => session.ObserveAsync(token), access: EProcessGroupAccess.Observe, cancellationToken: cancellationToken);
     }
 
     /// <summary>成立した復旧条件を明示限界内で処理します。</summary>
     /// <returns>実復旧または抑止・上限です。</returns>
     public ValueTask<ProcessOperationResult> RecoverAsync(string id, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(id, static (session, token) => session.RecoverAsync(token), automatic: true, cancellationToken: cancellationToken);
+        return ExecuteAsync(id, static (session, token) => session.RecoverAsync(token), automatic: true, access: EProcessGroupAccess.Recover, cancellationToken: cancellationToken);
     }
 
     /// <summary>起動予定の待機中も監視を続け、許可された時点でだけ自動復旧します。</summary>
@@ -203,9 +183,9 @@ public sealed class ProcessService : IProcessService, IDisposable
     {
         if (deferRecovery)
         {
-            return ExecuteAsync(registration.Definition.Id, static (session, token) => session.ObserveAsync(token), registration.Version, true, cancellationToken);
+            return ExecuteAsync(registration.Definition.Id, static (session, token) => session.ObserveAsync(token), registration.Version, true, EProcessGroupAccess.Observe, cancellationToken: cancellationToken);
         }
-        return ExecuteAsync(registration.Definition.Id, static (session, token) => session.RecoverAsync(token), registration.Version, true, cancellationToken);
+        return ExecuteAsync(registration.Definition.Id, static (session, token) => session.RecoverAsync(token), registration.Version, true, EProcessGroupAccess.Recover, cancellationToken: cancellationToken);
     }
 
     /// <summary>汎用ノードから現起動回の準備・利用可能・安定状態を渡します。</summary>
@@ -213,7 +193,7 @@ public sealed class ProcessService : IProcessService, IDisposable
     public ValueTask<ProcessOperationResult> SignalAsync(string id, ProcessSignal signal, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(signal);
-        return ExecuteAsync(id, (session, token) => session.SignalAsync(signal, token), cancellationToken: cancellationToken);
+        return ExecuteAsync(id, (session, token) => session.SignalAsync(signal, token), access: EProcessGroupAccess.Observe, cancellationToken: cancellationToken);
     }
 
     /// <summary>人が外部操作前に復旧抑止を保存します。</summary>
@@ -234,7 +214,7 @@ public sealed class ProcessService : IProcessService, IDisposable
     /// <returns>明示確認を保存した状態です。</returns>
     public ValueTask<ProcessOperationResult> ResolveLaunchAsync(string id, ProcessIdentity? confirmedIdentity, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(id, (session, token) => session.ResolveLaunchAsync(confirmedIdentity, token), cancellationToken: cancellationToken);
+        return ExecuteAsync(id, (session, token) => session.ResolveLaunchAsync(confirmedIdentity, token), access: EProcessGroupAccess.Observe, cancellationToken: cancellationToken);
     }
 
     /// <summary>確認した登録版の予定だけを、同じ操作排他内で一回受け付けます。</summary>
@@ -247,7 +227,7 @@ public sealed class ProcessService : IProcessService, IDisposable
             ProcessScheduleRunner runner = new(registry.Schedules, clock, boot);
             status = await runner.RunAsync(registration.Definition.Id, schedule, session, activatedAt, token).ConfigureAwait(false);
             return new(status.Outcome ?? EOutcome.Succeeded, null, status.Reason);
-        }, registration.Version, true, cancellationToken).ConfigureAwait(false);
+        }, registration.Version, true, cancellationToken: cancellationToken).ConfigureAwait(false);
         return status ?? new(schedule.Id, null, Outcome: result.Outcome, Reason: result.Reason);
     }
 
@@ -304,6 +284,7 @@ public sealed class ProcessService : IProcessService, IDisposable
     public void Dispose()
     {
         monitor.Dispose();
+        Groups.Dispose();
         foreach (SemaphoreSlim gate in gates.Values)
         {
             gate.Dispose();
@@ -315,13 +296,19 @@ public sealed class ProcessService : IProcessService, IDisposable
     /// <returns>一件の操作結果です。</returns>
     // 抑制理由: アプリケーションの共有gateはサービスが所有し、個別処理はWaitとReleaseだけを行います。
     [SuppressMessage("SourceQuality", "RAW141", Justification = "service所有の共有gateをここで破棄すると後続操作を壊します。")]
-    private async ValueTask<ProcessOperationResult> ExecuteAsync(string id, Func<ProcessSession, CancellationToken, ValueTask<ProcessOperationResult>> action, string? expectedVersion = null, bool automatic = false, CancellationToken cancellationToken = default)
+    private async ValueTask<ProcessOperationResult> ExecuteAsync(string id, Func<ProcessSession, CancellationToken, ValueTask<ProcessOperationResult>> action, string? expectedVersion = null, bool automatic = false,
+        EProcessGroupAccess access = EProcessGroupAccess.Control, string? group = null, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         SemaphoreSlim gate = Gate(id);
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            await Groups.InitializeAsync(cancellationToken).ConfigureAwait(false);
+            if (ownership.Check(id, access, group) is { } blocked)
+            {
+                return new(EOutcome.NotExecuted, null, blocked);
+            }
             if (expectedVersion is not null && !await registry.MatchesAsync(id, expectedVersion, cancellationToken).ConfigureAwait(false))
             {
                 return new(EOutcome.NotExecuted, null, "process.registrationChanged");
@@ -345,10 +332,32 @@ public sealed class ProcessService : IProcessService, IDisposable
         }
     }
 
+    /// <summary>グループが確保した登録版だけを、個別操作と同じ排他内で操作します。</summary>
+    /// <returns>既存の起動・停止・復旧規則を適用した結果です。</returns>
+    internal ValueTask<ProcessOperationResult> ExecuteGroupAsync(string group, ProcessGroupTarget target, EProcessGroupCommand command,
+        ProcessGroupDefinition plan, bool automatic, bool recoverOnly = false, CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(target.ApplicationId, (session, token) =>
+        {
+            if (recoverOnly)
+            {
+                return session.RecoverAsync(token);
+            }
+            if (command == EProcessGroupCommand.Stop)
+            {
+                return session.StopAsync(plan.StopPolicy, plan.StopTimeoutMilliseconds, token);
+            }
+            return session.StartAsync(restarting: automatic || command == EProcessGroupCommand.Restart, recovering: automatic, cancellationToken: token);
+        },
+            target.RegistrationVersion, automatic, group: group, cancellationToken: cancellationToken);
+    }
+
     /// <summary>アプリケーション専用の排他資源を取得します。</summary>
     /// <returns>サービスが所有し終了時に破棄する排他資源です。</returns>
     private SemaphoreSlim Gate(string id)
-    {
-        return gates.GetOrAdd(id, static _ => new SemaphoreSlim(1, 1));
-    }
+        => gates.GetOrAdd(id, static _ => new SemaphoreSlim(1, 1));
+
+    /// <summary>全体停止より前に、再起動先のユーザーが存在するか確認します。</summary>
+    /// <returns>現在の起動セッションの利用可否です。</returns>
+    internal bool IsGroupLaunchAvailable(ProcessDefinition definition) => monitor.Platform.IsLaunchUserAvailable(definition);
 }

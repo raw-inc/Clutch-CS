@@ -42,10 +42,15 @@ public sealed class RoutingIsolationTests
         IDurableRepository repository = await RepositoryFactory.CreateAsync(files.Root, "a", options);
         Assert.Equal(EOutcome.Succeeded, (await repository.ApplyBatchAsync(Guid.NewGuid(), [new("workflows", "w", null, NodeValue.FromObject(1)), new("workflow:w", "state", null, NodeValue.FromObject(42))])).Outcome);
         Assert.Equal(EOutcome.Succeeded, (await repository.ApplyBatchAsync(Guid.NewGuid(), [new("peer:a:processDefinitions", "app", null, NodeValue.FromObject("definition")), new("peer:a:processStates", "app", null, NodeValue.FromObject("state"))])).Outcome);
+        Assert.Equal(EOutcome.Succeeded, (await repository.ApplyBatchAsync(Guid.NewGuid(), [new("peer:a:processGroups", "group", null, NodeValue.FromObject("group")),
+            new("peer:a:processGroupStates", "group", null, NodeValue.FromObject("operation")), new("peer:a:processGroupMembers", "app", null, NodeValue.FromObject("group"))])).Outcome);
         await repository.WriteLocalSnapshotAsync("peer:a:resources", "history", NodeValue.FromObject(123));
         JsonFileRepository json = new(Path.Combine(files.Root, "state.json"));
         Assert.NotNull(await json.ReadAsync("peer:a:resources", "history"));
         Assert.NotNull(await json.ReadAsync("peer:a:processStates", "app"));
+        Assert.NotNull(await json.ReadAsync("peer:a:processGroups", "group"));
+        Assert.NotNull(await json.ReadAsync("peer:a:processGroupStates", "group"));
+        Assert.NotNull(await json.ReadAsync("peer:a:processGroupMembers", "app"));
         RepositorySnapshot shared = await repository.ExportAsync();
         Assert.Equal(2, shared.Entries.Count);
         Assert.Single(shared.Receipts);
