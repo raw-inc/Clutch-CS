@@ -57,6 +57,7 @@ public sealed class ProcessAutomation
         activatedAt ??= clock.GetUtcNow();
         try
         {
+            await service.Groups.InitializeAsync(cancellationToken).ConfigureAwait(false);
             long current = service.RegistrationRevision;
             if (current != revision)
             {
@@ -96,7 +97,7 @@ public sealed class ProcessAutomation
             {
                 await LoadSchedulesAsync(application, cancellationToken).ConfigureAwait(false);
             }
-            if (definition.AutomaticMonitoring)
+            if (definition.AutomaticMonitoring && !service.Groups.Managed(definition.Id))
             {
                 bool deferRecovery = definition.Mode == EProcessMode.Managed && AwaitingBootSchedule(application);
                 ProcessOperationResult result = await service.MonitorAsync(application.Registration, deferRecovery, cancellationToken).ConfigureAwait(false);
@@ -125,7 +126,13 @@ public sealed class ProcessAutomation
                 {
                     if (service.IsScheduleDue(definition, schedule, application.Schedules[schedule.Id], initialRead))
                     {
-                        application.Schedules[schedule.Id] = await service.RunScheduleAsync(application.Registration, schedule, activatedAt!.Value, cancellationToken).ConfigureAwait(false);
+                        ProcessScheduleStatus next = await service.RunScheduleAsync(application.Registration, schedule, activatedAt!.Value, cancellationToken).ConfigureAwait(false);
+                        string groupBusy = "process.groupOperationInProgress";
+                        if (string.Equals(next.Reason, groupBusy, StringComparison.Ordinal))
+                        {
+                            continue;
+                        }
+                        application.Schedules[schedule.Id] = next;
                         if (application.Schedules[schedule.Id].Outcome == EOutcome.Unknown)
                         {
                             await ReportAsync(application, application.Schedules[schedule.Id].Reason ?? "process.scheduleUnconfirmed", cancellationToken).ConfigureAwait(false);

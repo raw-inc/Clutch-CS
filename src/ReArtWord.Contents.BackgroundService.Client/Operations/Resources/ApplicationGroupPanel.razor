@@ -1,0 +1,63 @@
+@using ReArtWord.Contents.BackgroundService.Contracts.Processes
+<section class="section applications-panel">
+    <div class="section-heading"><h2>@Ui["Application groups"]</h2><button disabled="@(busy || !Available)" @onclick="()=>Edit(null)"><UiIcon Name="add" />@Ui["Create application group"]</button></div>
+    <p class="small muted">@Ui["Combine registered applications on this PC and choose how to recover them."]</p>
+    @if(message is not null){<p class="notice" role="status">@message()</p>}
+    <div class="table-wrap"><table><thead><tr><th>@Ui["Application group name"]</th><th>@Ui["Group recovery policy"]</th><th>@Ui["Status"]</th><th>@Ui["Actions"]</th></tr></thead><tbody>
+    @foreach(var item in groups)
+    {
+        <tr @key="item.Definition.Id"><td><strong>@item.Definition.Name</strong><div class="small muted">@string.Join(" → ",item.Definition.Members.Select(member=>Name(member.ApplicationId)))</div></td>
+            <td>@Ui[Policy(item.Definition.RecoveryMode)]<div class="small muted">@Ui[item.Definition.AutomaticMonitoring?"Automatic monitoring":"Group automatic recovery disabled"]</div></td>
+            <td><span class="badge">@Ui[Phase(item.Status)]</span>@if(item.Status.ApplicationId is {} active){<div>@Name(active)</div>}
+                @if(item.Status.NextAt is {} due){<div class="small muted">@due.ToLocalTime().ToString("G",CultureInfo.CurrentCulture)</div>}
+                @if(item.Status.Reason is {} reason){<div class="small error">@Ui[reason]</div>}
+                @if(item.Status.Phase==EProcessGroupPhase.Paused){<p class="small">@Ui["Check the applications, resolve any unknown launch, then choose Start or Restart to continue."]</p>}
+            </td>
+            <td><div class="toolbar"><button disabled="@(busy||!Available||Active(item))" @onclick="()=>CommandAsync(item,EProcessGroupCommand.Start,UiCancellation)">@Ui["Start group"]</button>
+                <button disabled="@(busy||!Available||Active(item))" @onclick="()=>Confirm(item,EProcessGroupCommand.Restart)">@Ui["Restart group"]</button>
+                <button disabled="@(busy||!Available)" @onclick="()=>Confirm(item,EProcessGroupCommand.Stop)">@Ui["Stop group"]</button></div>
+                <div class="toolbar"><button class="quiet" disabled="@(busy||!Available||item.Status.Phase!=EProcessGroupPhase.Idle)" @onclick="()=>Edit(item)">@Ui["Edit"]</button><button class="quiet danger" disabled="@(busy||!Available||Active(item))" @onclick="()=>removing=item">@Ui["Remove group"]</button></div></td>
+        </tr>
+    }
+    </tbody></table>@if(groups.Count==0){<div class="empty">@Ui["No application groups registered."]</div>}</div>
+</section>
+<Modal Wide="true" Open="@(draft is not null)" Title='@Ui["Application group settings"]' Close="CloseEditor">
+    @if(draft is {} form)
+    {
+        <p class="small muted">@Owner</p>
+        @if(message is not null){<p class="notice" role="status">@message()</p>}
+        <fieldset disabled="@(busy||!Available)">
+            <label>@Ui["Application group name"]<input maxlength="160" @bind="form.Name" @bind:event="oninput" /></label>
+            <label><input type="checkbox" @bind="form.Automatic" />@Ui["Automatically recover this application group"]</label>
+            <label>@Ui["Group recovery policy"]<select @bind="form.Mode"><option value="@EProcessGroupRecoveryMode.FailedApplications">@Ui[Policy(EProcessGroupRecoveryMode.FailedApplications)]</option><option value="@EProcessGroupRecoveryMode.EntireGroup">@Ui[Policy(EProcessGroupRecoveryMode.EntireGroup)]</option></select></label>
+            @if(form.Mode==EProcessGroupRecoveryMode.EntireGroup){<label>@Ui["Group recovery delay (ms)"]<input type="number" min="0" max="3600000" @bind="form.RecoveryDelay" @bind:event="oninput" /></label>}
+            <p class="small muted">@Ui["Recovery conditions and attempt limits follow each application's settings."]</p>
+            <h3>@Ui["Group startup order"]</h3>
+            <p class="small muted">@Ui["The first delay starts when group startup begins. Each later delay starts after the preceding application has started."]</p>
+            @foreach(var member in form.Members)
+            {
+                <div class="card toolbar" @key="member.Id"><strong>@Name(member.Id)</strong><label>@Ui["Delay before this application starts (ms)"]<input type="number" min="0" max="3600000" @bind="member.Delay" @bind:event="oninput" /></label>
+                    <button class="quiet" aria-label='@Ui["Move application up"]' disabled="@(form.Members.IndexOf(member)==0)" @onclick="()=>form.Move(member,-1)">↑</button>
+                    <button class="quiet" aria-label='@Ui["Move application down"]' disabled="@(form.Members.IndexOf(member)==form.Members.Count-1)" @onclick="()=>form.Move(member,1)">↓</button>
+                    <button class="quiet" @onclick="()=>form.Members.Remove(member)">@Ui["Remove from group"]</button>
+                </div>
+            }
+            <label>@Ui["Add a registered application"]<select value="" @onchange="Add"><option value="">@Ui["Select an application"]</option>@foreach(var application in Candidates()){<option value="@application.Id">@application.DisplayName</option>}</select></label>
+            <label>@Ui["Group graceful stop timeout (ms)"]<input type="number" min="1" max="3600000" @bind="form.StopTimeout" @bind:event="oninput" /></label>
+            <label>@Ui["If an application does not exit"]<select @bind="form.StopPolicy"><option value="@EProcessStopPolicy.WaitForManual">@Ui["Wait for manual action if it does not exit"]</option><option value="@EProcessStopPolicy.Force">@Ui["Force termination if it does not exit"]</option></select></label>
+            <div class="toolbar"><button @onclick="()=>SaveAsync(UiCancellation)">@Ui["Save"]</button><button class="quiet" @onclick="CloseEditor">@Ui["Cancel"]</button></div>
+        </fieldset>
+    }
+</Modal>
+<Modal Open="@(confirming is not null)" Title='@Ui[command==EProcessGroupCommand.Stop?"Stop group":"Restart group"]' Close="CloseConfirmation">
+    <p>@Owner · <strong>@confirming?.Definition.Name</strong></p>
+    <p>@Ui[command==EProcessGroupCommand.Stop?"Stop all applications in this group and suspend group recovery.":"Stop all applications in this group, then restart them in the configured order."]</p>
+    @if(confirming?.Definition.StopPolicy==EProcessStopPolicy.Force){<p>@Ui["Applications that do not exit within the configured timeout will be forcibly terminated."]</p>}
+    <button disabled="@(busy||!Available)" @onclick="()=>CommandAsync(confirming!,command,UiCancellation)">@Ui["Run"]</button>
+</Modal>
+<Modal Open="@(removing is not null)" Title='@Ui["Remove group"]' Close="CloseRemoval">
+    <p>@Owner · <strong>@removing?.Definition.Name</strong></p>
+    <p>@Ui["Remove the group only. Applications keep running and return to their individual monitoring settings."]</p>
+    @if(message is not null){<p class="notice" role="status">@message()</p>}
+    <button class="danger" disabled="@(busy||!Available)" @onclick="()=>RemoveAsync(UiCancellation)">@Ui["Remove group"]</button>
+</Modal>
