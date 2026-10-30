@@ -187,7 +187,7 @@ public sealed class ProcessService : IProcessService, IDisposable
     /// <returns>故障履歴を含む状態です。</returns>
     public ValueTask<ProcessOperationResult> ObserveAsync(string id, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(id, static (session, token) => session.ObserveAsync(token), cancellationToken: cancellationToken);
+        return ExecuteAsync(id, static (session, token) => session.ObserveAsync(cancellationToken: token), cancellationToken: cancellationToken);
     }
 
     /// <summary>成立した復旧条件を明示限界内で処理します。</summary>
@@ -203,7 +203,7 @@ public sealed class ProcessService : IProcessService, IDisposable
     {
         if (deferRecovery)
         {
-            return ExecuteAsync(registration.Definition.Id, static (session, token) => session.ObserveAsync(token), registration.Version, true, cancellationToken);
+            return ExecuteAsync(registration.Definition.Id, static (session, token) => session.ObserveAsync(cancellationToken: token), registration.Version, true, cancellationToken);
         }
         return ExecuteAsync(registration.Definition.Id, static (session, token) => session.RecoverAsync(token), registration.Version, true, cancellationToken);
     }

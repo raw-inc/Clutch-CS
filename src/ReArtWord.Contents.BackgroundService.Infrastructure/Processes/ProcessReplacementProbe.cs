@@ -5,7 +5,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Processes;
 
-/// <summary>自律再起動の確認待ち中だけ、同じ実行ファイルの一意な後継を探します。</summary>
+/// <summary>終了確認と復旧の待機中に、同じ実行ファイルの一意な後継を探します。</summary>
 internal sealed class ProcessReplacementProbe
 {
     private readonly ConcurrentDictionary<string, ProbeCache> cache = new(StringComparer.Ordinal);
@@ -42,11 +42,16 @@ internal sealed class ProcessReplacementProbe
         string? problem = null;
         try
         {
-            foreach (Process process in processes)
+            foreach (Process candidate in processes)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                using Process process = candidate;
                 try
                 {
+                    if (process.HasExited)
+                    {
+                        continue;
+                    }
                     ProcessIdentity identity = ProcessOs.Identity(process);
                     if (identity.StartedAt < window.NotBefore || process.HasExited)
                     {
@@ -59,7 +64,10 @@ internal sealed class ProcessReplacementProbe
                     string? path = process.MainModule?.FileName;
                     if (path is null)
                     {
-                        problem = "process.replacementUnconfirmed";
+                        if (!HasExited(process))
+                        {
+                            problem = "process.replacementUnconfirmed";
+                        }
                         continue;
                     }
                     if (!string.Equals(Path.GetFullPath(path), Path.GetFullPath(window.ExecutablePath), comparison))
@@ -71,7 +79,10 @@ internal sealed class ProcessReplacementProbe
                         string[]? arguments = await ProcessArguments.ReadAsync(identity.ProcessId, cancellationToken).ConfigureAwait(false);
                         if (arguments is null)
                         {
-                            problem = "process.replacementUnconfirmed";
+                            if (!HasExited(process))
+                            {
+                                problem = "process.replacementUnconfirmed";
+                            }
                             continue;
                         }
                         if (!string.Equals(ContractJson.Hash(arguments), window.ArgumentsHash, StringComparison.Ordinal))
@@ -91,11 +102,17 @@ internal sealed class ProcessReplacementProbe
                 }
                 catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                 {
-                    problem = "process.replacementUnconfirmed";
+                    if (!HasExited(process))
+                    {
+                        problem = "process.replacementUnconfirmed";
+                    }
                 }
                 catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException or ArgumentException)
                 {
-                    problem = "process.replacementUnconfirmed";
+                    if (!HasExited(process))
+                    {
+                        problem = "process.replacementUnconfirmed";
+                    }
                 }
             }
         }
@@ -111,6 +128,20 @@ internal sealed class ProcessReplacementProbe
             return (null, problem);
         }
         return (found, null);
+    }
+
+    /// <summary>照会中に終了した候補は除外し、生存を確認できない候補は保留に残します。</summary>
+    /// <returns>OSから終了を確認できた場合だけtrueです。</returns>
+    private static bool HasExited(Process process)
+    {
+        try
+        {
+            return process.HasExited;
+        }
+        catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException)
+        {
+            return false;
+        }
     }
 
     /// <summary>一登録・一確認区間だけを保持する照会抑制です。</summary>
