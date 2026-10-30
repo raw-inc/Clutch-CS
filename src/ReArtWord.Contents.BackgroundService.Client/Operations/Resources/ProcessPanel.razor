@@ -22,6 +22,10 @@
         @if(processes.Count==0){<div class="empty">@Ui["No applications registered on this host."]</div>}
     </div>
 </section>
+@if(peer is not null && cluster is not null)
+{
+    <ApplicationGroupPanel @ref="groupPanel" @key="(cluster,peer)" ClusterId="@cluster" PeerId="@peer" Owner="@Owner" Available="@(target is not null)" Applications="@processes.Select(item=>item.Definition).ToArray()" />
+}
 <Modal Open="@(selected is not null&&!registrationOpen&&removing is null)" Title='@(selected?.Definition.DisplayName??Ui["Application state"])' Close="()=>selected=null">
     @if(selected is {} item)
     {

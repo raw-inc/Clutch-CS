@@ -33,6 +33,7 @@ public sealed partial class ProcessPanel
     } = null!;
 
     private readonly List<ProcessView> processes = [];
+    private ApplicationGroupPanel? groupPanel;
     private ProcessView? selected;
     private ProcessView? removing;
     private ServiceStatus? target;
@@ -95,6 +96,10 @@ public sealed partial class ProcessPanel
         try
         {
             await LoadAsync(cancellationToken).ConfigureAwait(true);
+            if (groupPanel is not null)
+            {
+                await groupPanel.RefreshAsync(cancellationToken).ConfigureAwait(true);
+            }
         }
         catch (Exception exception) when (exception is HttpRequestException or JsonException or InvalidOperationException)
         {
