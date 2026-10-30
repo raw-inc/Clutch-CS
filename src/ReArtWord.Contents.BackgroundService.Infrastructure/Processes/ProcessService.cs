@@ -197,10 +197,16 @@ public sealed class ProcessService : IProcessService, IDisposable
         return ExecuteAsync(id, static (session, token) => session.RecoverAsync(token), automatic: true, cancellationToken: cancellationToken);
     }
 
-    /// <summary>監視登録の版と有効状態を確認した排他内で復旧判定します。</summary>
+    /// <summary>起動予定の待機中も監視を続け、許可された時点でだけ自動復旧します。</summary>
     /// <returns>編集で無効化した登録へ古い監視を適用しない結果です。</returns>
-    internal ValueTask<ProcessOperationResult> MonitorAsync(RegisteredProcess registration, CancellationToken cancellationToken = default)
-        => ExecuteAsync(registration.Definition.Id, static (session, token) => session.RecoverAsync(token), registration.Version, true, cancellationToken);
+    internal ValueTask<ProcessOperationResult> MonitorAsync(RegisteredProcess registration, bool deferRecovery, CancellationToken cancellationToken = default)
+    {
+        if (deferRecovery)
+        {
+            return ExecuteAsync(registration.Definition.Id, static (session, token) => session.ObserveAsync(token), registration.Version, true, cancellationToken);
+        }
+        return ExecuteAsync(registration.Definition.Id, static (session, token) => session.RecoverAsync(token), registration.Version, true, cancellationToken);
+    }
 
     /// <summary>汎用ノードから現起動回の準備・利用可能・安定状態を渡します。</summary>
     /// <returns>起動回を照合した保存結果です。</returns>
