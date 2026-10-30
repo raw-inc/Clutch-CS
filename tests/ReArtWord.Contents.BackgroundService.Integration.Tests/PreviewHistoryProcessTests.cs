@@ -50,6 +50,19 @@ public sealed class PreviewHistoryProcessTests
         }
         foreach (CorePeer peer in new[] { first, second })
         {
+            Contracts.Execution.History.ExecutionHistoryPage activity = await peer.GetAsync<Contracts.Execution.History.ExecutionHistoryPage>("executions.activity",
+                new Contracts.Execution.History.ExecutionHistoryQuery(100), timeout.Token).ConfigureAwait(true);
+            Assert.All(activity.Entries, entry =>
+            {
+                Assert.Null(entry.Report);
+                Assert.NotNull(entry.Summary);
+                Assert.Empty(entry.Summary.Targets);
+            });
+            if (ReferenceEquals(peer, first))
+            {
+                Assert.NotEmpty(activity.Entries);
+                Assert.Contains(definition.Id, activity.Entries.Select(entry => entry.Summary!.WorkflowId));
+            }
             NodePreviewHistoryEntry[] rows = await peer.GetAsync<NodePreviewHistoryEntry[]>("previews.history", new NodePreviewHistoryQuery(definition.Id, "preview"), timeout.Token).ConfigureAwait(true);
             Assert.Equal(50, rows.Length);
             Assert.Equal(Enumerable.Range(6, 50).Reverse().Select(number => (long)number), rows.Select(row => row.Number));

@@ -33,7 +33,7 @@ internal sealed class OverviewActivityWindow
         {
             runs.Remove(id);
         }
-        if (2000 < runs.Count)
+        if (2000 <= runs.Count)
         {
             limitedUntil = now.AddMinutes(1);
         }

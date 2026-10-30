@@ -113,6 +113,10 @@ internal static class WorkflowManagement
             }
             return ExecutionHistory.Page(service.Engine.RecentViews().Concat(service.ExecutionJournal.Recent()).DistinctBy(WorkflowExecutionJournal.Identity), query);
         });
+        registry.ReadValue("executions.activity", value => ExecutionHistory.ActivityPage(
+            service.Engine.RecentViews().Concat(service.ExecutionJournal.Recent()).DistinctBy(WorkflowExecutionJournal.Identity),
+            value is null ? new ExecutionHistoryQuery()
+                          : ManagementRegistry.Body<ExecutionHistoryQuery>(value)));
         registry.Write("executions.cancel", async (value, cancellation) => new
         {
             requested = await service.Executor.RequestCancellationAsync(ManagementRegistry.OperationId(value), cancellation).ConfigureAwait(false),

@@ -264,7 +264,7 @@ public sealed class DashboardCacheTests
         int fast = 0, details = 0, maximumFast = 0, maximumDetails = 0;
         using DashboardCache cache = new(() => [new("cluster", peers, [], DateTimeOffset.UtcNow)], async (command, token) =>
         {
-            bool diagnostic = command.Operation is "executions.list" or "logs.query";
+            bool diagnostic = command.Operation is "executions.list" or "executions.activity" or "logs.query";
             lock (gate)
             {
                 if (diagnostic)
@@ -275,7 +275,9 @@ public sealed class DashboardCacheTests
                 {
                     maximumFast = Math.Max(maximumFast, ++fast);
                 }
-                if (24 <= fast && 4 <= details)
+
+                // 機能確認後の旧経路と活動ページでは開始段階が異なるため、上限はそれぞれ観測します。
+                if (24 <= maximumFast && 4 <= maximumDetails)
                 {
                     full.TrySetResult();
                 }

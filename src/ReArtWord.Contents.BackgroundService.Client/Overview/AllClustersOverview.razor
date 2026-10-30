@@ -37,7 +37,7 @@
                 @{var activity=telemetry.Observations.SelectMany(pair=>pair.Value.Activity(Api.UtcNow).Select(row=>(Cluster:pair.Key,Row:row))).OrderByDescending(item=>item.Row.Completed).ToArray();}
                 @if(activity.Length==0){<p class="empty">@Ui["No completions in the retrieved range."]</p>}
                 @foreach(var item in activity.Take(8)){<div class="activity-row"><div><small>@item.Cluster</small><strong title="@item.Row.WorkflowId">@telemetry.Observations[item.Cluster].WorkflowName(item.Row.WorkflowId)</strong></div><span>@item.Row.Completed <small>@Ui["per 60 sec"]</small></span>@if(item.Row.Unsuccessful!=0){<small>@Ui.Format("{0} non-success results",item.Row.Unsuccessful)</small>}</div>}
-                <footer>@Ui.Format("Latest poll: {0}/{1} peers · up to 100 results each",telemetry.Observations.Sum(pair=>pair.Value.ActivityPeers),telemetry.KnownPeers) · @Ui["Partial range, not a cluster total"] @if(activity.Length>8){<span> · @Ui.Format("Showing 8/{0} workflows",activity.Length)</span>}</footer>
+                <footer>@Ui.Format("Latest poll: {0}/{1} peers",telemetry.Observations.Sum(pair=>pair.Value.ActivityPeers),telemetry.KnownPeers) · @Ui["Partial range, not a cluster total"] @if(activity.Length>8){<span> · @Ui.Format("Showing 8/{0} workflows",activity.Length)</span>}</footer>
                 </div>
             </section>
             <section><div class="panel-heading"><h2>@Ui["Recent logs"]</h2><span>@Ui["Last 15 minutes"]</span></div>

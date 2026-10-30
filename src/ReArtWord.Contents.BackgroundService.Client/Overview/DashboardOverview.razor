@@ -21,7 +21,7 @@
                 @{var activity = telemetry.Activity(Api.UtcNow); var maximum = Math.Max(1, activity.Select(row=>row.Completed).DefaultIfEmpty(0).Max());}
                 @if(activity.Count==0){<div class="activity-empty">@Ui["No completions in the retrieved range."]</div>}
                 @foreach(var row in activity.Take(8)){<div class="activity-row"><div><a href="@("/editor?workflow="+Uri.EscapeDataString(row.WorkflowId))" title="@row.WorkflowId">@telemetry.WorkflowName(row.WorkflowId)</a><span>@row.Completed <small>@Ui["per 60 sec"]</small></span></div><div class="activity-track"><span style="@("width:"+(100d*row.Completed/maximum).ToString("0.0",CultureInfo.InvariantCulture)+"%")"></span></div>@if(row.Unsuccessful!=0){<small class="activity-warning">@Ui.Format("{0} non-success results",row.Unsuccessful)</small>}</div>}
-                <footer>@Ui.Format("Latest poll: {0}/{1} peers · up to 100 results each",telemetry.ActivityPeers,telemetry.KnownPeers)@if(telemetry.ActivityLimited){<span> · @Ui["Partial range, not a cluster total"]</span>}@if(activity.Count>8){<span> · @Ui.Format("Showing 8/{0} workflows",activity.Count)</span>}</footer>
+                <footer>@Ui.Format("Latest poll: {0}/{1} peers",telemetry.ActivityPeers,telemetry.KnownPeers)@if(telemetry.ActivityLimited){<span> · @Ui["Partial range, not a cluster total"]</span>}@if(activity.Count>8){<span> · @Ui.Format("Showing 8/{0} workflows",activity.Count)</span>}</footer>
                 </div>
             </section>
             <section class="logs-panel"><div class="panel-heading"><h2>@Ui["Recent logs"]</h2><a href="/logs">Log Viewer →</a></div>

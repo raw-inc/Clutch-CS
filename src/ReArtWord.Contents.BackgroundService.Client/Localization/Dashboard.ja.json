@@ -133,7 +133,7 @@
   "OS traffic": "OS通信量",
   "Not measured": "取得不可",
   "Peer instance is unconfirmed": "ピア実体を確認できません",
-  "Latest poll: {0}/{1} peers · up to 100 results each": "今回の取得 {0}/{1} ピア · 各最大100結果",
+  "Latest poll: {0}/{1} peers": "直近の取得: {0}/{1}ピア",
   "Dashboard": "ダッシュボード",
   "All clusters": "全クラスタ",
   "Selected cluster": "選択中のクラスタ",
