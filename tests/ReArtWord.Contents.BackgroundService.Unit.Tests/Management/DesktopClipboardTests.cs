@@ -27,18 +27,26 @@ public sealed class DesktopClipboardTests
         start.ArgumentList.Add("clipboard-isolated");
         using System.Diagnostics.Process process = System.Diagnostics.Process.Start(start)!;
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
+        Task<string> errors = process.StandardError.ReadToEndAsync(timeout.Token);
         try
         {
-            Task<string> errors = process.StandardError.ReadToEndAsync(timeout.Token);
             await process.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
             Assert.True(process.ExitCode == 0, await errors.ConfigureAwait(true));
         }
         finally
         {
-            if (!process.HasExited)
+            try
             {
-                process.Kill(true);
+                if (!process.HasExited)
+                {
+                    process.Kill(true);
+                }
                 await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(true);
+            }
+            finally
+            {
+                await timeout.CancelAsync().ConfigureAwait(true);
+                await ((Task)errors).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
             }
         }
     }
