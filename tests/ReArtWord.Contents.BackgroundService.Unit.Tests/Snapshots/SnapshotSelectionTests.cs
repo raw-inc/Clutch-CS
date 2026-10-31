@@ -130,6 +130,7 @@ public sealed class SnapshotSelectionTests
         finally
         {
             release.TrySetResult();
+            await restoring.ConfigureAwait(true);
         }
         Assert.Equal(EOutcome.Succeeded, (await restoring.ConfigureAwait(true)).Outcome);
         Assert.Empty(await secondSnapshots.GetEditLocksAsync());
@@ -162,26 +163,34 @@ public sealed class SnapshotSelectionTests
         using CancellationTokenSource timeout = new();
         Task<SnapshotRestoreResult> restoration = snapshots.RestoreAsync(request, timeout.Token);
         using CancellationTokenSource deadline = new(TimeSpan.FromSeconds(10));
-        while (runtime.Restores == 0)
+        try
         {
-            await Task.Delay(10, deadline.Token);
+            while (runtime.Restores == 0)
+            {
+                await Task.Delay(10, deadline.Token);
+            }
+            await timeout.CancelAsync();
+            SnapshotRestoreResult unknown = await restoration.ConfigureAwait(true);
+            Assert.Equal(EOutcome.Unknown, unknown.Outcome);
+            Assert.Single(await snapshots.GetEditLocksAsync());
+            StoredWorkflow saved = (await store.GetAsync("demo"))!;
+            WorkflowDefinition outside = saved.Definition with { Name = "outside", Nodes = [saved.Definition.Nodes[0], current.Nodes[1] with { Settings = JsonSerializer.SerializeToElement(new { scope = "workflow", key = "b-later" }) }] };
+            WorkflowSaveResult allowed = await store.SaveAsync(new(Guid.NewGuid(), outside, saved.Revision, EActivationPolicy.Explicit));
+            Assert.Equal(EOutcome.Succeeded, allowed.Saved.Outcome);
+            WorkflowSaveResult rejected = await store.SaveAsync(new(Guid.NewGuid(), outside with { Nodes = [current.Nodes[0], outside.Nodes[1]] }, allowed.Revision));
+            Assert.Equal(EOutcome.NotExecuted, rejected.Saved.Outcome);
+            release.SetResult();
+            SnapshotRestoreResult recovered = await snapshots.RecoverAsync(request);
+            Assert.Equal(EOutcome.Succeeded, recovered.Outcome);
+            Assert.Equal(1, runtime.Restores);
+            Assert.Equal(ContractJson.Hash(outside), ContractJson.Hash((await store.GetAsync("demo"))!.Definition));
+            Assert.Empty(await snapshots.GetEditLocksAsync());
         }
-        await timeout.CancelAsync();
-        SnapshotRestoreResult unknown = await restoration.ConfigureAwait(true);
-        Assert.Equal(EOutcome.Unknown, unknown.Outcome);
-        Assert.Single(await snapshots.GetEditLocksAsync());
-        StoredWorkflow saved = (await store.GetAsync("demo"))!;
-        WorkflowDefinition outside = saved.Definition with { Name = "outside", Nodes = [saved.Definition.Nodes[0], current.Nodes[1] with { Settings = JsonSerializer.SerializeToElement(new { scope = "workflow", key = "b-later" }) }] };
-        WorkflowSaveResult allowed = await store.SaveAsync(new(Guid.NewGuid(), outside, saved.Revision, EActivationPolicy.Explicit));
-        Assert.Equal(EOutcome.Succeeded, allowed.Saved.Outcome);
-        WorkflowSaveResult rejected = await store.SaveAsync(new(Guid.NewGuid(), outside with { Nodes = [current.Nodes[0], outside.Nodes[1]] }, allowed.Revision));
-        Assert.Equal(EOutcome.NotExecuted, rejected.Saved.Outcome);
-        release.SetResult();
-        SnapshotRestoreResult recovered = await snapshots.RecoverAsync(request);
-        Assert.Equal(EOutcome.Succeeded, recovered.Outcome);
-        Assert.Equal(1, runtime.Restores);
-        Assert.Equal(ContractJson.Hash(outside), ContractJson.Hash((await store.GetAsync("demo"))!.Definition));
-        Assert.Empty(await snapshots.GetEditLocksAsync());
+        finally
+        {
+            release.TrySetResult();
+            await restoration.ConfigureAwait(true);
+        }
     }
 
     /// <summary>選択ノードだけを古い値へ戻し、他ノードと全体属性は現在値を維持します。</summary>

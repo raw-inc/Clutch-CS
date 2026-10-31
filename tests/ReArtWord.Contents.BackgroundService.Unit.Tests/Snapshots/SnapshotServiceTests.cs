@@ -256,14 +256,21 @@ public sealed class SnapshotServiceTests
         TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         participant.RestoreWait = release.Task;
         SnapshotRestoreRequest request = new(Guid.NewGuid(), [new(target, snapshot.Snapshot!.Id)]);
-        SnapshotRestoreResult unknown = await firstService.RestoreAsync(request);
-        Assert.Equal(EOutcome.Unknown, unknown.Outcome);
-        release.SetResult();
-        Assert.Equal(EOutcome.Unknown, (await firstService.RestoreAsync(request)).Outcome);
-        SnapshotRestoreResult recovered = await firstService.RecoverAsync(request);
-        Assert.Equal(EOutcome.Succeeded, recovered.Outcome);
-        Assert.Equal(1, participant.Restores);
-        Assert.Equal(1, participant.Current);
+        try
+        {
+            SnapshotRestoreResult unknown = await firstService.RestoreAsync(request);
+            Assert.Equal(EOutcome.Unknown, unknown.Outcome);
+            release.SetResult();
+            Assert.Equal(EOutcome.Unknown, (await firstService.RestoreAsync(request)).Outcome);
+            SnapshotRestoreResult recovered = await firstService.RecoverAsync(request);
+            Assert.Equal(EOutcome.Succeeded, recovered.Outcome);
+            Assert.Equal(1, participant.Restores);
+            Assert.Equal(1, participant.Current);
+        }
+        finally
+        {
+            release.TrySetResult();
+        }
     }
 
     /// <summary>独立した明示初期化Peerを作ります。</summary>
