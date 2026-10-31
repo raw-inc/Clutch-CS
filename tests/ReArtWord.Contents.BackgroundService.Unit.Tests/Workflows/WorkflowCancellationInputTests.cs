@@ -71,7 +71,7 @@ public sealed class WorkflowCancellationInputTests
         using CancellationTokenRegistration delayed = cancellation.Token.Register(() =>
         {
             callbackEntered.TrySetResult();
-            resumeCallbacks.Wait(TimeSpan.FromSeconds(10));
+            Assert.True(resumeCallbacks.Wait(TimeSpan.FromSeconds(10)), "The cancellation gate timed out before the test released it.");
         });
         Task cancelling = cancellation.CancelAsync();
         try
@@ -123,7 +123,7 @@ public sealed class WorkflowCancellationInputTests
         using CancellationTokenRegistration delayed = cancellation.Token.Register(() =>
         {
             callbackEntered.TrySetResult();
-            resumeCallbacks.Wait(TimeSpan.FromSeconds(10));
+            Assert.True(resumeCallbacks.Wait(TimeSpan.FromSeconds(10)), "The cancellation gate timed out before the test released it.");
         });
         Task cancelling = cancellation.CancelAsync();
         try
