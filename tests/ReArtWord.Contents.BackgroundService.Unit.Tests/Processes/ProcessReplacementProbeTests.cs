@@ -2,6 +2,7 @@ using System.Diagnostics;
 using ReArtWord.Contents.BackgroundService.Contracts.Processes;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Processes;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 using ReArtWord.Contents.BackgroundService.Runtime.Processes.Commands;
 using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
@@ -36,7 +37,7 @@ public sealed class ProcessReplacementProbeTests
             if (exits)
             {
                 candidate.Kill(true);
-                await candidate.WaitForExitAsync(token).ConfigureAwait(false);
+                await ProcessCompletion.WaitAsync(candidate, token).ConfigureAwait(false);
             }
             throw failure switch
             {
