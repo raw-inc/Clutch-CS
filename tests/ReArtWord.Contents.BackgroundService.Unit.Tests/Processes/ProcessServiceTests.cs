@@ -22,6 +22,7 @@ public sealed class ProcessServiceTests
     {
         using ProcessTestScope scope = new();
         using ProcessService service = scope.CreateService();
+        using CancellationTokenSource deadline = new(TimeSpan.FromSeconds(30));
         Assert.Equal(EOutcome.Succeeded, await service.RegisterAsync(scope.Definition));
         ProcessOperationResult started = await service.StartAsync(scope.Definition.Id);
         scope.Track(started);
@@ -30,12 +31,15 @@ public sealed class ProcessServiceTests
         Assert.Null(started.Status.Ready);
         IActionNode wait = (IActionNode)Assert.Single(ProcessNodeRegistration.Create(service, new WorkflowEventHub()), node => string.Equals(node.Descriptor.Type, "process.waitReady", StringComparison.Ordinal));
         NodeExecutionContext context = NodeTestContext.Create(JsonSerializer.Serialize(new { processId = scope.Definition.Id, timeoutMs = 50 }));
-        NodeResult timeout = await wait.ExecuteAsync(context);
+        NodeResult timeout = await wait.ExecuteAsync(context, deadline.Token);
         Assert.Equal("process.readyTimeout", timeout.ReasonCode);
         ProcessOperationResult stale = await service.SignalAsync(scope.Definition.Id, new ProcessSignal(Guid.NewGuid(), true, true));
         Assert.Equal(EOutcome.NotExecuted, stale.Outcome);
         Assert.Equal(EOutcome.Succeeded, (await service.SignalAsync(scope.Definition.Id, new ProcessSignal(started.Status.InstanceId, true, true))).Outcome);
-        Assert.Equal(EOutcome.Succeeded, (await wait.ExecuteAsync(context)).Outcome);
+
+        // 50msは期限切れの検証専用です。readyの確認に同じ競合条件を持ち込みません。
+        NodeExecutionContext confirmed = NodeTestContext.Create(JsonSerializer.Serialize(new { processId = scope.Definition.Id, timeoutMs = (int?)null }));
+        Assert.Equal(EOutcome.Succeeded, (await wait.ExecuteAsync(confirmed, deadline.Token)).Outcome);
         ProcessOperationResult repeated = await service.StartAsync(scope.Definition.Id);
         Assert.Equal(started.Status.Identity, repeated.Status!.Identity);
     }
