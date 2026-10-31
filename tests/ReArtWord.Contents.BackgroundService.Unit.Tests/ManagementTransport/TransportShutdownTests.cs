@@ -24,8 +24,8 @@ public sealed class TransportShutdownTests
         Guid senderId = Guid.NewGuid();
         Guid receiverId = Guid.NewGuid();
         UdpTransport sender = new(new("sender", "127.0.0.1", "127.255.255.255", port, cluster), senderId, TimeProvider.System);
-        UdpTransport receiver = new(new("receiver", "127.0.0.1", "127.255.255.255", port, cluster), receiverId, TimeProvider.System);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable senderLifetime = sender.ConfigureAwait(true);
+        UdpTransport receiver = new(new("receiver", "127.0.0.1", "127.255.255.255", port, cluster), receiverId, TimeProvider.System);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable receiverLifetime = receiver.ConfigureAwait(true);
         sender.Initialize(network);
         receiver.Initialize(network);
