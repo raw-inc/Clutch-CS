@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace ReArtWord.Contents.BackgroundService.Client.Tests.Client;
 
-/// <summary>数値表示の地域設定を試験内で指定し、終了時に元の設定へ戻します。</summary>
+/// <summary>表示の地域設定を試験内で指定し、終了時に元の設定へ戻します。</summary>
 internal sealed class ClientCultureScope : IDisposable
 {
     private readonly CultureInfo previous = CultureInfo.CurrentCulture;
