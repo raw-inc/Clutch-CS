@@ -145,15 +145,16 @@ public sealed class LocalUpdateTests
         using CancellationTokenSource outputLifetime = new();
         Task<string> stdout = updater.StandardOutput.ReadToEndAsync(outputLifetime.Token);
         Task<string> stderr = updater.StandardError.ReadToEndAsync(outputLifetime.Token);
-        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
         try
         {
-            await updater.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+            // 停止・起動はジョブの期限で検証し、試験全体のハングは共通runsettingsで検出します。
+            await updater.WaitForExitAsync().ConfigureAwait(true);
             JsonElement health = await scope.HealthAsync().ConfigureAwait(true);
             Assert.Equal("v2", health.GetProperty("buildVersion").GetString());
             await scope.StopAsync().ConfigureAwait(true);
-            Assert.True(updater.ExitCode == 0, await stderr.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true));
-            Assert.Contains("completed", await stdout.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true), StringComparison.Ordinal);
+            scope.StopProcesses();
+            Assert.True(updater.ExitCode == 0, await stderr.ConfigureAwait(true));
+            Assert.Contains("completed", await stdout.ConfigureAwait(true), StringComparison.Ordinal);
             LocalUpdateRecord? record = await new UpdateJournal(new UpdateLayout(job.Options, job.OperationId), job.PeerId).ReadAsync();
             Assert.Equal(EUpdatePhase.Completed, record!.Result.Phase);
         }
