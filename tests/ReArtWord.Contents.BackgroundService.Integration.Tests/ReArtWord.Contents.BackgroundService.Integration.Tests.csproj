@@ -2,6 +2,7 @@
   <PropertyGroup><TargetFramework>net10.0</TargetFramework><AllowUnsafeBlocks>true</AllowUnsafeBlocks></PropertyGroup>
   <ItemGroup>
     <Compile Include="../Shared/ProcessResourceSample.cs" Link="Performance/ProcessResourceSample.cs" />
+    <Compile Include="../Shared/TestProcessDirectory.cs" Link="Shared/TestProcessDirectory.cs" />
     <Compile Include="../Shared/ApplicationProcessFixture.cs" Link="Applications/ApplicationProcessFixture.cs" />
     <Compile Include="../Shared/PublishedFixtureFile.cs" Link="Applications/PublishedFixtureFile.cs" />
     <ProjectReference Include="../ReArtWord.Contents.BackgroundService.Unit.Tests/CommandLine/FixtureHost/FixtureHost.csproj" ReferenceOutputAssembly="false" />
