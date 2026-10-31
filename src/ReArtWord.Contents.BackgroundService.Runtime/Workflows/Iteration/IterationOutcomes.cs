@@ -20,7 +20,7 @@ internal static class IterationOutcomes
 
     /// <summary>非選択経路以外の未実行を、別枝の成功で覆いません。</summary>
     /// <returns>実施できなかった処理も含む要素全体の結果です。</returns>
-    internal static EOutcome BodyOutcome(ExecutionFrame[] frames, bool cancellationRequested = false)
+    internal static EOutcome BodyOutcome(ExecutionFrame[] frames, bool cancellationRequested)
     {
         EOutcome outcome = ExecutionOutcomes.Aggregate(frames.Select(frame => CancelledOutcome(frame, cancellationRequested)));
         if (HasBlockedBody(frames, cancellationRequested))
