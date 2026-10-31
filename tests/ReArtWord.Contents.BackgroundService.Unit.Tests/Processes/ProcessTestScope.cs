@@ -4,6 +4,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Processes;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Processes;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Processes;
 
@@ -75,7 +76,7 @@ internal sealed class ProcessTestScope : IDisposable
     {
         using Process process = Process.GetProcessById(identity.ProcessId);
         process.Kill(true);
-        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        await ProcessCompletion.WaitAsync(process, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>試験が作成したプロセスと保存先のルートだけを取り除きます。</summary>
@@ -88,10 +89,13 @@ internal sealed class ProcessTestScope : IDisposable
             try
             {
                 using Process process = Process.GetProcessById(identity.ProcessId);
-                if (!process.HasExited && new DateTimeOffset(process.StartTime.ToUniversalTime()) == identity.StartedAt)
+                if (!ProcessCompletion.HasExited(process) && new DateTimeOffset(process.StartTime.ToUniversalTime()) == identity.StartedAt)
                 {
-                    process.Kill(true);
-                    process.WaitForExit(5000);
+                    if (!process.HasExited)
+                    {
+                        process.Kill(true);
+                    }
+                    process.WaitForExit();
                 }
             }
             catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)

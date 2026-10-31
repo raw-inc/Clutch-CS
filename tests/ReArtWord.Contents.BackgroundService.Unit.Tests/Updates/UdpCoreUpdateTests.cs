@@ -23,6 +23,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Health;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Local;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Updates;
 
@@ -266,7 +267,7 @@ public sealed class UdpCoreUpdateTests
                     if (!child.HasExited && new DateTimeOffset(child.StartTime.ToUniversalTime()) == identity.StartedAt)
                     {
                         child.Kill(true);
-                        await child.WaitForExitAsync().ConfigureAwait(true);
+                        await ProcessCompletion.WaitAsync(child).ConfigureAwait(true);
                     }
                 }
                 catch (ArgumentException)

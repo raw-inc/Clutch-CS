@@ -6,6 +6,7 @@ using ReArtWord.Contents.BackgroundService.CoreService.Desktop;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Clipboard;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Desktop;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
 
@@ -30,7 +31,7 @@ public sealed class DesktopClipboardTests
         try
         {
             Task<string> errors = process.StandardError.ReadToEndAsync(timeout.Token);
-            await process.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+            await ProcessCompletion.WaitAsync(process, timeout.Token).ConfigureAwait(true);
             Assert.True(process.ExitCode == 0, await errors.ConfigureAwait(true));
         }
         finally
@@ -38,7 +39,7 @@ public sealed class DesktopClipboardTests
             if (!process.HasExited)
             {
                 process.Kill(true);
-                await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(true);
+                await ProcessCompletion.WaitAsync(process, CancellationToken.None).ConfigureAwait(true);
             }
         }
     }

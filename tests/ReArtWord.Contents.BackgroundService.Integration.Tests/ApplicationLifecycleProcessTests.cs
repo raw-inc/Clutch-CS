@@ -11,6 +11,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Processes;
 using ReArtWord.Contents.BackgroundService.Contracts.Workflow;
 using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 
@@ -163,7 +164,7 @@ public sealed class ApplicationLifecycleProcessTests
         if (exitWhileOffline)
         {
             app.Release();
-            await process.WaitForExitAsync(timeout.Token);
+            await ProcessCompletion.WaitAsync(process, timeout.Token);
         }
         await ReadyAsync(peer, timeout.Token);
         ApplicationView observed = Assert.Single(await peer.GetAsync<ApplicationView[]>("processes.list", timeout.Token));
@@ -173,7 +174,7 @@ public sealed class ApplicationLifecycleProcessTests
         if (!exitWhileOffline)
         {
             process.Kill();
-            await process.WaitForExitAsync(timeout.Token);
+            await ProcessCompletion.WaitAsync(process, timeout.Token);
             await CorePeer.WaitAsync(_ => Task.FromResult(app.Starts().Length == 2), timeout.Token);
         }
         else

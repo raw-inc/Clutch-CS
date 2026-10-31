@@ -9,6 +9,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Processes;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 
@@ -63,7 +64,7 @@ public sealed class ApplicationGroupProcessTests
         using (Process failed = Process.GetProcessById(originalServer))
         {
             failed.Kill();
-            await failed.WaitForExitAsync(timeout.Token);
+            await ProcessCompletion.WaitAsync(failed, timeout.Token);
         }
         await CorePeer.WaitAsync(async token =>
         {

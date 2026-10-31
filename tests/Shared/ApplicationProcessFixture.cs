@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Processes;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Tests.Shared;
 
@@ -73,10 +74,13 @@ internal sealed class ApplicationProcessFixture : IDisposable
             {
                 using Process process = Process.GetProcessById(int.Parse(entry[0], CultureInfo.InvariantCulture));
                 DateTimeOffset started = DateTimeOffset.Parse(entry[1], CultureInfo.InvariantCulture);
-                if (!process.HasExited && new DateTimeOffset(process.StartTime.ToUniversalTime()) == started)
+                if (!ProcessCompletion.HasExited(process) && new DateTimeOffset(process.StartTime.ToUniversalTime()) == started)
                 {
-                    process.Kill(true);
-                    process.WaitForExit(5000);
+                    if (!process.HasExited)
+                    {
+                        process.Kill(true);
+                    }
+                    process.WaitForExit();
                 }
             }
             catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)

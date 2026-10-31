@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.SignalCapture.Capture;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.SignalCapture.Protocol.Tests;
 
@@ -134,7 +135,7 @@ internal sealed class PipeTestClient : IDisposable
     /// <returns>終了コード。</returns>
     internal async Task<int> ExitAsync(CancellationToken cancellationToken = default)
     {
-        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        await ProcessCompletion.WaitAsync(process, cancellationToken).ConfigureAwait(false);
         return process.ExitCode;
     }
 
@@ -145,12 +146,17 @@ internal sealed class PipeTestClient : IDisposable
     /// <summary>試験で所有した子プロセスだけを回収します。</summary>
     public void Dispose()
     {
-        if (!process.HasExited)
+        try
         {
-            process.Kill(true);
-            process.WaitForExit(5000);
+            if (!process.HasExited)
+            {
+                process.Kill(true);
+            }
+            process.WaitForExit();
         }
-
-        process.Dispose();
+        finally
+        {
+            process.Dispose();
+        }
     }
 }

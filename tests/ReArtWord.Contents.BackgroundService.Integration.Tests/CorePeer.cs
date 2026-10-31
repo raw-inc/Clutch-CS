@@ -10,6 +10,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Management;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Observers;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 
@@ -160,8 +161,8 @@ internal sealed class CorePeer : IAsyncDisposable
             if (!process.HasExited)
             {
                 process.Kill(includeChildren);
-                await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
             }
+            await ProcessCompletion.WaitAsync(process, cancellationToken).ConfigureAwait(false);
             string error = await errors.ConfigureAwait(false);
             if (error.Length != 0)
             {

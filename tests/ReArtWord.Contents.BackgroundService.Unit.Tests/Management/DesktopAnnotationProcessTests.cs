@@ -12,6 +12,7 @@ using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Tray;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Desktop;
 using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
 
@@ -87,14 +88,14 @@ public sealed class DesktopAnnotationProcessTests
             JsonElement controlled = await ReceiveAsync(second, 12, timeout.Token).ConfigureAwait(true);
             Assert.Single(controlled.GetProperty("cursors").EnumerateArray());
             one.Kill(true);
-            await one.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+            await ProcessCompletion.WaitAsync(one, timeout.Token).ConfigureAwait(true);
             await WaitAsync(() => Visible(two.Id) && !Present(one.Id), "The surviving annotation worker did not take over after the owner exited.", timeout.Token).ConfigureAwait(true);
             JsonElement cleared = await UntilAsync(second, value => value.GetProperty("cursors").GetArrayLength() == 0, timeout.Token).ConfigureAwait(true);
             Assert.Empty(cleared.GetProperty("cursors").EnumerateArray());
             await UntilAsync(second, value => value.GetProperty("points").GetArrayLength() == 0, timeout.Token).ConfigureAwait(true);
             await WaitAsync(() => !Visible(two.Id), "The annotation window remained visible after the shared points expired.", timeout.Token).ConfigureAwait(true);
             second.Close();
-            await two.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+            await ProcessCompletion.WaitAsync(two, timeout.Token).ConfigureAwait(true);
             Assert.Equal(0, two.ExitCode);
             Assert.False(Present(two.Id));
             if (other is not null)

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.ManagementTransport;
 
@@ -74,8 +75,8 @@ internal sealed class ObserverCoreProcess : IAsyncDisposable
             if (!process.HasExited)
             {
                 process.Kill(true);
-                await process.WaitForExitAsync().ConfigureAwait(false);
             }
+            await ProcessCompletion.WaitAsync(process).ConfigureAwait(false);
         }
     }
 }

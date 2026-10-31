@@ -12,6 +12,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement.WakeOnLan;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Management.Overview;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Client.Tests.Management;
 
@@ -94,7 +95,7 @@ public sealed class WakeRelayProcessTests
                 using CancellationTokenSource stop = new(TimeSpan.FromSeconds(3));
                 try
                 {
-                    await child.WaitForExitAsync(stop.Token).ConfigureAwait(true);
+                    await ProcessCompletion.WaitAsync(child, stop.Token).ConfigureAwait(true);
                 }
                 catch (OperationCanceledException) when (stop.IsCancellationRequested)
                 {
@@ -102,7 +103,7 @@ public sealed class WakeRelayProcessTests
                     {
                         child.Kill(true);
                     }
-                    await child.WaitForExitAsync().ConfigureAwait(true);
+                    await ProcessCompletion.WaitAsync(child).ConfigureAwait(true);
                 }
                 child.Dispose();
             }

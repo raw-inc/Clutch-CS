@@ -6,6 +6,7 @@ using System.IO.Pipes;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 
@@ -55,7 +56,7 @@ public sealed class HostPowerReadTests
             {
                 process.Kill(true);
             }
-            await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(true);
+            await ProcessCompletion.WaitAsync(process, CancellationToken.None).ConfigureAwait(true);
         }
     }
 

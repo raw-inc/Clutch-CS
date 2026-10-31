@@ -6,6 +6,7 @@ using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Capture;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Video;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
 
@@ -106,7 +107,7 @@ public sealed class DesktopReferenceTests
         Task<string> error = process.StandardError.ReadToEndAsync(cancellationToken);
         try
         {
-            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            await ProcessCompletion.WaitAsync(process, cancellationToken).ConfigureAwait(false);
             Assert.True(process.ExitCode == 0, await error.ConfigureAwait(false));
             return await output.ConfigureAwait(false);
         }
@@ -116,7 +117,7 @@ public sealed class DesktopReferenceTests
             {
                 process.Kill(true);
             }
-            await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+            await ProcessCompletion.WaitAsync(process, CancellationToken.None).ConfigureAwait(false);
             await Task.WhenAll(output, error).ConfigureAwait(false);
         }
     }

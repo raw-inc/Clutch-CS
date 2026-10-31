@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Installation;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Installer.Tests;
 
@@ -28,7 +29,7 @@ internal static class SetupOperationProcess
         {
             Task<string> output = process.StandardOutput.ReadToEndAsync(cancellationToken);
             Task<string> errors = process.StandardError.ReadToEndAsync(cancellationToken);
-            await Task.WhenAll(output, errors, process.WaitForExitAsync(cancellationToken)).ConfigureAwait(false);
+            await Task.WhenAll(output, errors, ProcessCompletion.WaitAsync(process, cancellationToken)).ConfigureAwait(false);
             return JsonSerializer.Deserialize<SetupResult>(await output.ConfigureAwait(false), ContractJson.Options)
                 ?? throw new InvalidDataException(await errors.ConfigureAwait(false));
         }
@@ -37,8 +38,8 @@ internal static class SetupOperationProcess
             if (!process.HasExited)
             {
                 process.Kill(true);
-                await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
             }
+            await ProcessCompletion.WaitAsync(process, CancellationToken.None).ConfigureAwait(false);
         }
     }
 }

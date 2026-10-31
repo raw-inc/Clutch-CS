@@ -2,6 +2,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Desktop;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Video;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
 
@@ -56,7 +57,7 @@ public sealed class DesktopVideoSettingsTests
         Task<string> error = process.StandardError.ReadToEndAsync(timeout.Token);
         try
         {
-            await process.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+            await ProcessCompletion.WaitAsync(process, timeout.Token).ConfigureAwait(true);
             string text = await output.ConfigureAwait(true);
             Assert.Equal(string.Empty, await error.ConfigureAwait(true));
             Assert.Equal(0, process.ExitCode);
@@ -70,7 +71,7 @@ public sealed class DesktopVideoSettingsTests
             {
                 process.Kill(true);
             }
-            await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(true);
+            await ProcessCompletion.WaitAsync(process, CancellationToken.None).ConfigureAwait(true);
             await Task.WhenAll(output, error).ConfigureAwait(true);
         }
     }

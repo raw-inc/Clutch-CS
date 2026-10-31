@@ -9,6 +9,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Updates;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Local;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Releases;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Updates;
 
@@ -145,7 +146,7 @@ public sealed class LocalUpdateTests
         Task<string> stdout = updater.StandardOutput.ReadToEndAsync();
         Task<string> stderr = updater.StandardError.ReadToEndAsync();
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
-        await updater.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+        await ProcessCompletion.WaitAsync(updater, timeout.Token).ConfigureAwait(true);
         JsonElement health = await scope.HealthAsync().ConfigureAwait(true);
         Assert.Equal("v2", health.GetProperty("buildVersion").GetString());
         await scope.StopAsync().ConfigureAwait(true);
