@@ -62,7 +62,7 @@ dotnet test tests/ReArtWord.Contents.BackgroundService.Client.Tests -c Release -
 
 定常診断の測定量は `CONTENTS_PERFORMANCE_JOURNAL_SCALE` と `CONTENTS_PERFORMANCE_JOURNAL_ROUNDS` で指定します。変更前後を同じビルド条件で複数回測り、初回の JIT や DB 準備を除いた区間で比較します。実行時間、履歴の保存時間、プロセスの読書き量、CPU 時間、メモリ割当をそれぞれ確認してください。プロセスの I/O は論理量であり、物理ディスクの転送量とは異なります。
 
-履歴の背景圧縮や再参加については、既存の `HistoryArchiveForwardingTests`、`HistoryRetentionProcessTests`、`PeriodicHeartbeatProbeTests` も併用します。長期履歴を増やす試験では、`CONTENTS_ARCHIVE_RECORDS` や `CONTENTS_PROBE_HISTORY_ROWS` の既存設定を使用できます。
+履歴の背景圧縮や再参加については、既存の `HistoryArchiveForwardingTests`、`HistoryRetentionProcessTests`、`PeriodicHeartbeatProbeTests` も併用します。長期履歴を増やす試験では、`CONTENTS_ARCHIVE_RECORDS` や `CONTENTS_PROBE_HISTORY_ROWS` の既存設定を使用できます。`CONTENTS_ARCHIVE_RECORDS` は256〜1,000,000件を指定でき、未指定または範囲外の場合は256件になります。
 
 HTTP試験は外部生成の待ち時間を再現するものではなく、受信したBinaryの配送・履歴・保存の負荷を確認します。
 
