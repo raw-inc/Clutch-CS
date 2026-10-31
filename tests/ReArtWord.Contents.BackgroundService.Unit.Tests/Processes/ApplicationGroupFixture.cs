@@ -78,7 +78,8 @@ internal sealed class ApplicationGroupFixture : IDisposable, IProcessPlatform
     {
         foreach (ProcessGroupMember member in Definition.Members)
         {
-            ProcessDefinition application = Storage.Definition with { Id = member.ApplicationId, AutomaticMonitoring = true, Recovery = new(DelayMilliseconds: 1000) };
+            ProcessDefinition application = Storage.Definition with { Id = member.ApplicationId, Arguments = [member.ApplicationId],
+                AutomaticMonitoring = true, Recovery = new(DelayMilliseconds: 1000) };
             Assert.Equal(EOutcome.Succeeded, await Service.RegisterAsync(application, cancellationToken: cancellationToken).ConfigureAwait(false));
             if (start)
             {
