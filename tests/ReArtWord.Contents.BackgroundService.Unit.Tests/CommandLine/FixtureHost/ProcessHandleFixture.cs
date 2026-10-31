@@ -10,8 +10,14 @@ internal static class ProcessHandleFixture
         List<FileStream> files = [];
         try
         {
-            // 強制終了時にもOSの後片付けを観測できるよう、少量のファイルを多数保持します。
-            for (int index = 0; index < 2048; index++)
+            // Windowsでは終了コードとOSの終了処理の間を観測するため、多数のハンドルを保持します。
+            // 他OSでの待機・取消の検証には少数で足りるため、ファイル記述子の上限へ近づけません。
+            int count = 32;
+            if (OperatingSystem.IsWindows())
+            {
+                count = 2048;
+            }
+            for (int index = 0; index < count; index++)
             {
                 string path = configuration + "." + index.ToString(System.Globalization.CultureInfo.InvariantCulture) + ".lock";
                 files.Add(new FileStream(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None));
