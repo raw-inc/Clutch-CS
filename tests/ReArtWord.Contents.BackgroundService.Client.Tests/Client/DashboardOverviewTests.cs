@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -246,7 +247,7 @@ public sealed class DashboardOverviewTests
     public async Task PeerPagingBoundsFanOutWithoutHidingRemainingPeers()
     {
         PeerInfo[] peers = Enumerable.Range(0, 129).Select(index => new PeerInfo("peer" + index.ToString("D3", System.Globalization.CultureInfo.InvariantCulture), Guid.NewGuid(), "host" + index.ToString("D3", System.Globalization.CultureInfo.InvariantCulture), "127.0.0.1", 1234, EPeerStatus.Ready, 1, null, DateTimeOffset.UtcNow)).ToArray();
-        List<string> observed = [];
+        ConcurrentBag<string> observed = [];
         using ClientHttpHandler handler = new((request, token) =>
         {
             string peerId = Assert.Single(request.Headers.GetValues("X-Contents-Peer"));
