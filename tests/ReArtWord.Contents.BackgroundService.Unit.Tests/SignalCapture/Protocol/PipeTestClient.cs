@@ -9,7 +9,7 @@ using ReArtWord.Contents.BackgroundService.SignalCapture.Capture;
 namespace ReArtWord.Contents.BackgroundService.SignalCapture.Protocol.Tests;
 
 /// <summary>発行済み AOT と開発 DLL に同じ pipe 契約を適用する試験クライアント。</summary>
-internal sealed class PipeTestClient : IDisposable
+internal sealed class PipeTestClient : IAsyncDisposable
 {
     private readonly Process process;
 
@@ -143,14 +143,20 @@ internal sealed class PipeTestClient : IDisposable
     internal Task<string> ErrorAsync(CancellationToken cancellationToken = default) => process.StandardError.ReadToEndAsync(cancellationToken);
 
     /// <summary>試験で所有した子プロセスだけを回収します。</summary>
-    public void Dispose()
+    /// <returns>子プロセスの終了とハンドルの解放です。</returns>
+    async ValueTask IAsyncDisposable.DisposeAsync()
     {
-        if (!process.HasExited)
+        try
         {
-            process.Kill(true);
-            process.WaitForExit(5000);
+            if (!process.HasExited)
+            {
+                process.Kill(true);
+            }
+            await process.WaitForExitAsync().ConfigureAwait(false);
         }
-
-        process.Dispose();
+        finally
+        {
+            process.Dispose();
+        }
     }
 }
