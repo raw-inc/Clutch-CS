@@ -76,7 +76,7 @@ internal static partial class ProcessOs
         try
         {
             using Process process = Process.GetProcessById(identity.ProcessId);
-            return !process.HasExited && Identity(process) == identity;
+            return !ProcessCompletion.HasExited(process) && Identity(process) == identity;
         }
         catch (ArgumentException)
         {
@@ -138,13 +138,13 @@ internal static partial class ProcessOs
             bool timedOut = false;
             try
             {
-                await process.WaitForExitAsync(linked.Token).ConfigureAwait(false);
+                await ProcessCompletion.WaitAsync(process, linked.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
                 timedOut = !cancellationToken.IsCancellationRequested;
             }
-            if (process.HasExited)
+            if (ProcessCompletion.HasExited(process))
             {
                 return EOutcome.Succeeded;
             }
@@ -162,7 +162,7 @@ internal static partial class ProcessOs
             }
             process.Kill(false);
             using CancellationTokenSource forced = new(TimeSpan.FromSeconds(10));
-            await process.WaitForExitAsync(forced.Token).ConfigureAwait(false);
+            await ProcessCompletion.WaitAsync(process, forced.Token).ConfigureAwait(false);
             return EOutcome.Succeeded;
         }
         catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException or ArgumentException or OperationCanceledException or NotSupportedException)

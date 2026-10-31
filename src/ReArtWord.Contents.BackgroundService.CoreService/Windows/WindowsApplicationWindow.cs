@@ -5,6 +5,7 @@ using System.IO.Pipes;
 using System.Runtime.Versioning;
 using ReArtWord.Contents.BackgroundService.Contracts.Processes;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.CoreService.Windows;
 
@@ -45,7 +46,7 @@ internal static class WindowsApplicationWindow
                 worker.Kill(true);
             }
             using CancellationTokenSource cleanup = new(TimeSpan.FromSeconds(5));
-            await worker.WaitForExitAsync(cleanup.Token).ConfigureAwait(false);
+            await ProcessCompletion.WaitAsync(worker, cleanup.Token).ConfigureAwait(false);
         }
     }
 

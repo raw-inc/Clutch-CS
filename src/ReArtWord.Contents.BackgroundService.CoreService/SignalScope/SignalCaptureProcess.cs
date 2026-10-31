@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using ReArtWord.Contents.BackgroundService.CoreService.Hosting;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.SignalScope;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.CoreService.SignalScope;
 
@@ -42,7 +43,7 @@ internal static class SignalCaptureProcess
             try
             {
                 using CancellationTokenSource grace = new(TimeSpan.FromSeconds(3));
-                await process.WaitForExitAsync(grace.Token).ConfigureAwait(false);
+                await ProcessCompletion.WaitAsync(process, grace.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -50,7 +51,7 @@ internal static class SignalCaptureProcess
                 {
                     process.Kill(entireProcessTree: true);
                 }
-                await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+                await ProcessCompletion.WaitAsync(process, CancellationToken.None).ConfigureAwait(false);
             }
             await SessionRelay.DrainAsync(Task.WhenAll(input, output, errors), linked.Token).ConfigureAwait(false);
         }
