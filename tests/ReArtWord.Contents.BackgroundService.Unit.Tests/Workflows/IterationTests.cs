@@ -63,11 +63,11 @@ public sealed class IterationTests
         TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         int active = 0;
-        int maximum = 0;
+        ConcurrentBag<int> concurrency = [];
         WorkflowFixture fixture = Create(async (context, token) =>
         {
             int current = Interlocked.Increment(ref active);
-            maximum = Math.Max(maximum, current);
+            concurrency.Add(current);
             if (current == 2)
             {
                 entered.TrySetResult();
@@ -87,7 +87,7 @@ public sealed class IterationTests
             release.TrySetResult();
             ExecutionReport report = await running.ConfigureAwait(true);
             Assert.Equal(EOutcome.Succeeded, report.Outcome);
-            Assert.Equal(2, maximum);
+            Assert.Equal(2, concurrency.Max());
             Assert.Equal("[1,2,3]", Collected(report).Json.GetRawText());
         }
         finally
