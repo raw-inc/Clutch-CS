@@ -13,6 +13,7 @@ using Xunit.Abstractions;
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Persistence;
 
 /// <summary>値と競合の一括照会で、現在値・削除・別接続の変更と破損を見落とさないことを確認します。</summary>
+[Collection("Performance")]
 public sealed class RepositoryCombinedReadTests(ITestOutputHelper output)
 {
     /// <summary>指定キーの有無にかかわらず、同じ用途の全競合を従来どおり返します。</summary>
@@ -102,11 +103,11 @@ public sealed class RepositoryCombinedReadTests(ITestOutputHelper output)
         Assert.True(combined < separate * 0.8, $"separate={separate}, combined={combined}");
     }
 
-    /// <summary>同期完了するSQLite照会を同じスレッドで測定します。</summary>
+    /// <summary>排他待ちでスレッドが切り替わっても、照会全体の割り当て量を測定します。</summary>
     /// <returns>32回の検証に割り当てたバイト数です。</returns>
     private static async Task<long> MeasureAsync(IDurableRepository repository, string scope, string key, bool combined, CancellationToken cancellationToken = default)
     {
-        long start = GC.GetAllocatedBytesForCurrentThread();
+        long start = GC.GetTotalAllocatedBytes(true);
         for (int index = 0; index < 32; index++)
         {
             DurableEntry? entry;
@@ -123,6 +124,6 @@ public sealed class RepositoryCombinedReadTests(ITestOutputHelper output)
             Assert.Equal(1, entry!.Value!.Json.GetInt32());
             Assert.Empty(conflicts);
         }
-        return GC.GetAllocatedBytesForCurrentThread() - start;
+        return GC.GetTotalAllocatedBytes(true) - start;
     }
 }
