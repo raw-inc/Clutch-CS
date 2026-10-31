@@ -216,11 +216,11 @@ public static class BoundedProcessRunner
 
     /// <summary>Windowsの同期pipeによるThreadPool占有を避け、文字コードとBOM判定を維持します。</summary>
     /// <returns>この一回の終了まで所有する出力readerです。</returns>
-    private static StreamReader Reader(StreamReader original)
+    private static StreamReader Reader(StreamReader original, CancellationToken drainDeadline)
     {
         if (OperatingSystem.IsWindows() && original.BaseStream is FileStream file && !file.IsAsync)
         {
-            return new StreamReader(new WindowsProcessPipe(file.SafeFileHandle), original.CurrentEncoding, detectEncodingFromByteOrderMarks: true);
+            return new StreamReader(new WindowsProcessPipe(file.SafeFileHandle, drainDeadline), original.CurrentEncoding, detectEncodingFromByteOrderMarks: true);
         }
         return original;
     }
@@ -244,14 +244,20 @@ public static class BoundedProcessRunner
     /// <returns>必要な標準出力だけを上限内で保持します。</returns>
     private static async Task<string> DrainAsync(StreamReader original, bool retain, ProcessRunLimits limits, Func<Task> limitReached, ProcessDiagnostics? diagnostics, CancellationToken cancellationToken = default)
     {
-        using StreamReader reader = Reader(original);
+        using StreamReader reader = Reader(original, cancellationToken);
+        CancellationToken readCancellation = cancellationToken;
+        if (OperatingSystem.IsWindows() && reader.BaseStream is WindowsProcessPipe)
+        {
+            // 期限後のバッファー読取りはpipe側で区切り、StreamReader内で受信済みの文字を失わないようにします。
+            readCancellation = CancellationToken.None;
+        }
         StringBuilder result = new();
         char[] buffer = new char[4096];
         int count;
         long total = 0;
         try
         {
-            while ((count = await reader.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false)) != 0)
+            while ((count = await reader.ReadAsync(buffer.AsMemory(), readCancellation).ConfigureAwait(false)) != 0)
             {
                 total += count;
                 if (!retain)
@@ -277,6 +283,13 @@ public static class BoundedProcessRunner
 
             // 本体終了後も子孫がpipeを保持する場合は、読取り期限までに受信した出力を返します。
             // 呼出元からの取消と終了コードはRunAsyncで別に判定します。
+        }
+        finally
+        {
+            if (OperatingSystem.IsWindows() && reader.BaseStream is WindowsProcessPipe { DrainDeadlineReached: true } && diagnostics is not null)
+            {
+                diagnostics.DrainTimedOut = true;
+            }
         }
         return result.ToString();
     }
