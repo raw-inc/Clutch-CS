@@ -7,6 +7,8 @@ using Xunit;
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Persistence;
 
 /// <summary>一時配列を減らしても既存契約の内容識別子を変えません。</summary>
+// 再利用時の割当量を計測するため、共有バッファーを他の試験が借用しない状態で実行します。
+[Collection("Performance")]
 public sealed class ContractHashTests
 {
     /// <summary>プロパティ順、配列順、数値表現、nullを既存canonical JSONどおり扱います。</summary>
