@@ -89,11 +89,19 @@ public sealed class OverviewWorkflowNamesTests
         using HttpClient http = new(handler) { BaseAddress = new Uri("http://localhost") };
         OverviewWorkflowNames names = new(new(http));
         Task pending = names.RefreshAsync("a", "peer", ["flow"]);
-        await ready.Task.WaitAsync(TimeSpan.FromSeconds(1)).ConfigureAwait(true);
-        await names.RefreshAsync("b", "peer", ["flow"]).ConfigureAwait(true);
-        release.TrySetResult();
-        await pending.ConfigureAwait(true);
-        Assert.Equal("b", names.Name("flow"));
+        try
+        {
+            await ready.Task.WaitAsync(TimeSpan.FromSeconds(1)).ConfigureAwait(true);
+            await names.RefreshAsync("b", "peer", ["flow"]).ConfigureAwait(true);
+            release.TrySetResult();
+            await pending.ConfigureAwait(true);
+            Assert.Equal("b", names.Name("flow"));
+        }
+        finally
+        {
+            release.TrySetResult();
+            await pending.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
     }
 
     /// <summary>WF本文を含まない管理API応答です。</summary>
