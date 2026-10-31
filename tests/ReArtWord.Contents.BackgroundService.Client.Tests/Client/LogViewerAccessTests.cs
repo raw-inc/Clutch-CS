@@ -119,6 +119,7 @@ public sealed class LogViewerAccessTests
             {
                 "/client/branding" => new ClientBranding(),
                 "/client/updates/visible" => new FleetUpdateOverview([], []),
+                "/client/transfers/active-count" => 0,
                 "/client/clusters" => Clusters(),
                 "/api/logs/statistics" => new LogStatistics(0, 0, 0, 0, 0, true, null),
                 _ => null
