@@ -71,17 +71,20 @@ internal sealed class SqliteVersionRows
             }
         }
         using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        using HashBufferWriter buffer = new(hash);
-        using (Utf8JsonWriter writer = new(buffer, new JsonWriterOptions { MaxDepth = ContractJson.Options.MaxDepth }))
+
+        // 各要素はEncodeで深さも検証済みです。配列の区切りだけを補い、大きな本文を作業バッファーへ複製しません。
+        hash.AppendData("["u8);
+        bool first = true;
+        foreach (DurableEntry entry in ordered)
         {
-            writer.WriteStartArray();
-            foreach (DurableEntry entry in ordered)
+            if (!first)
             {
-                // 同じcanonical writerで深さも検証した完全な一要素だけを再利用します。
-                writer.WriteRawValue(canonical[entry], skipInputValidation: true);
+                hash.AppendData(","u8);
             }
-            writer.WriteEndArray();
+            hash.AppendData(canonical[entry]);
+            first = false;
         }
+        hash.AppendData("]"u8);
         return (next, Convert.ToHexStringLower(hash.GetHashAndReset()));
     }
 
