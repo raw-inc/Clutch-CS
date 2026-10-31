@@ -162,6 +162,7 @@ public sealed class LogViewerAccessTests
 
             api.SelectedClusterId = "a";
             api.SelectedPeerId = "peer";
+            await activator.Layout!.SetParametersAsync(parameters).ConfigureAwait(true);
             queries.Clear();
             await SearchAsync(activator.Viewer!).ConfigureAwait(true);
             Assert.Equal(["a", "b"], queries.Select(item => item.Cluster).Order(StringComparer.Ordinal));
@@ -182,6 +183,7 @@ public sealed class LogViewerAccessTests
             Assert.True(Assert.Single(queries).Query.UncompressedOnly);
 
             api.SelectedPeerId = null;
+            await activator.Layout!.SetParametersAsync(parameters).ConfigureAwait(true);
             queries.Clear();
             await SearchAsync(activator.Viewer!).ConfigureAwait(true);
             Assert.Equal(["a", "b"], queries.Select(item => item.Cluster).Order(StringComparer.Ordinal));
