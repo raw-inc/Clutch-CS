@@ -9,6 +9,7 @@ import { chromium, firefox } from 'playwright';
 
 /** 実際のRemoteDesktopモジュールを、実機へ入力を送らない接続先で確認します。 */
 const root = fileURLToPath(new URL('../../../src/ReArtWord.Contents.BackgroundService.Client/wwwroot/', import.meta.url));
+const picture = await readFile(new URL('./fixtures/clipboard-frame.vp9', import.meta.url));
 let server, origin;
 before(async () =>
 {
@@ -54,7 +55,7 @@ after(async () =>
  */
 function frame(kind, value)
 {
-    const payload = Buffer.from(JSON.stringify(value)), result = Buffer.alloc(24 + payload.length);
+    const payload = Buffer.isBuffer(value) ? value : Buffer.from(JSON.stringify(value)), result = Buffer.alloc(24 + payload.length);
     result.writeInt32BE(kind, 0);
     result.writeInt32BE(payload.length, 8);
     payload.copy(result, 24);
@@ -85,7 +86,8 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         await page.routeWebSocket('**/client/desktop?*', socket =>
         {
             connections.push(socket);
-            let details = null;
+            let details = null, videoTimer = null, timestamp = 0;
+            socket.onClose(() => clearInterval(videoTimer));
             socket.onMessage(message =>
             {
                 const bytes = Buffer.from(message), values = Array.from({ length: 6 }, (_, index) => bytes.readInt32BE(index * 4));
@@ -99,6 +101,17 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
                     socket.send(frame(3, [{ id: 0, encoder: 'fixture', codec: values[2], selection: values[3], framesPerSecond: 60, maximumBitrateKbps: 10240,
                         variableBitrate: true, codecDetails: details, scanCodeInput: true, unicodeInput: true }]));
                     socket.send(frame(4, { sampleRate: 48000, channels: 2, format: 'f32le' }));
+
+                    // 操作の確認中も映像を送り、初回フレーム未受信による再取得を起こしません。
+                    clearInterval(videoTimer);
+                    videoTimer = setInterval(() =>
+                    {
+                        const image = frame(2, picture);
+                        image.writeInt32BE(1, 12);
+                        image.writeBigInt64BE(BigInt(timestamp += 200000), 16);
+                        socket.send(image);
+                    }, 200);
+                    videoTimer.unref();
                 }
             });
             socket.send(frame(7, { clusterId: 'test', hostId: 'remote', localAudioMuted: false, codecDetails: true, variableBitrate: true }));
