@@ -1,11 +1,14 @@
+using System.Security.Cryptography;
 using Microsoft.Data.Sqlite;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Retention;
+using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Documents;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.History;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Json;
+using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Receipts;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
@@ -13,6 +16,7 @@ using Xunit;
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Persistence;
 
 /// <summary>小さい変更で未変更の大きい値を展開せず、既存の共有版と破損検査を維持します。</summary>
+[Collection("Performance")]
 public sealed class SqliteVersionRowsTests
 {
     /// <summary>別行の変更で大きい現在値を再作成せず、予約・取消・確定後も従来の版と一致します。</summary>
@@ -21,6 +25,44 @@ public sealed class SqliteVersionRowsTests
     [InlineData(false)]
     [InlineData(true)]
     public async Task SmallUpdatesReuseUnchangedLargeRows(bool retained)
+        => await VerifySmallUpdatesAsync(retained, false).ConfigureAwait(true);
+
+    /// <summary>他の処理がハッシュ用バッファーを借用中でも、検証済みの大きい行を複製しません。</summary>
+    /// <returns>バッファーの空き状況に依存しない割当量と、既存の共有版との一致です。</returns>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SmallUpdatesDoNotCopyRowsWhenHashBuffersAreBusy(bool retained)
+        => await VerifySmallUpdatesAsync(retained, true).ConfigureAwait(true);
+
+    /// <summary>空配列と異なる型の複数行を、JSON保存と同じ正規化バイト列で識別します。</summary>
+    /// <returns>配列の区切り、並べ替え、Binary、JSONのnull、削除の互換性です。</returns>
+    [Fact]
+    public async Task EmptyAndMixedRowsMatchJsonStorage()
+    {
+        using MediaTestFiles files = new();
+        SqliteRepository store = new(Path.Combine(files.Root, "state.db"));
+        JsonFileRepository other = new(Path.Combine(files.Root, "state.json"));
+        Assert.Equal(await other.GetSharedVersionAsync().ConfigureAwait(true), await store.GetSharedVersionAsync().ConfigureAwait(true));
+        DurableMutation[] changes =
+        [
+            new("state", "z", null, NodeValue.FromObject(new { text = "日本語🌐\n\"", number = 1.00m })),
+            new("state", "b", null, NodeValue.FromBytes(new byte[] { 0, 1, 255 })),
+            new("state", "a", null, NodeValue.Null),
+        ];
+        DurableReceipt saved = await store.ApplyBatchAsync(Guid.NewGuid(), changes).ConfigureAwait(true);
+        Assert.True(await other.ImportAsync(await store.ExportAsync().ConfigureAwait(true)).ConfigureAwait(true));
+        Assert.Equal(await other.GetSharedVersionAsync().ConfigureAwait(true), await store.GetSharedVersionAsync().ConfigureAwait(true));
+        const string removedKey = "z";
+        DurableEntry removed = Assert.Single(saved.Entries, entry => string.Equals(entry.Key, removedKey, StringComparison.Ordinal));
+        await store.ApplyBatchAsync(Guid.NewGuid(), [new(removed.Scope, removed.Key, removed.Version, null)]).ConfigureAwait(true);
+        Assert.True(await other.ImportAsync(await store.ExportAsync().ConfigureAwait(true)).ConfigureAwait(true));
+        Assert.Equal(await other.GetSharedVersionAsync().ConfigureAwait(true), await store.GetSharedVersionAsync().ConfigureAwait(true));
+    }
+
+    /// <summary>小さい変更による共有版の更新を、未変更行の保持状態ごとに検証します。</summary>
+    /// <returns>各更新の割当量と保存形式の互換性です。</returns>
+    private static async Task VerifySmallUpdatesAsync(bool retained, bool busyPool)
     {
         using MediaTestFiles files = new();
         SqliteRepository store = new(Path.Combine(files.Root, "state.db"));
@@ -38,9 +80,32 @@ public sealed class SqliteVersionRowsTests
             Assert.Equal(EOutcome.Succeeded, (await store.PrepareAsync(id, [new("workflow", "small", revision, NodeValue.FromObject(index))]).ConfigureAwait(true)).Outcome);
             _ = await store.GetSharedVersionAsync().ConfigureAwait(true);
             revision = (await store.CommitAsync(id).ConfigureAwait(true)).Entries.Single().Version;
-            long allocated = GC.GetAllocatedBytesForCurrentThread();
-            string changed = await store.GetSharedVersionAsync().ConfigureAwait(true);
-            Assert.InRange(GC.GetAllocatedBytesForCurrentThread() - allocated, 0, 1048576);
+            using IncrementalHash borrowedHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            List<HashBufferWriter> borrowed = [];
+            string changed;
+            try
+            {
+                if (busyPool)
+                {
+                    // 大きい借用領域を意図的に占有するため、このクラスは他の試験と並列に実行しません。
+                    for (int indexBuffer = 0; indexBuffer < 8; indexBuffer++)
+                    {
+                        HashBufferWriter writer = new(borrowedHash);
+                        borrowed.Add(writer);
+                        _ = writer.GetMemory(3 * 1024 * 1024);
+                    }
+                }
+                long allocated = GC.GetAllocatedBytesForCurrentThread();
+                changed = await store.GetSharedVersionAsync().ConfigureAwait(true);
+                Assert.InRange(GC.GetAllocatedBytesForCurrentThread() - allocated, 0, 1048576);
+            }
+            finally
+            {
+                foreach (HashBufferWriter writer in borrowed)
+                {
+                    writer.Dispose();
+                }
+            }
             Assert.NotEqual(before, changed);
             JsonFileRepository other = new(Path.Combine(files.Root, "other-" + index + ".json"));
             Assert.True(await other.ImportAsync(await store.ExportAsync().ConfigureAwait(true)).ConfigureAwait(true));
