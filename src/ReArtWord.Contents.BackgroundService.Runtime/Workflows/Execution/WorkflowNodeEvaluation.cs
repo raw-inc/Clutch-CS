@@ -36,12 +36,13 @@ internal sealed class WorkflowNodeEvaluation(NodeRegistry registry, IPeerDirecto
         ClusterOperationalSnapshot? operational,
         TracePolicy trace,
         Guid iterationScope,
+        Func<bool> cancelled,
         CancellationToken cancellationToken = default)
     {
         ExecutionFrame[] upstream = await Task.WhenAll(parents).ConfigureAwait(false);
 
         // リンク先tokenへの通知より先に上流の取消結果が届くことがあるため、入力不足を判定する前に呼出元の取消も確認します。
-        if (cancellationToken.IsCancellationRequested)
+        if (cancelled() || cancellationToken.IsCancellationRequested)
         {
             return new(node.Id, EOutcome.Cancelled, [new(string.Empty,
                 NodeResult.Failure("execution.cancelledBeforeStart", "The execution was cancelled before this node started.", EOutcome.Cancelled))]);
@@ -151,6 +152,11 @@ internal sealed class WorkflowNodeEvaluation(NodeRegistry registry, IPeerDirecto
         if (outcome == EOutcome.Succeeded && results.Any(static result => result.Result.Outcome != EOutcome.Succeeded))
         {
             outcome = EOutcome.Failed;
+            if (cancelled() && results.All(static result => result.Result.Outcome == EOutcome.Succeeded
+                || ExecutionOutcomes.CancelledBeforeStart(result.Result)))
+            {
+                outcome = EOutcome.Cancelled;
+            }
         }
         bool awaitingEvent = results.Length != 0 && results.All(result => result.Result.ReasonCode is "input.eventPending");
         return new ExecutionFrame(node.Id, outcome, results, descriptor.Kind == ENodeKind.Source, SignalId: Guid.NewGuid(), PcSelection: target.Selection, AwaitingEvent: awaitingEvent);

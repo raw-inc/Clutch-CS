@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Workflow;
@@ -95,7 +96,7 @@ public sealed class WorkflowCancellationBoundaryTests
         using CancellationTokenRegistration delayed = cancellation.Token.Register(() =>
         {
             callbackEntered.TrySetResult();
-            resumeCallbacks.Wait(TimeSpan.FromSeconds(10));
+            Assert.True(resumeCallbacks.Wait(TimeSpan.FromSeconds(10)), "The cancellation gate timed out before the test released it.");
         });
         Task cancelling = Task.CompletedTask;
         try
@@ -123,6 +124,86 @@ public sealed class WorkflowCancellationBoundaryTests
             Assert.Equal(0, afterCalls);
             Assert.Equal(0, limiter.Active);
             Assert.Equal(Convert.ToInt32(limited), limiter.Released);
+            Assert.Empty(fixture.Engine.Active());
+        }
+        finally
+        {
+            resumeCallbacks.Set();
+            await cancelling.ConfigureAwait(true);
+        }
+    }
+
+    /// <summary>複数PCの成功と未実行が混在しても、取消とその他の未完了を区別します。</summary>
+    /// <returns>対象別結果の保持と、要求全体の成否です。</returns>
+    [Theory]
+    [InlineData(true, false, "execution.cancelUnconfirmed", EOutcome.NotExecuted, EOutcome.Cancelled)]
+    [InlineData(true, false, "execution.cancelledBeforeStart", EOutcome.NotExecuted, EOutcome.Cancelled)]
+    [InlineData(true, false, "overlap.cancelled", EOutcome.NotExecuted, EOutcome.Cancelled)]
+    [InlineData(true, false, "source.cancelledBeforeExecution", EOutcome.NotExecuted, EOutcome.Cancelled)]
+    [InlineData(false, false, "execution.cancelUnconfirmed", EOutcome.NotExecuted, EOutcome.Failed)]
+    [InlineData(true, true, "execution.cancelUnconfirmed", EOutcome.NotExecuted, EOutcome.Failed)]
+    [InlineData(true, false, "fixture.blocked", EOutcome.NotExecuted, EOutcome.Failed)]
+    [InlineData(true, false, "fixture.failed", EOutcome.Failed, EOutcome.Failed)]
+    [InlineData(true, false, "execution.unconfirmed", EOutcome.Unknown, EOutcome.Unknown)]
+    [InlineData(true, false, "fixture.cancelled", EOutcome.Cancelled, EOutcome.Cancelled)]
+    [InlineData(true, false, "", EOutcome.Succeeded, EOutcome.Succeeded)]
+    public async Task PartialTargetCancellationPreservesConfirmedPeerResults(bool cancel, bool rejectedPeer, string reason, EOutcome bodyOutcome, EOutcome expected)
+    {
+        using CancellationTokenSource cancellation = new();
+        using ManualResetEventSlim resumeCallbacks = new(false);
+        TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource callbackEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<NodeResult> result = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        WorkflowFixture fixture = new(new WorkflowFixture.ActionNode(static (_, _) => ValueTask.FromResult(NodeResult.Success())));
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = fixture.ConfigureAwait(true);
+        fixture.Peers.Others =
+        [
+            new PeerInfo("b", Guid.NewGuid(), "host-b", "127.0.0.2", 0, EPeerStatus.Ready, 0, DateTimeOffset.UnixEpoch, DateTimeOffset.UtcNow),
+            new PeerInfo("c", Guid.NewGuid(), "host-c", "127.0.0.3", 0, EPeerStatus.Ready, 0, DateTimeOffset.UnixEpoch, DateTimeOffset.UtcNow),
+        ];
+        fixture.Dispatcher.Handler = async (request, _) =>
+        {
+            const string delayedPeer = "b", otherPeer = "c";
+            if (string.Equals(request.TargetPeerId, delayedPeer, StringComparison.Ordinal))
+            {
+                entered.TrySetResult();
+                return await result.Task.ConfigureAwait(false);
+            }
+            if (rejectedPeer && string.Equals(request.TargetPeerId, otherPeer, StringComparison.Ordinal))
+            {
+                return NodeResult.Failure("fixture.blocked", "The other peer could not start.", EOutcome.NotExecuted);
+            }
+            return NodeResult.Success(NodeValue.FromObject(1));
+        };
+        NodeDefinition node = WorkflowFixture.Definition("action") with { Target = new TargetDefinition(EExecutionScope.All, ["a", "b", "c"]) };
+        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, new("cancel-targets", "Cancel targets", [node], [])), cancellationToken: cancellation.Token);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+        using CancellationTokenRegistration delayed = cancellation.Token.Register(() =>
+        {
+            callbackEntered.TrySetResult();
+            Assert.True(resumeCallbacks.Wait(TimeSpan.FromSeconds(10)), "The cancellation gate timed out before the test released it.");
+        });
+        Task cancelling = Task.CompletedTask;
+        try
+        {
+            if (cancel)
+            {
+                cancelling = cancellation.CancelAsync();
+                await callbackEntered.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+            }
+            NodeResult confirmed = NodeResult.Success(NodeValue.FromObject(1));
+            if (bodyOutcome != EOutcome.Succeeded)
+            {
+                confirmed = NodeResult.Failure(reason, "Fixture operation did not complete.", bodyOutcome);
+            }
+            result.TrySetResult(confirmed);
+            ExecutionReport report = await running.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+            Assert.True(report.Outcome == expected, JsonSerializer.Serialize(report));
+            IReadOnlyList<TargetNodeResult> targets = Assert.Single(report.Nodes).Targets;
+            const string succeededPeer = "a", cancelledPeer = "b";
+            Assert.Equal(EOutcome.Succeeded, Assert.Single(targets, target => string.Equals(target.PeerId, succeededPeer, StringComparison.Ordinal)).Result.Outcome);
+            Assert.Equal(confirmed, Assert.Single(targets, target => string.Equals(target.PeerId, cancelledPeer, StringComparison.Ordinal)).Result);
+            Assert.Equal(3, targets.Count);
             Assert.Empty(fixture.Engine.Active());
         }
         finally

@@ -288,8 +288,8 @@ public sealed class WorkflowEngine
         }
         WorkflowDemandRunner demand = new(registry, workflow, targets,
             (node, parents, entry, initial, valueRead, scope) => capture?.ExecuteAsync(node, parents, id, initial, entry, valueRead,
-                () => evaluation.ExecuteAsync(workflow, node, targets[node.Id], selection, parents.Select(Task.FromResult).ToArray(), entry, initial, valueRead, id, operational, trace, scope, cancellationToken), cancellationToken)
-                ?? evaluation.ExecuteAsync(workflow, node, targets[node.Id], selection, parents.Select(Task.FromResult).ToArray(), entry, initial, valueRead, id, operational, trace, scope, cancellationToken), RetainedValues,
+                () => evaluation.ExecuteAsync(workflow, node, targets[node.Id], selection, parents.Select(Task.FromResult).ToArray(), entry, initial, valueRead, id, operational, trace, scope, IsCancellationRequested, cancellationToken), cancellationToken)
+                ?? evaluation.ExecuteAsync(workflow, node, targets[node.Id], selection, parents.Select(Task.FromResult).ToArray(), entry, initial, valueRead, id, operational, trace, scope, IsCancellationRequested, cancellationToken), RetainedValues,
             (signal, inherited) =>
             {
                 capture?.Child(id, signal.SignalId);
