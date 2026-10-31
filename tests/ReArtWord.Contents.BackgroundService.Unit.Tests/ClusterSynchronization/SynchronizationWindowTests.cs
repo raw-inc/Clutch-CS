@@ -19,7 +19,10 @@ public sealed class SynchronizationWindowTests
         RepositorySnapshot snapshot = new([new("workflow:window", "value", "current", NodeValue.FromObject(text))], []);
         TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         ConcurrentDictionary<long, byte> requested = new();
-        SyncRecoveryPeer peer = new(snapshot)
+        TimeSpan observationLimit = TimeSpan.FromSeconds(10);
+
+        // 応答順を確認する間に、障害再現用の短い通信期限が先に切れないようにします。
+        SyncRecoveryPeer peer = new(snapshot, requestTimeout: observationLimit)
         {
             BeforeRead = async (request, token) =>
             {
@@ -31,7 +34,7 @@ public sealed class SynchronizationWindowTests
             },
         };
         await using ConfiguredAsyncDisposable lifetime = peer.ConfigureAwait(true);
-        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
+        using CancellationTokenSource timeout = new(observationLimit);
         try
         {
             await peer.StartAsync(timeout.Token).ConfigureAwait(true);

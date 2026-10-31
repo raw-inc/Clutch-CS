@@ -35,7 +35,8 @@ public sealed class ScheduledUpdateProcessTests
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable ownerLifetime = owner.ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable targetLifetime = target.ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable clientLifetime = ((IAsyncDisposable)client).ConfigureAwait(true);
-        using CancellationTokenSource timeout = new(TimeSpan.FromMinutes(3));
+        TimeSpan testTimeout = TimeSpan.FromMinutes(3);
+        using CancellationTokenSource timeout = new(testTimeout);
         await owner.StartAsync(timeout.Token).ConfigureAwait(true);
         Guid previous = await target.StartAsync(timeout.Token).ConfigureAwait(true);
         await client.StartAsync(timeout.Token).ConfigureAwait(true);
@@ -67,7 +68,9 @@ public sealed class ScheduledUpdateProcessTests
             File.Copy(Path.Combine(package, file.Path), destination);
         }
         ClusterUpdateRequest update = new(Guid.NewGuid(), old with { ReleaseId = "new" }, payload, ["b"], EUpdateFailurePolicy.KeepCompatibleMixed, PeerTimeoutMilliseconds: 60000);
-        UpdateScheduleRequest reservation = new(Guid.NewGuid(), new(DateTimeOffset.UtcNow.AddSeconds(15), 120, update));
+
+        // 編集前の予約が先に発火しないよう、初回の時刻は試験全体の期限より後に置きます。
+        UpdateScheduleRequest reservation = new(Guid.NewGuid(), new(DateTimeOffset.UtcNow.Add(testTimeout), 120, update));
         UpdateScheduleResult accepted = await PostAsync<UpdateScheduleResult>(client, cluster, "api/updates/schedules/save", reservation, timeout.Token).ConfigureAwait(true);
         Assert.Equal(EOutcome.Succeeded, accepted.Outcome);
         Assert.Equal(previous, accepted.View!.Schedule.PeerInstances["b"]);
