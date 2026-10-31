@@ -64,11 +64,11 @@ function frame(kind, value)
 /** ブラウザーの入力が非同期にWebSocketへ届くまで有限時間だけ待ちます。
  * @returns 指定件数までに届いた操作入力です。
  */
-async function inputsAsync(sent, count)
+async function inputsAsync(sent, count, signal)
 {
-    for (let attempt = 0; attempt < 100 && sent.filter(item => item[0] === 4).length < count; attempt++)
+    while (sent.filter(item => item[0] === 4).length < count)
     {
-        await setTimeout(10);
+        await setTimeout(10, undefined, { signal });
     }
     return sent.filter(item => item[0] === 4);
 }
@@ -186,7 +186,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
                 await page.keyboard.down(key);
             }
             await page.keyboard.up(key);
-            const keys = await inputsAsync(sent, total + 6);
+            const keys = await inputsAsync(sent, total + 6, context.signal);
             assert.deepEqual(keys.slice(total).map(value => value.slice(4)), [...Array.from({ length: 5 }, () => [code, 1]), [code, 0]]);
             total += 6;
         }
@@ -199,7 +199,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         }
         await page.keyboard.up('ArrowLeft');
         await page.keyboard.up('Control');
-        const modified = await inputsAsync(sent, total + 7);
+        const modified = await inputsAsync(sent, total + 7, context.signal);
         assert.deepEqual(modified.slice(total).map(value => value.slice(4)), [[0xa2, 1], [37, 1], [37, 1], [37, 1], [37, 1], [37, 0], [0xa2, 0]]);
         await page.getByRole('button', { name: 'Hide software keyboard', exact: true }).click();
         assert.equal(await page.getByRole('button', { name: 'Automatic reconnect', exact: true }).getAttribute('aria-pressed'), 'true');
@@ -207,9 +207,9 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         {
             const beforeReconnect = sent.length;
             await connections.at(-1).close({ code: 1011, reason: 'Desktop.UpstreamDisconnected' });
-            for (let attempt = 0; attempt < 100 && connections.length < count; attempt++)
+            while (connections.length < count)
             {
-                await setTimeout(10);
+                await setTimeout(10, undefined, { signal: context.signal });
             }
             assert.equal(connections.length, count);
             await page.waitForFunction(() => document.querySelector('.desktop-connection')?.textContent === 'Connected');
@@ -217,7 +217,6 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         }
         await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
         await page.waitForFunction(() => window.lastAction === 'Disconnect');
-        await setTimeout(30);
         assert.equal(connections.length, 3);
         assert.equal(await page.evaluate(() => document.fullscreenElement?.id), 'desktop');
         await page.getByRole('button', { name: 'Exit fullscreen', exact: true }).click();

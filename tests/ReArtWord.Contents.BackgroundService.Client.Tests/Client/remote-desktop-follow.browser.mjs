@@ -153,6 +153,31 @@ async function geometryAsync(page)
     });
 }
 
+/** 入力後の描画を待ってから、スクロールしない操作の結果を確認します。
+ * @returns 次の描画までの待機です。
+ */
+async function renderedAsync(page)
+{
+    await page.evaluate(() => new Promise(resolve =>
+    {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+    }));
+}
+
+/** 全画面への切替後の表示幅を使い、追従先に到着するまで待ちます。
+ * @returns 指定座標への追従完了です。
+ */
+async function followedAsync(page, x)
+{
+    await page.waitForFunction(x =>
+    {
+        const viewport = document.querySelector('.desktop-viewport'), bounds = viewport.getBoundingClientRect();
+        const range = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+        const wanted = range * (x - bounds.left - viewport.clientLeft) / (viewport.clientWidth - 1);
+        return Math.abs(viewport.scrollLeft - wanted) <= 2;
+    }, x);
+}
+
 for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' }], ['Firefox', firefox, {}]])
 {
     for (const [density, annotations] of [[1, true], [2, false]])
@@ -182,9 +207,9 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
                 if (annotations)
                 {
                     const expected = [13, 0, Math.floor((x - current.canvas.left) * 2560 / current.canvas.width), Math.floor((y - current.canvas.top) * 1920 / current.canvas.height)];
-                    for (let attempt = 0; attempt < 100 && sent.findLast(packet => packet[0] === 13)?.[2] !== expected[2]; attempt++)
+                    while (sent.findLast(packet => packet[0] === 13)?.[2] !== expected[2])
                     {
-                        await setTimeout(10);
+                        await setTimeout(10, undefined, { signal: context.signal });
                     }
                     assert.deepEqual(sent.findLast(packet => packet[0] === 13).slice(0, 4), expected);
                 }
@@ -192,14 +217,14 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
             await page.getByRole('button', { name: 'Follow pointer', exact: true }).click();
             const stopped = await geometryAsync(page);
             await page.mouse.move(original.left + 30, original.top + 80);
-            await setTimeout(70);
+            await renderedAsync(page);
             assert.equal((await geometryAsync(page)).scrollLeft, stopped.scrollLeft);
             await page.getByRole('button', { name: 'Follow pointer', exact: true }).click();
             await page.getByRole('button', { name: 'Fullscreen', exact: true }).click();
             await page.waitForFunction(() => document.fullscreenElement?.id === 'desktop');
             const fullscreen = await geometryAsync(page);
             await page.mouse.move(fullscreen.left + fullscreen.width * 0.5, fullscreen.top + fullscreen.height * 0.5);
-            await setTimeout(70);
+            await followedAsync(page, fullscreen.left + fullscreen.width * 0.5);
             const pinned = await geometryAsync(page);
             assert.ok(Math.abs(pinned.headerTop - pinned.top) <= 1);
             assert.ok(Math.abs(pinned.labelLeft - pinned.left - 8) <= 1);
@@ -217,14 +242,19 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
             }
             const multiple = await geometryAsync(page);
             await page.mouse.move(multiple.left + multiple.width * 0.6, multiple.top + multiple.height * 0.4);
-            await setTimeout(70);
+            await followedAsync(page, multiple.left + multiple.width * 0.6);
             const followed = await geometryAsync(page);
             assert.ok(0 < followed.scrollLeft);
             assert.ok(Math.abs(followed.headerTop - followed.top) <= 1);
             assert.ok(Math.abs(followed.labelLeft - followed.left - 8) <= 1);
             await page.getByRole('button', { name: 'Dot by dot (1:1)', exact: true }).click();
+            await page.waitForFunction(() =>
+            {
+                const viewport = document.querySelector('.desktop-viewport');
+                return viewport.scrollWidth <= viewport.clientWidth && viewport.scrollLeft === 0;
+            });
             await page.mouse.move(multiple.left + 40, multiple.top + 80);
-            await setTimeout(70);
+            await renderedAsync(page);
             assert.equal((await geometryAsync(page)).scrollLeft, 0);
             assert.equal(sent.slice(start).some(packet => [1, 2, 3, 4, 5, 10].includes(packet[0])), false);
             await page.evaluate(() => window.desktop.dispose());
