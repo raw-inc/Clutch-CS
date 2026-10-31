@@ -188,13 +188,17 @@ public static class BoundedProcessRunner
         }
     }
 
-    /// <summary>WindowsのCreateProcess内部の共通lockへ多数のThreadPoolスレッドを滞留させず、起動待ちを非同期化します。</summary>
+    /// <summary>Windows版Process.Startの共通ロックでスレッドが滞留しないよう、起動待ちを非同期化します。</summary>
     /// <returns>一回の起動確認です。起動済みプロセスの実行時間は直列化しません。</returns>
     private static async Task StartAsync(Process process, CancellationToken cancellationToken = default)
     {
         bool serialize = OperatingSystem.IsWindows();
         if (serialize)
         {
+            // .NETはパイプハンドルの誤継承を防ぐため、ハンドル作成からCreateProcessまでを共通ロックで保護します。
+            // https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Diagnostics.Process/src/System/Diagnostics/Process.Windows.cs#L452-L456
+            // その同期ロックへ入る前に非同期で待機させます。開始後の実行や出力読取りは並列のままです。
+            // 上流のロック範囲が変わった場合も、ハンドルの継承と並列起動時の待機を確認してから撤去を判断します。
             await windowsStarts.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
         try
@@ -248,7 +252,14 @@ public static class BoundedProcessRunner
         CancellationToken readCancellation = cancellationToken;
         if (OperatingSystem.IsWindows() && reader.BaseStream is WindowsProcessPipe)
         {
-            // 期限後のバッファー読取りはpipe側で区切り、StreamReader内で受信済みの文字を失わないようにします。
+            // StreamReader.ReadAsyncは取消済みなら、内部バッファーを読む前に取消を返します。
+            // また、一回の読取り中に取消が起きても、それまでにコピーした文字数が結果として返る保証はありません。
+            // https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Private.CoreLib/src/System/IO/StreamReader.cs#L1076-L1099
+            // https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Private.CoreLib/src/System/IO/StreamReader.cs#L1180-L1261
+            // .NET 10.0.13では、終了後の期限切れでパイプ内の返却JSON 31バイトを読めず、空の結果になる条件を再現しました。
+            // この期限は追加の到着を待つ上限です。WindowsProcessPipeが残量を固定してEOFを返すまで既存の出力を読み切ります。
+            // コマンド自体の取消・終了判定はRunAsyncに残し、StreamReaderのデコード中の文字を捨てる取消には使いません。
+            // 置換を検討する際は、WindowsProcessPipeTestsのBOM・Unicode・期限後の追加書込み・読取り取消の各条件を維持します。
             readCancellation = CancellationToken.None;
         }
         StringBuilder result = new();

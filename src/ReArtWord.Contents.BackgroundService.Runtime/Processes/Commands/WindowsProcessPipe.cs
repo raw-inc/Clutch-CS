@@ -5,7 +5,7 @@ using Microsoft.Win32.SafeHandles;
 
 namespace ReArtWord.Contents.BackgroundService.Runtime.Processes.Commands;
 
-/// <summary>一人だけが読む標準pipeで、到着済みbyteだけを取り出し、空のpipeをThreadPool上で待ちません。</summary>
+/// <summary>Windowsの標準出力パイプを専有し、届いたデータだけを読み取ります。</summary>
 [SupportedOSPlatform("windows")]
 internal sealed partial class WindowsProcessPipe : Stream
 {
@@ -16,6 +16,11 @@ internal sealed partial class WindowsProcessPipe : Stream
     /// <summary>元readerでは読まない同じhandleを引き受け、先読みを無効にしてOSの待機byte数と揃えます。</summary>
     internal WindowsProcessPipe(SafeFileHandle handle, CancellationToken drainDeadline)
     {
+        // .NETのProcessは、子プロセス側の同期I/Oとの互換性を保つため、同期の匿名パイプを作ります。
+        // https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Diagnostics.Process/src/System/Diagnostics/Process.Windows.cs#L811-L817
+        // 空のパイプで同期読取りを始めず、PeekNamedPipeで確認した分だけを読み取ります。
+        // 同期ハンドルのPeek自体も競合時には待機し得るため、元のreaderや別のReadとの併用は禁止です。
+        // https://learn.microsoft.com/en-us/windows/win32/api/namedpipeapi/nf-namedpipeapi-peeknamedpipe
         source = new FileStream(handle, FileAccess.Read, bufferSize: 1, isAsync: false);
         this.drainDeadline = drainDeadline;
     }
@@ -74,7 +79,9 @@ internal sealed partial class WindowsProcessPipe : Stream
             }
             if (expired && remainingAtDeadline is null)
             {
-                // 読取りの再開が遅れても、届いている出力は捨てません。以後に追加される分は待ちません。
+                // 期限切れを初めて観測した時点の到着量で固定します。取消の瞬間の量を取得できるわけではありません。
+                // 毎回取り直すと、パイプを継承した子孫が書き続ける限り排出が終わらなくなるためです。
+                // 読取り再開が遅れても既存の出力は保持し、この観測後に追加された分は待ちません。
                 remainingAtDeadline = available;
             }
             if (remainingAtDeadline is int remaining)
