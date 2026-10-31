@@ -128,6 +128,7 @@ public sealed class ClusterFileGateTests
         finally
         {
             repository.Resume.TrySetResult();
+            await Task.WhenAll(caller.CancelAsync(), acquiring).ConfigureAwait(true);
         }
         ClusterRequest original = new(lease.ReservationId, "file.gate.acquire", lease.Coordinator.PeerId, lease.Coordinator.InstanceId, lease.AdmissionExpiresAt, NodeValue.FromObject(lease));
         ClusterRequestStatus status;
@@ -155,6 +156,9 @@ public sealed class ClusterFileGateTests
         finally
         {
             repository.Resume.TrySetResult();
+
+            // 結果は呼出側で検証し、途中失敗時も要求が終わるまでPeerを保持する。
+            await operation.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
     }
 

@@ -109,6 +109,7 @@ public sealed class FileTransactionTests
         finally
         {
             finish.TrySetResult();
+            await Task.WhenAll(caller.CancelAsync(), pending).ConfigureAwait(true);
         }
         foreach (RemoteExecutionRequest execution in request.Targets)
         {
