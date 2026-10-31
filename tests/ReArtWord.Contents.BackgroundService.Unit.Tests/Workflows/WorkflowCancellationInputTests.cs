@@ -11,13 +11,18 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Workflows;
 /// <summary>取消通知の伝播と上流結果の到着が競合しても、入力不足へ読み替えないことを確認します。</summary>
 public sealed class WorkflowCancellationInputTests
 {
-    /// <summary>リンクしたtokenへの通知が遅れても、呼出元が取り消した後続を開始しません。</summary>
-    /// <returns>開始前取消と、実際の失敗・結果不明の優先順です。</returns>
+    /// <summary>取消通知が伝わる途中でも、後続の有無によらず確認済みの結果を集約します。</summary>
+    /// <returns>開始前取消と、実際の成功・失敗・結果不明の優先順です。</returns>
     [Theory]
-    [InlineData(EOutcome.NotExecuted, EOutcome.Cancelled)]
-    [InlineData(EOutcome.Failed, EOutcome.Failed)]
-    [InlineData(EOutcome.Unknown, EOutcome.Unknown)]
-    public async Task CancelledInputDoesNotBecomeMissingInput(EOutcome bodyOutcome, EOutcome expected)
+    [InlineData(true, EOutcome.NotExecuted, EOutcome.Cancelled)]
+    [InlineData(true, EOutcome.Failed, EOutcome.Failed)]
+    [InlineData(true, EOutcome.Unknown, EOutcome.Unknown)]
+    [InlineData(true, EOutcome.Succeeded, EOutcome.Cancelled)]
+    [InlineData(false, EOutcome.NotExecuted, EOutcome.Cancelled)]
+    [InlineData(false, EOutcome.Failed, EOutcome.Failed)]
+    [InlineData(false, EOutcome.Unknown, EOutcome.Unknown)]
+    [InlineData(false, EOutcome.Succeeded, EOutcome.Succeeded)]
+    public async Task CancellationResultsDoNotDependOnLinkedNotification(bool hasDownstream, EOutcome bodyOutcome, EOutcome expected)
     {
         using CancellationTokenSource cancellation = new();
         using ManualResetEventSlim resumeCallbacks = new(false);
@@ -47,8 +52,16 @@ public sealed class WorkflowCancellationInputTests
             return await fixture.Executor.ExecuteAsync(request, token).ConfigureAwait(false);
         };
         WorkflowDefinition definition = new("cancelled-input", "Cancelled input",
-            [WorkflowFixture.Definition("source", "test.value"), WorkflowFixture.Definition("body", "test.value"), WorkflowFixture.Definition("after", "test.value")],
-            [new("source", "value", "body", "value"), new("body", "value", "after", "value"), new("source", CompletionPorts.Signal, "after", "trigger")]);
+            [WorkflowFixture.Definition("source", "test.value"), WorkflowFixture.Definition("body", "test.value")],
+            [new("source", "value", "body", "value")]);
+        if (hasDownstream)
+        {
+            definition = definition with
+            {
+                Nodes = [.. definition.Nodes, WorkflowFixture.Definition("after", "test.value")],
+                Wires = [.. definition.Wires, new("body", "value", "after", "value"), new("source", CompletionPorts.Signal, "after", "trigger")],
+            };
+        }
         CompiledWorkflow workflow = ValueMergeFixture.Compile(fixture, definition);
         Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(workflow, "source", new Dictionary<string, NodeValue>(StringComparer.Ordinal)
         {
@@ -58,16 +71,71 @@ public sealed class WorkflowCancellationInputTests
         using CancellationTokenRegistration delayed = cancellation.Token.Register(() =>
         {
             callbackEntered.TrySetResult();
-            resumeCallbacks.Wait(TimeSpan.FromSeconds(10));
+            Assert.True(resumeCallbacks.Wait(TimeSpan.FromSeconds(10)), "The cancellation gate timed out before the test released it.");
         });
         Task cancelling = cancellation.CancelAsync();
         try
         {
             await callbackEntered.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
-            result.TrySetResult(NodeResult.Failure("execution.cancelUnconfirmed", "The operation was cancelled before it started.", bodyOutcome));
+            NodeResult bodyResult = bodyOutcome == EOutcome.Succeeded ? ValueMergeFixture.Result(NodeValue.FromObject(1))
+                                                                      : NodeResult.Failure("execution.cancelUnconfirmed", "The operation was cancelled before it started.", bodyOutcome);
+            result.TrySetResult(bodyResult);
             ExecutionReport report = await running.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
             Assert.True(report.Outcome == expected, JsonSerializer.Serialize(report));
             Assert.Equal(0, afterCalls);
+            Assert.Equal(bodyOutcome, Assert.Single(report.Nodes, node => string.Equals(node.NodeId, "body", StringComparison.Ordinal)).Outcome);
+        }
+        finally
+        {
+            resumeCallbacks.Set();
+            await cancelling.ConfigureAwait(true);
+        }
+    }
+
+    /// <summary>反復の結果判定と次要素の受付にも、通知途中の呼出元の取消を適用します。</summary>
+    /// <returns>最初の要素の成否を保ち、残りの要素を開始しない確認です。</returns>
+    [Theory]
+    [InlineData(EOutcome.NotExecuted, EOutcome.Cancelled)]
+    [InlineData(EOutcome.Succeeded, EOutcome.Cancelled)]
+    [InlineData(EOutcome.Failed, EOutcome.Failed)]
+    [InlineData(EOutcome.Unknown, EOutcome.Unknown)]
+    public async Task IterationCancellationDoesNotWaitForLinkedNotification(EOutcome bodyOutcome, EOutcome expected)
+    {
+        using CancellationTokenSource cancellation = new();
+        using ManualResetEventSlim resumeCallbacks = new(false);
+        TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource callbackEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<NodeResult> result = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        WorkflowFixture fixture = IterationTests.Create((context, _) => ValueTask.FromResult(NodeResult.Success(context.Inputs["value"])));
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = fixture.ConfigureAwait(true);
+        fixture.Dispatcher.Handler = async (request, token) =>
+        {
+            const string body = "body";
+            if (string.Equals(request.Node.Id, body, StringComparison.Ordinal))
+            {
+                entered.TrySetResult();
+                return await result.Task.ConfigureAwait(false);
+            }
+            return await fixture.Executor.ExecuteAsync(request, token).ConfigureAwait(false);
+        };
+        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, IterationTests.Definition(end: false)), cancellationToken: cancellation.Token);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+        using CancellationTokenRegistration delayed = cancellation.Token.Register(() =>
+        {
+            callbackEntered.TrySetResult();
+            Assert.True(resumeCallbacks.Wait(TimeSpan.FromSeconds(10)), "The cancellation gate timed out before the test released it.");
+        });
+        Task cancelling = cancellation.CancelAsync();
+        try
+        {
+            await callbackEntered.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+            NodeResult bodyResult = bodyOutcome == EOutcome.Succeeded ? NodeResult.Success(NodeValue.FromObject(1))
+                                                                      : NodeResult.Failure("execution.cancelUnconfirmed", "The operation did not complete.", bodyOutcome);
+            result.TrySetResult(bodyResult);
+            ExecutionReport report = await running.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+            Assert.True(report.Outcome == expected, JsonSerializer.Serialize(report));
+            Assert.Equal(1, IterationTests.Loop(report).Iteration!.Started);
+            Assert.Empty(fixture.Engine.Active());
         }
         finally
         {

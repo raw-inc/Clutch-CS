@@ -7,7 +7,7 @@ namespace ReArtWord.Contents.BackgroundService.Runtime.Workflows.Concurrency;
 
 /// <summary>区間を一度実行し、正常・異常・取消にかかわらず開始済みの子と枠を回収します。</summary>
 internal sealed class ConcurrencyRegionRunner(WorkflowConcurrencyExecution concurrency, IterationScopeRunner scopes,
-    Func<Guid, Task<EOutcome>> completeScope, Action<Guid, Guid> inheritProgress)
+    Func<Guid, Task<EOutcome>> completeScope, Action<Guid, Guid> inheritProgress, Func<bool> cancelled)
 {
     /// <summary>反復と同じ区間所有を使い、終了境界より先の処理には枠を持ち越しません。</summary>
     /// <returns>一回だけ実行したボディと境界の結果です。</returns>
@@ -55,7 +55,7 @@ internal sealed class ConcurrencyRegionRunner(WorkflowConcurrencyExecution concu
         EOutcome outcome = ExecutionOutcomes.Aggregate(body.Select(frame => frame.Outcome));
         if (outcome != EOutcome.Cancelled)
         {
-            outcome = IterationOutcomes.BodyOutcome(body);
+            outcome = IterationOutcomes.BodyOutcome(body, cancelled() || cancellationToken.IsCancellationRequested);
         }
         outcome = ExecutionOutcomes.Aggregate([outcome, children]);
         if (outcome == EOutcome.Succeeded && body.Any(frame => frame.AwaitingEvent))

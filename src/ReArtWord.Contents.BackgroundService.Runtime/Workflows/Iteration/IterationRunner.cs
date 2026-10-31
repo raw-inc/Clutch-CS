@@ -35,7 +35,7 @@ internal sealed class IterationRunner
     {
         this.workflow = workflow;
         scopes = new(workflow, execute, RunRegionAsync, publish);
-        this.concurrency = new(concurrency, scopes, completeScope, inheritProgress);
+        this.concurrency = new(concurrency, scopes, completeScope, inheritProgress, cancelled);
         this.cancelled = cancelled;
         this.clock = clock;
         this.publish = publish;

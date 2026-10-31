@@ -263,6 +263,11 @@ public sealed class WorkflowEngine
     {
         // 明示取消は保存待ちへ伝えますが、開始済み遠隔処理の結果照会は元の寿命で完了を確認します。
         using CancellationTokenSource execution = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, ownership.Find(id)?.Token ?? CancellationToken.None, context?.Cancellation ?? CancellationToken.None);
+
+        // リンク先への通知より先にノードの取消結果が届くため、呼出元と親実行の取消状態も直接確認します。
+        bool IsCancellationRequested() => cancellationToken.IsCancellationRequested || context?.Cancellation.IsCancellationRequested == true
+            || execution.IsCancellationRequested || ownership.Find(id)?.IsCancellationRequested == true;
+
         DateTimeOffset started = timeProvider.GetUtcNow();
         if (workflow.DependencyIssues.Count != 0 || OperationalProvider is not null && operational is null)
         {
@@ -283,8 +288,8 @@ public sealed class WorkflowEngine
         }
         WorkflowDemandRunner demand = new(registry, workflow, targets,
             (node, parents, entry, initial, valueRead, scope) => capture?.ExecuteAsync(node, parents, id, initial, entry, valueRead,
-                () => evaluation.ExecuteAsync(workflow, node, targets[node.Id], selection, parents.Select(Task.FromResult).ToArray(), entry, initial, valueRead, id, operational, trace, scope, cancellationToken), cancellationToken)
-                ?? evaluation.ExecuteAsync(workflow, node, targets[node.Id], selection, parents.Select(Task.FromResult).ToArray(), entry, initial, valueRead, id, operational, trace, scope, cancellationToken), RetainedValues,
+                () => evaluation.ExecuteAsync(workflow, node, targets[node.Id], selection, parents.Select(Task.FromResult).ToArray(), entry, initial, valueRead, id, operational, trace, scope, IsCancellationRequested, cancellationToken), cancellationToken)
+                ?? evaluation.ExecuteAsync(workflow, node, targets[node.Id], selection, parents.Select(Task.FromResult).ToArray(), entry, initial, valueRead, id, operational, trace, scope, IsCancellationRequested, cancellationToken), RetainedValues,
             (signal, inherited) =>
             {
                 capture?.Child(id, signal.SignalId);
@@ -293,14 +298,13 @@ public sealed class WorkflowEngine
                     containsPersonalData: workflow.ExecutionDefinition.ContainsPersonalData, cancellationToken: cancellationToken);
             },
             ValueObservations, id, directory.LocalPeerId, retentionQueue, context, capture, ownership.Find(id)?.Progress,
-            new WorkflowConcurrencyExecution(ConcurrencyLimiter, directory, workflow.Definition.Id, id, execution.Cancel));
+            new WorkflowConcurrencyExecution(ConcurrencyLimiter, directory, workflow.Definition.Id, id, execution.Cancel), IsCancellationRequested);
         ExecutionFrame[] frames;
         try
         {
             await using (demand.ConfigureAwait(false))
             {
-                frames = await demand.ExecuteAsync(entries, entryInputs, seed,
-                    () => execution.IsCancellationRequested || ownership.Find(id)?.IsCancellationRequested == true, timeProvider, execution.Token).ConfigureAwait(false);
+                frames = await demand.ExecuteAsync(entries, entryInputs, seed, timeProvider, execution.Token).ConfigureAwait(false);
             }
         }
         catch (Exception error) when (error is not OutOfMemoryException)
@@ -312,7 +316,7 @@ public sealed class WorkflowEngine
             throw;
         }
         EOutcome outcome = ExecutionOutcomes.AggregateWorkflow(frames);
-        if (outcome == EOutcome.Succeeded && ownership.Find(id)?.PreventedExecution(frames, execution.IsCancellationRequested) == true)
+        if (outcome == EOutcome.Succeeded && ownership.Find(id)?.PreventedExecution(frames, IsCancellationRequested()) == true)
         {
             outcome = EOutcome.Cancelled;
         }
