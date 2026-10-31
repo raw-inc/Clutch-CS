@@ -629,19 +629,25 @@ async function fixtureAsync(t, videoCodec = null, settings = {})
             return button;
         } };
     const view = await desktopView(root, ctx);
-    t.after(() =>
+    t.after(async () =>
     {
-        view.dispose();
-        controller.abort();
-        for (const name of names)
+        try
         {
-            if (before[name])
+            await view.dispose();
+        }
+        finally
+        {
+            controller.abort();
+            for (const name of names)
             {
-                Object.defineProperty(globalThis, name, before[name]);
-            }
-            else
-            {
-                delete globalThis[name];
+                if (before[name])
+                {
+                    Object.defineProperty(globalThis, name, before[name]);
+                }
+                else
+                {
+                    delete globalThis[name];
+                }
             }
         }
     });
