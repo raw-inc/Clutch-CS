@@ -60,14 +60,22 @@ public sealed class EditorClusterObservationTests
         EditorClusterObservations observed = new(new(client));
         using CancellationTokenSource lifetime = new();
         Task pending = observed.RefreshAsync(lifetime.Token);
-        await observed.RefreshAsync(lifetime.Token).ConfigureAwait(true);
-        Assert.True(observed.Refreshing);
-        Assert.Equal(1, calls);
-        await lifetime.CancelAsync().ConfigureAwait(true);
-        await pending.ConfigureAwait(true);
-        Assert.False(observed.Refreshing);
-        Assert.False(observed.Unavailable);
-        Assert.Empty(observed.Clusters);
+        try
+        {
+            await observed.RefreshAsync(lifetime.Token).ConfigureAwait(true);
+            Assert.True(observed.Refreshing);
+            Assert.Equal(1, calls);
+            await lifetime.CancelAsync().ConfigureAwait(true);
+            await pending.ConfigureAwait(true);
+            Assert.False(observed.Refreshing);
+            Assert.False(observed.Unavailable);
+            Assert.Empty(observed.Clusters);
+        }
+        finally
+        {
+            await lifetime.CancelAsync().ConfigureAwait(true);
+            await pending.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
         using HttpResponseMessage recovered = Response("recovered");
         reply.SetResult(recovered);
         await observed.RefreshAsync().ConfigureAwait(true);
