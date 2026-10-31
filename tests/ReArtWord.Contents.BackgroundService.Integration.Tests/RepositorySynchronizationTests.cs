@@ -116,7 +116,14 @@ public sealed class RepositorySynchronizationTests
         }
         catch (OperationCanceledException)
         {
-            Assert.Fail("同期後の通常参加を確認できません: " + JsonSerializer.Serialize(states));
+            Assert.Fail("同期後の通常参加を確認できません: " + JsonSerializer.Serialize(states.Select(state =>
+            {
+                if (state.ValueKind == JsonValueKind.Undefined)
+                {
+                    return (JsonElement?)null;
+                }
+                return state;
+            })));
         }
     }
 }
