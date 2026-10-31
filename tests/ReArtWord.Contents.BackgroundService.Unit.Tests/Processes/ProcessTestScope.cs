@@ -70,9 +70,15 @@ internal sealed class ProcessTestScope : IDisposable
 
     /// <summary>サービス外からの異常終了を実プロセスで起こします。</summary>
     /// <returns>実終了確認の完了です。</returns>
+    // 抑制理由: 起動時刻をUTCへ変換して照合し、PID再利用先を停止しません。
+    [SuppressMessage("SourceQuality", "RAW171", Justification = "試験で指定した実体だけを停止するため、OSの起動時刻を照合します。")]
     internal static async Task CrashAsync(ProcessIdentity identity, CancellationToken cancellationToken = default)
     {
         using Process process = Process.GetProcessById(identity.ProcessId);
+        if (new DateTimeOffset(process.StartTime.ToUniversalTime()) != identity.StartedAt)
+        {
+            throw new InvalidOperationException("試験対象のプロセスの起動時刻が一致しません。");
+        }
         process.Kill(true);
         await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
     }
