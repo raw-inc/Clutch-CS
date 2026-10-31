@@ -33,9 +33,7 @@ public sealed class DesktopSessionCloseTests
         string pipeName = "desktop-close-" + Guid.NewGuid().ToString("N");
         using NamedPipeServerStream worker = new(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
         using NamedPipeClientStream remote = new(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-        using Task connecting = worker.WaitForConnectionAsync(timeout.Token);
-        await remote.ConnectAsync(timeout.Token);
-        await connecting.ConfigureAwait(true);
+        await Task.WhenAll(worker.WaitForConnectionAsync(timeout.Token), remote.ConnectAsync(timeout.Token)).ConfigureAwait(true);
         SessionTestLog log = new();
         SessionFailureBoundary boundary = new(log, "peer");
         using Task bridge = boundary.RunAsync(() => DesktopSession.BridgeAsync(network, worker, timeout.Token), "RemoteDesktop", Guid.NewGuid(), "connection", timeout.Token);
