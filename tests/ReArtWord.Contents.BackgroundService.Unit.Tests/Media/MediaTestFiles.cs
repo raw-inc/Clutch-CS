@@ -1,6 +1,7 @@
-using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using ReArtWord.Contents.BackgroundService.Contracts.Files;
 using ReArtWord.Contents.BackgroundService.Nodes.Media;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes.Commands;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,13 +13,13 @@ internal sealed class MediaTestFiles : IDisposable
     private readonly ITestOutputHelper? testOutput;
 
     /// <summary>専用の一時rootと明示された実行物を用意します。</summary>
-    internal MediaTestFiles(ITestOutputHelper? output = null)
+    internal MediaTestFiles(ITestOutputHelper? output = null, string? ffmpegPath = null, string? ffprobePath = null)
     {
         testOutput = output;
         Root = Path.Combine(Path.GetTempPath(), "contents-media-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Root);
-        string ffmpeg = Environment.GetEnvironmentVariable("CONTENTS_TEST_FFMPEG") ?? "C:/opt/ffmpeg/current/bin/ffmpeg.exe";
-        string ffprobe = Environment.GetEnvironmentVariable("CONTENTS_TEST_FFPROBE") ?? "C:/opt/ffmpeg/current/bin/ffprobe.exe";
+        string ffmpeg = ffmpegPath ?? Environment.GetEnvironmentVariable("CONTENTS_TEST_FFMPEG") ?? "C:/opt/ffmpeg/current/bin/ffmpeg.exe";
+        string ffprobe = ffprobePath ?? Environment.GetEnvironmentVariable("CONTENTS_TEST_FFPROBE") ?? "C:/opt/ffmpeg/current/bin/ffprobe.exe";
         Action<string>? diagnostic = null;
         if (output is not null)
         {
@@ -42,6 +43,8 @@ internal sealed class MediaTestFiles : IDisposable
 
     /// <summary>変換とHTTP 試験用の構成に使う実媒体を生成します。</summary>
     /// <returns>実在する入力パスです。</returns>
+    // 抑制理由: 生成失敗の診断を添え、元の例外はInnerExceptionに保持します。
+    [SuppressMessage("SourceQuality", "RAW333", Justification = "呼出元に出力先がなくても、試験失敗から終了コードと標準エラーを確認できるようにします。")]
     internal async Task<string> CreateAsync(string kind, double durationSeconds = 0.3, CancellationToken cancellationToken = default)
     {
         Assert.True(File.Exists(Options.FfmpegPath), "Set CONTENTS_TEST_FFMPEG to the real ffmpeg executable.");
@@ -60,17 +63,27 @@ internal sealed class MediaTestFiles : IDisposable
             path = Path.Combine(Root, "picture.png");
             arguments = ["-nostdin", "-v", "error", "-n", "-f", "lavfi", "-i", "color=c=red:s=32x32", "-frames:v", "1", "-update", "1", path];
         }
-        ProcessStartInfo start = new(Options.FfmpegPath) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true };
-        foreach (string argument in arguments)
+        using CancellationTokenSource generation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        // 小さな固定媒体の生成が停止した場合も、試験用プロセスを回収します。
+        generation.CancelAfter(TimeSpan.FromMinutes(1));
+        string report = string.Empty;
+        ProcessRunLimits limits = new(OutputCharacters: 16384)
         {
-            start.ArgumentList.Add(argument);
+            DiagnosticOutput = value =>
+            {
+                report = value;
+                testOutput?.WriteLine("[fixture-generation]\n" + value);
+            },
+        };
+        try
+        {
+            _ = await BoundedProcessRunner.RunAsync(Options.FfmpegPath, arguments, limits, generation.Token).ConfigureAwait(false);
         }
-        using Process process = new() { StartInfo = start };
-        Assert.True(process.Start());
-        string error = await process.StandardError.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
-        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-        testOutput?.WriteLine(FormattableString.Invariant($"[fixture-generation]\nexecutable={Options.FfmpegPath}\nexitCode={process.ExitCode}\nstderr:\n{error[..Math.Min(error.Length, 16384)]}"));
-        Assert.True(process.ExitCode == 0, error);
+        catch (InvalidDataException exception)
+        {
+            throw new InvalidDataException("Fixture media generation failed.\n" + report, exception);
+        }
         return path;
     }
 
