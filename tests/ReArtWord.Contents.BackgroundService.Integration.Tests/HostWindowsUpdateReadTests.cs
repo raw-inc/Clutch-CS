@@ -1,5 +1,6 @@
 using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement;
 using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement.WindowsUpdate;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
@@ -9,7 +10,7 @@ public sealed class HostWindowsUpdateReadTests
 {
     /// <summary>更新を開始せず、Coreが確認した対応エディションとポリシーを取得します。</summary>
     /// <returns>実Coreとの通信結果です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task ReadsWindowsUpdatePolicyThroughTheCoreAsync()
     {
         if (!OperatingSystem.IsWindows())

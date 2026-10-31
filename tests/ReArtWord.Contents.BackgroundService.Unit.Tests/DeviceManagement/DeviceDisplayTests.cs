@@ -4,6 +4,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement.Display;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Infrastructure.DeviceManagement;
 using ReArtWord.Contents.BackgroundService.Infrastructure.DeviceManagement.Display;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.DeviceManagement;
@@ -75,7 +76,7 @@ public sealed class DeviceDisplayTests
 
     /// <summary>実Windowsの列挙だけを行い、表示変更関数は呼びません。</summary>
     /// <returns>ネイティブ構造体の寸法と個別版の確認です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task ReadsRealConsoleWithoutChangingItsModeAsync()
     {
         if (!OperatingSystem.IsWindows())

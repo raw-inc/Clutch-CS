@@ -5,6 +5,7 @@ using System.Security.Principal;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Installation;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Releases;
 using ReArtWord.Contents.BackgroundService.Contracts.Updates;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Updates;
 using Xunit;
 
@@ -15,7 +16,7 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Installation;
 public sealed partial class WindowsInstallationSecurityTests
 {
     /// <summary>共通フォルダー自体を保護しても、既存の別配置の ACL は変更しません。</summary>
-    [Fact]
+    [WindowsFact]
     public void ProtectingParentDoesNotRewriteExistingChildPermissions()
     {
         if (!OperatingSystem.IsWindows())
@@ -43,7 +44,7 @@ public sealed partial class WindowsInstallationSecurityTests
     }
 
     /// <summary>サービス更新も、ユーザーが差し替えられる保存先を準備段階で拒否します。</summary>
-    [Fact]
+    [WindowsFact]
     public void ServiceUpdateRejectsUserControlledStagingBeforeCreatingAnOperation()
     {
         if (!OperatingSystem.IsWindows())
@@ -58,7 +59,7 @@ public sealed partial class WindowsInstallationSecurityTests
     }
 
     /// <summary>本人の書込みは維持し、子ファイルに残った全員の変更権限も除去します。</summary>
-    [Fact]
+    [WindowsFact]
     public void UserInstallationRemovesBroadWriteAccessAndKeepsOwnerAccess()
     {
         if (!OperatingSystem.IsWindows())
@@ -91,7 +92,7 @@ public sealed partial class WindowsInstallationSecurityTests
     }
 
     /// <summary>管理者用サービスをユーザーが差し替えられる親の下へ配置しません。</summary>
-    [Fact]
+    [WindowsFact]
     public void ServiceInstallationRejectsUserControlledParentWithoutChangingIt()
     {
         if (!OperatingSystem.IsWindows())
@@ -115,7 +116,7 @@ public sealed partial class WindowsInstallationSecurityTests
     }
 
     /// <summary>サービスの実行物は一般ユーザーが読み取れ、保存データは公開されません。</summary>
-    [Fact]
+    [WindowsFact]
     public void ServiceProgramsAreReadableButNotWritableAndDataIsPrivate()
     {
         if (!OperatingSystem.IsWindows())
@@ -135,7 +136,7 @@ public sealed partial class WindowsInstallationSecurityTests
     }
 
     /// <summary>別の配置と実体を共有するファイルの権限を変更しません。</summary>
-    [Fact]
+    [WindowsFact]
     public void HardLinkedFileIsRejectedWithoutChangingTheOtherFile()
     {
         if (!OperatingSystem.IsWindows())

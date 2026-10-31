@@ -17,7 +17,7 @@ public sealed class DesktopAnnotationRelayTests
 {
     /// <summary>操作側と閲覧側の所属Coreが異なっても物理座標と色、軌跡を共有します。</summary>
     /// <returns>二つのCore、ClientHost、二つのworkerの実通信です。</returns>
-    [HostedDesktopFact]
+    [HostedDesktopFact(minimumWindows10Build: 19041)]
     public async Task WindowsAnnotationsReachAnotherCoreOnTheSameHostAsync()
     {
         if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041))

@@ -20,7 +20,7 @@ public sealed class DesktopAnnotationProcessTests
 {
     /// <summary>購読しない旧receiverへ新種別を送らず、購読した操作側へ閲覧側の指示を中継します。</summary>
     /// <returns>pipe、共有memory、実windowの確認です。</returns>
-    [HostedDesktopTheory, SupportedOSPlatform("windows")]
+    [HostedDesktopTheory(minimumWindows10Build: 19041), SupportedOSPlatform("windows")]
     [InlineData(false)]
     [InlineData(true)]
     public async Task WindowsWorkersShareAnnotationsAndRecoverAfterOwnerExitAsync(bool anotherGroupAlreadyActive)

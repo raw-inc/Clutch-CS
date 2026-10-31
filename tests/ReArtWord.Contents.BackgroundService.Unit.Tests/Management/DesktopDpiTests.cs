@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Capture;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
@@ -11,7 +12,7 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
 public sealed class DesktopDpiTests
 {
     /// <summary>物理座標の区間をネストしても、元のDPI状態を汚染しません。</summary>
-    [Fact]
+    [WindowsFact]
     public void PhysicalScopeRestoresTheCallingThreadAndMonitorEnumeration()
     {
         if (!OperatingSystem.IsWindows())
