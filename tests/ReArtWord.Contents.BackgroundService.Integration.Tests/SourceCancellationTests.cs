@@ -5,6 +5,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Configuration;
 using ReArtWord.Contents.BackgroundService.Contracts.Configuration.Workflows;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Management;
+using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Workflow;
 using Xunit;
 
@@ -21,8 +22,8 @@ public sealed class SourceCancellationTests
         string cluster = Guid.NewGuid().ToString("N");
         int port = CorePeer.AvailablePort();
         CorePeer first = new(cluster, "a", port, true);
-        CorePeer second = new(cluster, "b", port, false);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = first.ConfigureAwait(true);
+        CorePeer second = new(cluster, "b", port, false);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable secondLifetime = second.ConfigureAwait(true);
         await first.StartAsync().ConfigureAwait(true);
         await second.StartAsync().ConfigureAwait(true);
@@ -43,9 +44,22 @@ public sealed class SourceCancellationTests
         using UdpClient input = new(new IPEndPoint(IPAddress.Loopback, 0));
         await input.SendAsync(new byte[] { 1, 2 }, new IPEndPoint(IPAddress.Loopback, inputPort)).ConfigureAwait(true);
         await CorePeer.WaitAsync(async token => (await first.GetAsync<JsonElement>("status", token).ConfigureAwait(true)).GetProperty("runningNodes").GetArrayLength() == 1).ConfigureAwait(true);
+        WorkflowRunStatus run = Assert.Single((await second.GetAsync<ActiveRunsPage>("runs.active").ConfigureAwait(true)).Items);
+        Assert.Equal(definition.Id, run.WorkflowId);
         JsonElement beforeStop = await second.GetAsync<JsonElement>("status").ConfigureAwait(true);
         Guid sourceId = beforeStop.GetProperty("sources").EnumerateArray().Single(source => string.Equals(source.GetProperty("nodeId").GetString(), "receive", StringComparison.Ordinal)).GetProperty("id").GetGuid();
-        _ = await second.PostAsync<JsonElement>("sources.stop", new SourceStopRequest(definition.Id, "receive", true, sourceId, beforeStop.GetProperty("instanceId").GetGuid())).ConfigureAwait(true);
+        NodeResult cancellation = await second.PostAsync<NodeResult>("sources.stop", new SourceStopRequest(definition.Id, "receive", true, sourceId, beforeStop.GetProperty("instanceId").GetGuid())).ConfigureAwait(true);
+        Assert.Equal(EOutcome.Cancelled, cancellation.Outcome);
+        WorkflowRunStatus finished = run;
+        await CorePeer.WaitAsync(async token =>
+        {
+            finished = await second.GetAsync<WorkflowRunStatus>("runs.read", run.OperationId.ToString("D"), token).ConfigureAwait(true);
+            return !finished.Running;
+        }).ConfigureAwait(true);
+        Assert.Equal(EOutcome.Cancelled, finished.Outcome);
+        TargetNodeResult waiting = Assert.Single(Assert.Single(finished.Report!.Nodes, node => node.NodeId is "waiting").Targets);
+        Assert.Equal("a", waiting.PeerId);
+        Assert.Equal(EOutcome.Cancelled, waiting.Result.Outcome);
         await CorePeer.WaitAsync(async token => (await first.GetAsync<JsonElement>("status", token).ConfigureAwait(true)).GetProperty("runningNodes").GetArrayLength() == 0).ConfigureAwait(true);
         JsonElement stopped = await second.GetAsync<JsonElement>("status").ConfigureAwait(true);
         Assert.DoesNotContain(stopped.GetProperty("sources").EnumerateArray(), source => string.Equals(source.GetProperty("status").GetProperty("state").GetString(), "listening", StringComparison.Ordinal));
