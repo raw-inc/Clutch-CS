@@ -34,12 +34,12 @@ internal sealed class SyncRecoveryPeer : IAsyncDisposable
     private readonly Lock reads = new();
 
     /// <summary>短い配送期限で一つの実Peerと制御可能な相手を接続します。</summary>
-    internal SyncRecoveryPeer(RepositorySnapshot snapshot, TimeSpan? requestTimeout = null)
+    internal SyncRecoveryPeer(RepositorySnapshot snapshot, TimeSpan? requestTimeout = null, TimeProvider? clock = null)
     {
         Directory.CreateDirectory(root);
         Repository = new(Path.Combine(root, "state.db"));
         Target = new(new ClusterOptions(clusterId, "target", "target", "127.0.0.1", "127.255.255.255", port, 1, true, root)
-        { HeartbeatInterval = TimeSpan.FromMilliseconds(50), RequestTimeout = requestTimeout ?? TimeSpan.FromMilliseconds(400) }, Repository)
+        { HeartbeatInterval = TimeSpan.FromMilliseconds(50), RequestTimeout = requestTimeout ?? TimeSpan.FromMilliseconds(400) }, Repository, clock)
         { ReadinessCheck = _ => ValueTask.FromResult(true) };
         source = new(new("source", "127.0.0.1", "127.255.255.255", port, clusterId) { RequestTimeout = TimeSpan.FromSeconds(2) }, instance, TimeProvider.System);
         source.Initialize(NetworkInterface.GetAllNetworkInterfaces().Single(item => item.GetIPProperties().UnicastAddresses.Any(address => address.Address.Equals(IPAddress.Loopback))).Id);
