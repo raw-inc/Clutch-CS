@@ -13,6 +13,7 @@ using ReArtWord.Contents.BackgroundService.Nodes.Values;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Compilation;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.ClusterSynchronization;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
@@ -28,7 +29,7 @@ public sealed class SettingsStateCompatibilityTests
     {
         using MediaTestFiles files = new();
         SqliteRepository repository = new(Path.Combine(files.Root, "state.db"));
-        PeerCluster cluster = new(new("settings-state", "a", "host", "127.0.0.1", "127.255.255.255", 12345, 0, true, files.Root), repository);
+        PeerCluster cluster = new(new("settings-state", "a", "host", "127.0.0.1", "127.255.255.255", LargeSynchronizationTests.Port(), 0, true, files.Root), repository);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = cluster.ConfigureAwait(true);
         WorkflowCompiler compiler = new(new NodeRegistry([new ConstantValueNode(), .. StateNodeRegistration.Create(new NodeStateStore(repository, "a"))]));
         WorkflowDefinition definition = new("demo", "demo",
