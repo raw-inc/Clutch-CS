@@ -103,14 +103,15 @@ public sealed class IterationStartIntervalTests
         using CancellationTokenSource cancellation = new();
         IterationTestClock clock = new();
         ConcurrentDictionary<int, long> starts = new();
+        ConcurrentBag<int> concurrency = [];
         TaskCompletionSource[] finish = Enumerable.Range(0, 5).Select(_ => new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)).ToArray();
-        int active = 0, maximum = 0;
+        int active = 0;
         WorkflowFixture fixture = IterationTests.Create(async (context, _) =>
         {
             int index = context.Inputs["value"].Json.GetInt32();
-            starts[index] = clock.GetTimestamp();
-            int current = Interlocked.Increment(ref active);
-            maximum = Math.Max(maximum, current);
+            long timestamp = clock.GetTimestamp();
+            concurrency.Add(Interlocked.Increment(ref active));
+            starts[index] = timestamp;
             await finish[index - 1].Task.ConfigureAwait(false);
             Interlocked.Decrement(ref active);
             return NodeResult.Success(context.Inputs["value"]);
@@ -142,7 +143,7 @@ public sealed class IterationStartIntervalTests
             clock.Advance(1);
             await UntilAsync(() => starts.Count == 5).ConfigureAwait(true);
             Assert.Equal(new long[] { 0, 100, 200, 400, 500 }, starts.OrderBy(pair => pair.Key).Select(pair => pair.Value / TimeSpan.TicksPerMillisecond));
-            Assert.Equal(3, maximum);
+            Assert.Equal(3, concurrency.Max());
             foreach (TaskCompletionSource item in finish)
             {
                 item.TrySetResult();
