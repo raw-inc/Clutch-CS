@@ -23,6 +23,7 @@ public sealed class PeerEventTests
         IAsyncEnumerator<WorkflowEvent> reader = events.SubscribeAsync(timeout.Token).GetAsyncEnumerator();
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable readerLifetime = reader.ConfigureAwait(true);
         Task<bool> waiting = reader.MoveNextAsync().AsTask();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable waitingLifetime = new TestTaskLifetime(waiting, timeout).ConfigureAwait(true);
         await observations.RefreshAsync(timeout.Token).ConfigureAwait(true);
         Assert.True(await waiting.ConfigureAwait(true));
         Assert.Equal("peer.changed", reader.Current.Name);

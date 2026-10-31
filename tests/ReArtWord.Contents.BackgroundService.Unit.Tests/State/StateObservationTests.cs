@@ -32,6 +32,7 @@ public sealed class StateObservationTests
         Assert.True(watch.Current.Initial);
         Assert.Null(watch.Current.Value);
         Task<bool> next = watch.MoveNextAsync().AsTask();
+        await using ConfiguredAsyncDisposable valueLifetime = new TestTaskLifetime(next, timeout).ConfigureAwait(true);
         await repository.ApplyBatchAsync(Guid.NewGuid(), [new("workflow:two", "key", null, NodeValue.FromObject(99))], timeout.Token).ConfigureAwait(true);
         Guid aborted = Guid.NewGuid();
         await repository.PrepareAsync(aborted, [new("workflow:one", "key", null, NodeValue.FromObject(88))], timeout.Token).ConfigureAwait(true);
@@ -41,6 +42,7 @@ public sealed class StateObservationTests
         Assert.True(await next.WaitAsync(timeout.Token).ConfigureAwait(true));
         Assert.Equal(1, watch.Current.Value!.Json.GetInt32());
         next = watch.MoveNextAsync().AsTask();
+        await using ConfiguredAsyncDisposable nullLifetime = new TestTaskLifetime(next, timeout).ConfigureAwait(true);
         DurableEntry before = (await repository.ReadAsync("workflow:one", "key", timeout.Token).ConfigureAwait(true))!;
         await repository.ApplyBatchAsync(Guid.NewGuid(), [new(before.Scope, before.Key, before.Version, NodeValue.FromObject(1))], timeout.Token).ConfigureAwait(true);
         before = (await repository.ReadAsync(before.Scope, before.Key, timeout.Token).ConfigureAwait(true))!;
@@ -49,12 +51,14 @@ public sealed class StateObservationTests
         Assert.NotNull(watch.Current.Value);
         Assert.Equal(System.Text.Json.JsonValueKind.Null, watch.Current.Value.Json.ValueKind);
         next = watch.MoveNextAsync().AsTask();
+        await using ConfiguredAsyncDisposable deletionLifetime = new TestTaskLifetime(next, timeout).ConfigureAwait(true);
         before = (await repository.ReadAsync(before.Scope, before.Key, timeout.Token).ConfigureAwait(true))!;
         await repository.ApplyBatchAsync(Guid.NewGuid(), [new(before.Scope, before.Key, before.Version, null)], timeout.Token).ConfigureAwait(true);
         Assert.True(await next.WaitAsync(timeout.Token).ConfigureAwait(true));
         Assert.False(watch.Current.Initial);
         Assert.Null(watch.Current.Value);
         next = watch.MoveNextAsync().AsTask();
+        await using ConfiguredAsyncDisposable cancellationLifetime = new TestTaskLifetime(next, timeout).ConfigureAwait(true);
         await timeout.CancelAsync().ConfigureAwait(true);
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => next).ConfigureAwait(true);
     }

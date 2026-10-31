@@ -41,6 +41,7 @@ public sealed class SnapshotServiceTests
         IAsyncEnumerator<WorkflowEvent> reader = events.SubscribeAsync(timeout.Token).GetAsyncEnumerator();
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable readerLifetime = reader.ConfigureAwait(true);
         Task<bool> waiting = reader.MoveNextAsync().AsTask();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable waitingLifetime = new TestTaskLifetime(waiting, timeout).ConfigureAwait(true);
         Guid captureId = Guid.NewGuid();
         SnapshotTarget target = new("A", "one", ESnapshotKind.Runtime);
         SnapshotCaptureResult captured = await service.CaptureAsync(captureId, target, timeout.Token).ConfigureAwait(true);
