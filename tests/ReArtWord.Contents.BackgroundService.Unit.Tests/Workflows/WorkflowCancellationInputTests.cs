@@ -67,20 +67,23 @@ public sealed class WorkflowCancellationInputTests
         {
             ["value"] = NodeValue.FromObject(1),
         }, cancellationToken: cancellation.Token);
-        await entered.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
-        using CancellationTokenRegistration delayed = cancellation.Token.Register(() =>
-        {
-            callbackEntered.TrySetResult();
-            Assert.True(resumeCallbacks.Wait(TimeSpan.FromSeconds(10)), "The cancellation gate timed out before the test released it.");
-        });
-        Task cancelling = cancellation.CancelAsync();
+        CancellationTokenRegistration delayed = default;
+        Task cancelling = Task.CompletedTask;
         try
         {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+            delayed = cancellation.Token.Register(() =>
+            {
+                callbackEntered.TrySetResult();
+                resumeCallbacks.Wait();
+            });
+            cancelling = cancellation.CancelAsync();
             await callbackEntered.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
             NodeResult bodyResult = bodyOutcome == EOutcome.Succeeded ? ValueMergeFixture.Result(NodeValue.FromObject(1))
                                                                       : NodeResult.Failure("execution.cancelUnconfirmed", "The operation was cancelled before it started.", bodyOutcome);
             result.TrySetResult(bodyResult);
             ExecutionReport report = await running.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+            Assert.False(cancelling.IsCompleted);
             Assert.True(report.Outcome == expected, JsonSerializer.Serialize(report));
             Assert.Equal(0, afterCalls);
             Assert.Equal(bodyOutcome, Assert.Single(report.Nodes, node => string.Equals(node.NodeId, "body", StringComparison.Ordinal)).Outcome);
@@ -88,7 +91,22 @@ public sealed class WorkflowCancellationInputTests
         finally
         {
             resumeCallbacks.Set();
-            await cancelling.ConfigureAwait(true);
+            result.TrySetResult(NodeResult.Failure("fixture.cleanup", "The test ended.", EOutcome.Cancelled));
+            try
+            {
+                await cancellation.CancelAsync().ConfigureAwait(true);
+            }
+            finally
+            {
+                try
+                {
+                    await Task.WhenAll(cancelling, running).ConfigureAwait(true);
+                }
+                finally
+                {
+                    await delayed.DisposeAsync().ConfigureAwait(true);
+                }
+            }
         }
     }
 
@@ -119,20 +137,23 @@ public sealed class WorkflowCancellationInputTests
             return await fixture.Executor.ExecuteAsync(request, token).ConfigureAwait(false);
         };
         Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, IterationTests.Definition(end: false)), cancellationToken: cancellation.Token);
-        await entered.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
-        using CancellationTokenRegistration delayed = cancellation.Token.Register(() =>
-        {
-            callbackEntered.TrySetResult();
-            Assert.True(resumeCallbacks.Wait(TimeSpan.FromSeconds(10)), "The cancellation gate timed out before the test released it.");
-        });
-        Task cancelling = cancellation.CancelAsync();
+        CancellationTokenRegistration delayed = default;
+        Task cancelling = Task.CompletedTask;
         try
         {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+            delayed = cancellation.Token.Register(() =>
+            {
+                callbackEntered.TrySetResult();
+                resumeCallbacks.Wait();
+            });
+            cancelling = cancellation.CancelAsync();
             await callbackEntered.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
             NodeResult bodyResult = bodyOutcome == EOutcome.Succeeded ? NodeResult.Success(NodeValue.FromObject(1))
                                                                       : NodeResult.Failure("execution.cancelUnconfirmed", "The operation did not complete.", bodyOutcome);
             result.TrySetResult(bodyResult);
             ExecutionReport report = await running.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+            Assert.False(cancelling.IsCompleted);
             Assert.True(report.Outcome == expected, JsonSerializer.Serialize(report));
             Assert.Equal(1, IterationTests.Loop(report).Iteration!.Started);
             Assert.Empty(fixture.Engine.Active());
@@ -140,7 +161,22 @@ public sealed class WorkflowCancellationInputTests
         finally
         {
             resumeCallbacks.Set();
-            await cancelling.ConfigureAwait(true);
+            result.TrySetResult(NodeResult.Failure("fixture.cleanup", "The test ended.", EOutcome.Cancelled));
+            try
+            {
+                await cancellation.CancelAsync().ConfigureAwait(true);
+            }
+            finally
+            {
+                try
+                {
+                    await Task.WhenAll(cancelling, running).ConfigureAwait(true);
+                }
+                finally
+                {
+                    await delayed.DisposeAsync().ConfigureAwait(true);
+                }
+            }
         }
     }
 }
