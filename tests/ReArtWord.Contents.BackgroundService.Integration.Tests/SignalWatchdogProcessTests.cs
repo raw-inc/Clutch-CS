@@ -19,6 +19,7 @@ public sealed class SignalWatchdogProcessTests
     [Fact]
     public async Task RemoteRecoveryStopsOnlyOwnedListenersAndDrainsAcceptedWorkAsync()
     {
+        using ControlledHttpEndpoint response = new();
         string cluster = Guid.NewGuid().ToString("N");
         int port = CorePeer.AvailablePort();
         CorePeer first = new(cluster, "a", port, true), second = new(cluster, "b", port, false);
@@ -34,7 +35,7 @@ public sealed class SignalWatchdogProcessTests
                 && (await first.GetAsync<ClusterOperationalState>("configuration.read", token).ConfigureAwait(false)).Effective is not null;
         }, timeout.Token).ConfigureAwait(true);
         int mainPort = CorePeer.AvailablePort(), backupPort = CorePeer.AvailablePort();
-        WorkflowDefinition definition = Definition(first, mainPort, backupPort);
+        WorkflowDefinition definition = Definition(first, second, mainPort, backupPort, response.Url);
         WorkflowSaveResult saved = await first.PostAsync<WorkflowSaveResult>("workflows.save", new WorkflowSaveRequest(Guid.NewGuid(), definition, null), timeout.Token).ConfigureAwait(true);
         Assert.Equal(EOutcome.Succeeded, saved.Activation.Outcome);
         SourceExecutionInfo monitor = await WaitSourceAsync(second, "watch", ESourceState.Listening, timeout.Token).ConfigureAwait(true);
@@ -43,11 +44,15 @@ public sealed class SignalWatchdogProcessTests
         using UdpClient sender = new(new IPEndPoint(IPAddress.Loopback, 0));
         await sender.SendAsync(new byte[] { 9, 8, 7 }, new IPEndPoint(IPAddress.Loopback, backupPort), timeout.Token).ConfigureAwait(true);
         await WaitPreviewAsync(second, "accepted", timeout.Token).ConfigureAwait(true);
+        Assert.Equal(string.Empty, await response.AcceptAsync(timeout.Token).ConfigureAwait(true));
         await WithHeartbeatsAsync(mainPort, async token =>
         {
             SourceExecutionInfo stopped = await WaitSourceAsync(first, "backup", ESourceState.Completed, token).ConfigureAwait(false);
             Assert.Equal(backup.Id, stopped.Id);
             Assert.Equal(EOutcome.Succeeded, stopped.Result?.Outcome);
+
+            // 待受の終了後も受付済みの処理を保持し、ここでだけ正常終了を許可します。
+            await response.ReplyAsync("drained", token).ConfigureAwait(false);
             await WaitPreviewAsync(second, "drained", token).ConfigureAwait(false);
             SourceExecutionInfo late = await WaitSourceAsync(first, "late", ESourceState.Completed, token).ConfigureAwait(false);
             Assert.Equal("source.scope.closed", late.Result?.ReasonCode);
@@ -68,7 +73,7 @@ public sealed class SignalWatchdogProcessTests
 
     /// <summary>監視PCと待受PCを分け、無関係な待受と遅れて開始する待受も配置します。</summary>
     /// <returns>外部APIや本番ポートを使用しない定義です。</returns>
-    private static WorkflowDefinition Definition(CorePeer first, int mainPort, int backupPort)
+    private static WorkflowDefinition Definition(CorePeer first, CorePeer second, int mainPort, int backupPort, string url)
     {
         JsonElement preview = JsonSerializer.SerializeToElement(new { mediaType = "text/plain" });
         TargetDefinition local = new(EExecutionScope.One, ["a"]), remote = new(EExecutionScope.One, ["b"]);
@@ -79,11 +84,14 @@ public sealed class SignalWatchdogProcessTests
             new("watch", "control.signalWatchdog", JsonSerializer.SerializeToElement(new { timeoutMs = 1200 }), Target: remote, StartOnLoad: true),
             Receive("backup", backupPort), Receive("independent", CorePeer.AvailablePort(), true), Receive("late", CorePeer.AvailablePort()),
             new("accepted", "control.preview", preview, Target: remote),
-            new("delay", "control.delay", JsonSerializer.SerializeToElement(new { milliseconds = 3500 }), Target: remote),
+            new("delay", "http.request", JsonSerializer.SerializeToElement(new
+            {
+                interfaceId = second.InterfaceId, localAddress = "127.0.0.1", url, method = "GET", authentication = "none", responseBodyFormat = "text", timeoutMs = 0,
+            }), Target: remote),
             new("drained", "control.preview", preview, Target: remote)],
             [new("main", "start", "watch", "trigger"), new("watch", "start", "backup", "trigger"),
-                new("backup", "value", "accepted", "value"), new("backup", "value", "delay", "value"),
-                new("delay", "value", "drained", "value"), new("delay", CompletionPorts.Signal, "late", "trigger")], Enabled: true);
+                new("backup", "value", "accepted", "value"), new("backup", "value", "delay", "trigger"),
+                new("delay", "body", "drained", "value"), new("delay", CompletionPorts.Signal, "late", "trigger")], Enabled: true);
     }
 
     /// <summary>古い終了済み履歴ではなく、そのNodeの現在の待受状態を確認します。</summary>

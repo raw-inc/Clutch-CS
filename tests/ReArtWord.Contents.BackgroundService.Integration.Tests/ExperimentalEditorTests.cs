@@ -21,6 +21,7 @@ public sealed class ExperimentalEditorTests
     [Fact]
     public async Task SharedDraftsRemainManualUntilClusterPolicyEnablesLiveApplyAsync()
     {
+        using ControlledHttpEndpoint endpoint = new();
         string cluster = Guid.NewGuid().ToString("N");
         int port = CorePeer.AvailablePort();
         CorePeer first = new(cluster, "a", port, true);
@@ -34,12 +35,15 @@ public sealed class ExperimentalEditorTests
             JsonElement status = await first.GetAsync<JsonElement>("status", token).ConfigureAwait(true);
             return status.GetProperty("peers").EnumerateArray().Count(peer => string.Equals(peer.GetProperty("status").GetString(), "ready", StringComparison.Ordinal)) == 2;
         }).ConfigureAwait(true);
-        WorkflowDefinition definition = new("live-editor", "original", [new("delay", "control.delay", JsonSerializer.SerializeToElement(new { milliseconds = 3000 }))], [], Enabled: false);
+        WorkflowDefinition definition = new("live-editor", "original", [new("hold", "http.request", JsonSerializer.SerializeToElement(new
+        {
+            interfaceId = first.InterfaceId, localAddress = "127.0.0.1", url = endpoint.Url, method = "GET", authentication = "none", timeoutMs = 0,
+        }), Target: new(EExecutionScope.One, ["a"]))], [], Enabled: false);
         WorkflowSaveResult saved = await first.PostAsync<WorkflowSaveResult>("workflows.save", new WorkflowSaveRequest(Guid.NewGuid(), definition, null)).ConfigureAwait(true);
         Assert.Equal(EOutcome.Succeeded, saved.Saved.Outcome);
         await EditAsync(second, "shared draft").ConfigureAwait(true);
-        DraftView shared = await first.GetAsync<DraftView>("collaboration.draft", definition.Id).ConfigureAwait(true);
-        Assert.Equal("shared draft", shared.Definition.Name);
+        await CorePeer.WaitAsync(async token => (await first.GetAsync<DraftView>("collaboration.draft", definition.Id, token).ConfigureAwait(true))
+            .Definition.Name is "shared draft").ConfigureAwait(true);
         await Task.Delay(2200).ConfigureAwait(true);
         Assert.Equal("original", (await ReadAsync(first).ConfigureAwait(true)).GetProperty("saved").GetProperty("definition").GetProperty("name").GetString());
         await SetPolicyAsync(first, true).ConfigureAwait(true);
@@ -57,11 +61,15 @@ public sealed class ExperimentalEditorTests
         JsonElement current = await ReadAsync(first).ConfigureAwait(true);
         Assert.Equal("after restart", current.GetProperty("saved").GetProperty("definition").GetProperty("name").GetString());
         Guid operation = Guid.NewGuid();
-        await first.PostAsync<JsonElement>("runs.start", new WorkflowRunRequest(operation, definition.Id, current.GetProperty("effectiveRevision").GetString(), "delay")).ConfigureAwait(true);
-        await CorePeer.WaitAsync(async token => (await first.GetAsync<WorkflowNodeActivity>("workflows.activity", definition.Id, token).ConfigureAwait(true)).Nodes.Any(node => string.Equals(node.NodeId, "delay", StringComparison.Ordinal) && node.CompletedAt is null)).ConfigureAwait(true);
-        Assert.Empty((await first.GetAsync<WorkflowNodeActivity>("workflows.activity", "different-flow").ConfigureAwait(true)).Nodes);
-        await CorePeer.WaitAsync(async token => !(await first.GetAsync<JsonElement>("runs.read", operation, token).ConfigureAwait(true)).GetProperty("running").GetBoolean()).ConfigureAwait(true);
-        Assert.Empty((await first.GetAsync<WorkflowNodeActivity>("workflows.activity", definition.Id).ConfigureAwait(true)).Nodes);
+        using CancellationTokenSource observation = new(TimeSpan.FromSeconds(30));
+        await first.PostAsync<JsonElement>("runs.start", new WorkflowRunRequest(operation, definition.Id, current.GetProperty("effectiveRevision").GetString(), "hold"), observation.Token).ConfigureAwait(true);
+        Assert.Empty(await endpoint.AcceptAsync(observation.Token).ConfigureAwait(true));
+        await CorePeer.WaitAsync(async token => (await first.GetAsync<WorkflowNodeActivity>("workflows.activity", definition.Id, token).ConfigureAwait(true)).Nodes.Any(node => string.Equals(node.NodeId, "hold", StringComparison.Ordinal) && node.CompletedAt is null), observation.Token).ConfigureAwait(true);
+        Assert.Empty((await first.GetAsync<WorkflowNodeActivity>("workflows.activity", "different-flow", observation.Token).ConfigureAwait(true)).Nodes);
+        await endpoint.ReplyAsync("completed", observation.Token).ConfigureAwait(true);
+        await CorePeer.WaitAsync(async token => !(await first.GetAsync<JsonElement>("runs.read", operation, token).ConfigureAwait(true)).GetProperty("running").GetBoolean(), observation.Token).ConfigureAwait(true);
+        Assert.Equal(EOutcome.Succeeded, (await first.GetAsync<WorkflowRunStatus>("runs.read", operation, observation.Token).ConfigureAwait(true)).Outcome);
+        Assert.Empty((await first.GetAsync<WorkflowNodeActivity>("workflows.activity", definition.Id, observation.Token).ConfigureAwait(true)).Nodes);
     }
 
     /// <summary>一つの共通設定だけを通常の保存・反映経路で切り替えます。</summary>

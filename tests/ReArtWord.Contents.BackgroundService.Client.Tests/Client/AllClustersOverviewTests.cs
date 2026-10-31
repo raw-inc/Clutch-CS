@@ -25,6 +25,8 @@ namespace ReArtWord.Contents.BackgroundService.Client.Tests.Client;
 /// <summary>選択不要の全クラスタ観測が対象と取得範囲を混同しないことを検証します。</summary>
 public sealed class AllClustersOverviewTests
 {
+    private readonly EditorTestClock clock = new();
+
     /// <summary>低速経路でも履歴を削らず、小さい本文と有限並列で初回表示を完了します。</summary>
     /// <returns>全履歴の保持、差分カーソル、同時取得数の確認です。</returns>
     [Fact]
@@ -32,7 +34,7 @@ public sealed class AllClustersOverviewTests
     {
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
         TaskCompletionSource overlapping = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset now = clock.GetUtcNow();
         DiscoveredCluster[] catalog = Enumerable.Range(0, 12).Select(index => Cluster(index.ToString("D2", System.Globalization.CultureInfo.InvariantCulture), [Peer("peer")])).ToArray();
         int active = 0, maximum = 0, calls = 0, cursors = 0;
         object gate = new();
@@ -80,7 +82,7 @@ public sealed class AllClustersOverviewTests
             }
         });
         using HttpClient client = new(handler) { BaseAddress = new Uri("http://localhost/") };
-        AllClustersTelemetry overview = new(new(client));
+        AllClustersTelemetry overview = new(new(client, new(clock)));
         await overview.RefreshAsync(timeout.Token);
         Assert.Equal(3, calls);
         Assert.InRange(maximum, 2, 3);
@@ -88,7 +90,7 @@ public sealed class AllClustersOverviewTests
         Assert.All(overview.Peers, item => Assert.Equal(121, item.Peer.Samples.Count));
         await overview.RefreshAsync(timeout.Token);
         Assert.Equal(12, cursors);
-        Assert.All(catalog, cluster => Assert.Equal(("Ready", 1, 1), HealthCounts(overview, cluster, DateTimeOffset.UtcNow)));
+        Assert.All(catalog, cluster => Assert.Equal(("Ready", 1, 1), HealthCounts(overview, cluster, clock.GetUtcNow())));
     }
 
     /// <summary>一組の本文取得失敗が、成功した他クラスタの稼働確認を消しません。</summary>
@@ -108,14 +110,14 @@ public sealed class AllClustersOverviewTests
                     return new HttpResponseMessage(HttpStatusCode.GatewayTimeout);
                 }
             }
-            return await ResponseAsync(request, catalog, Guid.NewGuid(), DateTimeOffset.UtcNow, token).ConfigureAwait(false);
+            return await ResponseAsync(request, catalog, Guid.NewGuid(), clock.GetUtcNow(), token).ConfigureAwait(false);
         });
         using HttpClient client = new(handler) { BaseAddress = new Uri("http://localhost/") };
-        AllClustersTelemetry overview = new(new(client));
+        AllClustersTelemetry overview = new(new(client, new(clock)));
         await overview.RefreshAsync();
         Assert.NotNull(overview.Problem);
-        Assert.All(catalog.Take(4), cluster => Assert.Equal(("Unconfirmed", 0, 0), HealthCounts(overview, cluster, DateTimeOffset.UtcNow)));
-        Assert.All(catalog.Skip(4), cluster => Assert.Equal(("Ready", 1, 1), HealthCounts(overview, cluster, DateTimeOffset.UtcNow)));
+        Assert.All(catalog.Take(4), cluster => Assert.Equal(("Unconfirmed", 0, 0), HealthCounts(overview, cluster, clock.GetUtcNow())));
+        Assert.All(catalog.Skip(4), cluster => Assert.Equal(("Ready", 1, 1), HealthCounts(overview, cluster, clock.GetUtcNow())));
     }
 
     /// <summary>全PC再起動後も開いた画面が新実体を取得し、旧実体の値を混ぜず復帰します。</summary>
@@ -125,9 +127,9 @@ public sealed class AllClustersOverviewTests
     {
         DiscoveredCluster[] catalog = Enumerable.Range(0, 7).Select(index => Cluster(index.ToString(System.Globalization.CultureInfo.InvariantCulture),
             [Peer("manage") with { HostId = "manage" }, Peer("server") with { HostId = "server" }])).ToArray();
-        using ClientHttpHandler handler = new((request, token) => ResponseAsync(request, catalog, Guid.NewGuid(), DateTimeOffset.UtcNow, token));
+        using ClientHttpHandler handler = new((request, token) => ResponseAsync(request, catalog, Guid.NewGuid(), clock.GetUtcNow(), token));
         using HttpClient client = new(handler) { BaseAddress = new Uri("http://localhost/") };
-        AllClustersTelemetry overview = new(new(client));
+        AllClustersTelemetry overview = new(new(client, new(clock)));
         await overview.RefreshAsync();
         string server = "server";
         Guid[] previous = overview.Peers.Where(item => string.Equals(item.Peer.Peer.HostId, server, StringComparison.Ordinal)).Select(item => item.Peer.Peer.InstanceId).ToArray();
@@ -148,7 +150,7 @@ public sealed class AllClustersOverviewTests
             OverviewPeer[] current = overview.Peers.Select(item => item.Peer).Where(peer => string.Equals(peer.Peer.HostId, server, StringComparison.Ordinal) && !previous.Contains(peer.Peer.InstanceId)).ToArray();
             Assert.Equal(7, current.Length);
             Assert.Equal(14, overview.KnownPeers);
-            Assert.All(overview.Clusters, cluster => Assert.Equal(("Ready", 2, 2), HealthCounts(overview, cluster, DateTimeOffset.UtcNow)));
+            Assert.All(overview.Clusters, cluster => Assert.Equal(("Ready", 2, 2), HealthCounts(overview, cluster, clock.GetUtcNow())));
             Assert.All(current, peer =>
             {
                 Assert.Null(peer.Problem);
@@ -165,12 +167,12 @@ public sealed class AllClustersOverviewTests
     [InlineData(true)]
     public async Task UnselectedAndSelectedClientsCanObserveClustersWithoutChangingSelection(bool selected)
     {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset now = clock.GetUtcNow();
         Guid execution = Guid.NewGuid();
         DiscoveredCluster[] catalog = [Cluster("a", [Peer("same")]), Cluster("b", [Peer("same")])];
         using ClientHttpHandler handler = new((request, token) => ResponseAsync(request, catalog, execution, now, token));
         using HttpClient client = new(handler) { BaseAddress = new Uri("http://localhost/") };
-        ManagementApi api = new(client);
+        ManagementApi api = new(client, new(clock));
         if (selected)
         {
             api.SelectedClusterId = "untouched";
@@ -189,9 +191,9 @@ public sealed class AllClustersOverviewTests
         Assert.All(overview.Observations, item => Assert.Equal("表示名 / " + item.Key, item.Value.WorkflowName("workflow")));
         Assert.All(overview.Observations, item => Assert.Equal(1, Assert.Single(item.Value.Activity(now.AddSeconds(2))).Completed));
         Assert.All(overview.Peers, item => Assert.NotNull(item.Peer.Latest));
-        Assert.All(overview.Clusters, cluster => Assert.Equal(("Ready", 1, 1), HealthCounts(overview, cluster, DateTimeOffset.UtcNow)));
-        Assert.All(overview.Clusters, cluster => Assert.Equal("Unconfirmed", overview.Health(cluster, DateTimeOffset.UtcNow.AddSeconds(16)).State));
-        Assert.Equal("Needs attention", overview.Health(catalog[0] with { CoordinatorCandidates = ["same", "other"] }, DateTimeOffset.UtcNow).State);
+        Assert.All(overview.Clusters, cluster => Assert.Equal(("Ready", 1, 1), HealthCounts(overview, cluster, clock.GetUtcNow())));
+        Assert.All(overview.Clusters, cluster => Assert.Equal("Unconfirmed", overview.Health(cluster, clock.GetUtcNow().AddSeconds(16)).State));
+        Assert.Equal("Needs attention", overview.Health(catalog[0] with { CoordinatorCandidates = ["same", "other"] }, clock.GetUtcNow()).State);
     }
 
     /// <summary>多数クラスタでも現在の128Peerだけを取得し、次ページへ進めます。</summary>
@@ -212,15 +214,15 @@ public sealed class AllClustersOverviewTests
                     requested.Add(query.ClusterId);
                 }
             }
-            return await ResponseAsync(request, catalog, Guid.NewGuid(), DateTimeOffset.UtcNow, token).ConfigureAwait(false);
+            return await ResponseAsync(request, catalog, Guid.NewGuid(), clock.GetUtcNow(), token).ConfigureAwait(false);
         });
         using HttpClient client = new(handler) { BaseAddress = new Uri("http://localhost/") };
-        AllClustersTelemetry overview = new(new(client));
+        AllClustersTelemetry overview = new(new(client, new(clock)));
         await overview.RefreshAsync();
         Assert.Equal(128, requested.Count);
         Assert.Equal(128, overview.Peers.Count);
         Assert.Equal(129, overview.KnownPeers);
-        Assert.Equal("Unconfirmed", overview.Health(catalog[128], DateTimeOffset.UtcNow).State);
+        Assert.Equal("Unconfirmed", overview.Health(catalog[128], clock.GetUtcNow()).State);
         overview.NextPage();
         await overview.RefreshAsync();
         Assert.Single(overview.Peers);
@@ -235,14 +237,14 @@ public sealed class AllClustersOverviewTests
     {
         DiscoveredCluster[] catalog = Enumerable.Range(0, 7).Select(index => Cluster(index.ToString("D3", System.Globalization.CultureInfo.InvariantCulture),
             [Peer("peer-a") with { HostId = "host-a" }, Peer("peer-b") with { HostId = "host-b" }])).ToArray();
-        using ClientHttpHandler handler = new((request, token) => ResponseAsync(request, catalog, Guid.NewGuid(), DateTimeOffset.UtcNow, token));
+        using ClientHttpHandler handler = new((request, token) => ResponseAsync(request, catalog, Guid.NewGuid(), clock.GetUtcNow(), token));
         using HttpClient client = new(handler) { BaseAddress = new Uri("http://localhost/") };
-        AllClustersTelemetry overview = new(new(client));
+        AllClustersTelemetry overview = new(new(client, new(clock)));
         await overview.RefreshAsync();
         Assert.Equal(14, overview.KnownPeers);
         Assert.Equal(14, overview.Peers.Count);
         Assert.Equal(7, overview.Observations.Count);
-        Assert.All(overview.Clusters, cluster => Assert.Equal(("Ready", 2, 2), HealthCounts(overview, cluster, DateTimeOffset.UtcNow)));
+        Assert.All(overview.Clusters, cluster => Assert.Equal(("Ready", 2, 2), HealthCounts(overview, cluster, clock.GetUtcNow())));
         Assert.Equal(2, overview.Peers.Select(item => item.Peer.Peer.HostId).Distinct(StringComparer.Ordinal).Count());
     }
 
@@ -264,17 +266,17 @@ public sealed class AllClustersOverviewTests
                 }
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.GatewayTimeout));
             }
-            return ResponseAsync(request, [cluster], Guid.NewGuid(), DateTimeOffset.UtcNow, token);
+            return ResponseAsync(request, [cluster], Guid.NewGuid(), clock.GetUtcNow(), token);
         });
         using HttpClient client = new(handler) { BaseAddress = new Uri("http://localhost/") };
-        AllClustersTelemetry overview = new(new(client));
+        AllClustersTelemetry overview = new(new(client, new(clock)));
         await overview.RefreshAsync();
         Assert.NotNull(Assert.Single(overview.Peers).Peer.Latest);
         missing = true;
         await overview.RefreshAsync();
         Assert.Equal(EPeerStatus.Unavailable, Assert.Single(overview.Peers).Peer.Peer.Status);
         Assert.NotNull(Assert.Single(overview.Peers).Peer.Problem);
-        Assert.Equal(("Unconfirmed", 0, 0), HealthCounts(overview, Assert.Single(overview.Clusters), DateTimeOffset.UtcNow));
+        Assert.Equal(("Unconfirmed", 0, 0), HealthCounts(overview, Assert.Single(overview.Clusters), clock.GetUtcNow()));
     }
 
     /// <summary>発見通知がReadyでも、今回の状態照会が準備中ならReady表示にしません。</summary>
@@ -289,15 +291,15 @@ public sealed class AllClustersOverviewTests
             if (string.Equals(request.RequestUri!.AbsolutePath, statusPath, StringComparison.Ordinal))
             {
                 PeerInfo peer = cluster.Peers[0];
-                return Task.FromResult(Json(new[] { new DashboardPeerSnapshot(cluster.ClusterId, peer, DateTimeOffset.UtcNow, null,
+                return Task.FromResult(Json(new[] { new DashboardPeerSnapshot(cluster.ClusterId, peer, clock.GetUtcNow(), null,
                     JsonSerializer.SerializeToElement(new PeerHealth(cluster.ClusterId, peer.PeerId, peer.InstanceId, EPeerStatus.Syncing, null), ContractJson.Options), []) }));
             }
-            return ResponseAsync(request, [cluster], Guid.NewGuid(), DateTimeOffset.UtcNow, token);
+            return ResponseAsync(request, [cluster], Guid.NewGuid(), clock.GetUtcNow(), token);
         });
         using HttpClient client = new(handler) { BaseAddress = new Uri("http://localhost/") };
-        AllClustersTelemetry overview = new(new(client));
+        AllClustersTelemetry overview = new(new(client, new(clock)));
         await overview.RefreshAsync();
-        Assert.Equal(("Needs attention", 0, 1), HealthCounts(overview, cluster, DateTimeOffset.UtcNow));
+        Assert.Equal(("Needs attention", 0, 1), HealthCounts(overview, cluster, clock.GetUtcNow()));
     }
 
     /// <summary>状態詳細が欠測でもクラスタ概要とピア一覧の稼働判定を一致させます。</summary>
@@ -312,18 +314,18 @@ public sealed class AllClustersOverviewTests
         PeerHealth health = new(cluster.ClusterId, peer.PeerId, peer.InstanceId, state, "version");
         using ClientHttpHandler handler = new((request, token) => Task.FromResult(request.RequestUri!.AbsolutePath switch
         {
-            "/client/dashboard/batch" => Json(new[] { new DashboardPeerSnapshot(cluster.ClusterId, peer, DateTimeOffset.UtcNow, null,
+            "/client/dashboard/batch" => Json(new[] { new DashboardPeerSnapshot(cluster.ClusterId, peer, clock.GetUtcNow(), null,
                 JsonSerializer.SerializeToElement(health, ContractJson.Options), []) }),
             "/client/dashboard/health" => Json(health),
             _ => Json(new[] { cluster })
         }));
         using HttpClient client = new(handler) { BaseAddress = new Uri("http://localhost/") };
-        ManagementApi api = new(client);
+        ManagementApi api = new(client, new(clock));
         AllClustersTelemetry overview = new(api);
         PeerListTelemetry list = new(api);
         await overview.RefreshAsync();
         await list.RefreshAsync();
-        Assert.Equal(expected, overview.Health(cluster, DateTimeOffset.UtcNow).State);
+        Assert.Equal(expected, overview.Health(cluster, clock.GetUtcNow()).State);
         Assert.Equal(state, Assert.Single(list.Rows).Health!.Status);
         Assert.Equal(state, Assert.Single(overview.Peers).Peer.VerifiedStatus);
     }
@@ -338,11 +340,11 @@ public sealed class AllClustersOverviewTests
 
     /// <summary>同じ実PCに所属する実体を用意します。</summary>
     /// <returns>当該Core 実体の通知です。</returns>
-    private static PeerInfo Peer(string id) => new(id, Guid.NewGuid(), "physical-pc", "127.0.0.1", 1234, EPeerStatus.Ready, 0, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+    private PeerInfo Peer(string id) => new(id, Guid.NewGuid(), "physical-pc", "127.0.0.1", 1234, EPeerStatus.Ready, 0, clock.GetUtcNow(), clock.GetUtcNow());
 
     /// <summary>発見APIが返すクラスタ情報です。</summary>
     /// <returns>選択とは独立した一覧項目です。</returns>
-    private static DiscoveredCluster Cluster(string id, PeerInfo[] peers) => new(id, peers, [peers[0].PeerId], DateTimeOffset.UtcNow);
+    private DiscoveredCluster Cluster(string id, PeerInfo[] peers) => new(id, peers, [peers[0].PeerId], clock.GetUtcNow());
 
     /// <summary>明示ヘッダーのCluster/Peerと一致する実測・履歴だけを返します。</summary>
     /// <returns>各読取りAPIの応答です。</returns>

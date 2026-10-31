@@ -92,15 +92,16 @@ public sealed class WorkflowCancellationBoundaryTests
             return await fixture.Executor.ExecuteAsync(request, token).ConfigureAwait(false);
         };
         Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, definition), cancellationToken: cancellation.Token);
-        await entered.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
-        using CancellationTokenRegistration delayed = cancellation.Token.Register(() =>
-        {
-            callbackEntered.TrySetResult();
-            Assert.True(resumeCallbacks.Wait(TimeSpan.FromSeconds(10)), "The cancellation gate timed out before the test released it.");
-        });
+        CancellationTokenRegistration delayed = default;
         Task cancelling = Task.CompletedTask;
         try
         {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+            delayed = cancellation.Token.Register(() =>
+            {
+                callbackEntered.TrySetResult();
+                resumeCallbacks.Wait();
+            });
             if (cancel)
             {
                 cancelling = cancellation.CancelAsync();
@@ -120,6 +121,10 @@ public sealed class WorkflowCancellationBoundaryTests
             }
             result.TrySetResult(bodyResult);
             ExecutionReport report = await running.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+            if (cancel)
+            {
+                Assert.False(cancelling.IsCompleted);
+            }
             Assert.True(report.Outcome == expected, JsonSerializer.Serialize(report));
             Assert.Equal(0, afterCalls);
             Assert.Equal(0, limiter.Active);
@@ -129,7 +134,22 @@ public sealed class WorkflowCancellationBoundaryTests
         finally
         {
             resumeCallbacks.Set();
-            await cancelling.ConfigureAwait(true);
+            result.TrySetResult(NodeResult.Failure("fixture.cleanup", "The test ended.", EOutcome.Cancelled));
+            try
+            {
+                await cancellation.CancelAsync().ConfigureAwait(true);
+            }
+            finally
+            {
+                try
+                {
+                    await Task.WhenAll(cancelling, running).ConfigureAwait(true);
+                }
+                finally
+                {
+                    await delayed.DisposeAsync().ConfigureAwait(true);
+                }
+            }
         }
     }
 
@@ -177,15 +197,16 @@ public sealed class WorkflowCancellationBoundaryTests
         };
         NodeDefinition node = WorkflowFixture.Definition("action") with { Target = new TargetDefinition(EExecutionScope.All, ["a", "b", "c"]) };
         Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, new("cancel-targets", "Cancel targets", [node], [])), cancellationToken: cancellation.Token);
-        await entered.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
-        using CancellationTokenRegistration delayed = cancellation.Token.Register(() =>
-        {
-            callbackEntered.TrySetResult();
-            Assert.True(resumeCallbacks.Wait(TimeSpan.FromSeconds(10)), "The cancellation gate timed out before the test released it.");
-        });
+        CancellationTokenRegistration delayed = default;
         Task cancelling = Task.CompletedTask;
         try
         {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+            delayed = cancellation.Token.Register(() =>
+            {
+                callbackEntered.TrySetResult();
+                resumeCallbacks.Wait();
+            });
             if (cancel)
             {
                 cancelling = cancellation.CancelAsync();
@@ -198,6 +219,10 @@ public sealed class WorkflowCancellationBoundaryTests
             }
             result.TrySetResult(confirmed);
             ExecutionReport report = await running.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+            if (cancel)
+            {
+                Assert.False(cancelling.IsCompleted);
+            }
             Assert.True(report.Outcome == expected, JsonSerializer.Serialize(report));
             IReadOnlyList<TargetNodeResult> targets = Assert.Single(report.Nodes).Targets;
             const string succeededPeer = "a", cancelledPeer = "b";
@@ -209,7 +234,22 @@ public sealed class WorkflowCancellationBoundaryTests
         finally
         {
             resumeCallbacks.Set();
-            await cancelling.ConfigureAwait(true);
+            result.TrySetResult(NodeResult.Failure("fixture.cleanup", "The test ended.", EOutcome.Cancelled));
+            try
+            {
+                await cancellation.CancelAsync().ConfigureAwait(true);
+            }
+            finally
+            {
+                try
+                {
+                    await Task.WhenAll(cancelling, running).ConfigureAwait(true);
+                }
+                finally
+                {
+                    await delayed.DisposeAsync().ConfigureAwait(true);
+                }
+            }
         }
     }
 

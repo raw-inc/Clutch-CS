@@ -72,7 +72,9 @@ public sealed class FleetUpdateProcessTests
                 Assert.Equal(plan.OperationId, (await duplicate.Content.ReadFromJsonAsync<FleetUpdateStatus>(ContractJson.Options, timeout.Token).ConfigureAwait(true))!.Request.OperationId);
             }
             FleetUpdateStatus? status = null;
-            int peak = 0;
+
+            // 最大並列数までの利用はFleetUpdateParallelTestsで処理を保持して確認します。
+            // ここでは照会の間に更新が完了しても、実際の入替と排他条件を検証できます。
             do
             {
                 using HttpResponseMessage response = await client.SendAsync(HttpMethod.Get, "client/updates/" + plan.OperationId.ToString("D"), cancellationToken: timeout.Token).ConfigureAwait(true);
@@ -82,7 +84,6 @@ public sealed class FleetUpdateProcessTests
                 Assert.InRange(active.Length, 0, plan.Release.MaximumParallelism);
                 Assert.Equal(active.Length, active.Select(peer => peer.Target.ClusterId).Distinct().Count());
                 Assert.Equal(active.Length, active.Select(peer => peer.Target.Peer.HostId).Distinct().Count());
-                peak = Math.Max(peak, active.Length);
                 if (status?.Completed != true)
                 {
                     await Task.Delay(500, timeout.Token).ConfigureAwait(true);
@@ -90,7 +91,6 @@ public sealed class FleetUpdateProcessTests
             }
             while (status?.Completed != true);
             Assert.True(status!.Outcome == EOutcome.Succeeded, JsonSerializer.Serialize(status, ContractJson.Options));
-            Assert.Equal(parallelism, peak);
             Assert.All(status.Peers, peer => Assert.Equal("Completed", peer.State));
             Assert.All(status.Peers, peer => Assert.Single(peer.Attempts));
             using (HttpResponseMessage overview = await client.SendAsync(HttpMethod.Get, "client/updates", cancellationToken: timeout.Token).ConfigureAwait(true))

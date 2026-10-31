@@ -17,6 +17,7 @@ public sealed class ConcurrencyClusterTests
     [Fact]
     public async Task SeparateCoreProcessesShareAdmissionAndDashboardQueueAsync()
     {
+        using ControlledHttpEndpoint endpoint = new();
         string cluster = Guid.NewGuid().ToString("N");
         int port = CorePeer.AvailablePort();
         CorePeer first = new(cluster, "a", port, true), second = new(cluster, "b", port, false);
@@ -26,7 +27,7 @@ public sealed class ConcurrencyClusterTests
         await first.StartAsync(timeout.Token).ConfigureAwait(true);
         await second.StartAsync(timeout.Token).ConfigureAwait(true);
         await ReadyAsync(first, second, timeout.Token).ConfigureAwait(true);
-        WorkflowDefinition definition = Definition();
+        WorkflowDefinition definition = Definition(endpoint.Url, second.InterfaceId);
         WorkflowSaveResult saved = await first.PostAsync<WorkflowSaveResult>("workflows.save", new WorkflowSaveRequest(Guid.NewGuid(), definition, null), timeout.Token).ConfigureAwait(true);
         Assert.Equal(EOutcome.Succeeded, saved.Activation.Outcome);
         await CorePeer.WaitAsync(async token => string.Equals((await second.GetAsync<JsonElement>("workflows.read", definition.Id, token).ConfigureAwait(true))
@@ -35,6 +36,7 @@ public sealed class ConcurrencyClusterTests
         WorkflowRunStatus started = await first.PostAsync<WorkflowRunStatus>("runs.start", one, timeout.Token).ConfigureAwait(true);
         Assert.True(started.Running);
         await CorePeer.WaitAsync(async token => (await ReadAsync(first, token).ConfigureAwait(true)).ActiveCount == 1, timeout.Token).ConfigureAwait(true);
+        Assert.Equal("first", await endpoint.AcceptAsync(timeout.Token).ConfigureAwait(true));
         WorkflowRunStatus queued = await second.PostAsync<WorkflowRunStatus>("runs.start", two, timeout.Token).ConfigureAwait(true);
         Assert.True(queued.Running, queued.Reason);
         Assert.Equal("b", queued.PeerId);
@@ -52,13 +54,16 @@ public sealed class ConcurrencyClusterTests
         Assert.Null(card.Problem);
         Assert.Equal(1, card.Concurrency?.WaitingCount);
         Assert.Equal(snapshot.Waiting[0].TicketId, Assert.Single(card.Concurrency!.Waiting).TicketId);
+        Assert.False(endpoint.Pending);
+        await endpoint.ReplyAsync("first", timeout.Token).ConfigureAwait(true);
         WorkflowRunStatus completeOne = await CompletedAsync(first, one, timeout.Token).ConfigureAwait(true);
+        Assert.Equal("second", await endpoint.AcceptAsync(timeout.Token).ConfigureAwait(true));
+        await endpoint.ReplyAsync("second", timeout.Token).ConfigureAwait(true);
         WorkflowRunStatus completeTwo = await CompletedAsync(second, two, timeout.Token).ConfigureAwait(true);
         Assert.Equal(EOutcome.Succeeded, completeOne.Outcome);
         Assert.Equal(EOutcome.Succeeded, completeTwo.Outcome);
         Assert.Equal("first", completeOne.Report!.Nodes.Single(node => node.NodeId is "end").Targets.Single().Result.Outputs["value"].GetString());
         Assert.Equal("second", completeTwo.Report!.Nodes.Single(node => node.NodeId is "end").Targets.Single().Result.Outputs["value"].GetString());
-        Assert.True(TimeSpan.FromMilliseconds(1800) <= completeTwo.Report.CompletedAt - completeOne.Report.CompletedAt);
         await CorePeer.WaitAsync(async token =>
         {
             WorkflowConcurrencySnapshot empty = await ReadAsync(first, token).ConfigureAwait(true);
@@ -91,12 +96,14 @@ public sealed class ConcurrencyClusterTests
 
     /// <summary>限定した区間の副作用を別Coreへ配送します。</summary>
     /// <returns>本番の待受・外部APIを使用しないWFです。</returns>
-    private static WorkflowDefinition Definition()
+    private static WorkflowDefinition Definition(string url, string interfaceId)
     {
         JsonElement empty = JsonSerializer.SerializeToElement(new { });
-        return new("cluster-limit", "Cluster concurrency", [new("limit", ConcurrencyNodeTypes.Start, JsonSerializer.SerializeToElement(new { maxConcurrency = 1, waitTimeoutMs = 10000 })),
-            new("delay", "control.delay", JsonSerializer.SerializeToElement(new { milliseconds = 2500 }), Target: new(EExecutionScope.One, ["b"])),
-            new("end", ConcurrencyNodeTypes.End, empty)], [new("limit", "scope", "end", "scope"), new("limit", "value", "delay", "value"), new("delay", "value", "end", "value")]);
+
+        // 待機表示の確認が終わるまで応答を保持し、試験全体は呼出元の75秒で制限します。
+        return new("cluster-limit", "Cluster concurrency", [new("limit", ConcurrencyNodeTypes.Start, JsonSerializer.SerializeToElement(new { maxConcurrency = 1, waitTimeoutMs = 0 })),
+            new("body", "http.request", JsonSerializer.SerializeToElement(new { interfaceId, localAddress = "127.0.0.1", url, method = "POST", authentication = "none", responseBodyFormat = "text", timeoutMs = 0 }), Target: new(EExecutionScope.One, ["b"])),
+            new("end", ConcurrencyNodeTypes.End, empty)], [new("limit", "scope", "end", "scope"), new("limit", "value", "body", "value"), new("body", "body", "end", "value")]);
     }
 
     /// <summary>保存版を共有する二つのPeerの通常参加を待ちます。</summary>

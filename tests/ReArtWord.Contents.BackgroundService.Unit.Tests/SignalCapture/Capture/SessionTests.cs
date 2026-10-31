@@ -59,7 +59,7 @@ public sealed class SessionTests
         using var second = new TestCapture(beforeEnumeration: () =>
         {
             opening.Set();
-            Assert.True(resume.Wait(TimeSpan.FromSeconds(10)));
+            resume.Wait(CancellationToken.None);
         });
         var queue = new PacketQueue();
         int created = 0;
@@ -72,26 +72,34 @@ public sealed class SessionTests
             return second;
         });
         Task<PipeEvent> starting = Task.Run(() => session.Start(new PipeCommand("start", new[] { new SourceRequest("demo", "demo0"), new SourceRequest("demo", "demo1") })));
+        List<Task> operations = [starting];
         try
         {
             Assert.True(await Task.Run(() => opening.Wait(TimeSpan.FromSeconds(5))));
             first.Emit(DemoCapture.Create(0));
             QueuedPacket packet = Assert.IsType<QueuedPacket>(queue.Read());
-            byte[]? frame = await Task.Run(() => session.Encode(packet)).WaitAsync(TimeSpan.FromSeconds(2));
+            Task<byte[]?> encoding = Task.Run(() => session.Encode(packet));
+            operations.Add(encoding);
+            byte[]? frame = await encoding.WaitAsync(TimeSpan.FromSeconds(2));
             Assert.NotNull(frame);
-            PipeEvent state = await Task.Run(session.State).WaitAsync(TimeSpan.FromSeconds(2));
+            Task<PipeEvent> readingState = Task.Run(session.State);
+            operations.Add(readingState);
+            PipeEvent state = await readingState.WaitAsync(TimeSpan.FromSeconds(2));
             Assert.True(state.Running);
-            PipeEvent statistics = await Task.Run(session.Statistics).WaitAsync(TimeSpan.FromSeconds(2));
+            Task<PipeEvent> readingStatistics = Task.Run(session.Statistics);
+            operations.Add(readingStatistics);
+            PipeEvent statistics = await readingStatistics.WaitAsync(TimeSpan.FromSeconds(2));
             Assert.Equal(7, statistics.Received);
             Assert.Equal(0, queue.Dropped);
             session.ReplaceExclusions(new PipeCommand("exclusions", ExcludedTcpEndpoints: new[] { new EndpointRequest("127.0.0.2", 80) }));
             first.Emit(DemoCapture.Create(2));
             Assert.Null(queue.Read());
+            Assert.False(starting.IsCompleted);
         }
         finally
         {
             resume.Set();
-            await starting.WaitAsync(TimeSpan.FromSeconds(5));
+            await Task.WhenAll(operations).ConfigureAwait(true);
         }
     }
 
@@ -105,7 +113,7 @@ public sealed class SessionTests
         using var capture = new TestCapture(beforeStop: () =>
         {
             stopping.Set();
-            Assert.True(resume.Wait(TimeSpan.FromSeconds(10)));
+            resume.Wait(CancellationToken.None);
         });
         var queue = new PacketQueue();
         using var session = new WorkerSession(new CaptureFactory(true), queue, _ => capture);
@@ -113,15 +121,18 @@ public sealed class SessionTests
         capture.Emit(DemoCapture.Create(0));
         QueuedPacket pending = Assert.IsType<QueuedPacket>(queue.Read());
         Task<PipeEvent> ending = Task.Run(session.Stop);
+        Task<byte[]?> encoding = Task.FromResult<byte[]?>(null);
         try
         {
             Assert.True(await Task.Run(() => stopping.Wait(TimeSpan.FromSeconds(5))));
-            Assert.Null(await Task.Run(() => session.Encode(pending)).WaitAsync(TimeSpan.FromSeconds(2)));
+            encoding = Task.Run(() => session.Encode(pending));
+            Assert.Null(await encoding.WaitAsync(TimeSpan.FromSeconds(2)));
+            Assert.False(ending.IsCompleted);
         }
         finally
         {
             resume.Set();
-            await ending.WaitAsync(TimeSpan.FromSeconds(5));
+            await Task.WhenAll(ending, encoding).ConfigureAwait(true);
         }
         Assert.Equal(3, session.Statistics().Dropped);
     }

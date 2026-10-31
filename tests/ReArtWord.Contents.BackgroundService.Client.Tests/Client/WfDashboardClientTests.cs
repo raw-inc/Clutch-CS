@@ -186,8 +186,9 @@ public sealed class WfDashboardClientTests
     [InlineData("control.progress", "{\"Total\":100,\"Current\":12}")]
     public async Task CompactObservationReadsTheReferencedClusterAsync(string type, string body)
     {
+        EditorTestClock clock = new();
         byte[] data = Encoding.UTF8.GetBytes(body);
-        NodePreviewSnapshot snapshot = new(Guid.NewGuid(), "source", "saved", "node", "source-peer", DateTimeOffset.UtcNow, "text/plain", data.Length);
+        NodePreviewSnapshot snapshot = new(Guid.NewGuid(), "source", "saved", "node", "source-peer", clock.GetUtcNow(), "text/plain", data.Length);
         int reads = 0;
         using ClientHttpHandler handler = new(async (message, token) =>
         {
@@ -199,7 +200,7 @@ public sealed class WfDashboardClientTests
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(JsonSerializer.Serialize(new NodePreviewChunk(snapshot.Id, 0, data), ContractJson.Options), Encoding.UTF8, "application/json") };
         });
         using HttpClient client = new(handler) { BaseAddress = new("http://127.0.0.1") };
-        ManagementApi api = new(client) { SelectedClusterId = "source-cluster", SelectedPeerId = "source-peer" };
+        ManagementApi api = new(client, new(clock)) { SelectedClusterId = "source-cluster", SelectedPeerId = "source-peer" };
         BrowserTestRuntime browser = new();
         ServiceCollection services = new();
         services.AddLogging();
