@@ -35,7 +35,10 @@ function Assert-SetupLaunch([string] $Directory) {
     } finally {
         try {
             if ($started) {
-                # 終了コードが取得済みでも、配置を動かす前にOSの終了シグナルを確認します。
+                # .NETのWindows版HasExitedは、互換性維持のためOSの終了シグナルより先に終了コードを確認します。
+                # https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Diagnostics.Process/src/System/Diagnostics/ProcessManager.Windows.cs#L285-L319
+                # 終了コードが取得済みでもファイルは解放前の場合があるため、配置を動かす前のWaitForExitを省略しません。
+                # 詳細と見直し条件はRuntime/Processes/ProcessCompletion.csと同じです。通常終了・強制終了の猶予は維持します。
                 $closing = $process.HasExited -or $process.CloseMainWindow()
                 if (-not $closing -or -not $process.WaitForExit($exitTimeoutMilliseconds)) {
                     if (-not $process.HasExited) { $process.Kill() }
