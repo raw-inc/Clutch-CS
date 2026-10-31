@@ -10,9 +10,9 @@ internal sealed class ObserverCoreProcess : IAsyncDisposable
     private readonly Process process;
 
     /// <summary>試験専用設定と保存先でCoreを起動します。</summary>
-    public ObserverCoreProcess(string clusterId, string peerId, int udpPort, string interfaceId, bool initialize)
+    public ObserverCoreProcess(string root, string clusterId, string peerId, int udpPort, string interfaceId, bool initialize)
     {
-        string directory = Path.Combine(Path.GetTempPath(), "ContentsObserver", clusterId, peerId);
+        string directory = Path.Combine(root, clusterId, peerId);
         Directory.CreateDirectory(directory);
         string configuration = Path.Combine(directory, "contents.toml");
         File.WriteAllText(configuration, $$"""

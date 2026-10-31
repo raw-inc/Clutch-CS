@@ -22,19 +22,22 @@ using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Compilation;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Snapshots;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Configuration;
 
 /// <summary>異なるPeer起動設定からも共有運用版とスナップショット境界を維持します。</summary>
-public sealed class ClusterOperationalTests
+public sealed class ClusterOperationalTests : IDisposable
 {
+    private readonly MediaTestFiles files = new();
+
     /// <summary>復元対象でないPeer経由の共通保存・反映・直接復元も共有保護を迂回できません。</summary>
     /// <returns>実UDPで共有する全体保護の検証の完了。</returns>
     [Fact]
     public async Task SnapshotProtectionRejectsCommonWritesFromAnotherPeer()
     {
-        string root = Path.Combine(Path.GetTempPath(), "contents-operational-" + Guid.NewGuid().ToString("N"));
+        string root = files.Root;
         string id = Guid.NewGuid().ToString("N");
         int port = Port();
         SqliteRepository firstRepository = new(Path.Combine(root, "a.db"));
@@ -63,6 +66,7 @@ public sealed class ClusterOperationalTests
         participant.RestoreWait = release.Task;
         SnapshotRestoreRequest request = new(Guid.NewGuid(), [new(target, capture.Snapshot!.Id), new(pause, pauseCapture.Snapshot!.Id)]);
         Task<SnapshotRestoreResult> restoring = firstSnapshots.RestoreAsync(request);
+        SnapshotRestoreResult restored;
         try
         {
             await WaitAsync(() => participant.Restores != 0).ConfigureAwait(true);
@@ -76,8 +80,9 @@ public sealed class ClusterOperationalTests
         finally
         {
             release.TrySetResult();
+            restored = await restoring.ConfigureAwait(true);
         }
-        Assert.Equal(EOutcome.Succeeded, (await restoring.ConfigureAwait(true)).Outcome);
+        Assert.Equal(EOutcome.Succeeded, restored.Outcome);
         Assert.Empty(await secondSnapshots.GetEditLocksAsync().ConfigureAwait(true));
         string after = (await secondStore.GetAsync().ConfigureAwait(true)).Saved!.Revision;
         Assert.Equal(EOutcome.Succeeded, (await secondStore.SaveAsync(new(Guid.NewGuid(), initial with { TimeZoneId = "Asia/Tokyo" }, after)).ConfigureAwait(true)).Shared.Outcome);
@@ -88,7 +93,7 @@ public sealed class ClusterOperationalTests
     [Fact]
     public async Task DetachedInitializationLoadsLastEffectiveBeforeReadyCheck()
     {
-        string root = Path.Combine(Path.GetTempPath(), "contents-operational-" + Guid.NewGuid().ToString("N"));
+        string root = files.Root;
         FailingRepository repository = new(new SqliteRepository(Path.Combine(root, "a.db")));
         await using PeerCluster cluster = Create(Guid.NewGuid().ToString("N"), "a", Port(), true, repository);
         await cluster.StartAsync().ConfigureAwait(true);
@@ -110,7 +115,7 @@ public sealed class ClusterOperationalTests
     [Fact]
     public async Task DifferentPeerSeedsConvergeAndCapturedOccurrenceDoesNotChange()
     {
-        string root = Path.Combine(Path.GetTempPath(), "contents-operational-" + Guid.NewGuid().ToString("N"));
+        string root = files.Root;
         string id = Guid.NewGuid().ToString("N");
         int port = Port();
         FailingRepository firstRepository = new(new SqliteRepository(Path.Combine(root, "a.db")));
@@ -160,7 +165,7 @@ public sealed class ClusterOperationalTests
     [Fact]
     public async Task SnapshotFailurePreservesOldEffectiveAndExplicitCaptureAllowsActivation()
     {
-        string root = Path.Combine(Path.GetTempPath(), "contents-operational-" + Guid.NewGuid().ToString("N"));
+        string root = files.Root;
         FailingRepository repository = new(new SqliteRepository(Path.Combine(root, "a.db")));
         await using PeerCluster cluster = Create(Guid.NewGuid().ToString("N"), "a", Port(), true, repository);
         await cluster.StartAsync().ConfigureAwait(true);
@@ -197,7 +202,7 @@ public sealed class ClusterOperationalTests
     [Fact]
     public async Task ConfigurationSnapshotRestoresBothSavedAndEffective()
     {
-        string root = Path.Combine(Path.GetTempPath(), "contents-operational-" + Guid.NewGuid().ToString("N"));
+        string root = files.Root;
         FailingRepository repository = new(new JsonFileRepository(Path.Combine(root, "a.json")));
         await using PeerCluster cluster = Create(Guid.NewGuid().ToString("N"), "a", Port(), true, repository);
         await cluster.StartAsync().ConfigureAwait(true);
@@ -221,7 +226,7 @@ public sealed class ClusterOperationalTests
     [Fact]
     public async Task LatestConfirmationPolicyCannotBeBypassedByHistory()
     {
-        string root = Path.Combine(Path.GetTempPath(), "contents-operational-" + Guid.NewGuid().ToString("N"));
+        string root = files.Root;
         FailingRepository repository = new(new SqliteRepository(Path.Combine(root, "a.db")));
         await using PeerCluster cluster = Create(Guid.NewGuid().ToString("N"), "a", Port(), true, repository);
         await cluster.StartAsync().ConfigureAwait(true);
@@ -242,6 +247,9 @@ public sealed class ClusterOperationalTests
         Assert.Equal(EOutcome.Succeeded, (await store.RestoreSnapshotAsync(confirmedPolicy).ConfigureAwait(true)).Outcome);
         Assert.Equal(EOutcome.NotExecuted, (await store.ActivateAsync(new(Guid.NewGuid(), revision)).ConfigureAwait(true)).Outcome);
     }
+
+    /// <summary>全Peerと復元処理の終了後に、試験用の保存先を削除します。</summary>
+    public void Dispose() => files.Dispose();
 
     /// <summary>異なる起動TOMLの共通運用候補だけを取り出します。</summary>
     /// <returns>Peer固有rootを含まない候補です。</returns>

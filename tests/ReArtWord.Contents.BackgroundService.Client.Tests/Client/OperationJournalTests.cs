@@ -166,12 +166,21 @@ public sealed class OperationJournalTests
         OperationJournal journal = new(new(http), new(browser));
         Task first = StartAsync(journal, Guid.NewGuid());
         Task second = StartAsync(journal, Guid.NewGuid());
-        Assert.False(first.IsCompleted);
-        Assert.False(second.IsCompleted);
-        release.SetResult();
-        await Task.WhenAll(first, second).ConfigureAwait(true);
-        Assert.Equal(2, journal.Items.Select(item => item.OperationId).Distinct().Count());
-        Assert.All(journal.Items, item => Assert.Equal(item.OperationId, item.Result!.Value.GetProperty("operationId").GetGuid()));
+        Task combined = Task.WhenAll(first, second);
+        try
+        {
+            Assert.False(first.IsCompleted);
+            Assert.False(second.IsCompleted);
+            release.SetResult();
+            await combined.ConfigureAwait(true);
+            Assert.Equal(2, journal.Items.Select(item => item.OperationId).Distinct().Count());
+            Assert.All(journal.Items, item => Assert.Equal(item.OperationId, item.Result!.Value.GetProperty("operationId").GetGuid()));
+        }
+        finally
+        {
+            release.TrySetResult();
+            await combined.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
     }
 
     /// <summary>元IDを本文にも保持した試験要求です。</summary>

@@ -21,6 +21,7 @@ using ReArtWord.Contents.BackgroundService.Nodes.Control;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Compilation;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Configuration;
@@ -35,7 +36,8 @@ public sealed class ClusterArchiveStateTests
     [InlineData(EArchiveImportMode.Replace)]
     public async Task OneCommitRestoresBothRevisionsAndHonorsExtraWorkflowSelection(EArchiveImportMode mode)
     {
-        string root = Path.Combine(Path.GetTempPath(), "contents-archive-" + Guid.NewGuid().ToString("N"));
+        using MediaTestFiles files = new();
+        string root = files.Root;
         JsonFileRepository repository = new(Path.Combine(root, "state.json"));
         using UdpClient port = new(new IPEndPoint(IPAddress.Loopback, 0));
         int number = ((IPEndPoint)port.Client.LocalEndPoint!).Port;

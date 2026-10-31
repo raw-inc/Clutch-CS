@@ -113,6 +113,7 @@ public sealed class ButtonPcSelectionTests
         finally
         {
             release.TrySetResult();
+            await first.ConfigureAwait(true);
         }
         Assert.Equal(EOutcome.Succeeded, (await first.ConfigureAwait(true)).Outcome);
         Assert.Equal(new[] { ("b", "B"), ("a", "A") }, received);

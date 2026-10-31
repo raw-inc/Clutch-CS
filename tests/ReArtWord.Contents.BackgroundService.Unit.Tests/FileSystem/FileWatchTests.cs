@@ -26,6 +26,7 @@ public sealed class FileWatchTests
         string watchType = "file.watch";
         ISourceNode watcher = (ISourceNode)fixture.Nodes.Single(node => string.Equals(node.Descriptor.Type, watchType, StringComparison.Ordinal));
         Task<NodeResult> run = watcher.RunAsync(context, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = new TestTaskLifetime(run, timeout).ConfigureAwait(true);
         await WaitStatusAsync(statuses.Reader, ESourceState.Listening, timeout.Token).ConfigureAwait(true);
         string firstPath = Path.Combine(path, "first.txt");
         await File.WriteAllTextAsync(firstPath, "first", timeout.Token).ConfigureAwait(true);

@@ -3,6 +3,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Terminal;
 using ReArtWord.Contents.BackgroundService.CoreService.Terminal;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Json;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
@@ -15,7 +16,8 @@ public sealed class TerminalSettingsTests
     [Fact]
     public async Task SettingsPersistPerCoreAndRejectAStaleClientAsync()
     {
-        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "terminal.json");
+        using MediaTestFiles files = new();
+        string path = Path.Combine(files.Root, "settings", "terminal.json");
         TerminalSettingsStore first = new(new JsonFileRepository(path), "peer-a");
         TerminalSettings original = await first.ReadAsync();
         Assert.False(original.StrictUserToken);

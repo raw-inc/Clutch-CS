@@ -58,6 +58,7 @@ internal sealed class RuntimeParticipant(string id, int initial) : IRuntimeSnaps
         Current = snapshot.Json.GetInt32();
         if (RestoreWait is not null)
         {
+            // 呼出元の取消で外部処理が止まるとは限らないため、試験側で待機を解放します。
             await RestoreWait.ConfigureAwait(false);
         }
         if (Current == FailValue)

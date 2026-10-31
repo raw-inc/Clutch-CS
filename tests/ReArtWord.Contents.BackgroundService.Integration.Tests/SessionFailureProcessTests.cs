@@ -81,7 +81,9 @@ public sealed class SessionFailureProcessTests
             default: throw new ArgumentException("Unexpected test protocol.", nameof(protocol));
         }
         client.Client.Shutdown(SocketShutdown.Send);
-        await stream.CopyToAsync(Stream.Null, cancellationToken).WaitAsync(TimeSpan.FromSeconds(8), cancellationToken).ConfigureAwait(false);
+        using CancellationTokenSource closing = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        closing.CancelAfter(TimeSpan.FromSeconds(8));
+        await stream.CopyToAsync(Stream.Null, closing.Token).ConfigureAwait(false);
     }
 
     /// <summary>接続拒否、壊れたフレーム、再接続、診断とクラスタ参加を実プロセスで検証します。</summary>

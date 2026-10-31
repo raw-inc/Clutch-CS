@@ -31,23 +31,31 @@ public sealed class RequestReceiptBatchTests
         }
         string duplicate = Guid.NewGuid().ToString("N");
         List<Task<DurableEntry?>> requests = [batch.WriteAsync(new("receipts:p", duplicate, null, NodeValue.FromObject(1)), Apply).AsTask()];
-        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        requests.Add(batch.WriteAsync(new("receipts:p", duplicate, null, NodeValue.FromObject(2)), Apply).AsTask());
-        for (int index = 0; index < 62; index++)
+        try
         {
-            requests.Add(batch.WriteAsync(new("receipts:p", Guid.NewGuid().ToString("N"), null, NodeValue.FromObject(index)), Apply).AsTask());
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            requests.Add(batch.WriteAsync(new("receipts:p", duplicate, null, NodeValue.FromObject(2)), Apply).AsTask());
+            for (int index = 0; index < 62; index++)
+            {
+                requests.Add(batch.WriteAsync(new("receipts:p", Guid.NewGuid().ToString("N"), null, NodeValue.FromObject(index)), Apply).AsTask());
+            }
+            Assert.All(requests, request => Assert.False(request.IsCompleted));
+            Assert.Empty(await repository.ListAsync("receipts:p"));
+            release.TrySetResult();
+            DurableEntry?[] saved = await Task.WhenAll(requests).WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal(1, transactions);
+            Assert.NotNull(saved[0]);
+            Assert.Null(saved[1]);
+            Assert.Equal(63, saved.OfType<DurableEntry>().Count());
+            SqliteRepository reopened = new(path);
+            Assert.Equal(63, (await reopened.ListAsync("receipts:p")).Count);
+            Assert.Equal(1, (await reopened.ReadAsync("receipts:p", duplicate))!.Value!.Json.GetInt32());
         }
-        Assert.All(requests, request => Assert.False(request.IsCompleted));
-        Assert.Empty(await repository.ListAsync("receipts:p"));
-        release.TrySetResult();
-        DurableEntry?[] saved = await Task.WhenAll(requests).WaitAsync(TimeSpan.FromSeconds(5));
-        Assert.Equal(1, transactions);
-        Assert.NotNull(saved[0]);
-        Assert.Null(saved[1]);
-        Assert.Equal(63, saved.OfType<DurableEntry>().Count());
-        SqliteRepository reopened = new(path);
-        Assert.Equal(63, (await reopened.ListAsync("receipts:p")).Count);
-        Assert.Equal(1, (await reopened.ReadAsync("receipts:p", duplicate))!.Value!.Json.GetInt32());
+        finally
+        {
+            release.TrySetResult();
+            await Task.WhenAll(requests).ConfigureAwait(true);
+        }
     }
 
     /// <summary>保存枠の取得失敗で待機者を残さず、取消した一件は次の取引へ混ぜません。</summary>
@@ -66,20 +74,39 @@ public sealed class RequestReceiptBatchTests
         }
         ReceiptWrite first = new("receipts:p", Guid.NewGuid().ToString("N"), null, NodeValue.FromObject(1));
         Task<DurableEntry?> owner = batch.WriteAsync(first, Fail).AsTask();
-        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        Task<DurableEntry?> other = batch.WriteAsync(first with { Key = Guid.NewGuid().ToString("N") }, Fail).AsTask();
+        List<Task<DurableEntry?>> requests = [owner];
         using CancellationTokenSource cancellation = new();
-        Task<DurableEntry?> cancelled = batch.WriteAsync(first with { Key = Guid.NewGuid().ToString("N") }, Fail, cancellation.Token).AsTask();
-        await cancellation.CancelAsync();
-        release.TrySetResult();
-        await Assert.ThrowsAsync<IOException>(() => owner.WaitAsync(TimeSpan.FromSeconds(5)));
-        await Assert.ThrowsAsync<IOException>(() => other.WaitAsync(TimeSpan.FromSeconds(5)));
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancelled);
-        ValueTask<IReadOnlyList<DurableEntry?>> Save(Func<IReadOnlyList<ReceiptWrite>> take, CancellationToken token)
+        try
         {
-            ReceiptWrite only = Assert.Single(take());
-            return ValueTask.FromResult<IReadOnlyList<DurableEntry?>>([new(only.Scope, only.Key, "confirmed", only.Value)]);
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Task<DurableEntry?> other = batch.WriteAsync(first with { Key = Guid.NewGuid().ToString("N") }, Fail).AsTask();
+            requests.Add(other);
+            Task<DurableEntry?> cancelled = batch.WriteAsync(first with { Key = Guid.NewGuid().ToString("N") }, Fail, cancellation.Token).AsTask();
+            requests.Add(cancelled);
+            await cancellation.CancelAsync();
+            release.TrySetResult();
+            await Assert.ThrowsAsync<IOException>(() => owner.WaitAsync(TimeSpan.FromSeconds(5)));
+            await Assert.ThrowsAsync<IOException>(() => other.WaitAsync(TimeSpan.FromSeconds(5)));
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancelled);
+            ValueTask<IReadOnlyList<DurableEntry?>> Save(Func<IReadOnlyList<ReceiptWrite>> take, CancellationToken token)
+            {
+                ReceiptWrite only = Assert.Single(take());
+                return ValueTask.FromResult<IReadOnlyList<DurableEntry?>>([new(only.Scope, only.Key, "confirmed", only.Value)]);
+            }
+            Assert.NotNull(await batch.WriteAsync(first, Save));
         }
-        Assert.NotNull(await batch.WriteAsync(first, Save));
+        finally
+        {
+            release.TrySetResult();
+            await cancellation.CancelAsync().ConfigureAwait(true);
+            try
+            {
+                await Task.WhenAll(requests).ConfigureAwait(true);
+            }
+            catch (IOException)
+            {
+                // この試験で保存失敗を返す待機も、全件の終了まで確認します。
+            }
+        }
     }
 }

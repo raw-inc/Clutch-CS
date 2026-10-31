@@ -16,7 +16,7 @@ public sealed class UdpDispatchTests
     [Fact]
     public async Task ReplyRetransmissionRecoversLostFragmentsAsync()
     {
-        TransportPair pair = new(TimeSpan.FromSeconds(2));
+        TransportPair pair = await TransportPair.CreateAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = pair.ConfigureAwait(true);
         using UdpClient broadcast = new(new IPEndPoint(IPAddress.Loopback, 0)) { EnableBroadcast = true };
         int calls = 0;
@@ -43,7 +43,7 @@ public sealed class UdpDispatchTests
     [Fact]
     public async Task OrphanReplyIsNotDispatchedAsARequestAsync()
     {
-        TransportPair pair = new();
+        TransportPair pair = await TransportPair.CreateAsync().ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = pair.ConfigureAwait(true);
         TaskCompletionSource unexpected = new(TaskCreationOptions.RunContinuationsAsynchronously);
         pair.Sender.Received = (_, _, _) =>
@@ -66,7 +66,7 @@ public sealed class UdpDispatchTests
     [Fact]
     public async Task UnexpectedResponderCannotConsumePendingReplyAsync()
     {
-        TransportPair pair = new();
+        TransportPair pair = await TransportPair.CreateAsync().ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = pair.ConfigureAwait(true);
         pair.Receiver.Received = async (message, _, token) =>
         {
@@ -86,7 +86,7 @@ public sealed class UdpDispatchTests
     [Fact]
     public async Task RetransmissionsShareTheActiveHandlerAsync()
     {
-        TransportPair pair = new();
+        TransportPair pair = await TransportPair.CreateAsync().ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = pair.ConfigureAwait(true);
         int calls = 0;
         TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -144,7 +144,7 @@ public sealed class UdpDispatchTests
     [Fact]
     public async Task FragmentBurstSurvivesDelayedReceiveLoopAsync()
     {
-        TransportPair pair = new();
+        TransportPair pair = await TransportPair.CreateAsync().ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = pair.ConfigureAwait(true);
         TaskCompletionSource<WireMessage> received = new(TaskCreationOptions.RunContinuationsAsynchronously);
         pair.Receiver.Received = (message, _, _) =>
@@ -168,7 +168,7 @@ public sealed class UdpDispatchTests
     [InlineData(1)]
     public async Task UnrelatedIncompleteRepliesDoNotBlockRequestsAsync(int deliveredFragment)
     {
-        TransportPair pair = new();
+        TransportPair pair = await TransportPair.CreateAsync().ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = pair.ConfigureAwait(true);
         using UdpClient broadcast = new(new IPEndPoint(IPAddress.Loopback, 0)) { EnableBroadcast = true };
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
@@ -198,9 +198,9 @@ public sealed class UdpDispatchTests
     [Fact]
     public async Task SynchronousCallbackDoesNotBlockMessagesOrRepliesAsync()
     {
-        TransportPair pair = new();
-        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = pair.ConfigureAwait(true);
         using ManualResetEventSlim release = new(false);
+        TransportPair pair = await TransportPair.CreateAsync().ConfigureAwait(true);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = pair.ConfigureAwait(true);
         TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource heartbeat = new(TaskCreationOptions.RunContinuationsAsynchronously);
         CancellationToken callbackToken = default;
@@ -255,7 +255,7 @@ public sealed class UdpDispatchTests
     [Fact]
     public async Task SynchronousCompletionsReleaseHandlerCapacityAsync()
     {
-        TransportPair pair = new();
+        TransportPair pair = await TransportPair.CreateAsync().ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = pair.ConfigureAwait(true);
         Channel<int> completed = Channel.CreateUnbounded<int>();
         pair.Receiver.Received = (message, _, _) =>
@@ -275,52 +275,71 @@ public sealed class UdpDispatchTests
     }
 
     /// <summary>外部NIC設定を変更しない二つのループバック endpointです。</summary>
-    private sealed class TransportPair : IAsyncDisposable
+    private sealed class TransportPair(int port, string cluster, Guid senderId, Guid receiverId, UdpTransport sender, UdpTransport receiver) : IAsyncDisposable
     {
-        /// <summary>動的ポートと実ループバック NICを固定します。</summary>
-        internal TransportPair(TimeSpan? requestTimeout = null)
+        /// <summary>構築に失敗した場合も、確保済みのソケットを解放します。</summary>
+        /// <returns>動的ポートと実ループバックNICを使用する通信相手です。</returns>
+        // 抑制理由: 成功時は戻り値が所有し、構築失敗時はfinallyで両方を解放します。
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000", Justification = "成功時はTransportPairへ所有権を移し、失敗時はfinallyで両方を解放します。")]
+        internal static async Task<TransportPair> CreateAsync(TimeSpan? requestTimeout = null)
         {
             using Socket reservation = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             reservation.Bind(new IPEndPoint(IPAddress.Any, 0));
             int port = ((IPEndPoint)reservation.LocalEndPoint!).Port;
-            Port = port;
             reservation.Close();
             string network = NetworkInterface.GetAllNetworkInterfaces().Single(item => item.GetIPProperties().UnicastAddresses.Any(address => address.Address.Equals(IPAddress.Loopback))).Id;
-            Sender = new(new("sender", "127.0.0.1", "127.255.255.255", port, Cluster) { RequestTimeout = requestTimeout ?? TimeSpan.FromSeconds(10) }, SenderId, TimeProvider.System);
-            Receiver = new(new("receiver", "127.0.0.1", "127.255.255.255", port, Cluster), ReceiverId, TimeProvider.System);
-            Sender.Initialize(network);
-            Receiver.Initialize(network);
+            string cluster = Guid.NewGuid().ToString("N");
+            Guid senderId = Guid.NewGuid(), receiverId = Guid.NewGuid();
+            UdpTransport sender = new(new("sender", "127.0.0.1", "127.255.255.255", port, cluster) { RequestTimeout = requestTimeout ?? TimeSpan.FromSeconds(10) }, senderId, TimeProvider.System);
+            UdpTransport? receiver = null;
+            bool transferred = false;
+            try
+            {
+                receiver = new(new("receiver", "127.0.0.1", "127.255.255.255", port, cluster), receiverId, TimeProvider.System);
+                sender.Initialize(network);
+                receiver.Initialize(network);
+                TransportPair pair = new(port, cluster, senderId, receiverId, sender, receiver);
+                transferred = true;
+                return pair;
+            }
+            finally
+            {
+                if (!transferred)
+                {
+                    await DisposeAsync(receiver, sender).ConfigureAwait(false);
+                }
+            }
         }
 
         internal string Cluster
         {
             get;
-        } = Guid.NewGuid().ToString("N");
+        } = cluster;
 
         internal int Port
         {
             get;
-        }
+        } = port;
 
         internal Guid SenderId
         {
             get;
-        } = Guid.NewGuid();
+        } = senderId;
 
         internal Guid ReceiverId
         {
             get;
-        } = Guid.NewGuid();
+        } = receiverId;
 
         internal UdpTransport Sender
         {
             get;
-        }
+        } = sender;
 
         internal UdpTransport Receiver
         {
             get;
-        }
+        } = receiver;
 
         /// <summary>受信先実体を固定した一配送です。</summary>
         /// <returns>副作用を含まない試験メッセージです。</returns>
@@ -328,10 +347,23 @@ public sealed class UdpDispatchTests
 
         /// <summary>コールバックの完了後に所有ソケットを解放します。</summary>
         /// <returns>二つの実通信の終了です。</returns>
-        public async ValueTask DisposeAsync()
+        public ValueTask DisposeAsync() => DisposeAsync(Receiver, Sender);
+
+        /// <summary>受信側の後始末に失敗した場合も、送信側を解放します。</summary>
+        /// <returns>確保済みの通信資源の終了です。</returns>
+        private static async ValueTask DisposeAsync(UdpTransport? receiver, UdpTransport sender)
         {
-            await ((IAsyncDisposable)Receiver).DisposeAsync().ConfigureAwait(false);
-            await ((IAsyncDisposable)Sender).DisposeAsync().ConfigureAwait(false);
+            try
+            {
+                if (receiver is not null)
+                {
+                    await ((IAsyncDisposable)receiver).DisposeAsync().ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                await ((IAsyncDisposable)sender).DisposeAsync().ConfigureAwait(false);
+            }
         }
     }
 }

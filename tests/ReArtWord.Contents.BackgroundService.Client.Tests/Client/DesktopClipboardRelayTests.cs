@@ -32,8 +32,19 @@ public sealed class DesktopClipboardRelayTests
         using NamedPipeServerStream upstream = new(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
         using NamedPipeClientStream core = new(".", name, PipeDirection.InOut, PipeOptions.Asynchronous);
         using Task attached = upstream.WaitForConnectionAsync(timeout.Token);
-        await core.ConnectAsync(timeout.Token).ConfigureAwait(true);
-        await attached.ConfigureAwait(true);
+        try
+        {
+            await core.ConnectAsync(timeout.Token).ConfigureAwait(true);
+            await attached.ConfigureAwait(true);
+        }
+        finally
+        {
+            if (!attached.IsCompleted)
+            {
+                await timeout.CancelAsync().ConfigureAwait(true);
+            }
+            await attached.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
         using Task relay = DesktopRelay.RunAsync(upstream, relaySocket, timeout.Token);
         try
         {

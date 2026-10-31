@@ -107,6 +107,7 @@ public sealed class IterationValueLifetimeTests
         finally
         {
             release.TrySetResult();
+            await running.ConfigureAwait(true);
         }
         Assert.Equal(EOutcome.Succeeded, (await running.ConfigureAwait(true)).Outcome);
         Assert.Equal(3, generated);

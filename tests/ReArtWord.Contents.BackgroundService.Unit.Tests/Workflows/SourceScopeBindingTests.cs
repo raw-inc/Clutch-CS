@@ -27,8 +27,9 @@ public sealed class SourceScopeBindingTests
         reservation.Close();
         string cluster = Guid.NewGuid().ToString("N");
         string firstPath = Path.Combine(files.Root, "a.db"), secondPath = Path.Combine(files.Root, "b.db");
-        PeerCluster first = Peer(cluster, "a", port, true, firstPath), second = Peer(cluster, "b", port, false, secondPath);
+        PeerCluster first = Peer(cluster, "a", port, true, firstPath);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = first.ConfigureAwait(true);
+        PeerCluster second = Peer(cluster, "b", port, false, secondPath);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable secondLifetime = second.ConfigureAwait(true);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(20));
         await first.StartAsync(timeout.Token).ConfigureAwait(true);

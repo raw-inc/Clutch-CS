@@ -30,6 +30,7 @@ public sealed class ClusterConcurrencyTests
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstCleanup = first.Lease.ConfigureAwait(true);
         WorkflowConcurrencyRequest waiting = Fixture.Request(fixture.Second);
         Task<WorkflowConcurrencyAdmission> pending = fixture.SecondLimit.AcquireAsync(waiting, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable pendingLifetime = new TestPermitLifetime(pending, timeout).ConfigureAwait(true);
         await fixture.WaitAsync(snapshot => snapshot.WaitingCount == 1, timeout.Token).ConfigureAwait(true);
         WorkflowConcurrencySnapshot snapshot = await fixture.ReadAsync(timeout.Token).ConfigureAwait(true);
         Assert.Equal(1, snapshot.ActiveCount);
@@ -60,9 +61,11 @@ public sealed class ClusterConcurrencyTests
         string key = ContractJson.Hash(new WorkflowConcurrencyTarget("workflow", "limit"));
         Infrastructure.Persistence.DurableEntry? before = await fixture.FirstRepository.ReadAsync("execution:concurrency:permits", key, timeout.Token).ConfigureAwait(true);
         Task<WorkflowConcurrencyAdmission> leaving = fixture.SecondLimit.AcquireAsync(Fixture.Request(fixture.Second) with { WaitTimeoutMilliseconds = 0 }, cancelled.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable leavingLifetime = new TestPermitLifetime(leaving, cancelled).ConfigureAwait(true);
         await fixture.WaitAsync(value => value.WaitingCount == 1, timeout.Token).ConfigureAwait(true);
         WorkflowConcurrencyRequest following = Fixture.Request(fixture.First) with { WaitTimeoutMilliseconds = 0 };
         Task<WorkflowConcurrencyAdmission> waiting = fixture.FirstLimit.AcquireAsync(following, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable waitingLifetime = new TestPermitLifetime(waiting, timeout).ConfigureAwait(true);
         await fixture.WaitAsync(value => value.WaitingCount == 2, timeout.Token).ConfigureAwait(true);
         for (int index = 0; index < 10; index++)
         {
@@ -110,6 +113,7 @@ public sealed class ClusterConcurrencyTests
         await first.Lease.DisposeAsync().ConfigureAwait(true);
         WorkflowConcurrencyAdmission next = await fixture.SecondLimit.AcquireAsync(Fixture.Request(fixture.Second), timeout.Token).ConfigureAwait(true);
         Assert.NotNull(next.Lease);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable nextLifetime = next.Lease.ConfigureAwait(true);
         await next.Lease.DisposeAsync().ConfigureAwait(true);
         Assert.Equal(0, (await fixture.ReadAsync(timeout.Token).ConfigureAwait(true)).ActiveCount);
     }
@@ -126,6 +130,7 @@ public sealed class ClusterConcurrencyTests
         Assert.NotNull(first.Lease);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstCleanup = first.Lease.ConfigureAwait(true);
         Task<WorkflowConcurrencyAdmission> waiting = fixture.SecondLimit.AcquireAsync(Fixture.Request(fixture.Second) with { WaitTimeoutMilliseconds = 0 }, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable waitingLifetime = new TestPermitLifetime(waiting, timeout).ConfigureAwait(true);
         await fixture.WaitAsync(value => value.WaitingCount == 1, timeout.Token).ConfigureAwait(true);
         DateTimeOffset until = DateTimeOffset.UtcNow.AddSeconds(31);
         while (!waiting.IsCompleted && DateTimeOffset.UtcNow < until)
@@ -168,6 +173,7 @@ public sealed class ClusterConcurrencyTests
                 Assert.Null(second.Rejection);
                 Assert.True(second.Forced);
                 Assert.NotNull(second.Lease);
+                await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable secondLifetime = second.Lease.ConfigureAwait(true);
                 Assert.Equal(2, (await fixture.ReadAsync(timeout.Token).ConfigureAwait(true)).ActiveCount);
                 await second.Lease.DisposeAsync().ConfigureAwait(true);
             }

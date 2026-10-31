@@ -64,6 +64,7 @@ public sealed class ClusterUpdateTests
         IAsyncEnumerator<WorkflowEvent> reader = events.SubscribeAsync(timeout.Token).GetAsyncEnumerator();
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable readerLifetime = reader.ConfigureAwait(true);
         Task<bool> first = reader.MoveNextAsync().AsTask();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = new TestTaskLifetime(first, timeout).ConfigureAwait(true);
         UpdateEventPump pump = new(repository, events, "owner");
         await pump.DrainAsync(timeout.Token).ConfigureAwait(true);
         Assert.True(await first.ConfigureAwait(true));

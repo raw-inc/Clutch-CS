@@ -276,20 +276,28 @@ public sealed class FleetUpdateTests
     [Fact]
     public async Task StoreRecoversInterruptedOperationsWithoutLosingTheirIdentity()
     {
-        string directory = Path.Combine(Path.GetTempPath(), "contents-fleet-store-" + Guid.NewGuid().ToString("N"));
-        FleetUpdateStatus input = Status([Target("only", "one")]);
-        FleetUpdateStore store = new(directory);
-        FleetUpdateAttempt attempt = new(Guid.NewGuid(), PreviousInstanceId: input.Request.Targets[0].Peer.InstanceId, Problem: "stage: seal.Unknown");
-        input = input with { Peers = [input.Peers[0] with { Attempts = [attempt] }] };
-        await store.SaveAsync(input);
-        await new FleetUpdateStore(directory).RecoverAsync();
-        FleetUpdateStatus result = (await store.ReadAsync(input.Request.OperationId))!;
-        Assert.True(result.Completed);
-        Assert.Equal(EOutcome.Unknown, result.Outcome);
-        Assert.Equal(input.Request.OperationId, result.Request.OperationId);
-        Assert.Equal(input.Request.Targets[0], Assert.Single(result.Request.Targets));
-        Assert.Equal(attempt, Assert.Single(result.Peers[0].Attempts));
-        Assert.Single(await store.ListAsync());
+        DirectoryInfo root = Directory.CreateTempSubdirectory("contents-fleet-store-");
+        try
+        {
+            string directory = root.FullName;
+            FleetUpdateStatus input = Status([Target("only", "one")]);
+            FleetUpdateStore store = new(directory);
+            FleetUpdateAttempt attempt = new(Guid.NewGuid(), PreviousInstanceId: input.Request.Targets[0].Peer.InstanceId, Problem: "stage: seal.Unknown");
+            input = input with { Peers = [input.Peers[0] with { Attempts = [attempt] }] };
+            await store.SaveAsync(input);
+            await new FleetUpdateStore(directory).RecoverAsync();
+            FleetUpdateStatus result = (await store.ReadAsync(input.Request.OperationId))!;
+            Assert.True(result.Completed);
+            Assert.Equal(EOutcome.Unknown, result.Outcome);
+            Assert.Equal(input.Request.OperationId, result.Request.OperationId);
+            Assert.Equal(input.Request.Targets[0], Assert.Single(result.Request.Targets));
+            Assert.Equal(attempt, Assert.Single(result.Peers[0].Attempts));
+            Assert.Single(await store.ListAsync());
+        }
+        finally
+        {
+            root.Delete(true);
+        }
     }
 
     /// <summary>予定したClientHost再起動では、生存中helperを中断扱いせず後続の確定結果を復元します。</summary>
@@ -297,26 +305,34 @@ public sealed class FleetUpdateTests
     [Fact]
     public async Task StoreFollowsIndependentClientUpdaterAcrossRestart()
     {
-        string directory = Path.Combine(Path.GetTempPath(), "contents-client-store-" + Guid.NewGuid().ToString("N"));
-        FleetUpdateStatus input = Status([Target("only", "one")]);
-        FleetUpdateStore store = new(directory);
-        Contracts.Processes.ProcessIdentity identity = Infrastructure.Updates.Client.ClientUpdateFiles.Health("test").Process;
-        input = input with { Client = new("Updating", false, EOutcome.Unknown, identity, DateTimeOffset.UtcNow) };
-        await store.SaveAsync(input);
-        ClientUpdateJob job = new(input.Request.OperationId, input.Request.Release.Manifest, directory + "-installed", directory,
-            new Uri("http://127.0.0.1:5081/"), identity);
-        Infrastructure.Updates.Client.ClientUpdateFiles files = new(job);
-        Directory.CreateDirectory(files.Operation);
-        await files.SaveAsync("Starting", false, EOutcome.Unknown);
-        await store.RecoverAsync();
-        FleetUpdateStatus running = (await store.ReadAsync(input.Request.OperationId))!;
-        Assert.False(running.Completed);
-        Assert.Equal("Starting", running.Client!.State);
-        await files.SaveAsync("Completed", true, EOutcome.Succeeded);
-        FleetUpdateStatus result = (await new FleetUpdateStore(directory).ReadAsync(input.Request.OperationId))!;
-        Assert.True(result.Completed);
-        Assert.Equal(EOutcome.Succeeded, result.Outcome);
-        Assert.Equal(Contracts.Serialization.ContractJson.Hash(input.Peers), Contracts.Serialization.ContractJson.Hash(result.Peers));
+        DirectoryInfo root = Directory.CreateTempSubdirectory("contents-client-store-");
+        try
+        {
+            string directory = root.FullName;
+            FleetUpdateStatus input = Status([Target("only", "one")]);
+            FleetUpdateStore store = new(directory);
+            Contracts.Processes.ProcessIdentity identity = Infrastructure.Updates.Client.ClientUpdateFiles.Health("test").Process;
+            input = input with { Client = new("Updating", false, EOutcome.Unknown, identity, DateTimeOffset.UtcNow) };
+            await store.SaveAsync(input);
+            ClientUpdateJob job = new(input.Request.OperationId, input.Request.Release.Manifest, directory + "-installed", directory,
+                new Uri("http://127.0.0.1:5081/"), identity);
+            Infrastructure.Updates.Client.ClientUpdateFiles files = new(job);
+            Directory.CreateDirectory(files.Operation);
+            await files.SaveAsync("Starting", false, EOutcome.Unknown);
+            await store.RecoverAsync();
+            FleetUpdateStatus running = (await store.ReadAsync(input.Request.OperationId))!;
+            Assert.False(running.Completed);
+            Assert.Equal("Starting", running.Client!.State);
+            await files.SaveAsync("Completed", true, EOutcome.Succeeded);
+            FleetUpdateStatus result = (await new FleetUpdateStore(directory).ReadAsync(input.Request.OperationId))!;
+            Assert.True(result.Completed);
+            Assert.Equal(EOutcome.Succeeded, result.Outcome);
+            Assert.Equal(Contracts.Serialization.ContractJson.Hash(input.Peers), Contracts.Serialization.ContractJson.Hash(result.Peers));
+        }
+        finally
+        {
+            root.Delete(true);
+        }
     }
 
     /// <summary>helper起動前の中断と受付後の記録消失は、再実行せず結果未確認として復元します。</summary>
@@ -326,18 +342,26 @@ public sealed class FleetUpdateTests
     [InlineData("Updating")]
     public async Task StoreDoesNotAssumeSuccessWhenClientHandoffIsMissing(string state)
     {
-        string directory = Path.Combine(Path.GetTempPath(), "contents-client-store-" + Guid.NewGuid().ToString("N"));
-        FleetUpdateStatus input = Status([Target("only", "one")]) with
+        DirectoryInfo root = Directory.CreateTempSubdirectory("contents-client-store-");
+        try
         {
-            Client = new(state, false, EOutcome.Unknown, null, DateTimeOffset.UtcNow)
-        };
-        FleetUpdateStore store = new(directory);
-        await store.SaveAsync(input);
-        await store.RecoverAsync();
-        FleetUpdateStatus result = (await store.ReadAsync(input.Request.OperationId))!;
-        Assert.True(result.Completed);
-        Assert.Equal(EOutcome.Unknown, result.Outcome);
-        Assert.Equal(input.Request.OperationId, result.Request.OperationId);
+            string directory = root.FullName;
+            FleetUpdateStatus input = Status([Target("only", "one")]) with
+            {
+                Client = new(state, false, EOutcome.Unknown, null, DateTimeOffset.UtcNow)
+            };
+            FleetUpdateStore store = new(directory);
+            await store.SaveAsync(input);
+            await store.RecoverAsync();
+            FleetUpdateStatus result = (await store.ReadAsync(input.Request.OperationId))!;
+            Assert.True(result.Completed);
+            Assert.Equal(EOutcome.Unknown, result.Outcome);
+            Assert.Equal(input.Request.OperationId, result.Request.OperationId);
+        }
+        finally
+        {
+            root.Delete(true);
+        }
     }
 
     /// <summary>既存Updaterに渡す固定要求を構成します。</summary>

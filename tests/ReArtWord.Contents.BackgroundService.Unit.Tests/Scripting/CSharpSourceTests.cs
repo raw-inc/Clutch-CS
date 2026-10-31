@@ -116,7 +116,7 @@ public sealed class CSharpSourceTests
         finally
         {
             await stop.CancelAsync().ConfigureAwait(true);
-            await running.WaitAsync(TimeSpan.FromSeconds(15)).ConfigureAwait(true);
+            await running.ConfigureAwait(true);
         }
     }
 

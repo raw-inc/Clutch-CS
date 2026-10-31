@@ -30,6 +30,7 @@ public sealed class DesktopLivenessTests
         using NamedPipeServerStream worker = new(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
         using NamedPipeClientStream reader = new(".", name, PipeDirection.InOut, PipeOptions.Asynchronous);
         using Task attached = worker.WaitForConnectionAsync(timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable attachmentLifetime = new TestTaskLifetime(attached, timeout).ConfigureAwait(true);
         await reader.ConnectAsync(timeout.Token).ConfigureAwait(true);
         await attached.ConfigureAwait(true);
         using Task bridge = DesktopSession.BridgeAsync(network, worker, timeout.Token);

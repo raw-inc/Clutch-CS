@@ -10,6 +10,7 @@ using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Management;
 using ReArtWord.Contents.BackgroundService.Contracts.Processes;
+using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Contracts.Updates;
 using ReArtWord.Contents.BackgroundService.Contracts.Updates.Local;
 using ReArtWord.Contents.BackgroundService.Contracts.Updates.Releases;
@@ -168,41 +169,82 @@ internal sealed class UpdateTestScope : IDisposable
         await observer.SendAsync("fixture-peer", peer.InstanceId, "updates.local.stop", null, false, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>この試験が実起動したプロセスと専用rootだけを削除します。</summary>
+    /// <summary>稼働照会前に起動した実体も含め、この試験のプロセスを停止します。</summary>
     // 抑制理由: PID再利用先を終了しないためBCL時刻を取得して即時変換・照合します。
     [SuppressMessage("SourceQuality", "RAW171", Justification = "試験が所有するprocessの実体だけを終了します。")]
-    public void Dispose()
+    internal void StopProcesses()
     {
         string root = ValidateCleanupRoot();
-        foreach (ProcessIdentity identity in owned.Distinct())
+        HashSet<ProcessIdentity> processes = [.. owned];
+        List<Exception> failures = [];
+        string processDirectory = Path.Combine(root, "fixture-processes");
+        if (Directory.Exists(processDirectory))
         {
-            Process process;
-            try
+            foreach (string path in Directory.EnumerateFiles(processDirectory, "*.json"))
             {
-                process = Process.GetProcessById(identity.ProcessId);
-            }
-            catch (ArgumentException)
-            {
-                // PIDが存在しない場合だけ、元の実体の終了として扱います。
-                continue;
-            }
-            using (process)
-            {
-                if (!process.HasExited && new DateTimeOffset(process.StartTime.ToUniversalTime()) != identity.StartedAt)
+                try
                 {
-                    // 再利用されたPIDは別の実体なので終了しません。
-                    continue;
-                }
-                if (!process.WaitForExit(1000))
-                {
-                    process.Kill(true);
-                    if (!process.WaitForExit(5000))
+                    ProcessIdentity identity = JsonSerializer.Deserialize<ProcessIdentity>(File.ReadAllText(path), ContractJson.Options)
+                        ?? throw new InvalidDataException("The fixture process record is missing.");
+                    if (identity.ProcessId <= 0 || identity.StartedAt == default)
                     {
-                        throw new TimeoutException($"Fixture process exit is unconfirmed: PID={identity.ProcessId}, startedAt={identity.StartedAt:O}, retainedRoot={root}");
+                        throw new InvalidDataException("The fixture process identity is invalid.");
                     }
+                    processes.Add(identity);
+                }
+                catch (Exception exception) when (exception is IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
+                {
+                    failures.Add(exception);
                 }
             }
         }
+        foreach (ProcessIdentity identity in processes)
+        {
+            try
+            {
+                Process process;
+                try
+                {
+                    process = Process.GetProcessById(identity.ProcessId);
+                }
+                catch (ArgumentException)
+                {
+                    // PIDが存在しない場合だけ、元の実体の終了として扱います。
+                    continue;
+                }
+                using (process)
+                {
+                    if (!process.HasExited && new DateTimeOffset(process.StartTime.ToUniversalTime()) != identity.StartedAt)
+                    {
+                        // 再利用されたPIDは別の実体なので終了しません。
+                        continue;
+                    }
+                    if (!process.WaitForExit(1000))
+                    {
+                        process.Kill(true);
+                        if (!process.WaitForExit(5000))
+                        {
+                            throw new TimeoutException($"Fixture process exit is unconfirmed: PID={identity.ProcessId}, startedAt={identity.StartedAt:O}, retainedRoot={root}");
+                        }
+                    }
+                }
+            }
+            catch (Exception exception) when (exception is not OutOfMemoryException)
+            {
+                failures.Add(exception);
+            }
+        }
+        if (failures.Count != 0)
+        {
+            throw new AggregateException("Some update fixture processes could not be stopped; the files were retained.", failures);
+        }
+    }
+
+    /// <summary>所有プロセスの終了後に、この試験の専用配置だけを削除します。</summary>
+    public void Dispose()
+    {
+        StopProcesses();
+        string root = ValidateCleanupRoot();
         Stopwatch elapsed = Stopwatch.StartNew();
         bool deleted = false;
         while (!deleted)

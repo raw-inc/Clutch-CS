@@ -44,6 +44,7 @@ public sealed class UpdateReadRaceTests
         finally
         {
             completed.Set();
+            await ((Task)reading).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
         Assert.Equal(expected, await reading.ConfigureAwait(true));
         Assert.Equal(expected, (await journal.ReadAsync(timeout.Token).ConfigureAwait(true))!.Result);

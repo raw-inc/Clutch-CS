@@ -41,7 +41,7 @@ public sealed class PeerHeartbeatTests
         {
             await stopping.CancelAsync().ConfigureAwait(true);
             context.Release();
-            await heartbeat.WaitAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(true);
+            await heartbeat.ConfigureAwait(true);
         }
     }
 
@@ -80,7 +80,7 @@ public sealed class PeerHeartbeatTests
         {
             await stopping.CancelAsync().ConfigureAwait(true);
             release.TrySetResult();
-            await heartbeat.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
+            await heartbeat.ConfigureAwait(true);
         }
         Assert.True(0 < unavailable);
     }
@@ -120,7 +120,7 @@ public sealed class PeerHeartbeatTests
         finally
         {
             await stopping.CancelAsync().ConfigureAwait(true);
-            await heartbeat.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
+            await heartbeat.ConfigureAwait(true);
         }
     }
 

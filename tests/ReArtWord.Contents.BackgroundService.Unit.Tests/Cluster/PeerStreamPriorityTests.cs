@@ -24,9 +24,11 @@ public sealed class PeerStreamPriorityTests
     {
         string id = Guid.NewGuid().ToString("N");
         int port = Port();
-        FileTestPeer first = await FileTestPeer.CreateAsync(id, "first", port, true), second = await FileTestPeer.CreateAsync(id, "second", port, false), third = await FileTestPeer.CreateAsync(id, "third", port, false);
+        FileTestPeer first = await FileTestPeer.CreateAsync(id, "first", port, true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = first.ConfigureAwait(true);
+        FileTestPeer second = await FileTestPeer.CreateAsync(id, "second", port, false);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable secondLifetime = second.ConfigureAwait(true);
+        FileTestPeer third = await FileTestPeer.CreateAsync(id, "third", port, false);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable thirdLifetime = third.ConfigureAwait(true);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(25));
         TaskCompletionSource saturated = new(TaskCreationOptions.RunContinuationsAsynchronously), release = new(TaskCreationOptions.RunContinuationsAsynchronously);

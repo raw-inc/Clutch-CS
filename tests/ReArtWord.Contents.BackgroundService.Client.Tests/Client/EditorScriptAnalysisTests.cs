@@ -89,19 +89,27 @@ public sealed class EditorScriptAnalysisTests
         ManagementApi api = new(client) { SelectedPeerId = "peer", SelectedClusterId = "cluster" };
         EditorDocument model = await ModelAsync().ConfigureAwait(true);
         EditorScriptAnalysis editor = new(model, api, new(api));
-        Task<ScriptAnalysis?> pending = editor.AnalyzeAsync("script");
-        if (navigate)
-        {
-            model.New();
-        }
-        else
-        {
-            model.ChangeNode("script", node => node with { Settings = JsonSerializer.SerializeToElement(new { code = "public static string Run() => string.Empty;" }) });
-        }
         using HttpResponseMessage reply = Reply();
-        response.SetResult(reply);
-        Assert.Null(await pending.ConfigureAwait(true));
-        Assert.All(model.Draft.Document.Nodes, node => Assert.False(node.Settings.TryGetProperty("analysis", out _)));
+        Task<ScriptAnalysis?> pending = editor.AnalyzeAsync("script");
+        try
+        {
+            if (navigate)
+            {
+                model.New();
+            }
+            else
+            {
+                model.ChangeNode("script", node => node with { Settings = JsonSerializer.SerializeToElement(new { code = "public static string Run() => string.Empty;" }) });
+            }
+            response.SetResult(reply);
+            Assert.Null(await pending.ConfigureAwait(true));
+            Assert.All(model.Draft.Document.Nodes, node => Assert.False(node.Settings.TryGetProperty("analysis", out _)));
+        }
+        finally
+        {
+            response.TrySetCanceled();
+            await ((Task)pending).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
     }
 
     /// <summary>解析は型を追加しますが、入力値や配線を黙って削除しません。</summary>

@@ -31,6 +31,7 @@ public sealed class FileReservationReleaseTests
         repository.Pause();
         FileLease barrier = Lease(peer, "/barrier");
         Task<ClusterResponse> acquiring = coordinator.AcquireAsync(Request(peer, "file.gate.acquire", barrier), timeout.Token);
+        List<Task> running = [acquiring];
         Task<ClusterResponse>[] releasing;
         try
         {
@@ -38,11 +39,13 @@ public sealed class FileReservationReleaseTests
             releasing = leases.Select((lease, index) => coordinator.ReleaseAsync(Request(peer, "file.gate.release",
                 new FileGateRelease(index == 0 ? lease with { OwnerInstanceId = Guid.NewGuid() }
                                                : lease, [peer])), timeout.Token)).ToArray();
+            running.AddRange(releasing);
             Assert.All(releasing, operation => Assert.False(operation.IsCompleted));
         }
         finally
         {
             repository.Resume.TrySetResult();
+            await Task.WhenAll(running).ConfigureAwait(true);
         }
         Assert.Equal(EOutcome.Succeeded, (await acquiring.ConfigureAwait(true)).Outcome);
         ClusterResponse[] results = await Task.WhenAll(releasing);
@@ -79,17 +82,21 @@ public sealed class FileReservationReleaseTests
         repository.Pause();
         FileLease barrier = Lease(peer, "/barrier");
         Task<ClusterResponse> acquiring = coordinator.AcquireAsync(Request(peer, "file.gate.acquire", barrier), timeout.Token);
+        List<Task> running = [acquiring];
         Task<ClusterResponse> released, unconfirmed;
         try
         {
             await repository.Entered.Task.WaitAsync(timeout.Token);
             released = coordinator.ReleaseAsync(Request(peer, "file.gate.release", new FileGateRelease(first, [peer])), timeout.Token);
+            running.Add(released);
             PeerInfo missing = peer with { PeerId = "missing", InstanceId = Guid.NewGuid(), HostId = "other" };
             unconfirmed = coordinator.ReleaseAsync(Request(peer, "file.gate.release", new FileGateRelease(second, [peer, missing])), timeout.Token);
+            running.Add(unconfirmed);
         }
         finally
         {
             repository.Resume.TrySetResult();
+            await Task.WhenAll(running).ConfigureAwait(true);
         }
         Assert.Equal(EOutcome.Succeeded, (await acquiring.ConfigureAwait(true)).Outcome);
         Assert.Equal(EOutcome.Succeeded, (await released.ConfigureAwait(true)).Outcome);

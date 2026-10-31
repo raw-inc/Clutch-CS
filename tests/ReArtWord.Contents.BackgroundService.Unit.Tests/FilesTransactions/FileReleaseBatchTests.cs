@@ -39,6 +39,7 @@ public sealed class FileReleaseBatchTests
         finally
         {
             release.TrySetResult();
+            await ((Task)Task.WhenAll(tasks)).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => tasks[10]);
         Assert.All(await Task.WhenAll(tasks.Where((_, index) => index != 10)), result => Assert.Equal(EOutcome.Succeeded, result.Outcome));
@@ -68,9 +69,16 @@ public sealed class FileReleaseBatchTests
         }
         Task<ClusterResponse>[] tasks = Enumerable.Range(0, 8).Select(_ => batch.WriteAsync(Guid.NewGuid(), Release(), Fail, timeout.Token)).ToArray();
         release.TrySetResult();
-        foreach (Task<ClusterResponse> task in tasks)
+        try
         {
-            await Assert.ThrowsAsync<IOException>(() => task.WaitAsync(timeout.Token));
+            foreach (Task<ClusterResponse> task in tasks)
+            {
+                await Assert.ThrowsAsync<IOException>(() => task.WaitAsync(timeout.Token));
+            }
+        }
+        finally
+        {
+            await ((Task)Task.WhenAll(tasks)).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
         ClusterResponse next = await batch.WriteAsync(Guid.NewGuid(), Release(),
             (take, _) => Task.FromResult<IReadOnlyList<ClusterResponse>>(take().Select(_ => new ClusterResponse(EOutcome.Succeeded)).ToArray()), timeout.Token);
