@@ -28,6 +28,7 @@ public sealed class MultiPortListenerTests
         TaskCompletionSource<string> listening = new(TaskCreationOptions.RunContinuationsAsynchronously);
         NodeSourceContext source = Source(new { localPort = $"{ports[0]}-{ports[1]}, {ports[0]}", count = 2 }, emissions, listening);
         Task<NodeResult> run = ((ISourceNode)SocketNodeTests.Find(type)).RunAsync(source, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, timeout).ConfigureAwait(true);
         Assert.Equal(2, (await listening.Task.WaitAsync(timeout.Token)).Split(", ", StringSplitOptions.None).Length);
         using UdpClient sender = new(AddressFamily.InterNetwork);
         byte[] packet = type switch
@@ -59,6 +60,7 @@ public sealed class MultiPortListenerTests
         TaskCompletionSource<string> listening = new(TaskCreationOptions.RunContinuationsAsynchronously);
         NodeSourceContext source = Source(new { localPort = ports, count = 2, framing = "lengthPrefix" }, emissions, listening);
         Task<NodeResult> run = ((ISourceNode)SocketNodeTests.Find(type)).RunAsync(source, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, timeout).ConfigureAwait(true);
         await listening.Task.WaitAsync(timeout.Token);
         using TcpClient first = new(), second = new();
         await first.ConnectAsync(IPAddress.Loopback, ports[0], timeout.Token);
@@ -96,6 +98,7 @@ public sealed class MultiPortListenerTests
         ISourceNode node = (ISourceNode)SocketNodeTests.Find(type);
         Assert.Empty(node.Validate(new("listener", type, source.Initial.Settings)));
         Task<NodeResult> run = node.RunAsync(source, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, timeout).ConfigureAwait(true);
         Assert.Equal(2, (await listening.Task.WaitAsync(timeout.Token)).Split(", ", StringSplitOptions.None).Length);
         using HttpClient http = new();
         foreach (int port in ports)
@@ -154,6 +157,7 @@ public sealed class MultiPortListenerTests
             }
         });
         Task<NodeResult> run = ((ISourceNode)SocketNodeTests.Find(type)).RunAsync(source, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, timeout).ConfigureAwait(true);
         await unavailable.Task.WaitAsync(timeout.Token);
         Assert.False(reportedListening);
         AssertReleased([ports[0]], tcp);
@@ -173,8 +177,10 @@ public sealed class MultiPortListenerTests
         TaskCompletionSource<string> firstReady = new(TaskCreationOptions.RunContinuationsAsynchronously), groupReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
         ISourceNode node = (ISourceNode)SocketNodeTests.Find("udp.receive");
         Task<NodeResult> firstRun = node.RunAsync(Source(new { localPort = ports[0], count = 2 }, first, firstReady), timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstRunLifetime = new TestTaskLifetime(firstRun, timeout).ConfigureAwait(true);
         await firstReady.Task.WaitAsync(timeout.Token);
         Task<NodeResult> groupRun = node.RunAsync(Source(new { localPort = ports, count = 1 }, group, groupReady), timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable groupRunLifetime = new TestTaskLifetime(groupRun, timeout).ConfigureAwait(true);
         await groupReady.Task.WaitAsync(timeout.Token);
         using UdpClient sender = new();
         await sender.SendAsync(new byte[] { 42 }, new IPEndPoint(IPAddress.Loopback, ports[1]), timeout.Token);

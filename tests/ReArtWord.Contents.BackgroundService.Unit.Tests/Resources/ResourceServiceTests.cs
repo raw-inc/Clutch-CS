@@ -127,10 +127,13 @@ public sealed class ResourceServiceTests
     {
         using MediaTestFiles files = new();
         using ResourceService service = new(new SqliteRepository(Path.Combine(files.Root, "resource.db")), "peer", new ResourceOptions(1, 5, 1));
-        using CancellationTokenSource stop = new(TimeSpan.FromSeconds(5));
+        using CancellationTokenSource stop = new();
         Task run = service.RunAsync(stop.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = new TestTaskLifetime(run, stop).ConfigureAwait(true);
+
+        // 採取を確認してから停止し、確認用の期限と自動停止を競合させません。
         using CancellationTokenSource wait = new(TimeSpan.FromSeconds(5));
-        while ((await service.HistoryAsync()).Count < 2)
+        while ((await service.HistoryAsync(wait.Token)).Count < 2)
         {
             await Task.Delay(10, wait.Token).ConfigureAwait(true);
         }

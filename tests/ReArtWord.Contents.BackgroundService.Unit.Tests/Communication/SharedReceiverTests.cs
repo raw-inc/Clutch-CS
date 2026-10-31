@@ -32,6 +32,7 @@ public sealed class SharedReceiverTests
             return ValueTask.CompletedTask;
         });
         Task<NodeResult> receiving = ((ISourceNode)SocketNodeTests.Find("udp.receive")).RunAsync(source, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable receivingLifetime = new TestTaskLifetime(receiving, timeout).ConfigureAwait(true);
         int localPort = await listening.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         NodeExecutionContext first = SocketNodeTests.Context(SocketNodeTests.Settings(new { localPort, remoteAddress = "127.0.0.1", remotePort }), input: NodeValue.FromObject("first"));
         NodeExecutionContext second = SocketNodeTests.Context(SocketNodeTests.Settings(new { localPort, remoteAddress = "127.0.0.1", remotePort, broadcast = true }), input: NodeValue.FromObject("second"));
@@ -75,6 +76,7 @@ public sealed class SharedReceiverTests
             return ValueTask.CompletedTask;
         }, stop.Token);
         Task<NodeResult> slowRun = ((ISourceNode)SocketNodeTests.Find("udp.receive")).RunAsync(slow, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable slowRunLifetime = new TestTaskLifetime(slowRun, timeout).ConfigureAwait(true);
         int port = await listening.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         Channel<NodeEmission> packets = Channel.CreateUnbounded<NodeEmission>();
         TaskCompletionSource fastReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -88,6 +90,7 @@ public sealed class SharedReceiverTests
             return ValueTask.CompletedTask;
         }, stop.Token);
         Task<NodeResult> fastRun = ((ISourceNode)SocketNodeTests.Find("udp.receive")).RunAsync(fast, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable fastRunLifetime = new TestTaskLifetime(fastRun, timeout).ConfigureAwait(true);
         await fastReady.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         using UdpClient sender = new();
         for (int index = 0; index < 300; index++)

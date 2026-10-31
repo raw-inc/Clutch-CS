@@ -97,9 +97,11 @@ public sealed class OscWorkflowTests
         Channel<NodeEmission> selected = Channel.CreateUnbounded<NodeEmission>();
         TaskCompletionSource<int> listening = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Task<NodeResult> first = Run(new { }, all, listening, stop.Token, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = new TestTaskLifetime(first, timeout).ConfigureAwait(true);
         int port = await listening.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         TaskCompletionSource<int> secondListening = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Task<NodeResult> second = Run(new { localPort = port, address = "/cue", argumentTypes = cueTypes, count = 2 }, selected, secondListening, default, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable secondLifetime = new TestTaskLifetime(second, timeout).ConfigureAwait(true);
         Assert.Equal(port, await secondListening.Task.WaitAsync(timeout.Token).ConfigureAwait(true));
         using UdpClient sender = new();
         await SendAsync(sender, port, "/other", timeout.Token).ConfigureAwait(true);
@@ -129,6 +131,7 @@ public sealed class OscWorkflowTests
         Channel<NodeEmission> emissions = Channel.CreateUnbounded<NodeEmission>();
         TaskCompletionSource<int> listening = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Task<NodeResult> run = Run(new { argumentTypes = textTypes, count = 2 }, emissions, listening, default, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, timeout).ConfigureAwait(true);
         int port = await listening.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         using UdpClient sender = new();
         byte[] wrong = OscPacketCodec.Encode(JsonSerializer.SerializeToElement(new { address = "/value", arguments = new[] { new { type = "i", value = 12 } } }));
@@ -152,6 +155,7 @@ public sealed class OscWorkflowTests
         Channel<NodeEmission> emissions = Channel.CreateUnbounded<NodeEmission>();
         TaskCompletionSource<int> listening = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Task<NodeResult> run = Run(new { argumentTypes = types, count = 1 }, emissions, listening, default, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, timeout).ConfigureAwait(true);
         int port = await listening.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         NodeExecutionContext request = SocketNodeTests.Context(SocketNodeTests.Settings(new { remoteAddress = "127.0.0.1", remotePort = port, address = "/typed", argumentTypes = types }));
         Dictionary<string, NodeValue> inputs = new(StringComparer.Ordinal)

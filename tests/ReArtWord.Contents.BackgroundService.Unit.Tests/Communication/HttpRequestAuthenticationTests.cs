@@ -48,6 +48,7 @@ public sealed class HttpRequestAuthenticationTests
         JsonElement settings = SocketNodeTests.Settings(values);
         Assert.Empty(node.Validate(new("request", "http.request", settings)));
         Task<NodeResult> pending = node.ExecuteAsync(SocketNodeTests.Context(settings), timeout.Token).AsTask();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable pendingLifetime = new TestTaskLifetime(pending, timeout).ConfigureAwait(true);
         string request = await RespondAsync(server, 200, timeout.Token).ConfigureAwait(true);
         NodeResult result = await pending.ConfigureAwait(true);
         Assert.True(result.Outcome is EOutcome.Succeeded, result.ReasonCode + ": " + result.Message);
@@ -152,6 +153,7 @@ public sealed class HttpRequestAuthenticationTests
         server.Start();
         JsonElement settings = SocketNodeTests.Settings(new { url = "http://127.0.0.1:" + ((IPEndPoint)server.LocalEndpoint).Port.ToString(System.Globalization.CultureInfo.InvariantCulture), method = "GET" });
         Task<NodeResult> pending = RequestNode(new RecordingSecrets()).ExecuteAsync(SocketNodeTests.Context(settings), timeout.Token).AsTask();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable pendingLifetime = new TestTaskLifetime(pending, timeout).ConfigureAwait(true);
         await RespondAsync(server, 401, timeout.Token).ConfigureAwait(true);
         NodeResult result = await pending.ConfigureAwait(true);
         Assert.Equal(EOutcome.Failed, result.Outcome);
