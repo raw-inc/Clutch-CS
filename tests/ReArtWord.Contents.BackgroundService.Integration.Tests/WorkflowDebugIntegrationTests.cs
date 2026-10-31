@@ -34,7 +34,8 @@ public sealed class WorkflowDebugIntegrationTests
             return left.GetProperty("peers").EnumerateArray().Count(peer => peer.GetProperty("status").GetString() is "ready") == 2
                 && right.GetProperty("peers").EnumerateArray().Count(peer => peer.GetProperty("status").GetString() is "ready") == 2;
         }).ConfigureAwait(true);
-        int firstPort = CorePeer.AvailablePort(), secondPort = CorePeer.AvailablePort();
+        int[] ports = CorePeer.AvailableUdpPorts(2);
+        int firstPort = ports[0], secondPort = ports[1];
         JsonElement empty = JsonSerializer.SerializeToElement(new { });
         WorkflowDefinition definition = new("debug-inputs", "Debug inputs", [
             new("a", "udp.receive", JsonSerializer.SerializeToElement(new { interfaceId = first.InterfaceId, localAddress = "127.0.0.1", localPort = firstPort }), Target: new(EExecutionScope.One, ["a"]), StartOnLoad: true),
