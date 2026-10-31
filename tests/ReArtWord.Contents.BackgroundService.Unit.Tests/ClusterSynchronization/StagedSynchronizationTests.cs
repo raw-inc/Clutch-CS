@@ -30,9 +30,12 @@ public sealed class StagedSynchronizationTests
         }
         string clusterId = Guid.NewGuid().ToString("N");
         int port = LargeSynchronizationTests.Port();
-        TimeProvider clock = new HistoryClock();
+        HistoryClock clock = new();
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(40));
         await using PeerCluster target = Create(targetStore, targetFiles.Root, clusterId, "target", port, false, clock);
+
+        // Peerの破棄より先に保留中のタイマーを解放します。
+        using IDisposable clockLifetime = clock;
         RecoveryRepository incoming = RecoveryRepository.Create(targetStore)!;
         Guid originalInstance;
         await using (PeerCluster source = Create(sourceStore, sourceFiles.Root, clusterId, "source", port, true, clock))
@@ -47,7 +50,11 @@ public sealed class StagedSynchronizationTests
             Assert.True(0 < (await incoming.StatusAsync(timeout.Token)).Pending);
         }
         DateTimeOffset? readySince = target.GetPeers().Single(peer => peer.InstanceId == target.LocalInstanceId).ReadySince;
-        await Task.Delay(1000, timeout.Token);
+        clock.Resume();
+        while (target.HistorySynchronization?.Problem is null)
+        {
+            await Task.Delay(20, timeout.Token);
+        }
         Assert.True(0 < (await incoming.StatusAsync(timeout.Token)).Pending);
         Assert.Equal(EPeerStatus.Ready, target.GetPeers().Single(peer => peer.InstanceId == target.LocalInstanceId).Status);
         IDurableRepository restored = await RepositoryFactory.CreateAsync(sourceFiles.Root, "source", new());
@@ -76,9 +83,12 @@ public sealed class StagedSynchronizationTests
         IDurableRepository secondStore = secondRuntime.Repository;
         string clusterId = Guid.NewGuid().ToString("N");
         int port = LargeSynchronizationTests.Port();
-        TimeProvider clock = new HistoryClock();
+        HistoryClock clock = new();
         await using PeerCluster first = Create(firstStore, firstFiles.Root, clusterId, "first", port, true, clock);
         await using PeerCluster second = Create(secondStore, secondFiles.Root, clusterId, "second", port, false, clock);
+
+        // Peerの破棄より先に保留中のタイマーを解放します。
+        using IDisposable clockLifetime = clock;
         await first.StartAsync();
         DateTimeOffset? readySince = first.GetPeers().Single(peer => peer.InstanceId == first.LocalInstanceId).ReadySince;
         Guid firstOperation = Guid.Empty;
@@ -98,7 +108,10 @@ public sealed class StagedSynchronizationTests
         // 参加先の起動・背景取得の期限は、履歴の準備後に計測します。
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(40));
         await second.StartAsync(timeout.Token);
-        while (second.GetPeers().Single(peer => peer.InstanceId == second.LocalInstanceId).Status != EPeerStatus.Ready)
+
+        // 共有保存は送信側が把握する参加者を対象にするため、Ready通知の到着まで確認します。
+        while (second.GetPeers().Single(peer => peer.InstanceId == second.LocalInstanceId).Status != EPeerStatus.Ready
+            || !first.GetPeers().Any(peer => peer.InstanceId == second.LocalInstanceId && peer.Status == EPeerStatus.Ready))
         {
             Assert.Equal(EPeerStatus.Ready, first.GetPeers().Single(peer => peer.InstanceId == first.LocalInstanceId).Status);
             await Task.Delay(20, timeout.Token);
@@ -110,6 +123,9 @@ public sealed class StagedSynchronizationTests
         Guid update = Guid.NewGuid();
         Assert.Equal(EOutcome.Succeeded, (await first.ReplicateAsync(update,
             [new("workflow:history-test", "state", version, NodeValue.FromObject("live-change"))], timeout.Token)).Outcome);
+        Assert.Equal("live-change", (await secondStore.ReadAsync("workflow:history-test", "state", timeout.Token))!.Value!.GetString());
+        Assert.True(0 < (await incoming.StatusAsync(timeout.Token)).Pending);
+        clock.Resume();
         while (0 < (await incoming.StatusAsync(timeout.Token)).Pending)
         {
             Assert.Equal(EPeerStatus.Ready, first.GetPeers().Single(peer => peer.InstanceId == first.LocalInstanceId).Status);
@@ -128,11 +144,55 @@ public sealed class StagedSynchronizationTests
         { HeartbeatInterval = TimeSpan.FromMilliseconds(100), RequestTimeout = TimeSpan.FromSeconds(2) }, repository, clock)
         { ReadinessCheck = _ => ValueTask.FromResult(true) };
 
-    /// <summary>通常のタイマーで待機しながら、作成済みの履歴を直近区間の外へ置きます。</summary>
-    private sealed class HistoryClock : TimeProvider
+    /// <summary>1秒の単発タイマーを保留し、履歴取得前の状態を確認できるようにします。</summary>
+    private sealed class HistoryClock : TimeProvider, IDisposable
     {
+        private readonly Lock gate = new();
+        private readonly List<ITimer> held = [];
+        private bool resumed;
+
         /// <summary>壁時計だけを2分進め、長時間の試験待ちを避けます。</summary>
         /// <returns>実時刻と同じ速度で進む履歴検証用時刻です。</returns>
         public override DateTimeOffset GetUtcNow() => DateTimeOffset.UtcNow.AddMinutes(2);
+
+        /// <summary>1秒の単発待機を保留し、生存通知と2秒の要求期限は進めます。</summary>
+        /// <returns>利用側で取消・破棄できるタイマーです。</returns>
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            using (gate.EnterScope())
+            {
+                if (!resumed && dueTime == TimeSpan.FromSeconds(1) && period == Timeout.InfiniteTimeSpan)
+                {
+                    ITimer timer = System.CreateTimer(callback, state, Timeout.InfiniteTimeSpan, period);
+                    held.Add(timer);
+                    return timer;
+                }
+                return System.CreateTimer(callback, state, dueTime, period);
+            }
+        }
+
+        /// <summary>観測後は保留分を含め、すべての待機を実時間で進めます。</summary>
+        internal void Resume()
+        {
+            using (gate.EnterScope())
+            {
+                resumed = true;
+                foreach (ITimer timer in held)
+                {
+                    try
+                    {
+                        timer.Change(TimeSpan.FromSeconds(1), Timeout.InfiniteTimeSpan);
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Peerの停止などで取消済みの待機は再開しません。
+                    }
+                }
+                held.Clear();
+            }
+        }
+
+        /// <summary>途中で検証に失敗しても、Peerが終了処理に入る前に待機を解放します。</summary>
+        public void Dispose() => Resume();
     }
 }
