@@ -3,6 +3,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Installation;
 using System.Security.AccessControl;
 using System.Security.Principal;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Installer.Tests;
@@ -12,7 +13,7 @@ public sealed class InstallationFileTests
 {
     /// <summary>実際の配置・修復でも、起動登録に進む前に ACL を揃えます。</summary>
     /// <returns>サービス操作を代替し、ユーザー導入の実ファイル権限を確認します。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task UserInstallAndRepairProtectFilesBeforeRegistration()
     {
         if (!OperatingSystem.IsWindows())
@@ -20,7 +21,7 @@ public sealed class InstallationFileTests
             return;
         }
         using SetupFixture fixture = new();
-        await fixture.InitializeAsync();
+        await fixture.InitializeAsync().ConfigureAwait(true);
         fixture.Platform.UseFilePermissions = true;
         string registerStage = "register";
         fixture.Platform.StageBehavior = stage =>
@@ -31,25 +32,25 @@ public sealed class InstallationFileTests
             }
             return Task.CompletedTask;
         };
-        SetupResult installed = await fixture.RunAsync(new(Guid.NewGuid(), ESetupAction.Install, fixture.Settings), "install");
+        SetupResult installed = await fixture.RunAsync(new(Guid.NewGuid(), ESetupAction.Install, fixture.Settings), "install").ConfigureAwait(true);
         Assert.Equal(EOutcome.Succeeded, installed.Outcome);
         string data = Path.Combine(fixture.Settings.Root, "data", "user.txt");
-        await File.WriteAllTextAsync(data, "retained");
+        await File.WriteAllTextAsync(data, "retained").ConfigureAwait(true);
         string configuration = Path.Combine(fixture.Settings.Root, "config", "contents.toml");
         FileSecurity loose = new FileInfo(configuration).GetAccessControl();
         loose.AddAccessRule(new(new SecurityIdentifier(WellKnownSidType.WorldSid, null), FileSystemRights.Modify, AccessControlType.Allow));
         new FileInfo(configuration).SetAccessControl(loose);
-        InstallationRecord record = await InstallationFiles.ReadAsync(fixture.Settings.Root);
-        SetupResult repaired = await fixture.RunAsync(new(Guid.NewGuid(), ESetupAction.Reinstall, record.Settings, record.InstallationId), "repair");
+        InstallationRecord record = await InstallationFiles.ReadAsync(fixture.Settings.Root).ConfigureAwait(true);
+        SetupResult repaired = await fixture.RunAsync(new(Guid.NewGuid(), ESetupAction.Reinstall, record.Settings, record.InstallationId), "repair").ConfigureAwait(true);
         Assert.Equal(EOutcome.Succeeded, repaired.Outcome);
-        Assert.Equal("retained", await File.ReadAllTextAsync(data));
-        await File.WriteAllTextAsync(data, "writable");
+        Assert.Equal("retained", await File.ReadAllTextAsync(data).ConfigureAwait(true));
+        await File.WriteAllTextAsync(data, "writable").ConfigureAwait(true);
         WindowsInstallationSecurity.ValidateTree(fixture.Settings.Root, perUser: true);
     }
 
     /// <summary>一時的な共有違反を待ち、ロック解放後に同じファイルだけを削除します。</summary>
     /// <returns>Windowsの実ファイルロックを使う検証です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task RemovalWaitsForFileHandleRelease()
     {
         if (!OperatingSystem.IsWindows())
@@ -57,15 +58,15 @@ public sealed class InstallationFileTests
             return;
         }
         using SetupFixture fixture = new();
-        await fixture.InitializeAsync();
+        await fixture.InitializeAsync().ConfigureAwait(true);
         string name = "locked.dll";
         string path = Path.Combine(fixture.Root, name);
-        await File.WriteAllTextAsync(path, "fixture");
+        await File.WriteAllTextAsync(path, "fixture").ConfigureAwait(true);
         Task deleting;
         using (FileStream held = new(path, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
             deleting = InstallationFiles.DeleteFileAsync(fixture.Root, name);
-            await Task.Delay(InstallationDefaults.PollInterval);
+            await Task.Delay(InstallationDefaults.PollInterval).ConfigureAwait(true);
             Assert.False(deleting.IsCompleted);
             Assert.True(File.Exists(path));
         }
