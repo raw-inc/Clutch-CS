@@ -10,6 +10,7 @@ const stages = {
     installer_tests: 'Installer regression tests',
     integration_tests: 'Integration tests',
     performance_tests: 'Performance tests',
+    native_capture_tests: 'Packaged native capture tests',
     install_tests: 'Installation lifecycle tests',
     avx2_tests: 'Installation without AVX2',
 };
