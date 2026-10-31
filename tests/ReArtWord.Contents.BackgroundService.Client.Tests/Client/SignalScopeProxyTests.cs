@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using ReArtWord.Contents.BackgroundService.ClientHost.Networking;
 using ReArtWord.Contents.BackgroundService.ClientHost.SignalScope;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Client.Tests.Client;
@@ -16,13 +17,9 @@ public sealed class SignalScopeProxyTests
 {
     /// <summary>実TCP接続の所有PIDを使い、転送ヘッダー上の利用者IPを所有者と誤認しません。</summary>
     /// <returns>復元したoriginと、実際に所有するUDP端点です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task ForwardedHttpsKeepsOneOriginAndFindsProxyUdpEndpointsAsync()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders();
