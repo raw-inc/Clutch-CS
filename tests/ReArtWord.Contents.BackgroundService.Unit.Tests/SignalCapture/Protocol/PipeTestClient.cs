@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 using System.Globalization;
 using System.Buffers.Binary;
 using System.Diagnostics;
@@ -134,7 +135,7 @@ internal sealed class PipeTestClient : IAsyncDisposable
     /// <returns>終了コード。</returns>
     internal async Task<int> ExitAsync(CancellationToken cancellationToken = default)
     {
-        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        await ProcessCompletion.WaitAsync(process, cancellationToken).ConfigureAwait(false);
         return process.ExitCode;
     }
 
@@ -152,7 +153,7 @@ internal sealed class PipeTestClient : IAsyncDisposable
             {
                 process.Kill(true);
             }
-            await process.WaitForExitAsync().ConfigureAwait(false);
+            await ProcessCompletion.WaitAsync(process).ConfigureAwait(false);
         }
         finally
         {

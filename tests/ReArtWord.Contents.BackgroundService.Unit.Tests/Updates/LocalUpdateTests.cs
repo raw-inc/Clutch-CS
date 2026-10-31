@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 using System.Diagnostics;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
@@ -148,7 +149,7 @@ public sealed class LocalUpdateTests
         try
         {
             // 停止・起動はジョブの期限で検証し、試験全体のハングは共通runsettingsで検出します。
-            await updater.WaitForExitAsync().ConfigureAwait(true);
+            await ProcessCompletion.WaitAsync(updater).ConfigureAwait(true);
             JsonElement health = await scope.HealthAsync().ConfigureAwait(true);
             Assert.Equal("v2", health.GetProperty("buildVersion").GetString());
             await scope.StopAsync().ConfigureAwait(true);
@@ -166,7 +167,7 @@ public sealed class LocalUpdateTests
                 {
                     updater.Kill(entireProcessTree: true);
                 }
-                await updater.WaitForExitAsync(CancellationToken.None).ConfigureAwait(true);
+                await ProcessCompletion.WaitAsync(updater, CancellationToken.None).ConfigureAwait(true);
             }
             finally
             {

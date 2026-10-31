@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -122,7 +123,7 @@ public sealed class WakeRelayProcessTests
             using CancellationTokenSource stop = new(TimeSpan.FromSeconds(3));
             try
             {
-                await child.WaitForExitAsync(stop.Token).ConfigureAwait(false);
+                await ProcessCompletion.WaitAsync(child, stop.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (stop.IsCancellationRequested)
             {
@@ -130,7 +131,7 @@ public sealed class WakeRelayProcessTests
                 {
                     child.Kill(true);
                 }
-                await child.WaitForExitAsync().ConfigureAwait(false);
+                await ProcessCompletion.WaitAsync(child).ConfigureAwait(false);
             }
         }
     }

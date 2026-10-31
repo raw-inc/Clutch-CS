@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 using System.Diagnostics;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests;
@@ -70,7 +71,7 @@ internal static class TestProcessCleanup
                     // 停止要求と自然終了が重なった場合も、終了確認まで進めます。
                 }
             }
-            await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+            await ProcessCompletion.WaitAsync(process, CancellationToken.None).ConfigureAwait(false);
         }
         finally
         {
