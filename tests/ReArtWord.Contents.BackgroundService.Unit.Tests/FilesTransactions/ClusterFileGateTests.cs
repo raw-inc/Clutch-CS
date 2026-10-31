@@ -12,6 +12,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Files.Transactions;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.FilesTransactions;
@@ -354,12 +355,26 @@ public sealed class ClusterFileGateTests
     /// <summary>同一Host名で独立保存・独立UDP実体を構成します。</summary>
     private sealed class GatePeer : IAsyncDisposable
     {
+        private readonly MediaTestFiles files = new();
+
         /// <summary>共通調停だけを起動します。</summary>
         public GatePeer(string id, string peer, int port, bool fresh, IDurableRepository? repository = null, TimeSpan? requestTimeout = null)
         {
-            Repository = repository ?? new SqliteRepository(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "state.db"));
-            Cluster = new PeerCluster(new ClusterOptions(id, peer, "same-host", "127.0.0.1", "127.255.255.255", port, 1, fresh, Path.GetTempPath()) { HeartbeatInterval = TimeSpan.FromMilliseconds(50), PeerTimeout = TimeSpan.FromSeconds(2), RequestTimeout = requestTimeout ?? TimeSpan.FromSeconds(2) }, Repository) { ReadinessCheck = token => ValueTask.FromResult(true) };
-            Gate = new ClusterFileGate(Cluster, Repository);
+            bool initialized = false;
+            try
+            {
+                Repository = repository ?? new SqliteRepository(Path.Combine(files.Root, "state.db"));
+                Cluster = new PeerCluster(new ClusterOptions(id, peer, "same-host", "127.0.0.1", "127.255.255.255", port, 1, fresh, files.Root) { HeartbeatInterval = TimeSpan.FromMilliseconds(50), PeerTimeout = TimeSpan.FromSeconds(2), RequestTimeout = requestTimeout ?? TimeSpan.FromSeconds(2) }, Repository) { ReadinessCheck = token => ValueTask.FromResult(true) };
+                Gate = new ClusterFileGate(Cluster, Repository);
+                initialized = true;
+            }
+            finally
+            {
+                if (!initialized)
+                {
+                    files.Dispose();
+                }
+            }
         }
 
         /// <summary>独立保存先です。</summary>
@@ -386,6 +401,7 @@ public sealed class ClusterFileGateTests
         {
             await ((IAsyncDisposable)Cluster).DisposeAsync().ConfigureAwait(false);
             Gate.Dispose();
+            files.Dispose();
         }
     }
 }
