@@ -22,13 +22,13 @@ internal sealed class WorkflowDemandRunner(NodeRegistry registry, CompiledWorkfl
     Func<NodeDefinition, ExecutionFrame[], bool, IReadOnlyDictionary<string, NodeValue>?, bool, Guid, Task<ExecutionFrame>> execute, INodeStateStore? store,
     Func<ExecutionFrame, WorkflowEventContext, Task<ExecutionReport>> emit, NodeValueObservations observations, Guid causationId, string ownerPeer,
     NodeOutputRetentionQueue retentionQueue, WorkflowEventContext? context, WorkflowDebugCapture? debug, WorkflowProgressLifetime? progress,
-    WorkflowConcurrencyExecution concurrency) : IAsyncDisposable
+    WorkflowConcurrencyExecution concurrency, Func<bool> cancelled) : IAsyncDisposable
 {
     private readonly ConcurrentDictionary<string, ExecutionFrame> demanded = new(StringComparer.Ordinal);
     private readonly NodeOutputRetention retention = new(store, retentionQueue);
     private readonly WorkflowEvaluationCache evaluations = new();
     private readonly ConcurrentDictionary<Guid, Guid> progressAliases = new();
-    private readonly WorkflowEventDispatcher signals = new(workflow, (node, frames, entry, inputs) => execute(node, frames, entry, inputs, false, context?.IterationScope ?? Guid.Empty), emit, debug);
+    private readonly WorkflowEventDispatcher signals = new(workflow, (node, frames, entry, inputs) => execute(node, frames, entry, inputs, false, context?.IterationScope ?? Guid.Empty), emit, debug, cancelled);
 
     /// <summary>反復から発火した子も、元の要素範囲を維持します。</summary>
     /// <returns>内側の明示範囲、または継承した範囲です。</returns>
@@ -281,7 +281,7 @@ internal sealed class WorkflowDemandRunner(NodeRegistry registry, CompiledWorkfl
     /// <summary>通常グラフと反復内の評価範囲を分け、開始済み依存だけを共有します。</summary>
     /// <returns>一件の要求時評価も含む有限な結果です。</returns>
     internal async Task<ExecutionFrame[]> ExecuteAsync(HashSet<string> entries, IReadOnlyDictionary<string, NodeValue>? inputs,
-        ExecutionFrame? seed, Func<bool> cancelled, TimeProvider clock, CancellationToken cancellationToken = default)
+        ExecutionFrame? seed, TimeProvider clock, CancellationToken cancellationToken = default)
     {
         signals.IterationLifetime = evaluations.Child;
         signals.ProgressScope = ProgressScope;

@@ -12,7 +12,7 @@ namespace ReArtWord.Contents.BackgroundService.Runtime.Workflows.Execution;
 /// <summary>信号と値の合流を全入力待ちから分離し、一件に固定した後続を追跡します。</summary>
 internal sealed class WorkflowEventDispatcher(CompiledWorkflow workflow,
     Func<NodeDefinition, ExecutionFrame[], bool, IReadOnlyDictionary<string, NodeValue>?, Task<ExecutionFrame>> execute,
-    Func<ExecutionFrame, WorkflowEventContext, Task<ExecutionReport>> emit, WorkflowDebugCapture? debug) : IDisposable
+    Func<ExecutionFrame, WorkflowEventContext, Task<ExecutionReport>> emit, WorkflowDebugCapture? debug, Func<bool> cancellationRequested) : IDisposable
 {
     /// <summary>反復から発火した子処理の開始と終了を、値の所有範囲へ通知します。</summary>
     internal Action<Guid, bool, EOutcome>? IterationLifetime
@@ -116,7 +116,8 @@ internal sealed class WorkflowEventDispatcher(CompiledWorkflow workflow,
         ExecutionFrame received = (await execute(node, parents, true, inputs).ConfigureAwait(false)) with { SignalId = input.Id };
         if (received.Outcome == EOutcome.NotExecuted)
         {
-            bool cancelled = received.Targets.Count != 0 && received.Targets.All(target => target.Result.ReasonCode is "execution.cancelledBeforeStart");
+            bool cancelled = received.Targets.Count != 0 && received.Targets.All(target => target.Result.ReasonCode is "execution.cancelledBeforeStart"
+                || cancellationRequested() && ExecutionOutcomes.CancelledBeforeStart(target.Result));
             EOutcome outcome = EOutcome.Failed;
             if (cancelled)
             {
@@ -170,7 +171,7 @@ internal sealed class WorkflowEventDispatcher(CompiledWorkflow workflow,
                 pending.Remove(completed);
             }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationRequested() || cancellationToken.IsCancellationRequested)
         {
             return new(node, EOutcome.Cancelled, [new(string.Empty, NodeResult.Failure("execution.cancelledBeforeStart", "The execution was cancelled before a value arrived.", EOutcome.Cancelled))]);
         }
@@ -217,7 +218,7 @@ internal sealed class WorkflowEventDispatcher(CompiledWorkflow workflow,
                 results.AddOrUpdate(signal.NodeId, failed, (_, previous) => Summary(previous, failed));
             }
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationRequested() || cancellationToken.IsCancellationRequested)
         {
             outcome = EOutcome.Cancelled;
             ExecutionFrame stopped = new(signal.NodeId, EOutcome.Cancelled, [new(string.Empty, NodeResult.Failure("signal.outputCancelled", "The downstream execution was cancelled before dispatch.", EOutcome.Cancelled))]);

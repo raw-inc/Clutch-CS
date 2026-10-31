@@ -298,13 +298,13 @@ public sealed class WorkflowEngine
                     containsPersonalData: workflow.ExecutionDefinition.ContainsPersonalData, cancellationToken: cancellationToken);
             },
             ValueObservations, id, directory.LocalPeerId, retentionQueue, context, capture, ownership.Find(id)?.Progress,
-            new WorkflowConcurrencyExecution(ConcurrencyLimiter, directory, workflow.Definition.Id, id, execution.Cancel));
+            new WorkflowConcurrencyExecution(ConcurrencyLimiter, directory, workflow.Definition.Id, id, execution.Cancel), IsCancellationRequested);
         ExecutionFrame[] frames;
         try
         {
             await using (demand.ConfigureAwait(false))
             {
-                frames = await demand.ExecuteAsync(entries, entryInputs, seed, IsCancellationRequested, timeProvider, execution.Token).ConfigureAwait(false);
+                frames = await demand.ExecuteAsync(entries, entryInputs, seed, timeProvider, execution.Token).ConfigureAwait(false);
             }
         }
         catch (Exception error) when (error is not OutOfMemoryException)
