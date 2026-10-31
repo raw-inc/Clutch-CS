@@ -86,7 +86,7 @@ public sealed class SessionFailureProcessTests
 
     /// <summary>接続拒否、壊れたフレーム、再接続、診断とクラスタ参加を実プロセスで検証します。</summary>
     /// <returns>外部NICのキャプチャや画面取得を行わない、二つのCoreの生存確認です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task InvalidSessionsDoNotStopCoreOrPreventNewConnections()
     {
         if (!OperatingSystem.IsWindows())
@@ -101,58 +101,58 @@ public sealed class SessionFailureProcessTests
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = first.ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable secondLifetime = second.ConfigureAwait(true);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(90));
-        await first.StartAsync(timeout.Token);
-        await second.StartAsync(timeout.Token);
-        await CorePeer.WaitAsync(async token => (await second.GetAsync<JsonElement>("health", token).ConfigureAwait(false)).GetProperty("ready").GetBoolean(), timeout.Token);
-        JsonElement before = await first.GetAsync<JsonElement>("health", timeout.Token);
+        await first.StartAsync(timeout.Token).ConfigureAwait(true);
+        await second.StartAsync(timeout.Token).ConfigureAwait(true);
+        await CorePeer.WaitAsync(async token => (await second.GetAsync<JsonElement>("health", token).ConfigureAwait(false)).GetProperty("ready").GetBoolean(), timeout.Token).ConfigureAwait(true);
+        JsonElement before = await first.GetAsync<JsonElement>("health", timeout.Token).ConfigureAwait(true);
         for (int attempt = 0; attempt < 2; attempt++)
         {
-            DesktopTicket desktop = await first.NotifyAsync<DesktopTicket>("desktop.open", Guid.NewGuid(), timeout.Token);
-            await RejectAsync(desktop.Port, null, timeout.Token);
-            await CorePeer.WaitAsync(async token => await first.GetAsync<int>("desktop.status", token).ConfigureAwait(false) == 0, timeout.Token);
-            SignalScopeTicket capture = await first.NotifyAsync<SignalScopeTicket>("signal-scope.open", Guid.NewGuid(), timeout.Token);
+            DesktopTicket desktop = await first.NotifyAsync<DesktopTicket>("desktop.open", Guid.NewGuid(), timeout.Token).ConfigureAwait(true);
+            await RejectAsync(desktop.Port, null, timeout.Token).ConfigureAwait(true);
+            await CorePeer.WaitAsync(async token => await first.GetAsync<int>("desktop.status", token).ConfigureAwait(false) == 0, timeout.Token).ConfigureAwait(true);
+            SignalScopeTicket capture = await first.NotifyAsync<SignalScopeTicket>("signal-scope.open", Guid.NewGuid(), timeout.Token).ConfigureAwait(true);
             string? tokenValue = null;
             if (attempt != 0)
             {
                 tokenValue = capture.Token;
             }
-            await RejectAsync(capture.Port, tokenValue, timeout.Token);
-            await CorePeer.WaitAsync(async token => await first.GetAsync<int>("signal-scope.status", token).ConfigureAwait(false) == 0, timeout.Token);
+            await RejectAsync(capture.Port, tokenValue, timeout.Token).ConfigureAwait(true);
+            await CorePeer.WaitAsync(async token => await first.GetAsync<int>("signal-scope.status", token).ConfigureAwait(false) == 0, timeout.Token).ConfigureAwait(true);
         }
-        TerminalRequest create = await TerminalTestRequest.CreateAsync(first, cancellationToken: timeout.Token);
-        TerminalView terminal = await first.PostAsync<TerminalView>("terminal.create", create, timeout.Token);
+        TerminalRequest create = await TerminalTestRequest.CreateAsync(first, cancellationToken: timeout.Token).ConfigureAwait(true);
+        TerminalView terminal = await first.PostAsync<TerminalView>("terminal.create", create, timeout.Token).ConfigureAwait(true);
         for (int attempt = 0; attempt < 2; attempt++)
         {
-            TerminalTicket ticket = await first.NotifyAsync<TerminalTicket>("terminal.attach", new TerminalAttachRequest(create.SessionId, create.Owner, Guid.NewGuid()), timeout.Token);
+            TerminalTicket ticket = await first.NotifyAsync<TerminalTicket>("terminal.attach", new TerminalAttachRequest(create.SessionId, create.Owner, Guid.NewGuid()), timeout.Token).ConfigureAwait(true);
             string? tokenValue = null;
             if (attempt != 0)
             {
                 tokenValue = ticket.Token;
             }
-            await RejectAsync(ticket.Port, tokenValue, timeout.Token);
-            Assert.Equal(terminal.SessionId, Assert.Single(await first.GetAsync<TerminalView[]>("terminal.list", timeout.Token)).SessionId);
+            await RejectAsync(ticket.Port, tokenValue, timeout.Token).ConfigureAwait(true);
+            Assert.Equal(terminal.SessionId, Assert.Single(await first.GetAsync<TerminalView[]>("terminal.list", timeout.Token).ConfigureAwait(true)).SessionId);
         }
-        TerminalView entered = await first.NotifyAsync<TerminalView>("terminal.input", create with { Data = Convert.ToBase64String("\r"u8.ToArray()) }, timeout.Token);
+        TerminalView entered = await first.NotifyAsync<TerminalView>("terminal.input", create with { Data = Convert.ToBase64String("\r"u8.ToArray()) }, timeout.Token).ConfigureAwait(true);
         Assert.Equal(1, entered.Sequence);
-        Assert.True(await first.PostAsync<bool>("terminal.close", create, timeout.Token));
-        Assert.Empty(await first.GetAsync<TerminalView[]>("terminal.list", timeout.Token));
+        Assert.True(await first.PostAsync<bool>("terminal.close", create, timeout.Token).ConfigureAwait(true));
+        Assert.Empty(await first.GetAsync<TerminalView[]>("terminal.list", timeout.Token).ConfigureAwait(true));
         LogQueryResult? logs = null;
         await CorePeer.WaitAsync(async token =>
         {
             logs = await first.GetAsync<LogQueryResult>("logs.query", new LogQuery(Text: "Session.Failed"), token).ConfigureAwait(false);
             return 6 <= logs.Entries.Count;
-        }, timeout.Token);
+        }, timeout.Token).ConfigureAwait(true);
         Assert.All(logs!.Entries, entry => Assert.Equal("InvalidDataException", entry.Data!.Json.GetProperty("exceptionType").GetString()));
         Assert.Equal(["RemoteDesktop", "SignalScope", "Terminal"], logs.Entries.Select(entry => entry.Data!.Json.GetProperty("component").GetString()).Distinct().Order(StringComparer.Ordinal));
         var target = new { workflowId = "session-test", scope = "shared", key = "continued" };
         JsonElement written = await first.PostAsync<JsonElement>("internal-data.compare-exchange", new
         {
             operationId = Guid.NewGuid(), target, expectedRevision = (string?)null, value = NodeValue.FromObject(42),
-        }, timeout.Token);
+        }, timeout.Token).ConfigureAwait(true);
         Assert.True(written.GetProperty("result").GetProperty("applied").GetBoolean());
-        JsonElement read = await second.GetAsync<JsonElement>("internal-data.read", target, timeout.Token);
+        JsonElement read = await second.GetAsync<JsonElement>("internal-data.read", target, timeout.Token).ConfigureAwait(true);
         Assert.Equal(42, read.GetProperty("confirmedValue").GetProperty("json").GetInt32());
-        JsonElement after = await first.GetAsync<JsonElement>("health", timeout.Token);
+        JsonElement after = await first.GetAsync<JsonElement>("health", timeout.Token).ConfigureAwait(true);
         Assert.True(after.GetProperty("ready").GetBoolean());
         Assert.Equal(before.GetProperty("instanceId").GetGuid(), after.GetProperty("instanceId").GetGuid());
         Assert.Equal(before.GetProperty("processId").GetInt32(), after.GetProperty("processId").GetInt32());
