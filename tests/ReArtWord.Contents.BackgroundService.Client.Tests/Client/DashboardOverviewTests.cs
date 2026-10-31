@@ -193,16 +193,24 @@ public sealed class DashboardOverviewTests
         ManagementApi api = new(client) { SelectedClusterId = "a", SelectedPeerId = "peer" };
         DashboardTelemetry telemetry = new(api);
         Task pending = telemetry.RefreshAsync(Status(first));
-        await entered.Task.WaitAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(true);
-        api.SelectedClusterId = "b";
-        finish.TrySetResult();
-        await pending.ConfigureAwait(true);
-        Assert.False(telemetry.IsCurrent);
-        Assert.Empty(telemetry.Peers);
-        Assert.All(requested, cluster => Assert.Equal("a", cluster));
-        await telemetry.RefreshAsync(Status(second));
-        Assert.True(telemetry.IsCurrent);
-        Assert.Equal(second, Assert.Single(telemetry.Peers).Latest!.InstanceId);
+        try
+        {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(true);
+            api.SelectedClusterId = "b";
+            finish.TrySetResult();
+            await pending.ConfigureAwait(true);
+            Assert.False(telemetry.IsCurrent);
+            Assert.Empty(telemetry.Peers);
+            Assert.All(requested, cluster => Assert.Equal("a", cluster));
+            await telemetry.RefreshAsync(Status(second));
+            Assert.True(telemetry.IsCurrent);
+            Assert.Equal(second, Assert.Single(telemetry.Peers).Latest!.InstanceId);
+        }
+        finally
+        {
+            finish.TrySetResult();
+            await pending.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
     }
 
     /// <summary>同じPeerが採取直後に再起動した場合は旧実体として集計しません。</summary>
