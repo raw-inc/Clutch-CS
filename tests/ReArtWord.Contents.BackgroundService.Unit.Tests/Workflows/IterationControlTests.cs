@@ -57,6 +57,7 @@ public sealed class IterationControlTests
     [InlineData(true, true)]
     public async Task ExplicitControlWaitsForStartedWorkAndSkipsUnstartedWorkAsync(bool breakLoop, bool missingResult)
     {
+        using CancellationTokenSource cancellation = new();
         TaskCompletionSource gateStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource controlled = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -68,10 +69,10 @@ public sealed class IterationControlTests
             {
                 case "gate" when value == 2:
                     gateStarted.TrySetResult();
-                    await release.Task.WaitAsync(TimeSpan.FromSeconds(10), token).ConfigureAwait(false);
+                    await release.Task.WaitAsync(token).ConfigureAwait(false);
                     break;
                 case "body" when value == 2:
-                    await gateStarted.Task.WaitAsync(TimeSpan.FromSeconds(10), token).ConfigureAwait(false);
+                    await gateStarted.Task.WaitAsync(token).ConfigureAwait(false);
                     break;
                 case "late":
                     late.Enqueue(value);
@@ -87,38 +88,41 @@ public sealed class IterationControlTests
             port = IterationNodeTypes.BreakPort;
         }
         WorkflowDefinition document = Controlled(port, missingResult);
-        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, document));
+        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, document), cancellationToken: cancellation.Token);
         try
         {
             await controlled.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
             Assert.False(running.IsCompleted);
             Assert.DoesNotContain(2, late);
+            release.TrySetResult();
+            ExecutionReport report = await running.ConfigureAwait(true);
+            Assert.True(report.Outcome == EOutcome.Succeeded, System.Text.Json.JsonSerializer.Serialize(report));
+            int[] expected = [1, 2, 3];
+            int[] expectedLate = [1, 3];
+            int started = 3;
+            if (breakLoop)
+            {
+                expected = [1, 2];
+                expectedLate = [1];
+                started = 2;
+            }
+            if (missingResult)
+            {
+                expected = expected.Where(value => value != 2).ToArray();
+            }
+            IReadOnlyDictionary<string, NodeValue> outputs = IterationResultTests.Outputs(report);
+            Assert.Equal(expected, outputs["value"].Json.EnumerateArray().Select(value => value.GetInt32()));
+            Assert.Equal(expected.Length, outputs["value2"].Json.GetArrayLength());
+            Assert.Equal(expectedLate, late);
+            Assert.Equal(started, IterationTests.Loop(report).Iteration!.Started);
+            Assert.Equal(3, IterationTests.Loop(report).Iteration!.Count);
         }
         finally
         {
             release.TrySetResult();
+            await cancellation.CancelAsync().ConfigureAwait(true);
+            await running.ConfigureAwait(true);
         }
-        ExecutionReport report = await running.ConfigureAwait(true);
-        Assert.True(report.Outcome == EOutcome.Succeeded, System.Text.Json.JsonSerializer.Serialize(report));
-        int[] expected = [1, 2, 3];
-        int[] expectedLate = [1, 3];
-        int started = 3;
-        if (breakLoop)
-        {
-            expected = [1, 2];
-            expectedLate = [1];
-            started = 2;
-        }
-        if (missingResult)
-        {
-            expected = expected.Where(value => value != 2).ToArray();
-        }
-        IReadOnlyDictionary<string, NodeValue> outputs = IterationResultTests.Outputs(report);
-        Assert.Equal(expected, outputs["value"].Json.EnumerateArray().Select(value => value.GetInt32()));
-        Assert.Equal(expected.Length, outputs["value2"].Json.GetArrayLength());
-        Assert.Equal(expectedLate, late);
-        Assert.Equal(started, IterationTests.Loop(report).Iteration!.Started);
-        Assert.Equal(3, IterationTests.Loop(report).Iteration!.Count);
     }
 
     /// <summary>並列のbreakは追加要素を始めず、開始済みの別要素は確定結果を待ちます。</summary>
@@ -126,6 +130,7 @@ public sealed class IterationControlTests
     [Fact]
     public async Task ParallelBreakAwaitsAlreadyStartedElementsAsync()
     {
+        using CancellationTokenSource cancellation = new();
         TaskCompletionSource secondStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource controlled = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -136,12 +141,12 @@ public sealed class IterationControlTests
             started.Enqueue(value);
             if (value == 1)
             {
-                await secondStarted.Task.WaitAsync(TimeSpan.FromSeconds(10), token).ConfigureAwait(false);
+                await secondStarted.Task.WaitAsync(token).ConfigureAwait(false);
             }
             else
             {
                 secondStarted.TrySetResult();
-                await release.Task.WaitAsync(TimeSpan.FromSeconds(10), token).ConfigureAwait(false);
+                await release.Task.WaitAsync(token).ConfigureAwait(false);
             }
             return IterationControlTestNode.Result(value, value == 1);
         });
@@ -153,22 +158,25 @@ public sealed class IterationControlTests
             Nodes = [.. baseGraph.Nodes, WorkflowFixture.Definition("choose", "control.ifStart")],
             Wires = [.. baseGraph.Wires, new("body", "condition", "choose", "condition"), new("choose", "start", "end", "break")],
         };
-        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, document));
+        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, document), cancellationToken: cancellation.Token);
         try
         {
             await controlled.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
             Assert.False(running.IsCompleted);
             Assert.Equal([1, 2], started.Order());
+            release.TrySetResult();
+            ExecutionReport report = await running.ConfigureAwait(true);
+            Assert.Equal(EOutcome.Succeeded, report.Outcome);
+            Assert.Equal(2, IterationTests.Loop(report).Iteration!.Started);
+            Assert.Equal("[1,2]", IterationResultTests.Outputs(report)["value"].Json.GetRawText());
+            Assert.Equal([1, 2], started.Order());
         }
         finally
         {
             release.TrySetResult();
+            await cancellation.CancelAsync().ConfigureAwait(true);
+            await running.ConfigureAwait(true);
         }
-        ExecutionReport report = await running.ConfigureAwait(true);
-        Assert.Equal(EOutcome.Succeeded, report.Outcome);
-        Assert.Equal(2, IterationTests.Loop(report).Iteration!.Started);
-        Assert.Equal("[1,2]", IterationResultTests.Outputs(report)["value"].Json.GetRawText());
-        Assert.Equal([1, 2], started.Order());
     }
 
     /// <summary>同じ完了信号が両方へ接続されても、breakを一回だけ採用します。</summary>
@@ -198,6 +206,7 @@ public sealed class IterationControlTests
     [InlineData(EOutcome.Unknown)]
     public async Task BreakDoesNotHideFailureFromAlreadyStartedWorkAsync(EOutcome failure)
     {
+        using CancellationTokenSource cancellation = new();
         TaskCompletionSource gateStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource controlled = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -208,30 +217,33 @@ public sealed class IterationControlTests
             if (value == 2 && string.Equals(context.NodeId, gate, StringComparison.Ordinal))
             {
                 gateStarted.TrySetResult();
-                await release.Task.WaitAsync(TimeSpan.FromSeconds(10), token).ConfigureAwait(false);
+                await release.Task.WaitAsync(token).ConfigureAwait(false);
                 return NodeResult.Failure("test.startedFailure", "Started work did not succeed.", failure);
             }
             if (value == 2)
             {
-                await gateStarted.Task.WaitAsync(TimeSpan.FromSeconds(10), token).ConfigureAwait(false);
+                await gateStarted.Task.WaitAsync(token).ConfigureAwait(false);
             }
             return IterationControlTestNode.Result(value, value == 2);
         });
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = fixture.ConfigureAwait(true);
         ObserveControl(fixture, controlled);
-        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, Controlled("break", false)));
+        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, Controlled("break", false)), cancellationToken: cancellation.Token);
         try
         {
             await controlled.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
             Assert.False(running.IsCompleted);
+            release.TrySetResult();
+            ExecutionReport report = await running.ConfigureAwait(true);
+            Assert.Equal(failure, report.Outcome);
+            Assert.Equal(2, IterationTests.Loop(report).Iteration!.Started);
         }
         finally
         {
             release.TrySetResult();
+            await cancellation.CancelAsync().ConfigureAwait(true);
+            await running.ConfigureAwait(true);
         }
-        ExecutionReport report = await running.ConfigureAwait(true);
-        Assert.Equal(failure, report.Outcome);
-        Assert.Equal(2, IterationTests.Loop(report).Iteration!.Started);
     }
 
     /// <summary>通常ノード・実条件ゲート・実反復を同じランタイムへ登録します。</summary>
