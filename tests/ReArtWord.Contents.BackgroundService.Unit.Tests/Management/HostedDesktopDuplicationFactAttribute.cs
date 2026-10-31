@@ -11,6 +11,11 @@ internal sealed class HostedDesktopDuplicationFactAttribute : FactAttribute
     /// <summary>製品の引数を使わず、最小のddagrabで画面取得機能を確認します。</summary>
     public HostedDesktopDuplicationFactAttribute()
     {
+        Skip = WindowsFactAttribute.GetSkipReason();
+        if (Skip is not null)
+        {
+            return;
+        }
         string? executable = Environment.GetEnvironmentVariable("CONTENTS_TEST_FFPROBE");
         if (!OperatingSystem.IsWindows() || !HostedDesktopFactAttribute.IsHostedRunner || !File.Exists(executable))
         {
