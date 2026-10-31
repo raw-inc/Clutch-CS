@@ -225,10 +225,7 @@ internal sealed class WorkflowDemandRunner(NodeRegistry registry, CompiledWorkfl
         }
         if (!saved)
         {
-            completed = completed with { Targets = completed.Targets.Select(target => target with { Result = target.Result with
-            {
-                ReasonCode = "value.retentionUnconfirmed", Message = "The operation result is known, but retention for later reads could not be confirmed. The operation was not repeated.",
-            } }).ToArray() };
+            completed = NodeOutputRetention.Unconfirmed(completed);
         }
         return evaluations.Retain(iterationScope, completed);
     }
