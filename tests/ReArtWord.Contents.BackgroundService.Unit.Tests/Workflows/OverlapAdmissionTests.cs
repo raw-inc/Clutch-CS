@@ -41,8 +41,10 @@ public sealed class OverlapAdmissionTests
         };
         NodeDefinition node = WorkflowFixture.Definition("n") with { Overlap = EOverlapPolicy.Queue, Safety = new(StopWhenSingleton: false, Inputs: EStoppedInputPolicy.All) };
         Task<NodeResult> first = fixture.Executor.ExecuteAsync(Request(node, "first", fixture), timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = new TestTaskLifetime(first, timeout).ConfigureAwait(true);
         await started.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         Task<NodeResult> queued = fixture.Executor.ExecuteAsync(Request(node, "queued", fixture), timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable queuedLifetime = new TestTaskLifetime(queued, timeout).ConfigureAwait(true);
         Volatile.Write(ref stopped, 1);
         release.SetResult();
         await heldAtSafety.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
@@ -75,8 +77,10 @@ public sealed class OverlapAdmissionTests
         NodeDefinition node = WorkflowFixture.Definition("n") with { Overlap = EOverlapPolicy.Queue };
         RemoteExecutionRequest first = Request(node, "first", fixture);
         Task<NodeResult> active = fixture.Executor.ExecuteAsync(first, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable activeLifetime = new TestTaskLifetime(active, timeout).ConfigureAwait(true);
         await started.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         Task<NodeResult> pending = fixture.Executor.ExecuteAsync(Request(node, "captured", fixture), timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable pendingLifetime = new TestTaskLifetime(pending, timeout).ConfigureAwait(true);
         Assert.False(pending.IsCompleted);
         fixture.Executor.AdmissionCheck = static () => "maintenance";
         release.SetResult();
