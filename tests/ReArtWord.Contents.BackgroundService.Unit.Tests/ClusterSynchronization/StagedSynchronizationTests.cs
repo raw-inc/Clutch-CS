@@ -34,7 +34,7 @@ public sealed class StagedSynchronizationTests
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(40));
         await using PeerCluster target = Create(targetStore, targetFiles.Root, clusterId, "target", port, false, clock);
 
-        // Peerの破棄より先に保留中のタイマーを解放します。
+        // 受信側Peerの破棄より先に保留中のタイマーを解放します。
         using IDisposable clockLifetime = clock;
         RecoveryRepository incoming = RecoveryRepository.Create(targetStore)!;
         Guid originalInstance;
@@ -192,7 +192,7 @@ public sealed class StagedSynchronizationTests
             }
         }
 
-        /// <summary>途中で検証に失敗しても、Peerが終了処理に入る前に待機を解放します。</summary>
+        /// <summary>途中で検証に失敗しても、保留中の待機を解放します。</summary>
         public void Dispose() => Resume();
     }
 }
