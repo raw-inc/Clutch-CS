@@ -10,11 +10,20 @@ namespace ReArtWord.Contents.BackgroundService.Runtime.Processes.Commands;
 internal sealed partial class WindowsProcessPipe : Stream
 {
     private readonly FileStream source;
+    private readonly CancellationToken drainDeadline;
+    private int? remainingAtDeadline;
 
     /// <summary>元readerでは読まない同じhandleを引き受け、先読みを無効にしてOSの待機byte数と揃えます。</summary>
-    internal WindowsProcessPipe(SafeFileHandle handle)
+    internal WindowsProcessPipe(SafeFileHandle handle, CancellationToken drainDeadline)
     {
         source = new FileStream(handle, FileAccess.Read, bufferSize: 1, isAsync: false);
+        this.drainDeadline = drainDeadline;
+    }
+
+    /// <summary>プロセス終了後の読取り期限に達したことを確認したかです。</summary>
+    internal bool DrainDeadlineReached
+    {
+        get; private set;
     }
 
     /// <inheritdoc />
@@ -48,6 +57,12 @@ internal sealed partial class WindowsProcessPipe : Stream
         while (!cancellationToken.IsCancellationRequested)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            bool expired = drainDeadline.IsCancellationRequested;
+            DrainDeadlineReached |= expired;
+            if (remainingAtDeadline == 0)
+            {
+                return 0;
+            }
             if (!PeekNamedPipe(source.SafeFileHandle, IntPtr.Zero, 0, IntPtr.Zero, out int available, IntPtr.Zero))
             {
                 int error = Marshal.GetLastPInvokeError();
@@ -57,12 +72,37 @@ internal sealed partial class WindowsProcessPipe : Stream
                 }
                 throw new IOException("標準出力pipeの状態を確認できません。", new Win32Exception(error));
             }
+            if (expired && remainingAtDeadline is null)
+            {
+                // 読取りの再開が遅れても、届いている出力は捨てません。以後に追加される分は待ちません。
+                remainingAtDeadline = available;
+            }
+            if (remainingAtDeadline is int remaining)
+            {
+                available = Math.Min(available, remaining);
+            }
             if (0 < available)
             {
                 // 他のreaderや保留Readは存在しません。先読みなしで確認済みbyte数以内だけを読みます。
-                return source.Read(buffer.Span[..Math.Min(buffer.Length, available)]);
+                int read = source.Read(buffer.Span[..Math.Min(buffer.Length, available)]);
+                if (remainingAtDeadline is not null)
+                {
+                    remainingAtDeadline -= read;
+                }
+                return read;
             }
-            await Task.Delay(2, cancellationToken).ConfigureAwait(false);
+            if (expired)
+            {
+                return 0;
+            }
+            try
+            {
+                await Task.Delay(2, drainDeadline).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (drainDeadline.IsCancellationRequested)
+            {
+                // 期限切れを確認してから、パイプに残っている分だけ読み取ります。
+            }
         }
         throw new OperationCanceledException(cancellationToken);
     }

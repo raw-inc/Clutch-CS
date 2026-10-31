@@ -5,6 +5,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="ReArtWord.Contents.BackgroundService.Unit.Tests" />
     <ProjectReference Include="../ReArtWord.Contents.BackgroundService.Contracts/ReArtWord.Contents.BackgroundService.Contracts.csproj" />
   </ItemGroup>
 </Project>
