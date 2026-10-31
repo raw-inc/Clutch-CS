@@ -1,23 +1,32 @@
 using System.Diagnostics;
+using System.Runtime.Versioning;
+using ReArtWord.Contents.BackgroundService.Contracts.Desktop;
+using ReArtWord.Contents.BackgroundService.CoreService.Desktop;
+using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Capture;
 using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
 
-/// <summary>FFmpegで画面を取得できないホステッドCIだけ、実画面取得を除外します。</summary>
+/// <summary>DDAの対象画面を確認し、実画面取得を検証できない場合は理由を示します。</summary>
 [AttributeUsage(AttributeTargets.Method)]
-internal sealed class HostedDesktopDuplicationFactAttribute : FactAttribute
+internal sealed class DesktopDuplicationFactAttribute : FactAttribute
 {
-    /// <summary>製品の引数を使わず、最小のddagrabで画面取得機能を確認します。</summary>
-    public HostedDesktopDuplicationFactAttribute()
+    /// <summary>対象画面を選び、ホステッドCIでは最小のddagrabによる取得も確認します。</summary>
+    public DesktopDuplicationFactAttribute()
     {
         Skip = WindowsFactAttribute.GetSkipReason();
-        if (Skip is not null)
+        if (Skip is not null || !OperatingSystem.IsWindows())
         {
             return;
         }
+        if (FindMonitor() is null)
+        {
+            Skip = "Desktop Duplicationで取得する画面を特定できないため、フレームの受け渡しを検証できません。";
+            return;
+        }
         string? executable = Environment.GetEnvironmentVariable("CONTENTS_TEST_FFPROBE");
-        if (!OperatingSystem.IsWindows() || !HostedDesktopFactAttribute.IsHostedRunner || !File.Exists(executable))
+        if (!HostedDesktopFactAttribute.IsHostedRunner || !File.Exists(executable))
         {
             return;
         }
@@ -45,5 +54,20 @@ internal sealed class HostedDesktopDuplicationFactAttribute : FactAttribute
         {
             Skip = $"FFmpegのDesktop Duplicationを使用できません。exitCode={process.ExitCode}。対応するGPUとディスプレイドライバーがあるWindowsで実行してください。{error}";
         }
+    }
+
+    /// <summary>製品がDDAに対応付けられる画面だけを、この試験の取得対象にします。</summary>
+    /// <returns>対象画面。GDIへのフォールバックが必要な場合はnullです。</returns>
+    [SupportedOSPlatform("windows")]
+    internal static DesktopMonitor? FindMonitor()
+    {
+        foreach (DesktopMonitor candidate in WindowsDesktop.Monitors())
+        {
+            if (DesktopDuplication.FindOutput(candidate.Name) is not null)
+            {
+                return candidate;
+            }
+        }
+        return null;
     }
 }

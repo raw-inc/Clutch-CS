@@ -1,8 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Desktop;
-using ReArtWord.Contents.BackgroundService.CoreService.Desktop;
-using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Capture;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Video;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
@@ -14,26 +12,15 @@ public sealed class DesktopReferenceTests
 {
     /// <summary>DDA取得後、別threadへ渡る入力がGPU surfaceではなく独立したCPU画素であることを実物で確認します。</summary>
     /// <returns>対話Windowsの取得graphをffprobeで開いた結果です。DDA非対応環境は対象外です。</returns>
-    [HostedDesktopDuplicationFact]
+    [DesktopDuplicationFact]
     public async Task DuplicationHandsOffCpuFramesBeforeEncodingAsync()
     {
         if (!OperatingSystem.IsWindows())
         {
             return;
         }
-        DesktopMonitor? monitor = null;
-        foreach (DesktopMonitor candidate in WindowsDesktop.Monitors())
-        {
-            if (DesktopDuplication.FindOutput(candidate.Name) is not null)
-            {
-                monitor = candidate;
-                break;
-            }
-        }
-        if (monitor is null)
-        {
-            return;
-        }
+        DesktopMonitor? monitor = DesktopDuplicationFactAttribute.FindMonitor();
+        Assert.NotNull(monitor);
         using MediaTestFiles files = new();
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
         ProcessStartInfo production = DesktopEncoder.StartInfo(files.Options.FfmpegPath, monitor, "hevc_nvenc", 20000, settings: new(120, 6000));
