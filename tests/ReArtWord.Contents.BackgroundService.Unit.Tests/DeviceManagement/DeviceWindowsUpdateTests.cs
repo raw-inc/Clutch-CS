@@ -5,6 +5,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement.WindowsUpd
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Infrastructure.DeviceManagement;
 using ReArtWord.Contents.BackgroundService.Infrastructure.DeviceManagement.WindowsUpdate;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.DeviceManagement;
@@ -72,7 +73,7 @@ public sealed class DeviceWindowsUpdateTests
     }
 
     /// <summary>隔離したHKCUのキーで、実Windowsのポリシーを触らず保存範囲を確認します。</summary>
-    [Fact]
+    [WindowsFact]
     public void WritesOnlyTheRequestedPolicyValuesInAnIsolatedRegistryRoot()
     {
         if (!OperatingSystem.IsWindows())
@@ -106,7 +107,7 @@ public sealed class DeviceWindowsUpdateTests
     }
 
     /// <summary>実OSでは読取りだけを行います。</summary>
-    [Fact]
+    [WindowsFact]
     public void ReadsTheWindowsEditionAndUpdateStateWithoutChangingPolicy()
     {
         if (!OperatingSystem.IsWindows())
