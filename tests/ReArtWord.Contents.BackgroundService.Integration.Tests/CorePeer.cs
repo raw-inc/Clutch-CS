@@ -44,7 +44,6 @@ internal sealed class CorePeer : IAsyncDisposable
         this.clusterId = clusterId;
         this.peerId = peerId;
         InterfaceId = NetworkInterface.GetAllNetworkInterfaces().First(item => item.GetIPProperties().UnicastAddresses.Any(address => address.Address.Equals(IPAddress.Loopback))).Id;
-        observer = new(new ObserverOptions(Guid.NewGuid().ToString("N"), new(InterfaceId, "127.0.0.1", "127.255.255.255", clusterPort)));
         File.WriteAllText(configurationPath, $$"""
             [cluster]
             id = "{{clusterId}}"
@@ -63,6 +62,9 @@ internal sealed class CorePeer : IAsyncDisposable
             interfaceId = '{{InterfaceId}}'
             listenPort = 0
             """);
+
+        // 設定保存の失敗時に、破棄できない待受を残さないよう最後に確保します。
+        observer = new(new ObserverOptions(Guid.NewGuid().ToString("N"), new(InterfaceId, "127.0.0.1", "127.255.255.255", clusterPort)));
     }
 
     /// <summary>失敗時の状態とログを調査する一時保存先です。</summary>
