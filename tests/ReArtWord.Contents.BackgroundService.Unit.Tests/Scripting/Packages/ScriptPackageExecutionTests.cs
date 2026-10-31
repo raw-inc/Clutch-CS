@@ -24,7 +24,7 @@ public sealed class ScriptPackageExecutionTests
         fixture.CreateFrameworkOverlap();
         Assert.Equal(EOutcome.Succeeded, (await fixture.ChangeAsync(EScriptPackageKind.Nuget, "1.0.0").ConfigureAwait(true)).Outcome);
         string settings = await fixture.SettingsAsync("csharp", "using System.Text.Json;\npublic static string Run() => JsonSerializer.Serialize(new[] { 1, 2 });").ConfigureAwait(true);
-        Assert.Equal("[1,2]", (await fixture.Node("csharp").ExecuteAsync(NodeTestContext.Create(settings)).ConfigureAwait(true)).Outputs["value"].GetString());
+        Assert.Equal("[1,2]", (await fixture.ExecuteSuccessfullyAsync("csharp", settings).ConfigureAwait(true)).Outputs["value"].GetString());
     }
 
     /// <summary>製品と同名のDLLでも、解析で確認したパッケージ版を実プロセスが使用します。</summary>
@@ -40,14 +40,14 @@ public sealed class ScriptPackageExecutionTests
         Assert.Equal(2, fixture.Store.Current(EScriptPackageKind.Nuget)!.Installed.Count);
         string code = "using PackageEntry;\nusing Alias = PackageEntry.Entry;\npublic static string Run() => Alias.Read();";
         string first = await fixture.SettingsAsync("csharp", code).ConfigureAwait(true);
-        Assert.Equal("first", (await fixture.Node("csharp").ExecuteAsync(NodeTestContext.Create(first)).ConfigureAwait(true)).Outputs["value"].GetString());
+        Assert.Equal("first", (await fixture.ExecuteSuccessfullyAsync("csharp", first).ConfigureAwait(true)).Outputs["value"].GetString());
         Assert.Equal(EOutcome.Succeeded, (await fixture.ChangeAsync(EScriptPackageKind.Nuget, "2.0.0").ConfigureAwait(true)).Outcome);
         string second = await fixture.SettingsAsync("csharp", code).ConfigureAwait(true);
-        Assert.Equal("second", (await fixture.Node("csharp").ExecuteAsync(NodeTestContext.Create(second)).ConfigureAwait(true)).Outputs["value"].GetString());
-        Assert.Equal("first", (await fixture.Node("csharp").ExecuteAsync(NodeTestContext.Create(first)).ConfigureAwait(true)).Outputs["value"].GetString());
+        Assert.Equal("second", (await fixture.ExecuteSuccessfullyAsync("csharp", second).ConfigureAwait(true)).Outputs["value"].GetString());
+        Assert.Equal("first", (await fixture.ExecuteSuccessfullyAsync("csharp", first).ConfigureAwait(true)).Outputs["value"].GetString());
         Assert.Equal(EOutcome.Succeeded, (await fixture.ChangeAsync(EScriptPackageKind.Nuget, "2.0.0", remove: true).ConfigureAwait(true)).Outcome);
         Assert.Empty(fixture.Store.Current(EScriptPackageKind.Nuget)!.Requested);
-        Assert.Equal("second", (await fixture.Node("csharp").ExecuteAsync(NodeTestContext.Create(second)).ConfigureAwait(true)).Outputs["value"].GetString());
+        Assert.Equal("second", (await fixture.ExecuteSuccessfullyAsync("csharp", second).ConfigureAwait(true)).Outputs["value"].GetString());
         Assert.NotEmpty(CSharpScriptCompiler.Analyze(code).Diagnostics);
         ScriptPackageStore restarted = new(fixture.DirectoryPath);
         ScriptAnalysis saved = JsonSerializer.Deserialize<JsonElement>(first).GetProperty("analysis").Deserialize<ScriptAnalysis>(ContractJson.Options)!;
@@ -66,15 +66,15 @@ public sealed class ScriptPackageExecutionTests
         Assert.Equal(EOutcome.Succeeded, (await fixture.ChangeAsync(EScriptPackageKind.Pip, "1.0.0").ConfigureAwait(true)).Outcome);
         string code = "from contents_test_entry import read\ndef run() -> str:\n    return read()";
         string first = await fixture.SettingsAsync("python", code).ConfigureAwait(true);
-        Assert.Equal("first", (await fixture.Node("python").ExecuteAsync(NodeTestContext.Create(first)).ConfigureAwait(true)).Outputs["value"].GetString());
+        Assert.Equal("first", (await fixture.ExecuteSuccessfullyAsync("python", first).ConfigureAwait(true)).Outputs["value"].GetString());
         ScriptAnalysisRequest unsafeImport = new("python", "import does_not_exist\nraise RuntimeError('must not execute')\ndef run() -> str:\n    return 'safe'");
         ScriptAnalysis analysis = await ScriptAnalysisService.AnalyzeAsync(unsafeImport, fixture.Store.ForAnalysis(unsafeImport)).ConfigureAwait(true);
         Assert.Empty(analysis.Diagnostics);
         Assert.NotNull(analysis.PackageEnvironmentId);
         Assert.Equal(EOutcome.Succeeded, (await fixture.ChangeAsync(EScriptPackageKind.Pip, "2.0.0").ConfigureAwait(true)).Outcome);
         string second = await fixture.SettingsAsync("python", code).ConfigureAwait(true);
-        Assert.Equal("second", (await fixture.Node("python").ExecuteAsync(NodeTestContext.Create(second)).ConfigureAwait(true)).Outputs["value"].GetString());
-        Assert.Equal("first", (await fixture.Node("python").ExecuteAsync(NodeTestContext.Create(first)).ConfigureAwait(true)).Outputs["value"].GetString());
+        Assert.Equal("second", (await fixture.ExecuteSuccessfullyAsync("python", second).ConfigureAwait(true)).Outputs["value"].GetString());
+        Assert.Equal("first", (await fixture.ExecuteSuccessfullyAsync("python", first).ConfigureAwait(true)).Outputs["value"].GetString());
         string revision = fixture.Store.Current(EScriptPackageKind.Pip)!.Revision;
         ScriptPackageOperation failed = await fixture.ChangeAsync(EScriptPackageKind.Pip, "99.0.0").ConfigureAwait(true);
         Assert.Equal(EOutcome.Failed, failed.Outcome);
@@ -83,7 +83,7 @@ public sealed class ScriptPackageExecutionTests
         int builds = Directory.GetDirectories(Path.Combine(fixture.DirectoryPath, "script-packages", "builds")).Length;
         Assert.Equal(EOutcome.Succeeded, (await fixture.ChangeAsync(EScriptPackageKind.Pip, "1.0.0").ConfigureAwait(true)).Outcome);
         Assert.Equal(builds, Directory.GetDirectories(Path.Combine(fixture.DirectoryPath, "script-packages", "builds")).Length);
-        Assert.Equal("first", (await fixture.Node("python").ExecuteAsync(NodeTestContext.Create(await fixture.SettingsAsync("python", code).ConfigureAwait(true))).ConfigureAwait(true)).Outputs["value"].GetString());
+        Assert.Equal("first", (await fixture.ExecuteSuccessfullyAsync("python", await fixture.SettingsAsync("python", code).ConfigureAwait(true)).ConfigureAwait(true)).Outputs["value"].GetString());
     }
 
     /// <summary>再起動前の未完了要求を自動実行せず、元のIDに結果不明を残します。</summary>

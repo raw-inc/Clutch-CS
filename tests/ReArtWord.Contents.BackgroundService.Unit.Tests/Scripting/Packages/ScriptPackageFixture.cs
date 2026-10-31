@@ -2,12 +2,16 @@ using System.IO.Compression;
 using System.Text.Json;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using ReArtWord.Contents.BackgroundService.Contracts.Execution;
+using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Scripting;
 using ReArtWord.Contents.BackgroundService.Contracts.Scripting.Packages;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Nodes.Scripting;
 using ReArtWord.Contents.BackgroundService.Nodes.Scripting.Packages;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Data;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Observability;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Scripting.Packages;
@@ -129,6 +133,16 @@ internal sealed class ScriptPackageFixture : IAsyncDisposable
         }
         return (IActionNode)ScriptingNodeRegistration.Create(new(Path.Combine(AppContext.BaseDirectory, executable), []), Store)
             .Single(node => string.Equals(node.Descriptor.Type, "script." + language, StringComparison.Ordinal));
+    }
+
+    /// <summary>実行に失敗した場合は、出力の参照前に理由と例外診断を報告します。</summary>
+    /// <returns>成功を確認したノードの実行結果です。</returns>
+    internal async Task<NodeResult> ExecuteSuccessfullyAsync(string language, string settings, CancellationToken cancellationToken = default)
+    {
+        RecordingWorkflowLog log = new();
+        NodeResult result = await Node(language).ExecuteAsync(NodeTestContext.Create(settings) with { Log = log }, cancellationToken).ConfigureAwait(false);
+        Assert.True(result.Outcome == EOutcome.Succeeded, result.ReasonCode + ": " + result.Message + "\n" + string.Join("\n", log.Entries.Select(entry => entry.Data?.Json.GetRawText())));
+        return result;
     }
 
     /// <summary>全プロセスの停止確認後、今回作成した試験ディレクトリーだけを削除します。</summary>
