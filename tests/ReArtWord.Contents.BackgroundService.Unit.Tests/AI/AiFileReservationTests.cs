@@ -11,6 +11,7 @@ using ReArtWord.Contents.BackgroundService.Runtime.Processes.Commands;
 using ReArtWord.Contents.BackgroundService.Runtime.Secrets;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Data;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.FilesTransactions;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Workflows;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.AI;
@@ -93,18 +94,25 @@ public sealed class AiFileReservationTests
             return AiWireResponse.Json("{}", 500);
         });
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable serverLifetime = server.ConfigureAwait(true);
+        IterationTestClock clock = new();
         using CancellationTokenSource cancellation = new();
         const string type = "ai.audio.qwen.tts.generate";
-        NodeExecutionContext context = Context(peer, server, type, "qwen3-tts-flash", Path.Combine(peer.Root, "timeout.wav"), 500);
+        NodeExecutionContext context = Context(peer, server, type, "qwen3-tts-flash", Path.Combine(peer.Root, "timeout.wav"), 500) with { TimeProvider = clock };
         Task<NodeResult> pending = peer.Transactions.ExecuteFileAsync(Node(peer, server, type), context, cancellation.Token).AsTask();
         try
         {
             await entered.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
+            Assert.False(pending.IsCompleted);
             if (cancel)
             {
                 await cancellation.CancelAsync().ConfigureAwait(true);
             }
-            NodeResult result = await pending.ConfigureAwait(true);
+            else
+            {
+                // HTTP送信後の期限切れを、送信前の準備時間に左右されず確認します。
+                clock.Advance(500);
+            }
+            NodeResult result = await pending.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
             Assert.Equal(EOutcome.Unknown, result.Outcome);
             Assert.True(result.FileAccessCompleted);
             Assert.Empty((await FileReservationLedger.ReadAsync(peer.Repository, "file:reservations").ConfigureAwait(true)).Active);
@@ -113,6 +121,7 @@ public sealed class AiFileReservationTests
         finally
         {
             release.TrySetResult();
+            await cancellation.CancelAsync().ConfigureAwait(true);
             await pending.ConfigureAwait(true);
         }
     }
