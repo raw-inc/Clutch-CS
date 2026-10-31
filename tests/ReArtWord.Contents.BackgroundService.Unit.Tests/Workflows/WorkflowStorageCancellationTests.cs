@@ -67,6 +67,58 @@ public sealed class WorkflowStorageCancellationTests
         }
     }
 
+    /// <summary>完了値の保存が取り消されても、ノード自身の取消・失敗理由を失いません。</summary>
+    /// <returns>一件の成否と、保存前に確認した対象別結果です。</returns>
+    [Theory]
+    [InlineData(EOutcome.NotExecuted, "execution.cancelUnconfirmed", EOutcome.Cancelled)]
+    [InlineData(EOutcome.Failed, "fixture.failed", EOutcome.Failed)]
+    [InlineData(EOutcome.Unknown, "execution.unconfirmed", EOutcome.Unknown)]
+    [InlineData(EOutcome.Cancelled, "fixture.cancelled", EOutcome.Cancelled)]
+    [InlineData(EOutcome.Succeeded, "fixture.completed", EOutcome.Succeeded)]
+    public async Task InterruptedRetentionKeepsFailureReasonsAndConfirmedSuccess(EOutcome bodyOutcome, string reason, EOutcome expected)
+    {
+        NodeResult confirmed = NodeResult.Failure(reason, "Fixture operation did not complete.", bodyOutcome);
+        if (bodyOutcome == EOutcome.Succeeded)
+        {
+            confirmed = NodeResult.Success(NodeValue.FromObject(42)) with { ReasonCode = reason };
+        }
+        WorkflowFixture fixture = new(new IfNode(), new WorkflowFixture.ActionNode((_, _) => ValueTask.FromResult(confirmed)));
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = fixture.ConfigureAwait(true);
+        WaitingStore store = new(2);
+        fixture.Engine.RetainedValues = store;
+        NodeDefinition gate = new("gate", "control.ifStart", JsonSerializer.SerializeToElement(new { }),
+            new Dictionary<string, NodeValue> { ["condition"] = NodeValue.FromObject(true) });
+        WorkflowDefinition definition = new("cancelled-retention", "Cancelled retention", [gate, WorkflowFixture.Definition("action")], [new("gate", "start", "action", "trigger")]);
+        Guid id = Guid.NewGuid();
+        Task<ExecutionReport> pending = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, definition), "gate", executionId: id);
+        try
+        {
+            await store.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+            Assert.True(await fixture.Engine.RequestCancellationAsync(id).ConfigureAwait(true));
+            ExecutionReport report = await pending.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+            Assert.True(report.Outcome == expected, JsonSerializer.Serialize(report));
+            const string action = "action";
+            NodeResult result = Assert.Single(Assert.Single(report.Nodes, node => string.Equals(node.NodeId, action, StringComparison.Ordinal)).Targets).Result;
+            Assert.Equal(bodyOutcome, result.Outcome);
+            if (bodyOutcome == EOutcome.Succeeded)
+            {
+                Assert.Equal("value.retentionUnconfirmed", result.ReasonCode);
+            }
+            else
+            {
+                Assert.Equal(reason, result.ReasonCode);
+                Assert.StartsWith(confirmed.Message!, result.Message, StringComparison.Ordinal);
+                Assert.Contains("Retention for later reads could not be confirmed.", result.Message, StringComparison.Ordinal);
+            }
+            Assert.Empty(fixture.Engine.Active());
+        }
+        finally
+        {
+            store.Release.TrySetResult();
+            await pending.ConfigureAwait(true);
+        }
+    }
+
     /// <summary>同じノードの並行開始を保存区間で揃え、比較失敗の連鎖を発生させません。</summary>
     /// <returns>すべての副作用を一回ずつ実施し、保存要求が入力数に比例することです。</returns>
     [Fact]

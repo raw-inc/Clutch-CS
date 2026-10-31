@@ -112,6 +112,29 @@ internal sealed class NodeOutputRetention(INodeStateStore? store, NodeOutputRete
         return retained.Result with { ConfigurationOnly = true, RetainedValue = true };
     }
 
+    /// <summary>保存確認の失敗を補足し、結果集約に必要なノード自身の取消・失敗理由は保持します。</summary>
+    /// <returns>ノードの成否を変更しない診断結果です。</returns>
+    internal static ExecutionFrame Unconfirmed(ExecutionFrame completed)
+    {
+        TargetNodeResult[] targets = completed.Targets.Select(target =>
+        {
+            if (target.Result.Outcome != EOutcome.Succeeded && target.Result.ReasonCode is not null)
+            {
+                string message = "Retention for later reads could not be confirmed. The operation was not repeated.";
+                if (!string.IsNullOrEmpty(target.Result.Message))
+                {
+                    message = target.Result.Message + " " + message;
+                }
+                return target with { Result = target.Result with { Message = message } };
+            }
+            return target with { Result = target.Result with
+            {
+                ReasonCode = "value.retentionUnconfirmed", Message = "The operation result is known, but retention for later reads could not be confirmed. The operation was not repeated.",
+            } };
+        }).ToArray();
+        return completed with { Targets = targets };
+    }
+
     /// <summary>利用者の通常キーと衝突しにくい、ノード一つにつき一つの固定キーです。</summary>
     /// <returns>版ごとにキーを増やさない内部用途名です。</returns>
     private static string Key(string node) => "runtime:node-output:" + node;
