@@ -142,17 +142,44 @@ public sealed class LocalUpdateTests
         start.ArgumentList.Add(input);
         using Process updater = new() { StartInfo = start };
         Assert.True(updater.Start());
-        Task<string> stdout = updater.StandardOutput.ReadToEndAsync();
-        Task<string> stderr = updater.StandardError.ReadToEndAsync();
+        using CancellationTokenSource outputLifetime = new();
+        Task<string> stdout = updater.StandardOutput.ReadToEndAsync(outputLifetime.Token);
+        Task<string> stderr = updater.StandardError.ReadToEndAsync(outputLifetime.Token);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
-        await updater.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
-        JsonElement health = await scope.HealthAsync().ConfigureAwait(true);
-        Assert.Equal("v2", health.GetProperty("buildVersion").GetString());
-        await scope.StopAsync().ConfigureAwait(true);
-        Assert.True(updater.ExitCode == 0, await stderr.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true));
-        Assert.Contains("completed", await stdout.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true), StringComparison.Ordinal);
-        LocalUpdateRecord? record = await new UpdateJournal(new UpdateLayout(job.Options, job.OperationId), job.PeerId).ReadAsync();
-        Assert.Equal(EUpdatePhase.Completed, record!.Result.Phase);
+        try
+        {
+            await updater.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+            JsonElement health = await scope.HealthAsync().ConfigureAwait(true);
+            Assert.Equal("v2", health.GetProperty("buildVersion").GetString());
+            await scope.StopAsync().ConfigureAwait(true);
+            Assert.True(updater.ExitCode == 0, await stderr.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true));
+            Assert.Contains("completed", await stdout.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true), StringComparison.Ordinal);
+            LocalUpdateRecord? record = await new UpdateJournal(new UpdateLayout(job.Options, job.OperationId), job.PeerId).ReadAsync();
+            Assert.Equal(EUpdatePhase.Completed, record!.Result.Phase);
+        }
+        finally
+        {
+            try
+            {
+                if (!updater.HasExited)
+                {
+                    updater.Kill(entireProcessTree: true);
+                }
+                await updater.WaitForExitAsync(CancellationToken.None).ConfigureAwait(true);
+            }
+            finally
+            {
+                try
+                {
+                    scope.StopProcesses();
+                }
+                finally
+                {
+                    await outputLifetime.CancelAsync().ConfigureAwait(true);
+                    await ((Task)Task.WhenAll(stdout, stderr)).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+                }
+            }
+        }
     }
 
     /// <summary>portable相対パスを越えるリリース項目を拒否します。</summary>
