@@ -76,7 +76,7 @@ internal sealed class ApplicationProcessFixture : IDisposable
                 if (!process.HasExited && new DateTimeOffset(process.StartTime.ToUniversalTime()) == started)
                 {
                     process.Kill(true);
-                    process.WaitForExit(5000);
+                    process.WaitForExit();
                 }
             }
             catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
