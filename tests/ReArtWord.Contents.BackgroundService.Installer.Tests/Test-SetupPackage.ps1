@@ -33,13 +33,18 @@ function Assert-SetupLaunch([string] $Directory) {
             }
         }
     } finally {
-        if ($started -and -not $process.HasExited) {
-            if (-not $process.CloseMainWindow() -or -not $process.WaitForExit($exitTimeoutMilliseconds)) {
-                $process.Kill()
-                if (-not $process.WaitForExit($exitTimeoutMilliseconds)) { throw 'The setup test process did not stop.' }
+        try {
+            if ($started) {
+                # 終了コードが取得済みでも、配置を動かす前にOSの終了シグナルを確認します。
+                $closing = $process.HasExited -or $process.CloseMainWindow()
+                if (-not $closing -or -not $process.WaitForExit($exitTimeoutMilliseconds)) {
+                    if (-not $process.HasExited) { $process.Kill() }
+                    if (-not $process.WaitForExit($exitTimeoutMilliseconds)) { throw 'The setup test process did not stop.' }
+                }
             }
+        } finally {
+            $process.Dispose()
         }
-        $process.Dispose()
     }
 }
 
