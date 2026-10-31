@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading.Channels;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Scheduling;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.ManagementTransport;
@@ -124,7 +125,7 @@ public sealed class UdpDispatchTests
         WireMessage message = new(Guid.NewGuid(), "cluster", "sender", Guid.NewGuid(), "read", "target", null, JsonSerializer.SerializeToElement(new string('x', size)));
         byte[][] packets = DatagramEncoding.Encode(message, 4194304);
         Assert.InRange(packets.Length, 1, 512);
-        FragmentAssembler assembler = new(4194304, TimeProvider.System);
+        FragmentAssembler assembler = new(4194304, new FixedClock(DateTimeOffset.UnixEpoch));
         byte[]? complete = null;
         foreach (byte[] packet in packets.Reverse())
         {

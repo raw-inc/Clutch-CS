@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Scheduling;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.ManagementTransport;
@@ -13,8 +14,8 @@ public sealed class DatagramRecipientTests
     {
         Guid receiver = Guid.NewGuid();
         WireMessage message = Message(receiver) with { Kind = DiscoveryProtocol.AnnouncementKind, TargetId = null, TargetInstanceId = null };
-        FragmentAssembler peer = new(4194304, TimeProvider.System, new("receiver", receiver, "cluster"));
-        FragmentAssembler observer = new(4194304, TimeProvider.System, new("observer", receiver, null));
+        FragmentAssembler peer = new(4194304, new FixedClock(DateTimeOffset.UnixEpoch), new("receiver", receiver, "cluster"));
+        FragmentAssembler observer = new(4194304, new FixedClock(DateTimeOffset.UnixEpoch), new("observer", receiver, null));
         Assert.Null(Assemble(peer, message));
         Assert.Equal(JsonSerializer.SerializeToUtf8Bytes(message), Assemble(observer, message));
     }
@@ -24,7 +25,7 @@ public sealed class DatagramRecipientTests
     public void ForeignFragmentsAreDiscardedBeforePayloadAllocation()
     {
         Guid receiver = Guid.NewGuid();
-        FragmentAssembler assembler = new(4194304, TimeProvider.System, new("receiver", receiver, "cluster"));
+        FragmentAssembler assembler = new(4194304, new FixedClock(DateTimeOffset.UnixEpoch), new("receiver", receiver, "cluster"));
         WireMessage foreign = Message(Guid.NewGuid());
         byte[][] packets = DatagramEncoding.Encode(foreign, 4194304);
         Assert.All(packets, packet => Assert.Null(assembler.Decode("source", packet)));
@@ -40,7 +41,7 @@ public sealed class DatagramRecipientTests
     public void AddressedHeaderCanDisplaceAnUnidentifiedTailAtCapacity()
     {
         Guid receiver = Guid.NewGuid();
-        FragmentAssembler assembler = new(4194304, TimeProvider.System, new("receiver", receiver, "cluster"));
+        FragmentAssembler assembler = new(4194304, new FixedClock(DateTimeOffset.UnixEpoch), new("receiver", receiver, "cluster"));
         for (int index = 0; index < 32; index++)
         {
             DatagramFragment[] foreign = Fragments(Message(receiver) with { TargetId = "another-peer" });
@@ -60,7 +61,7 @@ public sealed class DatagramRecipientTests
     public void LateDuplicateTailsDoNotStarveSubsequentDeliveries()
     {
         Guid receiver = Guid.NewGuid();
-        FragmentAssembler assembler = new(4194304, TimeProvider.System, new("receiver", receiver, "cluster"));
+        FragmentAssembler assembler = new(4194304, new FixedClock(DateTimeOffset.UnixEpoch), new("receiver", receiver, "cluster"));
         for (int index = 0; index < 64; index++)
         {
             WireMessage expected = Message(receiver);
@@ -80,7 +81,7 @@ public sealed class DatagramRecipientTests
     public void CapacityStillProtectsMessagesWhoseHeadersHaveArrived()
     {
         Guid receiver = Guid.NewGuid();
-        FragmentAssembler assembler = new(4194304, TimeProvider.System, new("receiver", receiver, "cluster"));
+        FragmentAssembler assembler = new(4194304, new FixedClock(DateTimeOffset.UnixEpoch), new("receiver", receiver, "cluster"));
         WireMessage[] admitted = Enumerable.Range(0, 32).Select(_ => Message(receiver)).ToArray();
         foreach (WireMessage message in admitted)
         {
@@ -107,7 +108,7 @@ public sealed class DatagramRecipientTests
     public void IncompleteNotificationsDoNotStarveAddressedMessages(string kind, bool delayedHeader)
     {
         Guid receiver = Guid.NewGuid();
-        FragmentAssembler assembler = new(4194304, TimeProvider.System, new("receiver", receiver, "cluster"));
+        FragmentAssembler assembler = new(4194304, new FixedClock(DateTimeOffset.UnixEpoch), new("receiver", receiver, "cluster"));
         for (int index = 0; index < 32; index++)
         {
             WireMessage notification = Message(receiver) with { Kind = "transient", TargetId = null, TargetInstanceId = null };
@@ -132,7 +133,7 @@ public sealed class DatagramRecipientTests
     public void NotificationsDoNotEvictIncompleteRequests()
     {
         Guid receiver = Guid.NewGuid();
-        FragmentAssembler assembler = new(4194304, TimeProvider.System, new("receiver", receiver, "cluster"));
+        FragmentAssembler assembler = new(4194304, new FixedClock(DateTimeOffset.UnixEpoch), new("receiver", receiver, "cluster"));
         WireMessage[] admitted = Enumerable.Range(0, 32).Select(_ => Message(receiver) with { Kind = "prepare" }).ToArray();
         foreach (WireMessage message in admitted)
         {
@@ -155,7 +156,7 @@ public sealed class DatagramRecipientTests
     public void UnrelatedPartialMessagesDoNotFillAssemblyCapacity(string difference)
     {
         Guid receiver = Guid.NewGuid();
-        FragmentAssembler assembler = new(4194304, TimeProvider.System, new("receiver", receiver, "cluster"));
+        FragmentAssembler assembler = new(4194304, new FixedClock(DateTimeOffset.UnixEpoch), new("receiver", receiver, "cluster"));
         for (int index = 0; index < 64; index++)
         {
             WireMessage foreign = Message(receiver);
@@ -182,7 +183,7 @@ public sealed class DatagramRecipientTests
     public void AddressedAndBroadcastMessagesAcceptReorderedFragments(bool broadcast)
     {
         Guid receiver = Guid.NewGuid();
-        FragmentAssembler assembler = new(4194304, TimeProvider.System, new("receiver", receiver, "cluster"));
+        FragmentAssembler assembler = new(4194304, new FixedClock(DateTimeOffset.UnixEpoch), new("receiver", receiver, "cluster"));
         WireMessage expected = Message(receiver);
         if (broadcast)
         {
@@ -196,7 +197,7 @@ public sealed class DatagramRecipientTests
     public void ObserverAcceptsItsReplyFromAnyCluster()
     {
         Guid receiver = Guid.NewGuid();
-        FragmentAssembler assembler = new(4194304, TimeProvider.System, new("receiver", receiver, null));
+        FragmentAssembler assembler = new(4194304, new FixedClock(DateTimeOffset.UnixEpoch), new("receiver", receiver, null));
         WireMessage expected = Message(receiver) with { ClusterId = "discovered-cluster" };
         Assert.Equal(JsonSerializer.SerializeToUtf8Bytes(expected), Assemble(assembler, expected));
     }
@@ -206,7 +207,7 @@ public sealed class DatagramRecipientTests
     public void IncompleteHeaderDoesNotRejectAnAddressedMessage()
     {
         Guid receiver = Guid.NewGuid();
-        FragmentAssembler assembler = new(4194304, TimeProvider.System, new("receiver", receiver, "cluster"));
+        FragmentAssembler assembler = new(4194304, new FixedClock(DateTimeOffset.UnixEpoch), new("receiver", receiver, "cluster"));
         WireMessage expected = Message(receiver) with { SenderId = new string('s', 2000) };
         Assert.Equal(JsonSerializer.SerializeToUtf8Bytes(expected), Assemble(assembler, expected));
     }
