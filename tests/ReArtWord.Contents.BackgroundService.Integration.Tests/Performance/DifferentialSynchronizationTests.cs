@@ -88,9 +88,16 @@ public sealed class DifferentialSynchronizationTests(ITestOutputHelper output)
         }
         catch (OperationCanceledException)
         {
-            Assert.Fail("差分同期が転送上限内で完了しません: " + JsonSerializer.Serialize(states.Select(state => new
+            Assert.Fail("差分同期が転送上限内で完了しません: " + JsonSerializer.Serialize(states.Select(state =>
             {
-                sync = state.GetProperty("synchronizationProblem"), peers = state.GetProperty("peers").EnumerateArray().Select(peer => new { id = peer.GetProperty("peerId"), state = peer.GetProperty("status") }),
+                if (state.ValueKind == JsonValueKind.Undefined)
+                {
+                    return null;
+                }
+                return new
+                {
+                    sync = state.GetProperty("synchronizationProblem"), peers = state.GetProperty("peers").EnumerateArray().Select(peer => new { id = peer.GetProperty("peerId"), state = peer.GetProperty("status") }),
+                };
             })));
         }
     }
