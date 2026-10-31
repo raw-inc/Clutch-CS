@@ -102,10 +102,7 @@ public sealed class WorkflowLatencyTests(ITestOutputHelper output)
         /// <returns>全Coreの終了です。</returns>
         public async ValueTask DisposeAsync()
         {
-            foreach (CorePeer peer in Items)
-            {
-                await ((IAsyncDisposable)peer).DisposeAsync().ConfigureAwait(false);
-            }
+            await Task.WhenAll(Items.Select(static peer => ((IAsyncDisposable)peer).DisposeAsync().AsTask())).ConfigureAwait(false);
         }
     }
 }

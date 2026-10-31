@@ -162,13 +162,20 @@ internal sealed class CorePeer : IAsyncDisposable
                 process.Kill(includeChildren);
                 await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
             }
-            string error = await errors.ConfigureAwait(false);
-            if (error.Length != 0)
+            try
             {
-                await File.WriteAllTextAsync(Path.Combine(DirectoryPath, "startup-error.txt"), error, cancellationToken).ConfigureAwait(false);
+                string error = await errors.ConfigureAwait(false);
+                if (error.Length != 0)
+                {
+                    await File.WriteAllTextAsync(Path.Combine(DirectoryPath, "startup-error.txt"), error, cancellationToken).ConfigureAwait(false);
+                }
             }
-            process.Dispose();
-            process = null;
+            finally
+            {
+                // 診断を保存できなくても、停止確認済みのプロセスハンドルは解放します。
+                process.Dispose();
+                process = null;
+            }
         }
     }
 
@@ -291,7 +298,13 @@ internal sealed class CorePeer : IAsyncDisposable
     /// <returns>試験用の構成の終了です。</returns>
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
-        await StopAsync().ConfigureAwait(false);
-        await ((IAsyncDisposable)observer).DisposeAsync().ConfigureAwait(false);
+        try
+        {
+            await StopAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            await ((IAsyncDisposable)observer).DisposeAsync().ConfigureAwait(false);
+        }
     }
 }
