@@ -34,8 +34,8 @@ public sealed class RuntimeDestinationProcessTests
         using UdpClient receiver = new(new IPEndPoint(IPAddress.Loopback, 0));
         using UdpClient sender = new();
         int destinationPort = ((IPEndPoint)receiver.Client.LocalEndPoint!).Port;
-        int inputPort = CorePeer.AvailablePort();
-        int sourcePort = CorePeer.AvailablePort();
+        int[] ports = CorePeer.AvailableUdpPorts(2);
+        int inputPort = ports[0], sourcePort = ports[1];
         JsonElement empty = JsonSerializer.SerializeToElement(new { });
         WorkflowDefinition definition = new("dynamic-osc-destination", "Continuous OSC routing", [
             new("receive", "osc.udp.receive", JsonSerializer.SerializeToElement(new { interfaceId = first.InterfaceId, localAddress = "127.0.0.1", localPort = inputPort, count = 0 }), Target: new(EExecutionScope.One, ["a"])),

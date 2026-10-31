@@ -35,7 +35,8 @@ public sealed class WholeClusterRestartRecoveryTests(ITestOutputHelper output)
     public async Task AllPeersRecoverPreparedAndConflictedStateWithoutWorkflowReplayAsync()
     {
         string cluster = Guid.NewGuid().ToString("N");
-        int clusterPort = CorePeer.AvailablePort(), inputPort = CorePeer.AvailablePort();
+        int[] ports = CorePeer.AvailableUdpPorts(2);
+        int clusterPort = ports[0], inputPort = ports[1];
         CorePeer first = new(cluster, "a", clusterPort, true, "host-a", 1000);
         CorePeer second = new(cluster, "b", clusterPort, false, "host-b", 900);
         CorePeer third = new(cluster, "c", clusterPort, false, "host-c", 800);
