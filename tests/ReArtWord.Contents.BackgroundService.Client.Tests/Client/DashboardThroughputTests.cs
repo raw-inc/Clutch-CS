@@ -13,6 +13,7 @@ public sealed class DashboardThroughputTests
     [Fact]
     public void SummaryIncludesHostRatesWithoutExtraNicDetails()
     {
+        using ClientCultureScope culture = new("en-US");
         ResourceSample sample = Sample(1048576) with { Metrics = [
             new("disk.read.rate", "machine", 1048576, "bytes/s"), new("disk.write.rate", "machine", 2097152, "bytes/s"),
             new("network.sent.rate", "machine", 12500000, "bytes/s"), new("network.received.rate", "machine", 25000000, "bytes/s"),

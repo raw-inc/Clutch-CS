@@ -31,6 +31,7 @@ public sealed class PreviewHistoryRenderingTests
     [InlineData(true, true)]
     public async Task ToggleLoadsOnlyHistoryAndKeepsLatestMediaExplicitAsync(bool media, bool multiplePeers)
     {
+        using ClientCultureScope culture = new("en-US");
         BrowserTestRuntime script = new();
         EditorDocument model = new(new(script));
         NodeDefinition node = new("preview", "control.preview", JsonSerializer.SerializeToElement(new { }));
