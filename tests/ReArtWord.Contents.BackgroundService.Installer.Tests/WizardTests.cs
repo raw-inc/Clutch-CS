@@ -25,7 +25,14 @@ public sealed class WizardTests
         await session.Dispatch<bool>(async () =>
         {
             InstallationViewModel settings = new();
-            WizardViewModel model = new(settings, new DiscoveryViewModel(settings), new TestInteraction());
+            int scans = 0;
+            DiscoveryViewModel discovery = new(settings, (binding, _) =>
+            {
+                Assert.Equal("127.0.0.1", binding.BindAddress);
+                scans++;
+                return Task.FromResult<IReadOnlyList<ObservedTarget>>([]);
+            });
+            WizardViewModel model = new(settings, discovery, new TestInteraction());
             InstallerWindow window = new() { DataContext = model };
             window.Show();
             Dispatcher.UIThread.RunJobs();
@@ -57,6 +64,7 @@ public sealed class WizardTests
             model.Discovery.SelectedNetwork = model.Discovery.Networks.Single(network => string.Equals(network.Binding.BindAddress, "127.0.0.1", StringComparison.Ordinal));
             await model.NextCommand.ExecuteAsync(null).ConfigureAwait(true);
             Assert.Equal(EWizardPage.Targets, model.Page);
+            Assert.Equal(1, scans);
             Assert.Single(settings.Networks);
             Capture(window, "installer-cluster.png");
             model.Page = EWizardPage.Identity;
