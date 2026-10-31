@@ -271,6 +271,39 @@ internal sealed class CorePeer : IAsyncDisposable
         }
     }
 
+    /// <summary>同じ試験で使うUDPポートを、選択が終わるまで保持して重複なく取得します。</summary>
+    /// <param name="count">必要なポート数です。</param>
+    /// <param name="excluded">まだ待受を開始していない、選択済みのポートです。</param>
+    /// <returns>予約を解放したポート番号です。</returns>
+    internal static int[] AvailableUdpPorts(int count, params int[] excluded)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count);
+        List<Socket> held = [];
+        List<int> ports = new(count);
+        try
+        {
+            while (ports.Count < count)
+            {
+                Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                held.Add(socket);
+                socket.Bind(new IPEndPoint(IPAddress.Any, 0));
+                int port = ((IPEndPoint)socket.LocalEndPoint!).Port;
+                if (!excluded.Contains(port))
+                {
+                    ports.Add(port);
+                }
+            }
+            return ports.ToArray();
+        }
+        finally
+        {
+            foreach (Socket socket in held)
+            {
+                socket.Dispose();
+            }
+        }
+    }
+
     /// <summary>試験用の構成ごとに使用可能なローカルポートを選択します。</summary>
     /// <returns>短時間だけ予約確認したポートです。</returns>
     internal static int AvailablePort(bool tcp = false)
