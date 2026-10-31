@@ -112,6 +112,7 @@ public sealed class LogViewerAccessTests
     [InlineData(true)]
     public async Task SearchDefaultsAndExplicitFiltersAsync(bool selected)
     {
+        EditorTestClock clock = new();
         ConcurrentQueue<(string Cluster, LogQuery Query)> queries = new();
         using ClientHttpHandler handler = new(async (request, cancellationToken) =>
         {
@@ -135,7 +136,7 @@ public sealed class LogViewerAccessTests
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(value, options: ContractJson.Options) };
         });
         using HttpClient http = new(handler) { BaseAddress = new("http://localhost") };
-        ManagementApi api = new(http);
+        ManagementApi api = new(http, new(clock));
         if (selected)
         {
             api.SelectedClusterId = "a";

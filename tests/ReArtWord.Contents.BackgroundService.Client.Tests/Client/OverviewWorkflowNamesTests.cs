@@ -51,6 +51,7 @@ public sealed class OverviewWorkflowNamesTests
     [Fact]
     public async Task FailureDoesNotCauseUnboundedQueriesAsync()
     {
+        EditorTestClock clock = new();
         int requests = 0;
         using ClientHttpHandler handler = new(async (request, token) =>
         {
@@ -60,7 +61,7 @@ public sealed class OverviewWorkflowNamesTests
             return new(HttpStatusCode.BadRequest);
         });
         using HttpClient http = new(handler) { BaseAddress = new Uri("http://localhost") };
-        OverviewWorkflowNames names = new(new(http));
+        OverviewWorkflowNames names = new(new(http, new(clock)));
         string[] ids = Enumerable.Range(0, 100).Select(index => index.ToString(System.Globalization.CultureInfo.InvariantCulture)).ToArray();
         await names.RefreshAsync("a", "peer", ids).ConfigureAwait(true);
         await names.RefreshAsync("a", "peer", ids).ConfigureAwait(true);
