@@ -92,13 +92,14 @@ public sealed class EditorPreviewTests
     [Fact]
     public async Task MetadataKeepsPeerAndClusterIdentity()
     {
+        EditorTestClock clock = new();
         using PreviewHandler handler = new((request, _) =>
         {
             string peer = Assert.Single(request.Headers.GetValues("X-Contents-Peer"));
             return new NodePreviewSnapshot[] { new(Guid.NewGuid(), "flow", "revision", "preview", peer, DateTimeOffset.UtcNow, "image/png", 100) };
         });
         using HttpClient client = new(handler) { BaseAddress = new Uri("http://localhost") };
-        ManagementApi api = new(client) { SelectedClusterId = "cluster" };
+        ManagementApi api = new(client, new(clock)) { SelectedClusterId = "cluster" };
         EditorPreviews previews = new(api);
         WorkflowDefinition document = new("flow", "flow", [new("preview", "control.preview", JsonSerializer.SerializeToElement(new { }))], []);
         PeerInfo[] peers = [Peer("a"), Peer("b")];
