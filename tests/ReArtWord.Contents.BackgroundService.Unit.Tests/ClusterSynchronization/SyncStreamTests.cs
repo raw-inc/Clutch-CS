@@ -96,7 +96,15 @@ public sealed class SyncStreamTests
         using TcpClient client = new(new IPEndPoint(IPAddress.Loopback, 0));
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(5));
         await client.ConnectAsync(IPAddress.Loopback, manifest.Stream!.Port, timeout.Token).ConfigureAwait(true);
-        await fixture.Exports.ReleaseAsync(manifest.Id, timeout.Token).WaitAsync(timeout.Token).ConfigureAwait(true);
+        Task release = fixture.Exports.ReleaseAsync(manifest.Id, timeout.Token);
+        try
+        {
+            await release.WaitAsync(timeout.Token).ConfigureAwait(true);
+        }
+        finally
+        {
+            await release.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
     }
 
     /// <summary>旧版のマニフェストは本文を変更せず従来経路の選択を返します。</summary>
