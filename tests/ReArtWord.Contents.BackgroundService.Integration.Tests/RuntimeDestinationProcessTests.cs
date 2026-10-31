@@ -72,9 +72,9 @@ public sealed class RuntimeDestinationProcessTests
             }
             return false;
         }).ConfigureAwait(true);
-        using CancellationTokenSource deadline = new(TimeSpan.FromSeconds(20));
         for (int index = 0; index < 3; index++)
         {
+            using CancellationTokenSource deadline = new(TimeSpan.FromSeconds(20));
             byte[] legacyPing = Convert.FromHexString("2F616C6C2F70696E67000000");
             await sender.SendAsync(legacyPing, new IPEndPoint(IPAddress.Loopback, inputPort), deadline.Token).ConfigureAwait(true);
             await CheckIgnoredPingsAsync(first, definition.Id, (index * 2) + 1, deadline.Token).ConfigureAwait(true);
@@ -94,12 +94,13 @@ public sealed class RuntimeDestinationProcessTests
             await CheckIgnoredPingsAsync(first, definition.Id, (index * 2) + 2, deadline.Token).ConfigureAwait(true);
             Assert.Equal(0, receiver.Available);
         }
-        JsonElement final = await first.GetAsync<JsonElement>("status", deadline.Token).ConfigureAwait(true);
+        using CancellationTokenSource finalRead = new(TimeSpan.FromSeconds(20));
+        JsonElement final = await first.GetAsync<JsonElement>("status", finalRead.Token).ConfigureAwait(true);
         JsonElement listener = Assert.Single(final.GetProperty("sources").EnumerateArray());
         Assert.Equal(session, listener.GetProperty("id").GetGuid());
         Assert.Equal("listening", listener.GetProperty("status").GetProperty("state").GetString());
         Assert.Equal(JsonValueKind.Null, listener.GetProperty("result").ValueKind);
-        JsonElement remote = await second.GetAsync<JsonElement>("status", deadline.Token).ConfigureAwait(true);
+        JsonElement remote = await second.GetAsync<JsonElement>("status", finalRead.Token).ConfigureAwait(true);
         Assert.Contains(remote.GetProperty("nodeValues").EnumerateArray(), value => string.Equals(value.GetProperty("nodeId").GetString(), "send", StringComparison.Ordinal));
     }
 
