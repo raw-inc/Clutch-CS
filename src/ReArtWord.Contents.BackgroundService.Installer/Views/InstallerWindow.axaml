@@ -89,8 +89,7 @@
                 <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:TargetChoiceViewModel"><CheckBox IsChecked="{Binding Selected}"><TextBlock Classes="note" Text="{Binding Label}" /></CheckBox></DataTemplate></ItemsControl.ItemTemplate>
               </ItemsControl>
               <Button Content="{Binding Text[Local]}" Command="{Binding AddLocalCommand}" IsVisible="{Binding !IsUpdate}" />
-              <!-- 選択肢は親要素ごとにまとめ、表示前の別ウィンドウと干渉させません。 -->
-            <StackPanel Classes="form" IsVisible="{Binding IsUpdate}">
+              <StackPanel Classes="form" IsVisible="{Binding IsUpdate}">
                 <TextBlock Classes="label" Text="WebClient" />
                 <TextBlock Classes="note" Text="{Binding Text[WebClientUpdateHelp]}" />
                 <ItemsControl ItemsSource="{Binding Discovery.WebClients}">
