@@ -62,8 +62,10 @@ public sealed class DetachedAdmissionTests
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(5));
         NodeDefinition node = WorkflowFixture.Definition("n") with { Overlap = EOverlapPolicy.Queue };
         Task<NodeResult> first = fixture.Executor.ExecuteAsync(Request(fixture, node), timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = new TestTaskLifetime(first, timeout).ConfigureAwait(true);
         await started.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         Task<NodeResult> queued = fixture.Executor.ExecuteAsync(Request(fixture, node), timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable queuedLifetime = new TestTaskLifetime(queued, timeout).ConfigureAwait(true);
         fixture.Executor.DependencyCheck = static (_, _) => "configuration.conflict";
         release.SetResult();
         Assert.Equal(EOutcome.Succeeded, (await first.ConfigureAwait(true)).Outcome);

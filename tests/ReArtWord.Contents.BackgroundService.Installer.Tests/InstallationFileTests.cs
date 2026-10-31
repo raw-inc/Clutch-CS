@@ -61,13 +61,18 @@ public sealed class InstallationFileTests
         string name = "locked.dll";
         string path = Path.Combine(fixture.Root, name);
         await File.WriteAllTextAsync(path, "fixture");
-        Task deleting;
-        using (FileStream held = new(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+        using FileStream held = new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        Task deleting = InstallationFiles.DeleteFileAsync(fixture.Root, name);
+        try
         {
-            deleting = InstallationFiles.DeleteFileAsync(fixture.Root, name);
             await Task.Delay(InstallationDefaults.PollInterval);
             Assert.False(deleting.IsCompleted);
             Assert.True(File.Exists(path));
+        }
+        finally
+        {
+            await held.DisposeAsync().ConfigureAwait(true);
+            await deleting.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
         await deleting.ConfigureAwait(true);
         Assert.False(File.Exists(path));

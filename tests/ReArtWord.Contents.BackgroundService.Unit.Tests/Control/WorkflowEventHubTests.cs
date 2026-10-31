@@ -23,6 +23,7 @@ public sealed class WorkflowEventHubTests
         IAsyncEnumerator<WorkflowEvent> reader = events.SubscribeAsync(timeout.Token).GetAsyncEnumerator();
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable readerLifetime = reader.ConfigureAwait(true);
         Task<bool> waiting = reader.MoveNextAsync().AsTask();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable waitingLifetime = new TestTaskLifetime(waiting, timeout).ConfigureAwait(true);
         Runtime.Workflows.Compilation.CompiledWorkflow plan = fixture.Compiler.Compile(new("failure", "Failure event", [WorkflowFixture.Definition("action")], [])).Workflow!;
         await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.Engine.ExecuteAsync(plan, cancellationToken: timeout.Token)).ConfigureAwait(true);
         Assert.True(await waiting.ConfigureAwait(true));
@@ -46,6 +47,7 @@ public sealed class WorkflowEventHubTests
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable fastLifetime = fast.ConfigureAwait(true);
         Task<bool> waiting = slow.MoveNextAsync().AsTask();
         Task<bool> ready = fast.MoveNextAsync().AsTask();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable waitingLifetime = new TestTaskLifetime(Task.WhenAll(waiting, ready), timeout).ConfigureAwait(true);
         await hub.PublishAsync(Event(0), timeout.Token).ConfigureAwait(true);
         Assert.True(await waiting.ConfigureAwait(true));
         Assert.True(await ready.ConfigureAwait(true));
@@ -70,6 +72,7 @@ public sealed class WorkflowEventHubTests
         IAsyncEnumerator<WorkflowEvent> reader = hub.SubscribeAsync(timeout.Token).GetAsyncEnumerator();
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable readerLifetime = reader.ConfigureAwait(true);
         Task<bool> waiting = reader.MoveNextAsync().AsTask();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable waitingLifetime = new TestTaskLifetime(waiting, timeout).ConfigureAwait(true);
         WorkflowEvent original = Event(1);
         await hub.PublishAsync(original, timeout.Token).ConfigureAwait(true);
         Assert.True(await waiting.ConfigureAwait(true));

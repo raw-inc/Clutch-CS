@@ -32,24 +32,33 @@ public sealed class SnapshotMaterializationTests
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
         using CancellationTokenSource queued = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token);
         Task<SyncManifest> first = exports.CreateAsync(local, true, timeout.Token);
-        await repository.Entered.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
-        Task<SyncManifest> second = exports.CreateAsync(local, true, queued.Token);
-        Assert.Equal(1, repository.Calls);
-        if (cancelQueued)
+        Task<SyncManifest>? second = null;
+        try
         {
-            await queued.CancelAsync().ConfigureAwait(true);
-            _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await second.ConfigureAwait(false)).ConfigureAwait(true);
-            second = exports.CreateAsync(local, true, timeout.Token);
+            await repository.Entered.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
+            second = exports.CreateAsync(local, true, queued.Token);
+            Assert.Equal(1, repository.Calls);
+            if (cancelQueued)
+            {
+                await queued.CancelAsync().ConfigureAwait(true);
+                _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await second.ConfigureAwait(false)).ConfigureAwait(true);
+                second = exports.CreateAsync(local, true, timeout.Token);
+            }
+            repository.Permits.Release(2);
+            SyncManifest[] results = await Task.WhenAll(first, second).ConfigureAwait(true);
+            Assert.Equal(1, repository.Peak);
+            Assert.Equal(2, repository.Calls);
+            Assert.NotEqual(results[0].Id, results[1].Id);
+            Assert.Equal(results[0].Hash, results[1].Hash);
+            foreach (SyncManifest result in results)
+            {
+                await exports.ReleaseAsync(result.Id, timeout.Token).ConfigureAwait(true);
+            }
         }
-        repository.Permits.Release(2);
-        SyncManifest[] results = await Task.WhenAll(first, second).ConfigureAwait(true);
-        Assert.Equal(1, repository.Peak);
-        Assert.Equal(2, repository.Calls);
-        Assert.NotEqual(results[0].Id, results[1].Id);
-        Assert.Equal(results[0].Hash, results[1].Hash);
-        foreach (SyncManifest result in results)
+        finally
         {
-            await exports.ReleaseAsync(result.Id, timeout.Token).ConfigureAwait(true);
+            await timeout.CancelAsync().ConfigureAwait(true);
+            await Task.WhenAll(first, second ?? Task.CompletedTask).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
     }
 

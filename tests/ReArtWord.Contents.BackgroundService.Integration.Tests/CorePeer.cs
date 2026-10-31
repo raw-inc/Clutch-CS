@@ -44,7 +44,6 @@ internal sealed class CorePeer : IAsyncDisposable
         this.clusterId = clusterId;
         this.peerId = peerId;
         InterfaceId = NetworkInterface.GetAllNetworkInterfaces().First(item => item.GetIPProperties().UnicastAddresses.Any(address => address.Address.Equals(IPAddress.Loopback))).Id;
-        observer = new(new ObserverOptions(Guid.NewGuid().ToString("N"), new(InterfaceId, "127.0.0.1", "127.255.255.255", clusterPort)));
         File.WriteAllText(configurationPath, $$"""
             [cluster]
             id = "{{clusterId}}"
@@ -63,6 +62,9 @@ internal sealed class CorePeer : IAsyncDisposable
             interfaceId = '{{InterfaceId}}'
             listenPort = 0
             """);
+
+        // 設定保存の失敗時に、破棄できない待受を残さないよう最後に確保します。
+        observer = new(new ObserverOptions(Guid.NewGuid().ToString("N"), new(InterfaceId, "127.0.0.1", "127.255.255.255", clusterPort)));
     }
 
     /// <summary>失敗時の状態とログを調査する一時保存先です。</summary>
@@ -162,13 +164,20 @@ internal sealed class CorePeer : IAsyncDisposable
                 process.Kill(includeChildren);
                 await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
             }
-            string error = await errors.ConfigureAwait(false);
-            if (error.Length != 0)
+            try
             {
-                await File.WriteAllTextAsync(Path.Combine(DirectoryPath, "startup-error.txt"), error, cancellationToken).ConfigureAwait(false);
+                string error = await errors.ConfigureAwait(false);
+                if (error.Length != 0)
+                {
+                    await File.WriteAllTextAsync(Path.Combine(DirectoryPath, "startup-error.txt"), error, cancellationToken).ConfigureAwait(false);
+                }
             }
-            process.Dispose();
-            process = null;
+            finally
+            {
+                // 診断を保存できなくても、停止確認済みのプロセスハンドルは解放します。
+                process.Dispose();
+                process = null;
+            }
         }
     }
 
@@ -291,7 +300,13 @@ internal sealed class CorePeer : IAsyncDisposable
     /// <returns>試験用の構成の終了です。</returns>
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
-        await StopAsync().ConfigureAwait(false);
-        await ((IAsyncDisposable)observer).DisposeAsync().ConfigureAwait(false);
+        try
+        {
+            await StopAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            await ((IAsyncDisposable)observer).DisposeAsync().ConfigureAwait(false);
+        }
     }
 }

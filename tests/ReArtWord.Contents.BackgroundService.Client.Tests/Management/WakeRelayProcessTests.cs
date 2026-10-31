@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -67,10 +68,17 @@ public sealed class WakeRelayProcessTests
             HostWakeStart request = new(Guid.NewGuid(), target.HostId);
             using CancellationTokenSource caller = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token);
             Task<HostWakeResult> pending = dispatch.SendAsync(request, caller.Token);
-            UdpReceiveResult packet = await receiver.ReceiveAsync(timeout.Token);
-            Assert.Equal(102, packet.Buffer.Length);
-            await caller.CancelAsync();
-            Assert.Equal(EOutcome.Unknown, (await pending.ConfigureAwait(true)).Outcome);
+            try
+            {
+                UdpReceiveResult packet = await receiver.ReceiveAsync(timeout.Token);
+                Assert.Equal(102, packet.Buffer.Length);
+                await caller.CancelAsync();
+                Assert.Equal(EOutcome.Unknown, (await pending.ConfigureAwait(true)).Outcome);
+            }
+            finally
+            {
+                await Task.WhenAll(caller.CancelAsync(), pending).ConfigureAwait(true);
+            }
             Assert.Equal(EOutcome.Unknown, (await dispatch.SendAsync(request, timeout.Token)).Outcome);
             await File.WriteAllTextAsync(Path.Combine(root, "release"), string.Empty, timeout.Token);
             HostWakeResult final;
@@ -87,26 +95,44 @@ public sealed class WakeRelayProcessTests
         }
         finally
         {
-            await File.WriteAllTextAsync(Path.Combine(root, "release"), string.Empty);
-            await File.WriteAllTextAsync(Path.Combine(root, "stop"), string.Empty);
-            if (child is not null)
+            try
             {
-                using CancellationTokenSource stop = new(TimeSpan.FromSeconds(3));
-                try
-                {
-                    await child.WaitForExitAsync(stop.Token).ConfigureAwait(true);
-                }
-                catch (OperationCanceledException) when (stop.IsCancellationRequested)
-                {
-                    if (!child.HasExited)
-                    {
-                        child.Kill(true);
-                    }
-                    await child.WaitForExitAsync().ConfigureAwait(true);
-                }
-                child.Dispose();
+                await File.WriteAllTextAsync(Path.Combine(root, "release"), string.Empty);
+                await File.WriteAllTextAsync(Path.Combine(root, "stop"), string.Empty);
             }
-            Directory.Delete(root, true);
+            finally
+            {
+                await StopAsync(child).ConfigureAwait(true);
+                Directory.Delete(root, true);
+            }
+        }
+    }
+
+    /// <summary>終了要求を書き込めなかった場合も、試験用プロセスの終了まで待ちます。</summary>
+    /// <returns>子プロセスの終了とハンドルの解放です。</returns>
+    private static async Task StopAsync(Process? child)
+    {
+        if (child is null)
+        {
+            return;
+        }
+
+        using (child)
+        {
+            // 通常終了の猶予を過ぎた場合は強制終了し、回収が済むまで待つ。
+            using CancellationTokenSource stop = new(TimeSpan.FromSeconds(3));
+            try
+            {
+                await ProcessCompletion.WaitAsync(child, stop.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (stop.IsCancellationRequested)
+            {
+                if (!child.HasExited)
+                {
+                    child.Kill(true);
+                }
+                await ProcessCompletion.WaitAsync(child).ConfigureAwait(false);
+            }
         }
     }
 

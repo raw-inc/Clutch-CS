@@ -18,8 +18,8 @@ public sealed class PeerRequestStreamTests
 {
     /// <summary>待受を閉じた後も、同じ確立済み接続で次の要求を送り、ポートを要求数だけ消費しません。</summary>
     /// <returns>二つの要求と応答の対応、および接続再利用です。</returns>
-    // 抑制理由: 受付タスクはfinallyで待機し、待受のusing寿命内に完了させます。
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2025", Justification = "同じusing範囲内のfinallyで受付タスクを必ず待ちます。")]
+    // 抑制理由: TestTaskLifetimeで受付を取り消して終了を待ち、TcpListenerより先に解放します。
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2025", Justification = "TestTaskLifetimeで受付タスクの終了を待ってから、TcpListenerを破棄します。")]
     [Fact]
     public async Task ConfirmedConnectionIsReusedAfterTheListenerClosesAsync()
     {
@@ -39,22 +39,17 @@ public sealed class PeerRequestStreamTests
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable clientLifetime = client.ConfigureAwait(true);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
         Task serving = ServeReusedAsync(server, timeout.Token);
-        try
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable servingLifetime = new TestTaskLifetime(serving, timeout).ConfigureAwait(true);
+        for (int index = 0; index < 2; index++)
         {
-            for (int index = 0; index < 2; index++)
-            {
-                WireMessage request = new(Guid.NewGuid(), peer.Cluster.LocalClusterId, "peer", peer.Cluster.LocalInstanceId, "request", "peer", null,
-                    JsonSerializer.SerializeToElement(index), peer.Cluster.LocalInstanceId);
-                WireMessage? response = await client.ExchangeAsync(request, timeout.Token).ConfigureAwait(true);
-                Assert.NotNull(response);
-                Assert.Equal(request.Id, response.ReplyTo);
-                Assert.Equal(index, response.Body.GetInt32());
-            }
+            WireMessage request = new(Guid.NewGuid(), peer.Cluster.LocalClusterId, "peer", peer.Cluster.LocalInstanceId, "request", "peer", null,
+                JsonSerializer.SerializeToElement(index), peer.Cluster.LocalInstanceId);
+            WireMessage? response = await client.ExchangeAsync(request, timeout.Token).ConfigureAwait(true);
+            Assert.NotNull(response);
+            Assert.Equal(request.Id, response.ReplyTo);
+            Assert.Equal(index, response.Body.GetInt32());
         }
-        finally
-        {
-            await serving.ConfigureAwait(true);
-        }
+        await serving.ConfigureAwait(true);
     }
 
     /// <summary>一回だけ接続を受け、同じストリーム上の二フレームを順に返します。</summary>
@@ -138,8 +133,9 @@ public sealed class PeerRequestStreamTests
     {
         string cluster = Guid.NewGuid().ToString("N");
         int port = Port();
-        FileTestPeer first = await FileTestPeer.CreateAsync(cluster, "first", port, true), second = await FileTestPeer.CreateAsync(cluster, "second", port, false);
+        FileTestPeer first = await FileTestPeer.CreateAsync(cluster, "first", port, true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = first.ConfigureAwait(false);
+        FileTestPeer second = await FileTestPeer.CreateAsync(cluster, "second", port, false);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable secondLifetime = second.ConfigureAwait(false);
         int writes = 0;
         second.Cluster.RegisterHandler("fixture.write", async (request, token) =>
@@ -168,8 +164,8 @@ public sealed class PeerRequestStreamTests
 
     /// <summary>本文を送った後の切断は、UDP再送で副作用を増やしません。</summary>
     /// <returns>旧版・接続拒否ではフォールバックし、受付後の欠測では確認不能を返します。</returns>
-    // 抑制理由: 並行する受付タスクはfinallyで必ず待機してから、外側のusingで待受を破棄します。
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2025", Justification = "受付タスクをfinallyで必ず待ち、TcpListenerの破棄より先に完了させます。")]
+    // 抑制理由: TestTaskLifetimeで受付を取り消して終了を待ち、TcpListenerより先に解放します。
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2025", Justification = "TestTaskLifetimeで受付タスクの終了を待ってから、TcpListenerを破棄します。")]
     [Theory]
     [InlineData("legacy", 1, 0)]
     [InlineData("before", 1, 0)]
@@ -208,17 +204,11 @@ public sealed class PeerRequestStreamTests
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
         Task serving = mode is legacy ? Task.CompletedTask
                                       : ServeAsync(server, mode, () => Interlocked.Increment(ref bodies), timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable servingLifetime = new TestTaskLifetime(serving, timeout).ConfigureAwait(true);
         WireMessage request = new(Guid.NewGuid(), peer.Cluster.LocalClusterId, member.PeerId, member.InstanceId, "request", member.PeerId, null,
             JsonSerializer.SerializeToElement(new { id = Guid.NewGuid(), value = "one write" }), member.InstanceId);
-        WireMessage? reply;
-        try
-        {
-            reply = await client.ExchangeAsync(request, timeout.Token);
-        }
-        finally
-        {
-            await serving.ConfigureAwait(true);
-        }
+        WireMessage? reply = await client.ExchangeAsync(request, timeout.Token);
+        await serving.ConfigureAwait(true);
         Assert.Equal(expectedFallback, fallback);
         Assert.Equal(expectedBodies, bodies);
         Assert.Equal(mode is "after" or "wrong-reply", reply is null);

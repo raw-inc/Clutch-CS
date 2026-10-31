@@ -36,6 +36,7 @@ public sealed class WorkflowEventBatchTests
         IAsyncEnumerator<WorkflowEvent> reader = secondHub.SubscribeAsync(timeout.Token).GetAsyncEnumerator();
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = reader.ConfigureAwait(true);
         Task<bool> waiting = reader.MoveNextAsync().AsTask();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable waitingLifetime = new TestTaskLifetime(waiting, timeout).ConfigureAwait(true);
         WorkflowEvent begin = new(Guid.NewGuid(), "test", DateTimeOffset.UtcNow, "first", NodeValue.FromObject(1), PeerInstanceId: first.LocalInstanceId);
         WorkflowEvent end = begin with { Id = Guid.NewGuid(), Data = NodeValue.FromObject(2) };
         WorkflowEvent wrong = begin with { Id = Guid.NewGuid(), PeerId = "unrelated" };

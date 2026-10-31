@@ -15,13 +15,16 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Compilation;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Collaboration;
 
 /// <summary>未保存編集とブラウザごとの一時表示を検証します。</summary>
-public sealed class CollaborationServiceTests
+public sealed class CollaborationServiceTests : IDisposable
 {
+    private readonly MediaTestFiles files = new();
+
     /// <summary>新規の不完全graphを共有し、保存・effectiveは作りません。</summary>
     /// <returns>検証完了。</returns>
     [Fact]
@@ -186,11 +189,11 @@ public sealed class CollaborationServiceTests
 
     /// <summary>独立した保存先です。</summary>
     /// <returns>SQLite保存先。</returns>
-    private static SqliteRepository Repository() => new(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "state.db"));
+    private SqliteRepository Repository() => new(Path.Combine(files.Root, Guid.NewGuid().ToString("N"), "state.db"));
 
     /// <summary>明示ループバックのPeerを構成します。</summary>
     /// <returns>試験Peer。</returns>
-    private static PeerCluster Cluster(IDurableRepository repository, string? id = null, string peerId = "one", int? port = null, bool initialize = true) => new(new ClusterOptions(id ?? Guid.NewGuid().ToString("N"), peerId, "host", "127.0.0.1", "127.255.255.255", port ?? Port(), 1, initialize, Path.GetTempPath()) { HeartbeatInterval = TimeSpan.FromMilliseconds(50) }, repository) { ReadinessCheck = token => ValueTask.FromResult(true) };
+    private PeerCluster Cluster(IDurableRepository repository, string? id = null, string peerId = "one", int? port = null, bool initialize = true) => new(new ClusterOptions(id ?? Guid.NewGuid().ToString("N"), peerId, "host", "127.0.0.1", "127.255.255.255", port ?? Port(), 1, initialize, files.Root) { HeartbeatInterval = TimeSpan.FromMilliseconds(50) }, repository) { ReadinessCheck = token => ValueTask.FromResult(true) };
 
     /// <summary>利用可能な試験ポートを割り当てます。</summary>
     /// <returns>UDP port。</returns>
@@ -199,4 +202,7 @@ public sealed class CollaborationServiceTests
         using UdpClient socket = new(new IPEndPoint(IPAddress.Loopback, 0));
         return ((IPEndPoint)socket.Client.LocalEndPoint!).Port;
     }
+
+    /// <summary>所有Peerの終了後に、試験用の保存先を削除します。</summary>
+    public void Dispose() => files.Dispose();
 }

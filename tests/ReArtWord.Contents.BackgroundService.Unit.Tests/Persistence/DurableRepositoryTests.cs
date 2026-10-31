@@ -4,6 +4,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Json;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Receipts;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Persistence;
@@ -18,7 +19,8 @@ public sealed class DurableRepositoryTests
     [InlineData(true)]
     public async Task BatchConflictAndReceiptSurviveRestart(bool sqlite)
     {
-        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "store");
+        using MediaTestFiles files = new();
+        string path = Path.Combine(files.Root, "store");
         IDurableRepository store = Create(path, sqlite);
         Guid operation = Guid.NewGuid();
         DurableMutation[] changes = [new("workflow:a", "x", null, NodeValue.FromObject(4)), new("workflow:a", "y", null, NodeValue.FromObject(5))];
@@ -42,7 +44,8 @@ public sealed class DurableRepositoryTests
     [InlineData(true)]
     public async Task PreparedReservationsSurviveRestart(bool sqlite)
     {
-        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "store");
+        using MediaTestFiles files = new();
+        string path = Path.Combine(files.Root, "store");
         IDurableRepository store = Create(path, sqlite);
         Guid operation = Guid.NewGuid();
         Assert.False(await store.HasPendingWriteAsync("configuration", "a"));
@@ -67,7 +70,8 @@ public sealed class DurableRepositoryTests
     [Fact]
     public async Task CorruptFileIsRejected()
     {
-        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "store");
+        using MediaTestFiles files = new();
+        string path = Path.Combine(files.Root, "store");
         JsonFileRepository store = new(path);
         await store.ApplyBatchAsync(Guid.NewGuid(), [new("workflow:a", "x", null, NodeValue.FromBytes(new byte[] { 1, 2 }))]);
         await File.WriteAllBytesAsync(path, new byte[] { 1, 2, 3 });
@@ -79,8 +83,9 @@ public sealed class DurableRepositoryTests
     [Fact]
     public async Task MergePreservesConflictingCandidates()
     {
-        IDurableRepository first = Create(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "a"), true);
-        IDurableRepository second = Create(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "b"), true);
+        using MediaTestFiles files = new();
+        IDurableRepository first = Create(Path.Combine(files.Root, "a"), true);
+        IDurableRepository second = Create(Path.Combine(files.Root, "b"), true);
         DurableReceipt seed = await first.ApplyBatchAsync(Guid.NewGuid(), [new("workflow:a", "x", null, NodeValue.FromObject(1))]);
         Assert.True(await second.ImportAsync(await first.ExportAsync()));
         await first.ApplyBatchAsync(Guid.NewGuid(), [new("workflow:a", "x", seed.Entries[0].Version, NodeValue.FromObject(2))]);
@@ -114,7 +119,8 @@ public sealed class DurableRepositoryTests
     [InlineData(true)]
     public async Task AbortReleasesReservationAndRejectsDelayedCommit(bool sqlite)
     {
-        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "store");
+        using MediaTestFiles files = new();
+        string path = Path.Combine(files.Root, "store");
         IDurableRepository store = Create(path, sqlite);
         Guid oldId = Guid.NewGuid();
         await store.PrepareAsync(oldId, [new("configuration", "a", null, NodeValue.FromObject(1))]);
@@ -132,7 +138,8 @@ public sealed class DurableRepositoryTests
     [Fact]
     public void MissingInitializedSqliteIsRejected()
     {
-        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "store");
+        using MediaTestFiles files = new();
+        string path = Path.Combine(files.Root, "store");
         SqliteRepository original = new(path);
         Assert.NotNull(original);
         File.Delete(path);
@@ -146,7 +153,8 @@ public sealed class DurableRepositoryTests
     [InlineData(true)]
     public async Task ConcurrentCompareExchangeHasOneWinner(bool sqlite)
     {
-        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "store");
+        using MediaTestFiles files = new();
+        string path = Path.Combine(files.Root, "store");
         IDurableRepository[] stores = Enumerable.Range(0, 8).Select(index => Create(path, sqlite)).ToArray();
         DurableReceipt[] results = await Task.WhenAll(stores.Select((store, index) => Task.Run(async () => await store.ApplyBatchAsync(Guid.NewGuid(), [new("workflow:counter", "value", null, NodeValue.FromObject(index))]).ConfigureAwait(false))));
         Assert.Single(results, result => result.Outcome == EOutcome.Succeeded);
@@ -160,7 +168,8 @@ public sealed class DurableRepositoryTests
     [InlineData(true)]
     public async Task LocalSnapshotReplacementDoesNotAccumulateHistory(bool sqlite)
     {
-        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "store");
+        using MediaTestFiles files = new();
+        string path = Path.Combine(files.Root, "store");
         IDurableRepository store = Create(path, sqlite);
         await store.WriteLocalSnapshotAsync("peer:one:resources", "history", NodeValue.FromObject(0));
         long initialBytes = new FileInfo(path).Length;

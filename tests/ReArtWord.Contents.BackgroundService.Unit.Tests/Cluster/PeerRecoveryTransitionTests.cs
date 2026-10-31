@@ -10,6 +10,50 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Cluster;
 /// <summary>準備待ちと人のローカル遷移が永続マーカーを逆順に上書きしないことを確認します。</summary>
 public sealed class PeerRecoveryTransitionTests
 {
+    /// <summary>準備確認中に試験が失敗しても、初期化の終了を待ってから資源を破棄します。</summary>
+    /// <returns>元の例外と、準備確認・保存処理の終了です。</returns>
+    [Fact]
+    public async Task FailedAssertionFinishesReadinessBeforeDisposalAsync()
+    {
+        string id = Guid.NewGuid().ToString("N");
+        SqliteRepository repository = new(Path.Combine(Path.GetTempPath(), id, "state.db"));
+        ClusterOptions options = new(id, "one", "host", "127.0.0.1", "127.255.255.255", 12345, 1, true, Path.GetTempPath());
+        PeerMembership membership = new(options, Guid.NewGuid(), TimeProvider.System);
+        using PeerRecovery recovery = new(options, repository, membership);
+        using CancellationTokenSource cancellation = new();
+        TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        recovery.ReadinessCheck = async token =>
+        {
+            entered.TrySetResult();
+            await Task.Delay(Timeout.Infinite, token).ConfigureAwait(false);
+            return true;
+        };
+        Task starting = recovery.InitializeAsync(cancellation.Token);
+        try
+        {
+            InvalidOperationException failure = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            {
+                await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable startingLifetime = new TestTaskLifetime(starting, cancellation).ConfigureAwait(true);
+                await entered.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
+                throw new InvalidOperationException("fixture assertion failed");
+            }).ConfigureAwait(true);
+            Assert.Equal("fixture assertion failed", failure.Message);
+            Assert.True(starting.IsCompleted);
+        }
+        finally
+        {
+            await cancellation.CancelAsync().ConfigureAwait(true);
+            try
+            {
+                await starting.ConfigureAwait(true);
+            }
+            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+            {
+                // 検証で例外が発生した場合も、初期化を回収してから資源を破棄します。
+            }
+        }
+    }
+
     /// <summary>解消済みの内容分岐は実同期へ戻し、識別衝突と人の離脱は維持します。</summary>
     /// <returns>未確認のままReadyへ昇格しない復旧遷移です。</returns>
     [Theory]
@@ -60,9 +104,12 @@ public sealed class PeerRecoveryTransitionTests
         };
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(5));
         Task starting = recovery.InitializeAsync(timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable startingLifetime = new TestTaskLifetime(starting, timeout).ConfigureAwait(true);
         await entered.Task.WaitAsync(timeout.Token);
         Task detach = recovery.DetachAsync(timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable detachLifetime = new TestTaskLifetime(detach, timeout).ConfigureAwait(true);
         Task laterReady = recovery.BecomeReadyAsync(timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable readyLifetime = new TestTaskLifetime(laterReady, timeout).ConfigureAwait(true);
         bool detachedBeforeReadinessCompleted = detach.IsCompleted;
         finish.TrySetResult();
         await Task.WhenAll(starting, detach, laterReady).WaitAsync(timeout.Token);
@@ -99,6 +146,7 @@ public sealed class PeerRecoveryTransitionTests
         };
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(5));
         Task[] pending = Enumerable.Range(0, 8).Select(_ => recovery.BecomeReadyAsync(timeout.Token)).ToArray();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable pendingLifetime = new TestTaskLifetime(Task.WhenAll(pending), timeout).ConfigureAwait(true);
         await entered.Task.WaitAsync(timeout.Token);
         finish.TrySetResult();
         await Task.WhenAll(pending).WaitAsync(timeout.Token);

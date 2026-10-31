@@ -19,13 +19,16 @@ using ReArtWord.Contents.BackgroundService.Nodes.Control;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Compilation;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Configuration;
 
 /// <summary>保存・スナップショット・実有効化と編集競合を検証します。</summary>
-public sealed class WorkflowStoreTests
+public sealed class WorkflowStoreTests : IDisposable
 {
+    private readonly MediaTestFiles files = new();
+
     /// <summary>確認した候補が変われば拒否し、新しい比較だけを反映して再送は元結果を返します。</summary>
     /// <returns>差分と確認対象版の検証完了です。</returns>
     [Fact]
@@ -275,9 +278,12 @@ public sealed class WorkflowStoreTests
         return store;
     }
 
+    /// <summary>全Peerの終了後に試験用の保存先を削除します。</summary>
+    public void Dispose() => files.Dispose();
+
     /// <summary>独立SQLite保存先を作ります。</summary>
     /// <returns>用途別失敗を設定できる保存先。</returns>
-    private static FailingRepository CreateRepository() => new(new SqliteRepository(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "state.db")));
+    private FailingRepository CreateRepository() => new(new SqliteRepository(Path.Combine(files.Root, Guid.NewGuid().ToString("N"), "state.db")));
 
     /// <summary>明示初期化した一Peerを作ります。</summary>
     /// <returns>独立Peer。</returns>

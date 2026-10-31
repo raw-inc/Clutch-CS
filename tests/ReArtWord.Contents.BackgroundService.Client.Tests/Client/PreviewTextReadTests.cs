@@ -18,15 +18,23 @@ public sealed class PreviewTextReadTests
         await state.UpdateAsync(first, _ => Task.FromResult(Encoding.UTF8.GetBytes("first"))).ConfigureAwait(true);
         TaskCompletionSource<byte[]> reply = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Task pending = state.UpdateAsync(next, _ => reply.Task);
-        Assert.True(state.Loading);
-        Assert.Equal("first", state.Text);
-        Assert.Equal(first, state.Snapshot);
-        await state.UpdateAsync(next, _ => throw new InvalidOperationException("Duplicate read")).ConfigureAwait(true);
-        reply.SetResult(Encoding.UTF8.GetBytes("second"));
-        await pending.ConfigureAwait(true);
-        Assert.False(state.Loading);
-        Assert.Equal("second", state.Text);
-        Assert.Equal(next, state.Snapshot);
+        try
+        {
+            Assert.True(state.Loading);
+            Assert.Equal("first", state.Text);
+            Assert.Equal(first, state.Snapshot);
+            await state.UpdateAsync(next, _ => throw new InvalidOperationException("Duplicate read")).ConfigureAwait(true);
+            reply.SetResult(Encoding.UTF8.GetBytes("second"));
+            await pending.ConfigureAwait(true);
+            Assert.False(state.Loading);
+            Assert.Equal("second", state.Text);
+            Assert.Equal(next, state.Snapshot);
+        }
+        finally
+        {
+            reply.TrySetCanceled();
+            await pending.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
     }
 
     /// <summary>取得失敗を成功したIDとして記憶せず、同じ取得IDを再試行できます。</summary>
@@ -90,21 +98,29 @@ public sealed class PreviewTextReadTests
         TaskCompletionSource<byte[]> reply = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Task pending = state.UpdateAsync(Snapshot(), _ => reply.Task);
         Task newer = Task.CompletedTask;
-        if (clear)
+        try
         {
-            state.Clear();
+            if (clear)
+            {
+                state.Clear();
+            }
+            else
+            {
+                newer = state.UpdateAsync(Snapshot(), _ => Task.FromResult(Encoding.UTF8.GetBytes("newer")));
+            }
+            reply.SetResult(Encoding.UTF8.GetBytes("old"));
+            await pending.ConfigureAwait(true);
+            await newer.ConfigureAwait(true);
+            string? expected = clear ? null
+                                     : "newer";
+            Assert.Equal(expected, state.Text);
+            Assert.False(state.Loading);
         }
-        else
+        finally
         {
-            newer = state.UpdateAsync(Snapshot(), _ => Task.FromResult(Encoding.UTF8.GetBytes("newer")));
+            reply.TrySetCanceled();
+            await Task.WhenAll(pending, newer).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
-        reply.SetResult(Encoding.UTF8.GetBytes("old"));
-        await pending.ConfigureAwait(true);
-        await newer.ConfigureAwait(true);
-        string? expected = clear ? null
-                                 : "newer";
-        Assert.Equal(expected, state.Text);
-        Assert.False(state.Loading);
     }
 
     /// <summary>同じノードに到着する独立した取得結果です。</summary>
@@ -134,16 +150,25 @@ public sealed class PreviewTextReadTests
             }
         });
         NodePreviewSnapshot latest = Snapshot();
-        await state.UpdateAsync(latest, _ =>
+        Task second = state.UpdateAsync(latest, _ =>
         {
             Assert.Equal(0, Volatile.Read(ref active));
             return Task.FromResult(Encoding.UTF8.GetBytes("latest"));
-        }).WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
-        await first.ConfigureAwait(true);
-        Assert.True(oldToken.IsCancellationRequested);
-        Assert.Equal(latest, state.Snapshot);
-        Assert.Equal("latest", state.Text);
-        Assert.Null(state.Problem);
+        });
+        try
+        {
+            await second.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
+            await first.ConfigureAwait(true);
+            Assert.True(oldToken.IsCancellationRequested);
+            Assert.Equal(latest, state.Snapshot);
+            Assert.Equal("latest", state.Text);
+            Assert.Null(state.Problem);
+        }
+        finally
+        {
+            state.Clear();
+            await Task.WhenAll(first, second).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
     }
 
     /// <summary>表示対象を離れたときは、取得の完了を待たずに通信へ取消を伝えます。</summary>
@@ -159,11 +184,19 @@ public sealed class PreviewTextReadTests
             await Task.Delay(Timeout.Infinite, token).ConfigureAwait(false);
             return [];
         });
-        state.Clear();
-        await reading.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
-        Assert.True(received.IsCancellationRequested);
-        Assert.Null(state.Snapshot);
-        Assert.False(state.Loading);
-        Assert.Null(state.Problem);
+        try
+        {
+            state.Clear();
+            await reading.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
+            Assert.True(received.IsCancellationRequested);
+            Assert.Null(state.Snapshot);
+            Assert.False(state.Loading);
+            Assert.Null(state.Problem);
+        }
+        finally
+        {
+            state.Clear();
+            await reading.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
     }
 }

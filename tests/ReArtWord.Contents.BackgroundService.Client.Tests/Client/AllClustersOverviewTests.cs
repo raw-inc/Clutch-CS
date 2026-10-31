@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -200,7 +201,7 @@ public sealed class AllClustersOverviewTests
     public async Task AllClustersPageCapsPollingAcrossClusterBoundaries()
     {
         DiscoveredCluster[] catalog = Enumerable.Range(0, 129).Select(index => Cluster(index.ToString("D3", System.Globalization.CultureInfo.InvariantCulture), [Peer("same")])).ToArray();
-        HashSet<string> requested = new(StringComparer.Ordinal);
+        ConcurrentDictionary<string, byte> requested = new(StringComparer.Ordinal);
         using ClientHttpHandler handler = new(async (request, token) =>
         {
             string resourcePath = "/client/dashboard/batch";
@@ -209,7 +210,7 @@ public sealed class AllClustersOverviewTests
                 DashboardSnapshotQuery[] queries = JsonSerializer.Deserialize<DashboardSnapshotQuery[]>(await request.Content!.ReadAsStringAsync(token).ConfigureAwait(false), ContractJson.Options)!;
                 foreach (DashboardSnapshotQuery query in queries)
                 {
-                    requested.Add(query.ClusterId);
+                    requested.TryAdd(query.ClusterId, 0);
                 }
             }
             return await ResponseAsync(request, catalog, Guid.NewGuid(), DateTimeOffset.UtcNow, token).ConfigureAwait(false);

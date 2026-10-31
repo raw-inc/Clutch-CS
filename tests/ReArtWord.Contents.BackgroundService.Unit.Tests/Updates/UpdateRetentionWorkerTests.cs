@@ -28,16 +28,16 @@ public sealed class UpdateRetentionWorkerTests
         using UpdateRetentionWorker worker = new(_ => Task.FromException(exception), TimeSpan.Zero);
         using IHost host = new HostBuilder().ConfigureServices(services => services.AddSingleton<IHostedService>(worker)).Build();
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
-        await host.StartAsync(timeout.Token);
         try
         {
+            await host.StartAsync(timeout.Token);
             await worker.ExecuteTask!.WaitAsync(timeout.Token);
             Assert.True(worker.ExecuteTask.IsCompletedSuccessfully);
             Assert.False(host.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping.IsCancellationRequested);
         }
         finally
         {
-            await host.StopAsync(timeout.Token);
+            await host.StopAsync(CancellationToken.None);
         }
     }
 
@@ -62,10 +62,17 @@ public sealed class UpdateRetentionWorkerTests
         }, TimeSpan.Zero);
         using IHost host = new HostBuilder().ConfigureServices(services => services.AddSingleton<IHostedService>(worker)).Build();
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
-        await host.StartAsync(timeout.Token);
-        await started.Task.WaitAsync(timeout.Token);
-        await host.StopAsync(timeout.Token);
-        Assert.True(finished.Task.IsCompletedSuccessfully);
-        Assert.True(worker.ExecuteTask!.IsCompletedSuccessfully);
+        try
+        {
+            await host.StartAsync(timeout.Token);
+            await started.Task.WaitAsync(timeout.Token);
+            await host.StopAsync(timeout.Token);
+            Assert.True(finished.Task.IsCompletedSuccessfully);
+            Assert.True(worker.ExecuteTask!.IsCompletedSuccessfully);
+        }
+        finally
+        {
+            await host.StopAsync(CancellationToken.None);
+        }
     }
 }

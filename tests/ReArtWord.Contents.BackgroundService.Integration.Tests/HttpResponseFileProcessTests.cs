@@ -53,7 +53,7 @@ public sealed class HttpResponseFileProcessTests
         Assert.Equal(EOutcome.Succeeded, saved.Activation.Outcome);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(30));
         Guid operation = Guid.NewGuid();
-        Task<WorkflowRunStatus> pending = first.PostAsync<WorkflowRunStatus>("runs.start", new WorkflowRunRequest(operation, definition.Id, saved.Revision));
+        WorkflowRunStatus run = await first.PostAsync<WorkflowRunStatus>("runs.start", new WorkflowRunRequest(operation, definition.Id, saved.Revision), timeout.Token).ConfigureAwait(true);
         using TcpClient accepted = await server.AcceptTcpClientAsync(timeout.Token).ConfigureAwait(true);
         using NetworkStream stream = accepted.GetStream();
         using StreamReader reader = new(stream, Encoding.ASCII, false, 1024, true);
@@ -65,7 +65,6 @@ public sealed class HttpResponseFileProcessTests
         while (!string.IsNullOrEmpty(line));
         await stream.WriteAsync(Encoding.ASCII.GetBytes(FormattableString.Invariant($"HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: {png.Length}\r\nConnection: close\r\n\r\n")), timeout.Token).ConfigureAwait(true);
         await stream.WriteAsync(png, timeout.Token).ConfigureAwait(true);
-        WorkflowRunStatus run = await pending.ConfigureAwait(true);
         await CorePeer.WaitAsync(async token =>
         {
             run = await first.GetAsync<WorkflowRunStatus>("runs.read", operation.ToString("D"), token).ConfigureAwait(true);

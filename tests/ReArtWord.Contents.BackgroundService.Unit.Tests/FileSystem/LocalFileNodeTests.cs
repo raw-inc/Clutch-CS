@@ -93,18 +93,28 @@ public sealed class LocalFileNodeTests
         using FileTestDirectory fixture = new(EFileConflictPolicy.Wait);
         string path = Path.Combine(fixture.Root, "target");
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
-        Task<NodeResult> pending;
-        using (IDisposable write = await fixture.Service.Operations.AcquireAsync([new(path, true)], timeout.Token).ConfigureAwait(true))
+        Task<NodeResult>? pending = null;
+        try
         {
-            pending = fixture.Action("file.create").ExecuteAsync(FileTestDirectory.Context(new { path, existingFileMode = "error" }, NodeValue.FromObject("new")), timeout.Token).AsTask();
-            Assert.False(pending.IsCompleted);
-            string other = Path.Combine(fixture.Root, "other");
-            using IDisposable readOne = await fixture.Service.Operations.AcquireAsync([new(other, false)], timeout.Token).ConfigureAwait(true);
-            using IDisposable readTwo = await fixture.Service.Operations.AcquireAsync([new(other, false)], timeout.Token).ConfigureAwait(true);
-            await File.WriteAllTextAsync(path, "raced", timeout.Token).ConfigureAwait(true);
+            using (IDisposable write = await fixture.Service.Operations.AcquireAsync([new(path, true)], timeout.Token).ConfigureAwait(true))
+            {
+                pending = fixture.Action("file.create").ExecuteAsync(FileTestDirectory.Context(new { path, existingFileMode = "error" }, NodeValue.FromObject("new")), timeout.Token).AsTask();
+                Assert.False(pending.IsCompleted);
+                string other = Path.Combine(fixture.Root, "other");
+                using IDisposable readOne = await fixture.Service.Operations.AcquireAsync([new(other, false)], timeout.Token).ConfigureAwait(true);
+                using IDisposable readTwo = await fixture.Service.Operations.AcquireAsync([new(other, false)], timeout.Token).ConfigureAwait(true);
+                await File.WriteAllTextAsync(path, "raced", timeout.Token).ConfigureAwait(true);
+            }
+            Assert.Equal(EOutcome.NotExecuted, (await pending.ConfigureAwait(true)).Outcome);
+            Assert.Equal("raced", await File.ReadAllTextAsync(path, timeout.Token).ConfigureAwait(true));
         }
-        Assert.Equal(EOutcome.NotExecuted, (await pending.ConfigureAwait(true)).Outcome);
-        Assert.Equal("raced", await File.ReadAllTextAsync(path, timeout.Token).ConfigureAwait(true));
+        finally
+        {
+            if (pending is not null)
+            {
+                await new TestTaskLifetime(pending, timeout).DisposeAsync().ConfigureAwait(true);
+            }
+        }
     }
 
     /// <summary>許可ルート内のlinkから外部へ抜ける操作を拒否します。</summary>

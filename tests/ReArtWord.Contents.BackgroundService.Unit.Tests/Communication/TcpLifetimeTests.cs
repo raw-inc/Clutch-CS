@@ -37,6 +37,7 @@ public sealed class TcpLifetimeTests
             return ValueTask.CompletedTask;
         }, stop.Token);
         Task<NodeResult> run = ((ISourceNode)SocketNodeTests.Find("tcp.listen")).RunAsync(source, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, timeout).ConfigureAwait(true);
         int port = await listening.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         using TcpClient client = new(AddressFamily.InterNetwork);
         await client.ConnectAsync(IPAddress.Loopback, port, timeout.Token).ConfigureAwait(true);

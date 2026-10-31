@@ -166,6 +166,7 @@ public sealed class SyncInventoryTests
         finally
         {
             repository.Release.TrySetResult();
+            await Task.WhenAll(first, close ?? Task.CompletedTask).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
         if (failExport)
         {
@@ -224,6 +225,7 @@ public sealed class SyncInventoryTests
         finally
         {
             repository.Release.TrySetResult();
+            await ((Task)first).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
         _ = await first.ConfigureAwait(true);
         SyncResponse result;
@@ -257,16 +259,27 @@ public sealed class SyncInventoryTests
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(5));
         SyncInventoryRequest request = new(Guid.NewGuid(), SyncInventory.Describe(Snapshot()), DateTimeOffset.UtcNow.AddMinutes(5));
         Task<SyncResponse> first = inventory.ReceiveAsync(request, local.PeerId, local.InstanceId, timeout.Token);
-        await repository.Entered.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
-        await inventory.CloseAsync(request.Id, local.PeerId, local.InstanceId, timeout.Token).WaitAsync(timeout.Token).ConfigureAwait(true);
-        Assert.Equal("Sync.SessionUnavailable", (await first.ConfigureAwait(true)).Reason);
-        Assert.False(repository.Release.Task.IsCompleted);
-        await inventory.CloseAsync(request.Id, local.PeerId, local.InstanceId, timeout.Token).ConfigureAwait(true);
-        Assert.Equal("Sync.SessionUnavailable", (await inventory.ReceiveAsync(request, local.PeerId, local.InstanceId, timeout.Token).ConfigureAwait(true)).Reason);
-        SyncInventoryRequest next = request with { Id = Guid.NewGuid() };
-        Assert.NotNull((await inventory.ReceiveAsync(next, local.PeerId, local.InstanceId, timeout.Token).ConfigureAwait(true)).Inventory);
-        Assert.Equal(2, repository.Exports);
-        await inventory.CloseAsync(next.Id, local.PeerId, local.InstanceId, timeout.Token).ConfigureAwait(true);
+        Task close = Task.CompletedTask;
+        try
+        {
+            await repository.Entered.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
+            close = inventory.CloseAsync(request.Id, local.PeerId, local.InstanceId, timeout.Token);
+            await close.WaitAsync(timeout.Token).ConfigureAwait(true);
+            Assert.Equal("Sync.SessionUnavailable", (await first.ConfigureAwait(true)).Reason);
+            Assert.False(repository.Release.Task.IsCompleted);
+            await inventory.CloseAsync(request.Id, local.PeerId, local.InstanceId, timeout.Token).ConfigureAwait(true);
+            Assert.Equal("Sync.SessionUnavailable", (await inventory.ReceiveAsync(request, local.PeerId, local.InstanceId, timeout.Token).ConfigureAwait(true)).Reason);
+            SyncInventoryRequest next = request with { Id = Guid.NewGuid() };
+            Assert.NotNull((await inventory.ReceiveAsync(next, local.PeerId, local.InstanceId, timeout.Token).ConfigureAwait(true)).Inventory);
+            Assert.Equal(2, repository.Exports);
+            await inventory.CloseAsync(next.Id, local.PeerId, local.InstanceId, timeout.Token).ConfigureAwait(true);
+        }
+        finally
+        {
+            repository.Release.TrySetResult();
+            await timeout.CancelAsync().ConfigureAwait(true);
+            await Task.WhenAll(first, close).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
     }
 
     /// <summary>最初の書出しだけを保留し、終了要求との交差を再現します。</summary>

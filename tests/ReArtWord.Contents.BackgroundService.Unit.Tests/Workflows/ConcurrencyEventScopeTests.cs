@@ -44,8 +44,11 @@ public sealed class ConcurrencyEventScopeTests
         WorkflowFixture fixture = Create(probe, limiter);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = fixture.ConfigureAwait(true);
         CompiledWorkflow workflow = IterationTests.Compile(fixture, Definition(end));
-        ExecutionReport report = await fixture.Engine.ExecuteAsync(workflow, "source",
-            new Dictionary<string, NodeValue>(StringComparer.Ordinal) { ["value"] = NodeValue.FromObject(elements) }).WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+        using CancellationTokenSource cancellation = new();
+        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(workflow, "source",
+            new Dictionary<string, NodeValue>(StringComparer.Ordinal) { ["value"] = NodeValue.FromObject(elements) }, cancellationToken: cancellation.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = new TestTaskLifetime(running, cancellation).ConfigureAwait(true);
+        ExecutionReport report = await running.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
         Assert.True(report.Outcome == EOutcome.Succeeded, JsonSerializer.Serialize(report));
         Assert.Equal([1, 2, 3], received.Order());
         Assert.Equal(1, sideCalls);
@@ -83,8 +86,11 @@ public sealed class ConcurrencyEventScopeTests
         WorkflowFixture fixture = Create(probe, limiter);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = fixture.ConfigureAwait(true);
         CompiledWorkflow workflow = IterationTests.Compile(fixture, Definition(true));
-        ExecutionReport[] reports = await Task.WhenAll(Enumerable.Range(1, 3).Select(owner => fixture.Engine.ExecuteAsync(workflow, "source",
-            new Dictionary<string, NodeValue>(StringComparer.Ordinal) { ["value"] = NodeValue.FromObject(Enumerable.Range(owner * 10, 3).ToArray()) }))).WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+        using CancellationTokenSource cancellation = new();
+        Task<ExecutionReport[]> runningTasks = Task.WhenAll(Enumerable.Range(1, 3).Select(owner => fixture.Engine.ExecuteAsync(workflow, "source",
+            new Dictionary<string, NodeValue>(StringComparer.Ordinal) { ["value"] = NodeValue.FromObject(Enumerable.Range(owner * 10, 3).ToArray()) }, cancellationToken: cancellation.Token)));
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = new TestTaskLifetime(runningTasks, cancellation).ConfigureAwait(true);
+        ExecutionReport[] reports = await runningTasks.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
         Assert.All(reports, report => Assert.True(report.Outcome == EOutcome.Succeeded, JsonSerializer.Serialize(report)));
         Assert.Equal([10, 11, 12, 20, 21, 22, 30, 31, 32], received.Order());
         Assert.Empty(running);
@@ -111,8 +117,11 @@ public sealed class ConcurrencyEventScopeTests
         });
         WorkflowFixture fixture = Create(probe, limiter);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = fixture.ConfigureAwait(true);
-        ExecutionReport report = await fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, Definition(true)), "source",
-            new Dictionary<string, NodeValue>(StringComparer.Ordinal) { ["value"] = NodeValue.FromObject(elements) }).WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+        using CancellationTokenSource cancellation = new();
+        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, Definition(true)), "source",
+            new Dictionary<string, NodeValue>(StringComparer.Ordinal) { ["value"] = NodeValue.FromObject(elements) }, cancellationToken: cancellation.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = new TestTaskLifetime(running, cancellation).ConfigureAwait(true);
+        ExecutionReport report = await running.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
         Assert.True(report.Outcome == expected, JsonSerializer.Serialize(report));
         Assert.Contains(fixture.Engine.Recent().SelectMany(result => result.Nodes), node => node.NodeId is "limit"
             && node.Targets.Any(target => target.Result.ReasonCode is "concurrency.body" && !string.IsNullOrEmpty(target.Result.Message)));
@@ -149,6 +158,7 @@ public sealed class ConcurrencyEventScopeTests
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = fixture.ConfigureAwait(true);
         Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, Definition(true)), "source",
             new Dictionary<string, NodeValue>(StringComparer.Ordinal) { ["value"] = NodeValue.FromObject(elements) }, cancellationToken: cancellation.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = new TestTaskLifetime(running, cancellation).ConfigureAwait(true);
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
         await cancellation.CancelAsync().ConfigureAwait(true);
         ExecutionReport report = await running.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
@@ -190,9 +200,10 @@ public sealed class ConcurrencyEventScopeTests
         });
         WorkflowFixture fixture = Create(probe, limiter);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = fixture.ConfigureAwait(true);
-        ExecutionReport report = await fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, Definition(true)), "source",
-            new Dictionary<string, NodeValue>(StringComparer.Ordinal) { ["value"] = NodeValue.FromObject(elements) }, cancellationToken: cancellation.Token)
-            .WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, Definition(true)), "source",
+            new Dictionary<string, NodeValue>(StringComparer.Ordinal) { ["value"] = NodeValue.FromObject(elements) }, cancellationToken: cancellation.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = new TestTaskLifetime(running, cancellation).ConfigureAwait(true);
+        ExecutionReport report = await running.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
         Assert.True(report.Outcome == expected, JsonSerializer.Serialize(fixture.Engine.Recent()));
         IterationExecutionSummary iteration = Assert.Single(fixture.Engine.Recent().SelectMany(result => result.Nodes).Select(node => node.Iteration).OfType<IterationExecutionSummary>());
         Assert.Contains(iteration.Items.SelectMany(item => Assert.IsType<ExecutionReport>(item.Execution.Report).Nodes).SelectMany(node => node.Targets),
@@ -237,8 +248,11 @@ public sealed class ConcurrencyEventScopeTests
         definition = definition with { Nodes = [.. definition.Nodes, WorkflowFixture.Definition("completed", "test.value")],
             Wires = [.. definition.Wires, new(end ? "limit-end"
                                                   : "limit", CompletionPorts.Signal, "completed", "trigger")] };
-        ExecutionReport report = await fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, definition), "source",
-            new Dictionary<string, NodeValue>(StringComparer.Ordinal) { ["value"] = NodeValue.FromObject(elements) }).WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+        using CancellationTokenSource cancellation = new();
+        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, definition), "source",
+            new Dictionary<string, NodeValue>(StringComparer.Ordinal) { ["value"] = NodeValue.FromObject(elements) }, cancellationToken: cancellation.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = new TestTaskLifetime(running, cancellation).ConfigureAwait(true);
+        ExecutionReport report = await running.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
         Assert.True(report.Outcome == EOutcome.Succeeded, JsonSerializer.Serialize(report));
         Assert.Equal(1, completed);
         Assert.Equal(0, limiter.Active);
