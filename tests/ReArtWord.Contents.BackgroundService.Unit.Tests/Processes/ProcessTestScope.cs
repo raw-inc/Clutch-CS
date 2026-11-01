@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using ReArtWord.Contents.BackgroundService.Contracts.Processes;
@@ -80,7 +81,7 @@ internal sealed class ProcessTestScope : IDisposable
             throw new InvalidOperationException("試験対象のプロセスの起動時刻が一致しません。");
         }
         process.Kill(true);
-        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        await ProcessCompletion.WaitAsync(process, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>試験が作成したプロセスと保存先のルートだけを取り除きます。</summary>
@@ -93,9 +94,12 @@ internal sealed class ProcessTestScope : IDisposable
             try
             {
                 using Process process = Process.GetProcessById(identity.ProcessId);
-                if (!process.HasExited && new DateTimeOffset(process.StartTime.ToUniversalTime()) == identity.StartedAt)
+                if (!ProcessCompletion.HasExited(process) && new DateTimeOffset(process.StartTime.ToUniversalTime()) == identity.StartedAt)
                 {
-                    process.Kill(true);
+                    if (!process.HasExited)
+                    {
+                        process.Kill(true);
+                    }
                     process.WaitForExit();
                 }
             }

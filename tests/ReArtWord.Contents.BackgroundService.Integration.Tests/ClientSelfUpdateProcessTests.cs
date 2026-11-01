@@ -11,6 +11,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Updates;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Client;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Local;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 
@@ -39,7 +40,7 @@ public sealed class ClientSelfUpdateProcessTests
         await CorePeer.WaitAsync(async token => string.Equals((await ClientUpdateFiles.ReadAsync(scope.State, job.OperationId, token).ConfigureAwait(true))?.State,
             "WaitingForExit", StringComparison.Ordinal), timeout.Token).ConfigureAwait(true);
         await scope.StopOriginalAsync(timeout.Token).ConfigureAwait(true);
-        await updater.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+        await ProcessCompletion.WaitAsync(updater, timeout.Token).ConfigureAwait(true);
         ClientUpdateProgress result = (await ClientUpdateFiles.ReadAsync(scope.State, job.OperationId, timeout.Token).ConfigureAwait(true))!;
         EOutcome expected = EOutcome.Succeeded;
         string releaseId = "new";
@@ -54,7 +55,7 @@ public sealed class ClientSelfUpdateProcessTests
         Assert.NotEqual(before.Process, after.Process);
         Assert.Equal(releaseId, (await LocalUpdateExecutor.ReadManifestAsync(scope.Installed, timeout.Token).ConfigureAwait(true)).ReleaseId);
         Process repeated = scope.StartUpdater(job);
-        await repeated.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+        await ProcessCompletion.WaitAsync(repeated, timeout.Token).ConfigureAwait(true);
         Assert.Equal(result, await ClientUpdateFiles.ReadAsync(scope.State, job.OperationId, timeout.Token).ConfigureAwait(true));
         Assert.Equal(after.Process, (await scope.HealthAsync(timeout.Token).ConfigureAwait(true)).Process);
         await Assert.ThrowsAsync<InvalidDataException>(() => ClientUpdateExecutor.ExecuteAsync(job with { TimeoutMilliseconds = 6000 }, timeout.Token));
@@ -78,7 +79,7 @@ public sealed class ClientSelfUpdateProcessTests
             await File.AppendAllTextAsync(Path.Combine(new ClientUpdateFiles(job).Candidate, job.Manifest.EntryPoint), "corrupt", timeout.Token).ConfigureAwait(true);
         }
         Process updater = scope.StartUpdater(job);
-        await updater.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+        await ProcessCompletion.WaitAsync(updater, timeout.Token).ConfigureAwait(true);
         ClientUpdateProgress result = (await ClientUpdateFiles.ReadAsync(scope.State, job.OperationId, timeout.Token).ConfigureAwait(true))!;
         Assert.Equal(EOutcome.NotExecuted, result.Outcome);
         Assert.Equal(before.Process, (await scope.HealthAsync(timeout.Token).ConfigureAwait(true)).Process);

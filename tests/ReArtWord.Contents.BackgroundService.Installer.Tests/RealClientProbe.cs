@@ -7,6 +7,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Management;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Installation;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Installer.Tests;
 
@@ -77,8 +78,8 @@ internal static class RealClientProbe
             if (!process.HasExited)
             {
                 process.Kill(false);
-                await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
             }
+            await ProcessCompletion.WaitAsync(process, CancellationToken.None).ConfigureAwait(false);
         }
     }
 }

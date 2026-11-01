@@ -10,6 +10,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Desktop;
 using ReArtWord.Contents.BackgroundService.CoreService.Hosting;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Desktop;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Streams;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.CoreService.Desktop;
 
@@ -108,12 +109,12 @@ internal sealed class DesktopSession : IAsyncDisposable
             using CancellationTokenSource grace = new(TimeSpan.FromSeconds(3));
             try
             {
-                await worker.WaitForExitAsync(grace.Token).ConfigureAwait(false);
+                await ProcessCompletion.WaitAsync(worker, grace.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (grace.IsCancellationRequested)
             {
                 worker.Kill(true);
-                await worker.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+                await ProcessCompletion.WaitAsync(worker, CancellationToken.None).ConfigureAwait(false);
             }
         }
     }

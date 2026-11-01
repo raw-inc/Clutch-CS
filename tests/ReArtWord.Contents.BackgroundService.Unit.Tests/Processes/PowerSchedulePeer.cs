@@ -6,6 +6,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Management;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Observers;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Processes;
 
@@ -107,8 +108,8 @@ internal sealed class PowerSchedulePeer : IAsyncDisposable
             if (!process.HasExited)
             {
                 process.Kill(true);
-                await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
             }
+            await ProcessCompletion.WaitAsync(process, cancellationToken).ConfigureAwait(false);
             process.Dispose();
             process = null;
         }

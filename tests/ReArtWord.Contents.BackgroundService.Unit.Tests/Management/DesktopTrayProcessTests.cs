@@ -7,6 +7,7 @@ using ReArtWord.Contents.BackgroundService.CoreService.Desktop;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Tray;
 using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
 
@@ -47,10 +48,10 @@ public sealed class DesktopTrayProcessTests
             await first.WriteAsync(Mode(false), timeout.Token).ConfigureAwait(true);
             await WaitAsync(() => !Viewing(one.Id) && Displayed([one.Id, two.Id]), timeout.Token).ConfigureAwait(true);
             one.Kill(true);
-            await one.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+            await ProcessCompletion.WaitAsync(one, timeout.Token).ConfigureAwait(true);
             await WaitAsync(() => Displayed([two.Id]) && !Present(one.Id), timeout.Token).ConfigureAwait(true);
             second.Close();
-            await two.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+            await ProcessCompletion.WaitAsync(two, timeout.Token).ConfigureAwait(true);
             await WaitAsync(() => !Present(one.Id) && !Present(two.Id), timeout.Token).ConfigureAwait(true);
             Assert.Equal(0, two.ExitCode);
         }

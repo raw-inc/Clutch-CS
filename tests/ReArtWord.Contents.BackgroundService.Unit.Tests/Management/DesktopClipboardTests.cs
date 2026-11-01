@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 using System.Buffers.Binary;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
@@ -30,7 +31,7 @@ public sealed class DesktopClipboardTests
         Task<string> errors = process.StandardError.ReadToEndAsync(timeout.Token);
         try
         {
-            await process.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+            await ProcessCompletion.WaitAsync(process, timeout.Token).ConfigureAwait(true);
             Assert.True(process.ExitCode == 0, await errors.ConfigureAwait(true));
         }
         finally
@@ -41,7 +42,7 @@ public sealed class DesktopClipboardTests
                 {
                     process.Kill(true);
                 }
-                await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(true);
+                await ProcessCompletion.WaitAsync(process, CancellationToken.None).ConfigureAwait(true);
             }
             finally
             {

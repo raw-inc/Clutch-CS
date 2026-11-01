@@ -13,6 +13,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Json;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Local;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Observers;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 
@@ -162,7 +163,7 @@ internal sealed class RollingUpdatePeer : IAsyncDisposable
                     if (string.Equals(process.MainModule?.FileName, executable, StringComparison.OrdinalIgnoreCase))
                     {
                         process.Kill(true);
-                        await process.WaitForExitAsync().ConfigureAwait(false);
+                        await ProcessCompletion.WaitAsync(process).ConfigureAwait(false);
                     }
                 }
                 catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)

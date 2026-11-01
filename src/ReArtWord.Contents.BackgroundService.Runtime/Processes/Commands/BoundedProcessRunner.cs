@@ -50,7 +50,8 @@ public static class BoundedProcessRunner
     /// <summary>起動・入出力・停止を一回の所有範囲で処理します。</summary>
     /// <returns>正常終了時の上限付き標準出力です。</returns>
     // 抑制理由: 子プロセス停止を確認した後で取消を上位へ伝え、停止不能は結果不明へ分離します。
-    [SuppressMessage("SourceQuality", "RAW330", Justification = "停止完了後も元の取消tokenを保持します。"), SuppressMessage("SourceQuality", "RAW333", Justification = "停止を確認できなかった場合だけ結果不明専用例外へ変換します。")]
+    [SuppressMessage("SourceQuality", "RAW330", Justification = "停止完了後も元の取消tokenを保持します。"), SuppressMessage("SourceQuality", "RAW333", Justification = "停止を確認できなかった場合だけ結果不明専用例外へ変換します。"),
+     SuppressMessage("Reliability", "CA2025", Justification = "終了待機Taskを成功・取消の双方で完了まで待ち、最後にProcessを解放します。")]
     private static async Task<string> RunCoreAsync(string executable, IReadOnlyList<string> arguments, ProcessRunLimits limits, ProcessDiagnostics? diagnostics, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(arguments);
@@ -110,7 +111,7 @@ public static class BoundedProcessRunner
         bool exceeded = false;
         try
         {
-            Task exit = process.WaitForExitAsync(resourceLimit.Token);
+            Task exit = ProcessCompletion.WaitAsync(process, resourceLimit.Token);
             while (!exit.IsCompleted)
             {
                 await Task.WhenAny(exit, Task.Delay(100, resourceLimit.Token)).ConfigureAwait(false);
@@ -134,7 +135,7 @@ public static class BoundedProcessRunner
                     process.Kill(true);
                 }
                 using CancellationTokenSource stop = new(TimeSpan.FromSeconds(10));
-                await process.WaitForExitAsync(stop.Token).ConfigureAwait(false);
+                await ProcessCompletion.WaitAsync(process, stop.Token).ConfigureAwait(false);
             }
             catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception or OperationCanceledException)
             {

@@ -4,6 +4,7 @@ using System.Runtime.Versioning;
 using System.Security.Principal;
 using ReArtWord.Contents.BackgroundService.Contracts.Installation;
 using ReArtWord.Contents.BackgroundService.Runtime.Processes.Commands;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Installation;
 
@@ -38,7 +39,7 @@ public static class WindowsFirewall
             start.ArgumentList.Add(argument);
         }
         using Process process = Process.Start(start) ?? throw new IOException("Windows Firewall configuration could not start.");
-        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        await ProcessCompletion.WaitAsync(process, cancellationToken).ConfigureAwait(false);
         if (process.ExitCode != 0)
         {
             string detail = "Windows Firewall configuration failed.";

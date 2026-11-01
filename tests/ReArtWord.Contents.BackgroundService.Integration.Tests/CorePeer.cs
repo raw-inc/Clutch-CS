@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
@@ -162,8 +163,8 @@ internal sealed class CorePeer : IAsyncDisposable
             if (!process.HasExited)
             {
                 process.Kill(includeChildren);
-                await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
             }
+            await ProcessCompletion.WaitAsync(process, cancellationToken).ConfigureAwait(false);
             try
             {
                 string error = await errors.ConfigureAwait(false);

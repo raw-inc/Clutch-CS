@@ -59,7 +59,7 @@ public sealed class ApplicationLaunchTests(ITestOutputHelper output)
         Assert.False(process.HasExited);
         app.Release();
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
-        await process.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+        await ProcessCompletion.WaitAsync(process, timeout.Token).ConfigureAwait(true);
         Assert.Equal(0, process.ExitCode);
     }
 
@@ -72,7 +72,7 @@ public sealed class ApplicationLaunchTests(ITestOutputHelper output)
         ProcessDefinition definition = new("fixed-command", EProcessMode.Managed, Path.Combine(Environment.SystemDirectory, "cmd.exe"), ["/c", "exit", "0"], Environment.SystemDirectory, Launch: new(Window: EProcessWindowMode.NoWindow));
         using System.Diagnostics.Process process = new WindowsApplicationPlatform().Start(definition);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
-        await process.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+        await ProcessCompletion.WaitAsync(process, timeout.Token).ConfigureAwait(true);
         Assert.Equal(0, process.ExitCode);
     }
 

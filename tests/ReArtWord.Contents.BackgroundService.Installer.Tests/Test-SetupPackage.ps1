@@ -33,13 +33,21 @@ function Assert-SetupLaunch([string] $Directory) {
             }
         }
     } finally {
-        if ($started -and -not $process.HasExited) {
-            if (-not $process.CloseMainWindow() -or -not $process.WaitForExit($exitTimeoutMilliseconds)) {
-                $process.Kill()
-                if (-not $process.WaitForExit($exitTimeoutMilliseconds)) { throw 'The setup test process did not stop.' }
+        try {
+            if ($started) {
+                # .NETのWindows版HasExitedは、互換性維持のためOSの終了シグナルより先に終了コードを確認します。
+                # https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Diagnostics.Process/src/System/Diagnostics/ProcessManager.Windows.cs#L285-L319
+                # 終了コードが取得済みでもファイルは解放前の場合があるため、配置を動かす前のWaitForExitを省略しません。
+                # 詳細と見直し条件はRuntime/Processes/ProcessCompletion.csと同じです。通常終了・強制終了の猶予は維持します。
+                $closing = $process.HasExited -or $process.CloseMainWindow()
+                if (-not $closing -or -not $process.WaitForExit($exitTimeoutMilliseconds)) {
+                    if (-not $process.HasExited) { $process.Kill() }
+                    if (-not $process.WaitForExit($exitTimeoutMilliseconds)) { throw 'The setup test process did not stop.' }
+                }
             }
+        } finally {
+            $process.Dispose()
         }
-        $process.Dispose()
     }
 }
 

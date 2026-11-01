@@ -13,6 +13,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Contracts.Workflow;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Archives;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 
@@ -155,7 +156,7 @@ public sealed class ClusterArchiveProcessTests
         Task<string> error = process.StandardError.ReadToEndAsync(cancellationToken);
         try
         {
-            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            await ProcessCompletion.WaitAsync(process, cancellationToken).ConfigureAwait(false);
             await Task.WhenAll(output, error).ConfigureAwait(false);
             string text = await output.ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(text))
@@ -169,8 +170,8 @@ public sealed class ClusterArchiveProcessTests
             if (!process.HasExited)
             {
                 process.Kill(true);
-                await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
             }
+            await ProcessCompletion.WaitAsync(process, CancellationToken.None).ConfigureAwait(false);
             await Task.WhenAll(output, error).ConfigureAwait(false);
         }
     }

@@ -8,6 +8,7 @@ using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Capture;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Input;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Desktop;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Desktop;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.CoreService.Desktop.Video;
 
@@ -48,7 +49,7 @@ internal static class DesktopVideo
                 Task output = DrainAsync(probe, false, timeout.Token);
                 try
                 {
-                    await probe.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+                    await ProcessCompletion.WaitAsync(probe, timeout.Token).ConfigureAwait(false);
                     await Task.WhenAll(error, output).ConfigureAwait(false);
                     if (probe.ExitCode == 0)
                     {
@@ -311,7 +312,7 @@ internal static class DesktopVideo
     {
         try
         {
-            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            await ProcessCompletion.WaitAsync(process, cancellationToken).ConfigureAwait(false);
             await lifetime.CancelAsync().ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -328,7 +329,7 @@ internal static class DesktopVideo
         {
             process.Kill(true);
         }
-        await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        await ProcessCompletion.WaitAsync(process, cancellationToken).ConfigureAwait(false);
         try
         {
             await Task.WhenAll(error, output).ConfigureAwait(false);

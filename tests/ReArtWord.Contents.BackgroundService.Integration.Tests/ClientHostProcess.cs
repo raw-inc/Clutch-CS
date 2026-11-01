@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 
@@ -98,8 +99,8 @@ internal sealed class ClientHostProcess : IAsyncDisposable
             if (!process.HasExited)
             {
                 process.Kill(true);
-                await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
             }
+            await ProcessCompletion.WaitAsync(process, cancellationToken).ConfigureAwait(false);
             process.Dispose();
             process = null;
         }

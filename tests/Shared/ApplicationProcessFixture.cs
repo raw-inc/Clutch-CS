@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -73,9 +74,12 @@ internal sealed class ApplicationProcessFixture : IDisposable
             {
                 using Process process = Process.GetProcessById(int.Parse(entry[0], CultureInfo.InvariantCulture));
                 DateTimeOffset started = DateTimeOffset.Parse(entry[1], CultureInfo.InvariantCulture);
-                if (!process.HasExited && new DateTimeOffset(process.StartTime.ToUniversalTime()) == started)
+                if (!ProcessCompletion.HasExited(process) && new DateTimeOffset(process.StartTime.ToUniversalTime()) == started)
                 {
-                    process.Kill(true);
+                    if (!process.HasExited)
+                    {
+                        process.Kill(true);
+                    }
                     process.WaitForExit();
                 }
             }

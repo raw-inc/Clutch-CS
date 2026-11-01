@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Runtime.InteropServices;
@@ -128,10 +129,13 @@ internal sealed class ClientUpdateInstallation : IAsyncDisposable
     /// <returns>元実体の終了確認です。</returns>
     internal async Task StopOriginalAsync(CancellationToken cancellationToken = default)
     {
-        if (original is not null && !original.HasExited)
+        if (original is not null)
         {
-            original.Kill(false);
-            await original.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            if (!original.HasExited)
+            {
+                original.Kill(false);
+            }
+            await ProcessCompletion.WaitAsync(original, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -146,8 +150,8 @@ internal sealed class ClientUpdateInstallation : IAsyncDisposable
                 if (!helper.HasExited)
                 {
                     helper.Kill(false);
-                    await helper.WaitForExitAsync().ConfigureAwait(false);
                 }
+                await ProcessCompletion.WaitAsync(helper).ConfigureAwait(false);
                 helper.Dispose();
             }
             await StopOriginalAsync().ConfigureAwait(false);
@@ -166,7 +170,7 @@ internal sealed class ClientUpdateInstallation : IAsyncDisposable
                         if (string.Equals(process.MainModule?.FileName, Path.Combine(Installed, Manifest.EntryPoint), StringComparison.OrdinalIgnoreCase))
                         {
                             process.Kill(false);
-                            await process.WaitForExitAsync().ConfigureAwait(false);
+                            await ProcessCompletion.WaitAsync(process).ConfigureAwait(false);
                         }
                     }
                     catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException)

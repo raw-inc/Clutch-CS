@@ -4,6 +4,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Management;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Processes;
 
@@ -118,7 +119,7 @@ public sealed class HostPowerController
                 return NodeResult.Failure("host.power.notStarted", "The OS power request could not be started.", EOutcome.NotExecuted);
             }
             using CancellationTokenSource deadline = new(TimeSpan.FromSeconds(15));
-            await process.WaitForExitAsync(deadline.Token).ConfigureAwait(false);
+            await ProcessCompletion.WaitAsync(process, deadline.Token).ConfigureAwait(false);
             if (process.ExitCode == 0)
             {
                 return NodeResult.Success();

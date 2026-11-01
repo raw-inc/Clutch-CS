@@ -5,6 +5,7 @@ using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Input;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Video;
 using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
 
@@ -83,7 +84,7 @@ public sealed class DesktopSwitchTests
             using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
             try
             {
-                await process.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+                await ProcessCompletion.WaitAsync(process, timeout.Token).ConfigureAwait(true);
                 Assert.Equal(0, process.ExitCode);
                 Assert.Equal(name, await File.ReadAllTextAsync(path, timeout.Token).ConfigureAwait(true));
                 Assert.Equal(before, WindowsInputDesktop.Name());
@@ -96,7 +97,7 @@ public sealed class DesktopSwitchTests
                 {
                     process.Kill(true);
                 }
-                await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(true);
+                await ProcessCompletion.WaitAsync(process, CancellationToken.None).ConfigureAwait(true);
             }
         }
         finally

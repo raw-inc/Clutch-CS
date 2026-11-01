@@ -29,11 +29,16 @@ internal static class Program
         await File.WriteAllTextAsync(marker + ".tmp", Environment.ProcessId.ToString(CultureInfo.InvariantCulture)).ConfigureAwait(false);
         File.Move(marker + ".tmp", marker);
         string wait = "wait";
+        string heldFiles = "held-files";
         string grace = "grace";
         string pipe = "pipe";
         string inputMode = "input";
         string inheritedOutput = "inherited-output", inheritedEmpty = "inherited-empty", inheritedFailure = "inherited-failure";
         string diagnosticSuccess = "diagnostic-success", diagnosticFailure = "diagnostic-failure";
+        if (string.Equals(text, heldFiles, StringComparison.Ordinal))
+        {
+            return await ProcessHandleFixture.RunAsync(args[1]).ConfigureAwait(false);
+        }
         if (string.Equals(text, diagnosticSuccess, StringComparison.Ordinal) || string.Equals(text, diagnosticFailure, StringComparison.Ordinal))
         {
             await Console.Out.WriteAsync("completed").ConfigureAwait(false);

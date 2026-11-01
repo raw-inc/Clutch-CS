@@ -3,6 +3,7 @@ using ReArtWord.Contents.BackgroundService.Runtime.Processes.Commands;
 using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Processes;
 
@@ -85,7 +86,7 @@ public sealed class BoundedProcessRunnerTests
                     {
                         child.Kill(true);
                     }
-                    await child.WaitForExitAsync(CancellationToken.None).ConfigureAwait(true);
+                    await ProcessCompletion.WaitAsync(child, CancellationToken.None).ConfigureAwait(true);
                 }
             }
         }
