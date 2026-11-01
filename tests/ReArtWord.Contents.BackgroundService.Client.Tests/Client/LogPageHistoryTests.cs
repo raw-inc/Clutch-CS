@@ -99,9 +99,17 @@ public sealed class LogPageHistoryTests
         LogSearchPage first = await history.ReadAsync(0).ConfigureAwait(true);
         using CancellationTokenSource cancellation = new();
         Task<LogSearchPage> pending = history.ReadAsync(1, cancellation.Token);
-        await started.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
-        await cancellation.CancelAsync().ConfigureAwait(true);
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending).ConfigureAwait(true);
+        try
+        {
+            await started.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
+            await cancellation.CancelAsync().ConfigureAwait(true);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending).ConfigureAwait(true);
+        }
+        finally
+        {
+            await cancellation.CancelAsync().ConfigureAwait(true);
+            await ((Task)pending).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
         Assert.Equal(0, history.PageIndex);
         Assert.Same(first, await history.ReadAsync(0).ConfigureAwait(true));
         blocking = false;

@@ -159,11 +159,19 @@ public sealed class LogSearchSessionTests
             return null;
         });
         using Task<LogSearchPage> pending = session.NextAsync(cancellation.Token);
-        await started.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => session.NextAsync()).ConfigureAwait(true);
-        await cancellation.CancelAsync().ConfigureAwait(true);
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending).ConfigureAwait(true);
-        Assert.Equal(2, reads);
+        try
+        {
+            await started.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => session.NextAsync()).ConfigureAwait(true);
+            await cancellation.CancelAsync().ConfigureAwait(true);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending).ConfigureAwait(true);
+            Assert.Equal(2, reads);
+        }
+        finally
+        {
+            await cancellation.CancelAsync().ConfigureAwait(true);
+            await ((Task)pending).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
     }
 
     /// <summary>クラスタ数に応じてバッファを制限し、一回のページを無制限に保持しません。</summary>

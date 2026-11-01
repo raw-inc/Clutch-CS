@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO.Pipes;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
@@ -14,7 +15,7 @@ public sealed class HostPowerReadTests
 {
     /// <summary>入力照会専用の補助経路で、コンソールの実入力を取得します。</summary>
     /// <returns>サービス側から使う固定pipe契約の確認です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task ReadsConsoleInputThroughTheOneShotWorkerAsync()
     {
         if (!OperatingSystem.IsWindows())
@@ -61,7 +62,7 @@ public sealed class HostPowerReadTests
 
     /// <summary>クラスタごとの仮の設定でなく、PC共通の値と版を読みます。</summary>
     /// <returns>二つの実プロセスと管理通信の確認です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task ReadsTheSamePowerSettingsFromIndependentCoreProcessesAsync()
     {
         if (!OperatingSystem.IsWindows())

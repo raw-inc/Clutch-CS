@@ -31,31 +31,35 @@ public sealed class TerminalNotificationTests
         Guid id = Guid.NewGuid(), owner = Guid.NewGuid();
         TerminalSession session = new(process, id, "fixture", owner, new(new SessionTestLog(), "test"));
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = session.ConfigureAwait(true);
-        using Task waiting = session.WaitAsync(0, owner);
-        Assert.False(waiting.IsCompleted);
-        await process.Output.WriteAsync(new byte[]
-{
- 65
-}
-).ConfigureAwait(true);
-        await waiting.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
-        Assert.Equal("QQ==", session.Read(0).Data);
-        _ = await session.InputAsync(new(id, owner, 0, Data: "YQ==")).ConfigureAwait(true);
-        _ = await session.InputAsync(new(id, owner, 1, Data: "Yg==")).ConfigureAwait(true);
-        Assert.Equal(0, process.Resizes);
-        _ = await session.InputAsync(new(id, owner, 2, Columns: 120, Rows: 40)).ConfigureAwait(true);
-        _ = await session.InputAsync(new(id, owner, 3, Columns: 120, Rows: 40)).ConfigureAwait(true);
-        Assert.Equal(1, process.Resizes);
-        Assert.Equal(2, process.WriterStream.Length);
-        using Task ownership = session.WaitAsync(1, owner);
-        Assert.False(ownership.IsCompleted);
-        _ = await session.ClaimAsync(Guid.NewGuid()).ConfigureAwait(true);
-        await ownership.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
         using CancellationTokenSource cancelled = new();
-        using Task idle = session.WaitAsync(1, session.View.Owner, cancelled.Token);
-        await cancelled.CancelAsync().ConfigureAwait(true);
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => idle).ConfigureAwait(true);
-
+        Task waiting = session.WaitAsync(0, owner, cancelled.Token);
+        Task ownership = Task.CompletedTask, idle = Task.CompletedTask;
+        try
+        {
+            Assert.False(waiting.IsCompleted);
+            await process.Output.WriteAsync(new byte[] { 65 }).ConfigureAwait(true);
+            await waiting.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
+            Assert.Equal("QQ==", session.Read(0).Data);
+            _ = await session.InputAsync(new(id, owner, 0, Data: "YQ==")).ConfigureAwait(true);
+            _ = await session.InputAsync(new(id, owner, 1, Data: "Yg==")).ConfigureAwait(true);
+            Assert.Equal(0, process.Resizes);
+            _ = await session.InputAsync(new(id, owner, 2, Columns: 120, Rows: 40)).ConfigureAwait(true);
+            _ = await session.InputAsync(new(id, owner, 3, Columns: 120, Rows: 40)).ConfigureAwait(true);
+            Assert.Equal(1, process.Resizes);
+            Assert.Equal(2, process.WriterStream.Length);
+            ownership = session.WaitAsync(1, owner, cancelled.Token);
+            Assert.False(ownership.IsCompleted);
+            _ = await session.ClaimAsync(Guid.NewGuid()).ConfigureAwait(true);
+            await ownership.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
+            idle = session.WaitAsync(1, session.View.Owner, cancelled.Token);
+            await cancelled.CancelAsync().ConfigureAwait(true);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => idle).ConfigureAwait(true);
+        }
+        finally
+        {
+            await cancelled.CancelAsync().ConfigureAwait(true);
+            await Task.WhenAll(waiting, ownership, idle).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
     }
 
     /// <summary>実シェルを起動しない対話ストリームです。</summary>

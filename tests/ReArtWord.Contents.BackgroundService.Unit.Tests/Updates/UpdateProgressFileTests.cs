@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Updates;
@@ -13,13 +14,9 @@ public sealed class UpdateProgressFileTests : IDisposable
 
     /// <summary>読み始めの共有競合を待ち、完全なJSONだけを返します。</summary>
     /// <returns>進捗ポーリング側の一時エラーの回帰確認です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task ReaderWaitsForTransientFileSharingAsync()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
         string path = Path.Combine(directory, "progress.json");
         await UpdateProgressFile.WriteAsync(path, "committed").ConfigureAwait(true);
         Task<string?> reading = Task.FromResult<string?>(null);
@@ -63,15 +60,11 @@ public sealed class UpdateProgressFileTests : IDisposable
 
     /// <summary>Windowsの実共有違反またはアクセス拒否が解消すると、同じ準備本文の保存だけを完了します。</summary>
     /// <returns>一時競合の間は旧記録を保ち、解消後に新記録へ置換する確認です。</returns>
-    [Theory]
+    [WindowsTheory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task TransientReplacementFailureRetainsCommittedProgressAsync(bool readOnly)
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
         string path = Path.Combine(directory, "progress.json");
         await UpdateProgressFile.WriteAsync(path, "previous").ConfigureAwait(true);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
@@ -99,13 +92,9 @@ public sealed class UpdateProgressFileTests : IDisposable
 
     /// <summary>恒久的な権限問題を成功扱いせず、有限の待機後に原因と旧記録を残します。</summary>
     /// <returns>アクセス拒否の上限と原子的保存の確認です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task PersistentAccessDenialStopsWithoutReplacingCommittedProgressAsync()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
         string path = Path.Combine(directory, "progress.json");
         await UpdateProgressFile.WriteAsync(path, "previous").ConfigureAwait(true);
         File.SetAttributes(path, FileAttributes.ReadOnly);
@@ -125,22 +114,25 @@ public sealed class UpdateProgressFileTests : IDisposable
 
     /// <summary>共有競合を待つ間の中止は保存を進めず、既存記録を残します。</summary>
     /// <returns>中止後に競合が解消しても再開しない確認です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task CancellationStopsReplacementRetryAsync()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
         string path = Path.Combine(directory, "progress.json");
         await UpdateProgressFile.WriteAsync(path, "previous").ConfigureAwait(true);
         using CancellationTokenSource cancellation = new();
         using (FileStream reader = new(path, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
             Task saving = UpdateProgressFile.WriteAsync(path, "next", cancellation.Token);
-            await Task.Delay(100).ConfigureAwait(true);
-            Assert.False(saving.IsCompleted);
-            await cancellation.CancelAsync().ConfigureAwait(true);
+            try
+            {
+                await Task.Delay(100).ConfigureAwait(true);
+                Assert.False(saving.IsCompleted);
+            }
+            finally
+            {
+                await cancellation.CancelAsync().ConfigureAwait(true);
+                await saving.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+            }
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => saving).ConfigureAwait(true);
         }
         Assert.Equal("previous", JsonSerializer.Deserialize<string>(await File.ReadAllTextAsync(path).ConfigureAwait(true)));

@@ -182,6 +182,7 @@ public sealed class IterationValueMergeBoundaryTests
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = fixture.ConfigureAwait(true);
         using CancellationTokenSource cancellation = new(TimeSpan.FromSeconds(10));
         Task<ExecutionReport> run = fixture.Engine.ExecuteAsync(ValueMergeFixture.Compile(fixture, IterationValueMergeTests.Definition(false, true)), "button", IterationValueMergeTests.Input("cancel"), cancellationToken: cancellation.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable executionLifetime = new TestTaskLifetime(run, cancellation).ConfigureAwait(true);
         await entered.Task.WaitAsync(cancellation.Token).ConfigureAwait(true);
         await cancellation.CancelAsync().ConfigureAwait(true);
         ExecutionReport report = await run.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);

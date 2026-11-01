@@ -5,6 +5,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Management;
 using ReArtWord.Contents.BackgroundService.Contracts.Terminal;
 using ReArtWord.Contents.BackgroundService.CoreService.Terminal;
 using ReArtWord.Contents.BackgroundService.CoreService.Windows;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
@@ -53,7 +54,7 @@ public sealed class TerminalIdentityTests
     }
 
     /// <summary>通常モードのトークンがSYSTEMや昇格管理者へ置き換わりません。</summary>
-    [Fact]
+    [WindowsFact]
     public void UserTokenHasTheRequestedIdentityAndElevation()
     {
         if (!OperatingSystem.IsWindows())
@@ -76,7 +77,7 @@ public sealed class TerminalIdentityTests
     }
 
     /// <summary>未ログオンだけをSYSTEM起動の対象とし、通常モードや権限エラーでは代替しません。</summary>
-    [Theory]
+    [WindowsTheory]
     [InlineData(true, 1U, 1008, true)]
     [InlineData(true, 1U, 1312, true)]
     [InlineData(true, uint.MaxValue, 87, true)]

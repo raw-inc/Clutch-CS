@@ -82,7 +82,10 @@ public sealed class OptionalHttpDictionaryIterationTests
             };
         }
         Runtime.Workflows.Compilation.CompiledWorkflow compiled = IterationTests.Compile(fixture, definition);
-        ExecutionReport report = await fixture.Engine.ExecuteAsync(compiled).WaitAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(true);
+        using CancellationTokenSource cancellation = new();
+        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(compiled, cancellationToken: cancellation.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable executionLifetime = new TestTaskLifetime(running, cancellation).ConfigureAwait(true);
+        ExecutionReport report = await running.WaitAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(true);
         if (status != 404)
         {
             Assert.Equal(EOutcome.Failed, report.Outcome);
@@ -94,8 +97,9 @@ public sealed class OptionalHttpDictionaryIterationTests
                 Assert.Equal(0, limiter.Active);
                 Assert.Equal(1, limiter.Released);
                 NodeValue recoveredRows = NodeValue.FromObject(new[] { new { id = "available", statusCode = 200, body = "{\"first\":null,\"second\":\"voice-a\"}" } });
-                ExecutionReport recovered = await fixture.Engine.ExecuteAsync(compiled, "limit", new Dictionary<string, NodeValue> { ["value"] = recoveredRows })
-                    .WaitAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(true);
+                Task<ExecutionReport> recovering = fixture.Engine.ExecuteAsync(compiled, "limit", new Dictionary<string, NodeValue> { ["value"] = recoveredRows }, cancellationToken: cancellation.Token);
+                await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable recoveryLifetime = new TestTaskLifetime(recovering, cancellation).ConfigureAwait(true);
+                ExecutionReport recovered = await recovering.WaitAsync(TimeSpan.FromSeconds(30)).ConfigureAwait(true);
                 Assert.Equal(EOutcome.Succeeded, recovered.Outcome);
                 Assert.Equal(0, limiter.Active);
                 Assert.Equal(2, limiter.Released);

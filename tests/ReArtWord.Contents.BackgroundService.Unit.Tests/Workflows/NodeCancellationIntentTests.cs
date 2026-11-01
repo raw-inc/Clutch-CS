@@ -36,12 +36,13 @@ public sealed class NodeCancellationIntentTests
     public async Task RunningWorkCanBeCancelledAfterOriginalDeadlineAsync()
     {
         TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource finish = new(TaskCreationOptions.RunContinuationsAsynchronously);
         WorkflowFixture fixture = new(new WorkflowFixture.ActionNode(async (_, token) =>
         {
             entered.TrySetResult();
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(5), token).ConfigureAwait(false);
+                await finish.Task.WaitAsync(token).ConfigureAwait(false);
                 return NodeResult.Success();
             }
             catch (OperationCanceledException)
@@ -54,10 +55,19 @@ public sealed class NodeCancellationIntentTests
         NodeExecutor executor = new(fixture.Registry, fixture.Peers, fixture.Sources, fixture.Safety, timeProvider: clock);
         RemoteExecutionRequest request = Request(fixture, clock.GetUtcNow().AddMinutes(1));
         Task<NodeResult> execution = executor.ExecuteAsync(request);
-        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
-        clock.Now = clock.Now.AddHours(1);
-        Assert.True(await executor.RequestCancellationAsync(request.Id, request.ExpiresAt));
-        Assert.Equal(EOutcome.Cancelled, (await execution.ConfigureAwait(true)).Outcome);
+        try
+        {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
+            clock.Now = clock.Now.AddHours(1);
+            Assert.True(await executor.RequestCancellationAsync(request.Id, request.ExpiresAt));
+            Assert.Equal(EOutcome.Cancelled, (await execution.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true)).Outcome);
+        }
+        finally
+        {
+            // 取消を確かめる前に自然終了させず、試験が失敗した場合も処理を残しません。
+            finish.TrySetResult();
+            _ = await execution.ConfigureAwait(true);
+        }
     }
 
     /// <summary>未開始intentは有限件数で、期限後の新規受付で解放します。</summary>

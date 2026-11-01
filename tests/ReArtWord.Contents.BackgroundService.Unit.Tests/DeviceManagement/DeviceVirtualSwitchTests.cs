@@ -2,6 +2,7 @@ using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement;
 using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement.Network;
 using ReArtWord.Contents.BackgroundService.Infrastructure.DeviceManagement;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.DeviceManagement;
@@ -11,7 +12,7 @@ public sealed class DeviceVirtualSwitchTests
 {
     /// <summary>種別ごとの引数と実状態を照合し、同名だけで成功にしません。</summary>
     /// <returns>実PowerShellを使った変更と型付き再読取りの確認です。</returns>
-    [Theory]
+    [WindowsTheory]
     [InlineData("Internal", null)]
     [InlineData("Private", null)]
     [InlineData("External", true)]
@@ -29,7 +30,7 @@ public sealed class DeviceVirtualSwitchTests
         {
             return;
         }
-        JsonElement result = await DevicePowerShellTests.RunFixtureAsync("VirtualSwitchBoundary", new { action = "virtualSwitchCreate", scenario = "normal", change });
+        JsonElement result = await DevicePowerShellTests.RunFixtureAsync("VirtualSwitchBoundary", new { action = "virtualSwitchCreate", scenario = "normal", change }).ConfigureAwait(true);
         Assert.True(result.GetProperty("success").GetBoolean());
         Assert.True(result.GetProperty("started").GetBoolean());
         JsonElement call = Assert.Single(result.GetProperty("calls").EnumerateArray());
@@ -45,7 +46,7 @@ public sealed class DeviceVirtualSwitchTests
 
     /// <summary>名前をwildcard検索せず、管理OSの接続だけのスイッチを識別子で削除します。</summary>
     /// <returns>指定したスイッチの消失まで確認します。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task DeletesExactSwitchAndChecksAbsenceAsync()
     {
         DeviceChangeRequest request = Request(EDeviceAction.VirtualSwitchDelete, "switch/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", new());
@@ -54,7 +55,7 @@ public sealed class DeviceVirtualSwitchTests
         {
             return;
         }
-        JsonElement result = await DevicePowerShellTests.RunFixtureAsync("VirtualSwitchBoundary", new { action = "virtualSwitchDelete", scenario = "normal", change = new DeviceVirtualSwitchChange() });
+        JsonElement result = await DevicePowerShellTests.RunFixtureAsync("VirtualSwitchBoundary", new { action = "virtualSwitchDelete", scenario = "normal", change = new DeviceVirtualSwitchChange() }).ConfigureAwait(true);
         Assert.True(result.GetProperty("success").GetBoolean());
         Assert.Equal("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", Assert.Single(result.GetProperty("calls").EnumerateArray()).GetProperty("id").GetString());
         Assert.True(DeviceChangeConfirmation.Matches(request, DeviceSnapshots.Create(result.GetProperty("after"))));
@@ -63,7 +64,7 @@ public sealed class DeviceVirtualSwitchTests
 
     /// <summary>変更前に判明した危険・競合と、開始後のOS障害を区別します。</summary>
     /// <returns>再実行や別対象への変更を行わない確認です。</returns>
-    [Theory]
+    [WindowsTheory]
     [InlineData("virtualSwitchDelete", "guest", "Device.VirtualSwitchInUse", false)]
     [InlineData("virtualSwitchDelete", "protected", "Device.VirtualSwitchReadOnly", false)]
     [InlineData("virtualSwitchDelete", "changed", "Device.SettingsChanged", false)]
@@ -81,7 +82,7 @@ public sealed class DeviceVirtualSwitchTests
             return;
         }
         DeviceVirtualSwitchChange change = new("created", "External", "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", true);
-        JsonElement result = await DevicePowerShellTests.RunFixtureAsync("VirtualSwitchBoundary", new { action, scenario, change });
+        JsonElement result = await DevicePowerShellTests.RunFixtureAsync("VirtualSwitchBoundary", new { action, scenario, change }).ConfigureAwait(true);
         Assert.False(result.GetProperty("success").GetBoolean());
         Assert.Equal(started, result.GetProperty("started").GetBoolean());
         Assert.Equal(reason, result.GetProperty("reason").GetString());

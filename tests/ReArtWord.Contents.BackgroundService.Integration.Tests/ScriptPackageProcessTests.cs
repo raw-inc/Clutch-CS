@@ -43,7 +43,7 @@ public sealed class ScriptPackageProcessTests
         await RunAsync(second, workflow.Id).ConfigureAwait(true);
         await first.StopAsync().ConfigureAwait(true);
         await first.StartAsync().ConfigureAwait(true);
-        await CorePeer.WaitAsync(async token => (await first.GetAsync<JsonElement>("health", token).ConfigureAwait(true)).GetProperty("ready").GetBoolean()).ConfigureAwait(true);
+        await WaitForRejoinAsync(first, second).ConfigureAwait(true);
         Assert.Equal(selected.Revision, (await first.GetAsync<ScriptRuntimeCatalog>("scripts.runtimes.list", new ScriptRuntimeQuery("javascript")).ConfigureAwait(true)).Revision);
         await RunAsync(second, workflow.Id).ConfigureAwait(true);
     }
@@ -116,7 +116,18 @@ public sealed class ScriptPackageProcessTests
         await RunAsync(second, workflow.Id).ConfigureAwait(true);
         await first.StopAsync().ConfigureAwait(true);
         await first.StartAsync().ConfigureAwait(true);
-        await CorePeer.WaitAsync(async token =>
+        await WaitForRejoinAsync(first, second).ConfigureAwait(true);
+        ScriptPackageOperation duplicate = await first.PostAsync<ScriptPackageOperation>("scripts.packages.change", request).ConfigureAwait(true);
+        Assert.True(duplicate.Completed);
+        Assert.Equal(finished.Revision, duplicate.Revision);
+        await RunAsync(second, workflow.Id).ConfigureAwait(true);
+        Assert.False(File.Exists(marker));
+    }
+
+    /// <summary>再起動した実体を、依頼元も通常参加済みとして認識するまで待ちます。</summary>
+    /// <returns>両端から見た現在の実体の参加完了です。</returns>
+    private static Task WaitForRejoinAsync(CorePeer first, CorePeer second, CancellationToken cancellationToken = default)
+        => CorePeer.WaitAsync(async token =>
         {
             JsonElement current = await first.GetAsync<JsonElement>("status", token).ConfigureAwait(true);
             JsonElement[] ownPeers = current.GetProperty("peers").EnumerateArray().ToArray();
@@ -125,13 +136,7 @@ public sealed class ScriptPackageProcessTests
             return ownPeers.Count(peer => peer.GetProperty("status").GetString() is "ready") == 2
                 && remote.GetProperty("peers").EnumerateArray().Any(peer => peer.GetProperty("peerId").GetString() is "a"
                     && peer.GetProperty("instanceId").GetGuid() == instance && peer.GetProperty("status").GetString() is "ready");
-        }).ConfigureAwait(true);
-        ScriptPackageOperation duplicate = await first.PostAsync<ScriptPackageOperation>("scripts.packages.change", request).ConfigureAwait(true);
-        Assert.True(duplicate.Completed);
-        Assert.Equal(finished.Revision, duplicate.Revision);
-        await RunAsync(second, workflow.Id).ConfigureAwait(true);
-        Assert.False(File.Exists(marker));
-    }
+        }, cancellationToken);
 
     /// <summary>別Peerへのノード配送と専用ワーカーの結果を照会します。</summary>
     /// <returns>完了した元実行の確認です。</returns>

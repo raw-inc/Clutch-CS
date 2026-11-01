@@ -35,8 +35,11 @@ public sealed class ConcurrencyWorkflowTests
         }, limiter);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = fixture.ConfigureAwait(true);
         CompiledWorkflow workflow = IterationTests.Compile(fixture, Definition(end));
-        ExecutionReport[] reports = await Task.WhenAll(Enumerable.Range(0, 5).Select(value => fixture.Engine.ExecuteAsync(workflow, "limit",
-            new Dictionary<string, NodeValue>(StringComparer.Ordinal) { ["value"] = NodeValue.FromObject(value) }))).WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+        using CancellationTokenSource cancellation = new();
+        Task<ExecutionReport[]> running = Task.WhenAll(Enumerable.Range(0, 5).Select(value => fixture.Engine.ExecuteAsync(workflow, "limit",
+            new Dictionary<string, NodeValue>(StringComparer.Ordinal) { ["value"] = NodeValue.FromObject(value) }, cancellationToken: cancellation.Token)));
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = new TestTaskLifetime(running, cancellation).ConfigureAwait(true);
+        ExecutionReport[] reports = await running.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
         Assert.All(reports, report => Assert.Equal(EOutcome.Succeeded, report.Outcome));
         Assert.Equal([0, 1, 2, 3, 4], values.Order());
         Assert.Equal(5, limiter.Released);

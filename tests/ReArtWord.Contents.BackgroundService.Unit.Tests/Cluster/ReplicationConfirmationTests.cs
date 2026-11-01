@@ -25,6 +25,7 @@ public sealed class ReplicationConfirmationTests
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
         Task<DurableReceipt> writing = peer.ReplicateAsync(repository.PausedOperation,
             [new("workflow:confirmation", "value", null, NodeValue.FromObject(42))], timeout.Token).AsTask();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable writingLifetime = new TestTaskLifetime(writing, timeout).ConfigureAwait(true);
         try
         {
             await repository.ReadCaptured.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
@@ -53,6 +54,8 @@ public sealed class ReplicationConfirmationTests
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
         Task<DurableReceipt> writing = peer.ReplicateAsync(repository.PausedOperation,
             [new("workflow:confirmation", "value", null, NodeValue.FromObject(42))], timeout.Token).AsTask();
+        Task<Exception?> completion = Record.ExceptionAsync(() => writing);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable writingLifetime = new TestTaskLifetime(completion, timeout).ConfigureAwait(true);
         try
         {
             await repository.ReadCaptured.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
@@ -66,7 +69,7 @@ public sealed class ReplicationConfirmationTests
         {
             repository.ContinueWrite.TrySetResult();
         }
-        await Assert.ThrowsAsync<InvalidDataException>(async () => await writing.ConfigureAwait(false)).ConfigureAwait(true);
+        Assert.IsType<InvalidDataException>(await completion.ConfigureAwait(true));
         Assert.Equal(1, repository.Commits);
     }
 

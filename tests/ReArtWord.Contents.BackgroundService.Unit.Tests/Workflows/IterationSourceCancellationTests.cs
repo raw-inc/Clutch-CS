@@ -21,6 +21,7 @@ public sealed class IterationSourceCancellationTests
     {
         ArraySource source = new();
         TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource finish = new(TaskCreationOptions.RunContinuationsAsynchronously);
         int calls = 0;
         WorkflowFixture fixture = new(source, new ForEachNode(), new WorkflowFixture.ActionNode(async (_, token) =>
         {
@@ -28,7 +29,7 @@ public sealed class IterationSourceCancellationTests
             entered.TrySetResult();
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(10), token).ConfigureAwait(false);
+                await finish.Task.WaitAsync(token).ConfigureAwait(false);
                 return NodeResult.Success();
             }
             catch (OperationCanceledException)
@@ -53,19 +54,26 @@ public sealed class IterationSourceCancellationTests
         };
         CompiledWorkflow plan = IterationTests.Compile(fixture, definition);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(5));
-        await fixture.Sources.ApplyAsync(plan, timeout.Token).ConfigureAwait(true);
-        Guid cause = await source.EmitAsync(timeout.Token).ConfigureAwait(true);
-        await entered.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
-        NodeResult stopped = await fixture.Sources.StopAsync(definition.Id, "source", true, cancellationToken: timeout.Token).ConfigureAwait(true);
-        Assert.Equal(EOutcome.Cancelled, stopped.Outcome);
-        Assert.Equal(1, calls);
-        RemoteExecutionRequest cancellation = Assert.Single(requested);
-        Assert.Equal("body", cancellation.Node.Id);
-        Assert.Equal(cause, cancellation.CausationId);
-        ExecutionReport? report = fixture.Engine.Find(cause);
-        Assert.NotNull(report);
-        Assert.Equal(EOutcome.Cancelled, report.Outcome);
-        Assert.Equal(1, IterationTests.Loop(report).Iteration!.Started);
+        try
+        {
+            await fixture.Sources.ApplyAsync(plan, timeout.Token).ConfigureAwait(true);
+            Guid cause = await source.EmitAsync(timeout.Token).ConfigureAwait(true);
+            await entered.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
+            NodeResult stopped = await fixture.Sources.StopAsync(definition.Id, "source", true, cancellationToken: timeout.Token).ConfigureAwait(true);
+            Assert.Equal(EOutcome.Cancelled, stopped.Outcome);
+            Assert.Equal(1, calls);
+            RemoteExecutionRequest cancellation = Assert.Single(requested);
+            Assert.Equal("body", cancellation.Node.Id);
+            Assert.Equal(cause, cancellation.CausationId);
+            ExecutionReport? report = fixture.Engine.Find(cause);
+            Assert.NotNull(report);
+            Assert.Equal(EOutcome.Cancelled, report.Outcome);
+            Assert.Equal(1, IterationTests.Loop(report).Iteration!.Started);
+        }
+        finally
+        {
+            finish.TrySetResult();
+        }
     }
 
     /// <summary>配列を一件として発生させる継続入力試験用の構成です。</summary>

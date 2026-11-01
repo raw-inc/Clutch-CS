@@ -13,6 +13,7 @@ using Xunit.Abstractions;
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Persistence;
 
 /// <summary>過去本文の件数が増えても、繰り返す復旧確認の割当と書込みを増やしません。</summary>
+[Collection("Performance")]
 public sealed class RecoveryStateCostTests(ITestOutputHelper output)
 {
     /// <summary>用途ルーターを経由し、過去本文を読む明示書出しと現在状態の確認を区別します。</summary>
@@ -31,7 +32,7 @@ public sealed class RecoveryStateCostTests(ITestOutputHelper output)
         Assert.True(await repository.ImportAsync(new([current], receipts)).ConfigureAwait(true));
         string expected = RepositoryStateVersion.Hash(await repository.ExportAsync().ConfigureAwait(true));
         DateTime beforeWrite = File.GetLastWriteTimeUtc(Path.Combine(files.Root, "state.db"));
-        long before = GC.GetAllocatedBytesForCurrentThread();
+        long before = GC.GetTotalAllocatedBytes(true);
         Stopwatch watch = Stopwatch.StartNew();
         for (int attempt = 0; attempt < 10; attempt++)
         {
@@ -40,7 +41,7 @@ public sealed class RecoveryStateCostTests(ITestOutputHelper output)
             Assert.Empty(state.Receipts);
             Assert.Equal(expected, RepositoryStateVersion.Hash(state));
         }
-        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        long allocated = GC.GetTotalAllocatedBytes(true) - before;
         output.WriteLine($"receipts={count}, elapsedMs={watch.Elapsed.TotalMilliseconds:F1}, allocatedBytes={allocated}");
         Assert.InRange(allocated, 0, 4194304);
         Assert.Equal(beforeWrite, File.GetLastWriteTimeUtc(Path.Combine(files.Root, "state.db")));

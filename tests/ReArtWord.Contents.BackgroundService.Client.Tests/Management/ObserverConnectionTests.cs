@@ -12,14 +12,16 @@ using Xunit;
 namespace ReArtWord.Contents.BackgroundService.Client.Tests.Management;
 
 /// <summary>全NIC設定の保存・互換読込・失敗時の既存監視維持を実ソケットで確認します。</summary>
-public sealed class ObserverConnectionTests
+public sealed class ObserverConnectionTests : IDisposable
 {
+    private readonly DirectoryInfo directory = Directory.CreateTempSubdirectory("contents-observers-");
+
     /// <summary>旧一件を読み、複数へ変更後も再起動で同じ割当を復元します。</summary>
     /// <returns>一件から複数への移行と明示的な監視解除の検証です。</returns>
     [Fact]
     public async Task LegacyBindingMigratesAndMultipleBindingsSurviveRestartAsync()
     {
-        string root = Directory.CreateTempSubdirectory("contents-observers-").FullName;
+        string root = directory.FullName;
         ClientNetworkBinding first = Binding();
         ClientNetworkBinding second = Binding();
         await File.WriteAllTextAsync(Path.Combine(root, "network.json"), JsonSerializer.Serialize(first, ContractJson.Options));
@@ -47,7 +49,7 @@ public sealed class ObserverConnectionTests
     [Fact]
     public async Task InvalidReplacementKeepsPreviousBindingsAndPersistenceAsync()
     {
-        string root = Directory.CreateTempSubdirectory("contents-observers-").FullName;
+        string root = directory.FullName;
         ClientNetworkBinding first = Binding();
         ObserverConnection connection = new(root);
         await using ConfiguredAsyncDisposable connectionLifetime = connection.ConfigureAwait(true);
@@ -66,7 +68,7 @@ public sealed class ObserverConnectionTests
     [Fact]
     public async Task MissingInterfaceDoesNotDisableAvailableBindingAsync()
     {
-        string root = Directory.CreateTempSubdirectory("contents-observers-").FullName;
+        string root = directory.FullName;
         ClientNetworkBinding available = Binding();
         ClientNetworkBinding missing = Binding() with { InterfaceId = Guid.NewGuid().ToString("B") };
         ObserverConnection connection = new(root);
@@ -86,4 +88,7 @@ public sealed class ObserverConnectionTests
         string nic = NetworkInterface.GetAllNetworkInterfaces().First(item => item.GetIPProperties().UnicastAddresses.Any(address => address.Address.Equals(IPAddress.Loopback))).Id;
         return new(nic, "127.0.0.1", "127.255.255.255", port);
     }
+
+    /// <summary>すべての監視を停止した後、試験専用の設定保存先を削除します。</summary>
+    public void Dispose() => directory.Delete(true);
 }

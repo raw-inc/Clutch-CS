@@ -13,7 +13,8 @@ public sealed class PipeProcessTests
     public async Task ReplacesUdpExclusionsWhileRunningAsync()
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(12));
-        using var client = new PipeTestClient();
+        var client = new PipeTestClient();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = client.ConfigureAwait(true);
         await client.ReadEventAsync("hello", timeout.Token).ConfigureAwait(true);
         await client.SendAsync("{\"type\":\"start\",\"sources\":[{\"backend\":\"demo\",\"adapterId\":\"demo0\"}]}", timeout.Token).ConfigureAwait(true);
         await client.ReadStateAsync(true, timeout.Token).ConfigureAwait(true);
@@ -55,7 +56,8 @@ public sealed class PipeProcessTests
     public async Task ReportsOverloadAndRestartsAsync()
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-        using var client = new PipeTestClient(demoRate: 20000);
+        var client = new PipeTestClient(demoRate: 20000);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = client.ConfigureAwait(true);
         await client.ReadEventAsync("hello", timeout.Token).ConfigureAwait(true);
         await client.SendAsync("{\"type\":\"start\",\"sources\":[{\"backend\":\"demo\",\"adapterId\":\"demo0\"}]}", timeout.Token).ConfigureAwait(true);
         await client.ReadStateAsync(true, timeout.Token).ConfigureAwait(true);
@@ -95,7 +97,8 @@ public sealed class PipeProcessTests
     public async Task StreamsDemoAndStopsWithoutPacketsAfterAcknowledgementAsync()
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(12));
-        using var client = new PipeTestClient();
+        var client = new PipeTestClient();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = client.ConfigureAwait(true);
         JsonElement hello = await client.ReadEventAsync("hello", timeout.Token).ConfigureAwait(true);
         Assert.Equal(1, hello.GetProperty("protocolVersion").GetInt32());
         await client.SendAsync("{\"type\":\"list\"}", timeout.Token).ConfigureAwait(true);
@@ -146,7 +149,8 @@ public sealed class PipeProcessTests
     public async Task SuppressesTcpWithoutSuppressingUdpAsync()
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        using var client = new PipeTestClient();
+        var client = new PipeTestClient();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = client.ConfigureAwait(true);
         await client.ReadEventAsync("hello", timeout.Token).ConfigureAwait(true);
         await client.SendAsync("{\"type\":\"start\",\"sources\":[{\"backend\":\"demo\",\"adapterId\":\"demo0\"}],\"excludedTcpEndpoints\":[{\"address\":\"127.0.0.2\",\"port\":80}]}", timeout.Token).ConfigureAwait(true);
         await client.ReadStateAsync(true, timeout.Token).ConfigureAwait(true);
@@ -180,7 +184,8 @@ public sealed class PipeProcessTests
     public async Task ExitsOnPipeClosureAsync(bool closeOutput)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        using var client = new PipeTestClient();
+        var client = new PipeTestClient();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = client.ConfigureAwait(true);
         await client.ReadEventAsync("hello", timeout.Token).ConfigureAwait(true);
         await client.SendAsync("{\"type\":\"start\",\"sources\":[{\"backend\":\"demo\",\"adapterId\":\"demo0\"}]}", timeout.Token).ConfigureAwait(true);
         await client.ReadStateAsync(true, timeout.Token).ConfigureAwait(true);
@@ -204,7 +209,8 @@ public sealed class PipeProcessTests
     public async Task RejectsInvalidOrIncompleteFramesAsync(int length)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        using var client = new PipeTestClient();
+        var client = new PipeTestClient();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = client.ConfigureAwait(true);
         await client.ReadEventAsync("hello", timeout.Token).ConfigureAwait(true);
         var header = new byte[4];
         BinaryPrimitives.WriteInt32BigEndian(header, length);
@@ -222,7 +228,8 @@ public sealed class PipeProcessTests
     public async Task ExitsWhenReaderStopsConsumingAsync()
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(12));
-        using var client = new PipeTestClient();
+        var client = new PipeTestClient();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = client.ConfigureAwait(true);
         await client.ReadEventAsync("hello", timeout.Token).ConfigureAwait(true);
         await client.SendAsync("{\"type\":\"start\",\"sources\":[{\"backend\":\"demo\",\"adapterId\":\"demo0\"}]}", timeout.Token).ConfigureAwait(true);
         await client.ReadStateAsync(true, timeout.Token).ConfigureAwait(true);

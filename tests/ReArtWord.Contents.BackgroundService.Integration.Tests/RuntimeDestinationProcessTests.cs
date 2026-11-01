@@ -34,8 +34,8 @@ public sealed class RuntimeDestinationProcessTests
         using UdpClient receiver = new(new IPEndPoint(IPAddress.Loopback, 0));
         using UdpClient sender = new();
         int destinationPort = ((IPEndPoint)receiver.Client.LocalEndPoint!).Port;
-        int inputPort = CorePeer.AvailablePort();
-        int sourcePort = CorePeer.AvailablePort();
+        int[] ports = CorePeer.AvailableUdpPorts(2);
+        int inputPort = ports[0], sourcePort = ports[1];
         JsonElement empty = JsonSerializer.SerializeToElement(new { });
         WorkflowDefinition definition = new("dynamic-osc-destination", "Continuous OSC routing", [
             new("receive", "osc.udp.receive", JsonSerializer.SerializeToElement(new { interfaceId = first.InterfaceId, localAddress = "127.0.0.1", localPort = inputPort, count = 0 }), Target: new(EExecutionScope.One, ["a"])),
@@ -72,9 +72,9 @@ public sealed class RuntimeDestinationProcessTests
             }
             return false;
         }).ConfigureAwait(true);
-        using CancellationTokenSource deadline = new(TimeSpan.FromSeconds(20));
         for (int index = 0; index < 3; index++)
         {
+            using CancellationTokenSource deadline = new(TimeSpan.FromSeconds(20));
             byte[] legacyPing = Convert.FromHexString("2F616C6C2F70696E67000000");
             await sender.SendAsync(legacyPing, new IPEndPoint(IPAddress.Loopback, inputPort), deadline.Token).ConfigureAwait(true);
             await CheckIgnoredPingsAsync(first, definition.Id, (index * 2) + 1, deadline.Token).ConfigureAwait(true);
@@ -94,12 +94,13 @@ public sealed class RuntimeDestinationProcessTests
             await CheckIgnoredPingsAsync(first, definition.Id, (index * 2) + 2, deadline.Token).ConfigureAwait(true);
             Assert.Equal(0, receiver.Available);
         }
-        JsonElement final = await first.GetAsync<JsonElement>("status", deadline.Token).ConfigureAwait(true);
+        using CancellationTokenSource finalRead = new(TimeSpan.FromSeconds(20));
+        JsonElement final = await first.GetAsync<JsonElement>("status", finalRead.Token).ConfigureAwait(true);
         JsonElement listener = Assert.Single(final.GetProperty("sources").EnumerateArray());
         Assert.Equal(session, listener.GetProperty("id").GetGuid());
         Assert.Equal("listening", listener.GetProperty("status").GetProperty("state").GetString());
         Assert.Equal(JsonValueKind.Null, listener.GetProperty("result").ValueKind);
-        JsonElement remote = await second.GetAsync<JsonElement>("status", deadline.Token).ConfigureAwait(true);
+        JsonElement remote = await second.GetAsync<JsonElement>("status", finalRead.Token).ConfigureAwait(true);
         Assert.Contains(remote.GetProperty("nodeValues").EnumerateArray(), value => string.Equals(value.GetProperty("nodeId").GetString(), "send", StringComparison.Ordinal));
     }
 

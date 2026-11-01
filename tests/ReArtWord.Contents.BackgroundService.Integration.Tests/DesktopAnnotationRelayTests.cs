@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.IO.MemoryMappedFiles;
 using System.Net.Http.Json;
 using System.Net.WebSockets;
 using System.Text.Json;
@@ -17,7 +18,7 @@ public sealed class DesktopAnnotationRelayTests
 {
     /// <summary>操作側と閲覧側の所属Coreが異なっても物理座標と色、軌跡を共有します。</summary>
     /// <returns>二つのCore、ClientHost、二つのworkerの実通信です。</returns>
-    [HostedDesktopFact]
+    [HostedDesktopFact(minimumWindows10Build: 19041)]
     public async Task WindowsAnnotationsReachAnotherCoreOnTheSameHostAsync()
     {
         if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041))
@@ -25,12 +26,22 @@ public sealed class DesktopAnnotationRelayTests
             return;
         }
         string cluster = Guid.NewGuid().ToString("N");
+        string group = "Local\\Contents.Annotation.Integration." + Guid.NewGuid().ToString("N");
+        string groupVariable = "CONTENTS_TEST_ANNOTATION_GROUP";
+        string configuration = new DirectoryInfo(AppContext.BaseDirectory).Parent!.Name;
+        string executable = Path.GetFullPath("../../../../ReArtWord.Contents.BackgroundService.Unit.Tests/Management/FixtureHost/bin/"
+            + configuration + "/net10.0/ContentsDesktopFixture.exe", AppContext.BaseDirectory);
         int port = CorePeer.AvailablePort();
-        CorePeer first = new(cluster + "a", "a", port, true, "annotation-host"), second = new(cluster + "b", "b", port, true, "annotation-host");
-        ClientHostProcess client = new(Path.Combine(first.DirectoryPath, "client"));
+        CorePeer first = new(cluster + "a", "a", port, true, "annotation-host", executablePath: executable);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = first.ConfigureAwait(true);
+        CorePeer second = new(cluster + "b", "b", port, true, "annotation-host", executablePath: executable);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable secondLifetime = second.ConfigureAwait(true);
+        ClientHostProcess client = new(Path.Combine(first.DirectoryPath, "client"));
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable clientLifetime = client.ConfigureAwait(true);
+
+        // 同じ試験のCoreだけが共有する名前を、子ワーカーにも引き継ぎます。
+        first.StartEnvironment[groupVariable] = group;
+        second.StartEnvironment[groupVariable] = group;
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(45));
         await first.StartAsync(timeout.Token).ConfigureAwait(true); await second.StartAsync(timeout.Token).ConfigureAwait(true); await client.StartAsync(timeout.Token).ConfigureAwait(true);
         using HttpResponseMessage binding = await client.SendAsync(HttpMethod.Post, "client/network", new ClientNetworkBinding(first.InterfaceId, "127.0.0.1", "127.255.255.255", port), cancellationToken: timeout.Token).ConfigureAwait(true);
@@ -54,6 +65,10 @@ public sealed class DesktopAnnotationRelayTests
         await SendAsync(viewer, [12, 1], timeout.Token).ConfigureAwait(true);
         await SendAsync(controller, [12, 1], timeout.Token).ConfigureAwait(true);
         await ReceiveAsync(viewer, 12, timeout.Token).ConfigureAwait(true); await ReceiveAsync(controller, 12, timeout.Token).ConfigureAwait(true);
+
+        // 実ワーカーが試験専用の共有領域を開いたことも確認します。
+        using MemoryMappedFile shared = MemoryMappedFile.OpenExisting(group, MemoryMappedFileRights.Read);
+        Assert.False(shared.SafeMemoryMappedFileHandle.IsInvalid);
         await SendAsync(viewer, [13, 0, 80, 80, 2, 9], timeout.Token).ConfigureAwait(true);
         JsonElement remote = await UntilAsync(controller, value => value.GetProperty("points").GetArrayLength() != 0, timeout.Token).ConfigureAwait(true);
         Assert.Equal(monitor.Left + 80, remote.GetProperty("points")[0][3].GetInt32());

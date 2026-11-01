@@ -153,18 +153,28 @@
             </Grid>
           </StackPanel>
           <StackPanel Classes="form" IsVisible="{Binding IsMaintenance}">
+            <!--
+              Avalonia 12.1.4では、表示先に未接続のRadioButtonが同じ既定のグループ管理を共有します。
+              同じGroupNameを付けた2画面を表示前に準備すると、内部設定は選択済みでも他方の選択表示が外れました。
+              https://github.com/AvaloniaUI/Avalonia/blob/12.1.4/src/Avalonia.Controls/RadioButtonGroupManager.cs#L18-L30
+              https://github.com/AvaloniaUI/Avalonia/blob/12.1.4/src/Avalonia.Controls/RadioButton.cs#L87-L113
+              GroupNameを省略した場合は同じ親の子要素だけが排他対象になるため、更新・修復の選択肢を各StackPanel内にまとめます。
+              https://github.com/AvaloniaUI/Avalonia/blob/12.1.4/src/Avalonia.Controls/RadioButtonGroupManager.cs#L130-L146
+              OneWayでの表示とCommandによる設定変更は維持します。選択解除の通知で設定を上書きさせないためです。
+              名前付きグループへ戻す場合は、MaintenanceSelectionTestsで表示前の画面間にも選択が干渉しないことを確認します。
+            -->
             <StackPanel Classes="form" IsVisible="{Binding IsUpdate}">
-              <RadioButton x:Name="SkipActiveUpdateOption" GroupName="UpdateMode" Content="{Binding Text[UpdateSkipActive]}" IsChecked="{Binding Settings.SkipActive, Mode=OneWay}" Command="{Binding Settings.ChooseUpdateModeCommand}" CommandParameter="{x:Static models:EInstallerUpdateMode.SkipActive}" />
-              <RadioButton x:Name="StopActiveUpdateOption" GroupName="UpdateMode" Content="{Binding Text[UpdateStopActive]}" IsChecked="{Binding Settings.StopActive, Mode=OneWay}" Command="{Binding Settings.ChooseUpdateModeCommand}" CommandParameter="{x:Static models:EInstallerUpdateMode.StopActive}" />
-              <RadioButton x:Name="FleetUpdateOption" GroupName="UpdateMode" Content="{Binding Text[UpdateFleet]}" IsChecked="{Binding Settings.Fleet, Mode=OneWay}" Command="{Binding Settings.ChooseUpdateModeCommand}" CommandParameter="{x:Static models:EInstallerUpdateMode.Fleet}" />
+              <RadioButton x:Name="SkipActiveUpdateOption" Content="{Binding Text[UpdateSkipActive]}" IsChecked="{Binding Settings.SkipActive, Mode=OneWay}" Command="{Binding Settings.ChooseUpdateModeCommand}" CommandParameter="{x:Static models:EInstallerUpdateMode.SkipActive}" />
+              <RadioButton x:Name="StopActiveUpdateOption" Content="{Binding Text[UpdateStopActive]}" IsChecked="{Binding Settings.StopActive, Mode=OneWay}" Command="{Binding Settings.ChooseUpdateModeCommand}" CommandParameter="{x:Static models:EInstallerUpdateMode.StopActive}" />
+              <RadioButton x:Name="FleetUpdateOption" Content="{Binding Text[UpdateFleet]}" IsChecked="{Binding Settings.Fleet, Mode=OneWay}" Command="{Binding Settings.ChooseUpdateModeCommand}" CommandParameter="{x:Static models:EInstallerUpdateMode.Fleet}" />
               <TextBlock Classes="note" Text="{Binding Text[UpdateFleetHelp]}" IsVisible="{Binding Settings.Fleet}" />
             </StackPanel>
             <StackPanel Classes="form" IsVisible="{Binding IsRepair}">
-              <RadioButton GroupName="RepairMode" Content="{Binding Text[AutoRepair]}" IsChecked="{Binding Settings.Repair.Automatic, Mode=OneWay}" Command="{Binding Settings.Repair.ChooseModeCommand}" CommandParameter="{x:Static models:EInstallerRepairMode.Automatic}">
+              <RadioButton Content="{Binding Text[AutoRepair]}" IsChecked="{Binding Settings.Repair.Automatic, Mode=OneWay}" Command="{Binding Settings.Repair.ChooseModeCommand}" CommandParameter="{x:Static models:EInstallerRepairMode.Automatic}">
               </RadioButton>
-              <RadioButton GroupName="RepairMode" Content="{Binding Text[Reinstall]}" IsChecked="{Binding Settings.Repair.Reinstall, Mode=OneWay}" Command="{Binding Settings.Repair.ChooseModeCommand}" CommandParameter="{x:Static models:EInstallerRepairMode.Reinstall}">
+              <RadioButton Content="{Binding Text[Reinstall]}" IsChecked="{Binding Settings.Repair.Reinstall, Mode=OneWay}" Command="{Binding Settings.Repair.ChooseModeCommand}" CommandParameter="{x:Static models:EInstallerRepairMode.Reinstall}">
               </RadioButton>
-              <RadioButton x:Name="ArchiveRestoreOption" GroupName="RepairMode" Content="{Binding Text[ArchiveRestore]}" IsChecked="{Binding Settings.Repair.RestoreArchive, Mode=OneWay}" Command="{Binding Settings.Repair.ChooseModeCommand}" CommandParameter="{x:Static models:EInstallerRepairMode.Archive}" />
+              <RadioButton x:Name="ArchiveRestoreOption" Content="{Binding Text[ArchiveRestore]}" IsChecked="{Binding Settings.Repair.RestoreArchive, Mode=OneWay}" Command="{Binding Settings.Repair.ChooseModeCommand}" CommandParameter="{x:Static models:EInstallerRepairMode.Archive}" />
               <StackPanel x:Name="ArchiveRestoreFields" Classes="form" IsVisible="{Binding Settings.Repair.RestoreArchive}" Margin="24,0,0,0">
                 <TextBlock Classes="note" Text="{Binding Text[ArchiveRestoreHelp]}" />
                 <TextBlock Text="{Binding Text[ArchiveFile]}" />

@@ -109,6 +109,7 @@ public sealed class WorkflowProgressLifetimeTests
         finally
         {
             release.TrySetResult();
+            await running.ConfigureAwait(true);
         }
         Assert.Equal(EOutcome.Succeeded, (await running.ConfigureAwait(true)).Outcome);
         Assert.Contains(completions, session => session.ScopeId == observed!.ScopeId);

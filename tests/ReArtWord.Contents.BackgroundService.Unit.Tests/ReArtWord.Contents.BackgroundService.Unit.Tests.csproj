@@ -12,6 +12,8 @@
     <Compile Include="../Shared/PerformanceTestGroup.cs" Link="Performance/PerformanceTestGroup.cs" />
     <Compile Include="../Shared/HostedDesktopFactAttribute.cs" Link="Management/HostedDesktopFactAttribute.cs" />
     <Compile Include="../Shared/HostedDesktopTheoryAttribute.cs" Link="Management/HostedDesktopTheoryAttribute.cs" />
+    <Compile Include="../Shared/WindowsFactAttribute.cs" Link="WindowsFactAttribute.cs" />
+    <Compile Include="../Shared/WindowsTheoryAttribute.cs" Link="WindowsTheoryAttribute.cs" />
     <!-- 実UDP・SQLite・外部processを使うfixture同士の同時数だけを制限し、fixture内部の並行試験は維持します。 -->
     <None Update="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="DeviceManagement/*.ps1" CopyToOutputDirectory="PreserveNewest" />

@@ -174,25 +174,46 @@ public sealed class InternalDataBridgeTests
         /// <summary>本番と同じローカル経路を起動します。</summary>
         /// <returns>呼出元が終了する試験用の構成です。</returns>
         // 抑制理由: bridgeとHttpClientの所有権を返却するFixtureへ移し、各試験のawait usingで解放します。
-        [SuppressMessage("Reliability", "CA2000", Justification = "作成したbridgeとHttpClientはFixture.DisposeAsyncが所有して解放します。")]
+        // 抑制理由: 初期化失敗を維持し、後始末も失敗した場合は両方を試験結果へ返します。
+        [SuppressMessage("Reliability", "CA2000", Justification = "作成したbridgeとHttpClientはFixture.DisposeAsyncが所有して解放します。"),
+         SuppressMessage("SourceQuality", "RAW330", Justification = "後始末後も初期化失敗の例外と発生位置を維持します。"),
+         SuppressMessage("SourceQuality", "RAW333", Justification = "初期化失敗と後始末の失敗を両方保持して試験結果へ返します。")]
         internal static async Task<Fixture> CreateAsync(EAvailabilityOffline mode)
         {
             string directory = Path.Combine(Path.GetTempPath(), "contents-k2-" + Guid.NewGuid().ToString("N"));
             RemoteData remote = new(mode);
-            InternalDataBridge bridge = new(remote, directory);
-            WebApplicationBuilder builder = WebApplication.CreateBuilder();
-            builder.WebHost.UseUrls("http://127.0.0.1:0");
-            builder.Logging.ClearProviders();
-            builder.Services.AddSingleton(bridge);
-            builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
-            WebApplication app = builder.Build();
-            app.Use((Microsoft.AspNetCore.Http.HttpContext context, Microsoft.AspNetCore.Http.RequestDelegate next) => ClientErrors.HandleAsync(context, next, context.RequestAborted));
-            InternalDataRoutes.Map(app);
-            await app.StartAsync().ConfigureAwait(false);
-            HttpClient client = new() { BaseAddress = new Uri(app.Urls.Single()) };
-            client.DefaultRequestHeaders.Add("X-Contents-Cluster", "cluster");
-            client.DefaultRequestHeaders.Add("X-Contents-Peer", "peer");
-            return new(app, bridge, directory, remote, client);
+            InternalDataBridge? bridge = null;
+            WebApplication? app = null;
+            HttpClient? client = null;
+            try
+            {
+                bridge = new(remote, directory);
+                WebApplicationBuilder builder = WebApplication.CreateBuilder();
+                builder.WebHost.UseUrls("http://127.0.0.1:0");
+                builder.Logging.ClearProviders();
+                builder.Services.AddSingleton(bridge);
+                builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
+                app = builder.Build();
+                app.Use((Microsoft.AspNetCore.Http.HttpContext context, Microsoft.AspNetCore.Http.RequestDelegate next) => ClientErrors.HandleAsync(context, next, context.RequestAborted));
+                InternalDataRoutes.Map(app);
+                await app.StartAsync().ConfigureAwait(false);
+                client = new() { BaseAddress = new Uri(app.Urls.Single()) };
+                client.DefaultRequestHeaders.Add("X-Contents-Cluster", "cluster");
+                client.DefaultRequestHeaders.Add("X-Contents-Peer", "peer");
+                return new(app, bridge, directory, remote, client);
+            }
+            catch (Exception startupError)
+            {
+                try
+                {
+                    await CleanupAsync(client, app, bridge, directory).ConfigureAwait(false);
+                }
+                catch (Exception cleanupError)
+                {
+                    throw new AggregateException(startupError, cleanupError);
+                }
+                throw;
+            }
         }
 
         /// <summary>実HTTP応答を共通DTOで読みます。</summary>
@@ -206,12 +227,41 @@ public sealed class InternalDataBridgeTests
 
         /// <summary>実待受と一時保存先を終了します。</summary>
         /// <returns>終了完了です。</returns>
-        public async ValueTask DisposeAsync()
+        public ValueTask DisposeAsync() => CleanupAsync(client, app, bridge, directory);
+
+        /// <summary>初期化途中でも待受を終了し、所有する保存領域を回収します。</summary>
+        /// <returns>試験専用のHTTP接続と保存資源の解放です。</returns>
+        private static async ValueTask CleanupAsync(HttpClient? client, WebApplication? app, InternalDataBridge? bridge, string directory)
         {
-            client.Dispose();
-            await app.DisposeAsync().ConfigureAwait(false);
-            bridge.Dispose();
-            Directory.Delete(directory, true);
+            try
+            {
+                client?.Dispose();
+                if (app is not null)
+                {
+                    try
+                    {
+                        await app.StopAsync().ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        await app.DisposeAsync().ConfigureAwait(false);
+                    }
+                }
+            }
+            finally
+            {
+                try
+                {
+                    bridge?.Dispose();
+                }
+                finally
+                {
+                    if (Directory.Exists(directory))
+                    {
+                        Directory.Delete(directory, true);
+                    }
+                }
+            }
         }
     }
 

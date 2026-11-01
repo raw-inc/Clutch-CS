@@ -116,7 +116,7 @@ public sealed class CSharpSourceTests
         finally
         {
             await stop.CancelAsync().ConfigureAwait(true);
-            await running.WaitAsync(TimeSpan.FromSeconds(15)).ConfigureAwait(true);
+            await running.ConfigureAwait(true);
         }
     }
 
@@ -145,7 +145,6 @@ public sealed class CSharpSourceTests
     [InlineData("public static async IAsyncEnumerable<string> Run() { await Task.Yield(); yield return \"first\"; throw new InvalidOperationException(\"source failure\"); }", 1)]
     public async Task WorkerFailureIsNotSuccessfulCompletionAsync(string code, int expected)
     {
-        using CancellationTokenSource deadline = new(TimeSpan.FromSeconds(20));
         Observability.RecordingWorkflowLog log = new();
         NodeExecutionContext initial = Context(code, new { }, maximum: 1024) with { Log = log };
         int count = 0;
@@ -156,6 +155,7 @@ public sealed class CSharpSourceTests
         }, () => false);
         for (int attempt = 0; attempt < 5; attempt++)
         {
+            using CancellationTokenSource deadline = new(TimeSpan.FromSeconds(20));
             count = 0;
             log.Entries.Clear();
             NodeResult result = await Node().RunAsync(source, deadline.Token).ConfigureAwait(true);

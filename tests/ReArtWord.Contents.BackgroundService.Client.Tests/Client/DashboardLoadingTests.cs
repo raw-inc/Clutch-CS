@@ -43,27 +43,48 @@ public sealed class DashboardLoadingTests
             component = typeof(AllClustersOverview);
             parameters.Add(nameof(AllClustersOverview.Active), true);
         }
-        HtmlRootComponent output = await renderer.Dispatcher.InvokeAsync(() => renderer.BeginRenderingComponent(component, ParameterView.FromDictionary(parameters))).ConfigureAwait(true);
-        string pending = await renderer.Dispatcher.InvokeAsync(output.ToHtmlString).ConfigureAwait(true);
-        Assert.Contains("aria-busy=\"true\"", pending, StringComparison.Ordinal);
-        Assert.Contains("skeleton", pending, StringComparison.Ordinal);
-        Assert.DoesNotContain("No peers have been discovered.", pending, StringComparison.Ordinal);
-        handler.Complete();
-        await output.QuiescenceTask.ConfigureAwait(true);
-        string completed = await renderer.Dispatcher.InvokeAsync(output.ToHtmlString).ConfigureAwait(true);
-        Assert.Contains("aria-busy=\"false\"", completed, StringComparison.Ordinal);
-        Assert.DoesNotContain("skeleton", completed, StringComparison.Ordinal);
-        if (!allClusters)
+        HtmlRootComponent output = default;
+        Task loading = Task.CompletedTask;
+        try
         {
-            if (failure)
+            // 初回描画とその観測を同じDispatcher呼出しで行い、観測した後に応答を返します。
+            string pending = await renderer.Dispatcher.InvokeAsync(() =>
             {
-                Assert.DoesNotContain("No peers have been discovered.", completed, StringComparison.Ordinal);
-                Assert.Contains("unconfirmed", completed, StringComparison.OrdinalIgnoreCase);
-            }
-            else
+                output = renderer.BeginRenderingComponent(component, ParameterView.FromDictionary(parameters));
+                loading = output.QuiescenceTask;
+                try
+                {
+                    return output.ToHtmlString();
+                }
+                finally
+                {
+                    handler.Complete();
+                }
+            }).ConfigureAwait(true);
+            Assert.Contains("aria-busy=\"true\"", pending, StringComparison.Ordinal);
+            Assert.Contains("skeleton", pending, StringComparison.Ordinal);
+            Assert.DoesNotContain("No peers have been discovered.", pending, StringComparison.Ordinal);
+            await loading.ConfigureAwait(true);
+            string completed = await renderer.Dispatcher.InvokeAsync(output.ToHtmlString).ConfigureAwait(true);
+            Assert.Contains("aria-busy=\"false\"", completed, StringComparison.Ordinal);
+            Assert.DoesNotContain("skeleton", completed, StringComparison.Ordinal);
+            if (!allClusters)
             {
-                Assert.Contains("No peers have been discovered.", completed, StringComparison.Ordinal);
+                if (failure)
+                {
+                    Assert.DoesNotContain("No peers have been discovered.", completed, StringComparison.Ordinal);
+                    Assert.Contains("unconfirmed", completed, StringComparison.OrdinalIgnoreCase);
+                }
+                else
+                {
+                    Assert.Contains("No peers have been discovered.", completed, StringComparison.Ordinal);
+                }
             }
+        }
+        finally
+        {
+            handler.Complete();
+            await loading.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
     }
 
@@ -73,7 +94,7 @@ public sealed class DashboardLoadingTests
         private readonly TaskCompletionSource ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         /// <summary>取得を完了させます。</summary>
-        internal void Complete() => ready.SetResult();
+        internal void Complete() => ready.TrySetResult();
 
         /// <summary>応答が届くまで空のクラスタ一覧を返しません。</summary>
         /// <returns>制御された照会結果です。</returns>

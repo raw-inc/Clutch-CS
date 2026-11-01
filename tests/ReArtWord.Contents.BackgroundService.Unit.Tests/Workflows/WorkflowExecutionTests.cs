@@ -103,7 +103,9 @@ public sealed class WorkflowExecutionTests
         fixture.Safety.SetStopped("w", "n", true);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(5));
         Task<NodeResult?> first = fixture.Safety.WaitAsync("w", node, timeout.Token).AsTask();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = new TestTaskLifetime(first, timeout).ConfigureAwait(true);
         Task<NodeResult?> latest = fixture.Safety.WaitAsync("w", node, timeout.Token).AsTask();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable latestLifetime = new TestTaskLifetime(latest, timeout).ConfigureAwait(true);
 
         Assert.Equal("safety.replaced", (await first.ConfigureAwait(true))!.ReasonCode);
         Assert.False(latest.IsCompleted);

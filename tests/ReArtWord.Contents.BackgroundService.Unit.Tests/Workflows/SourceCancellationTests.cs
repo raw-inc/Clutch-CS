@@ -22,6 +22,7 @@ public sealed class SourceCancellationTests
         TestSource source = new();
         Channel<(string Workflow, CancellationToken Token)> entered = Channel.CreateUnbounded<(string, CancellationToken)>();
         TaskCompletionSource otherFinish = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource originalFinish = new(TaskCreationOptions.RunContinuationsAsynchronously);
         WorkflowFixture fixture = new(source, new WorkflowFixture.ActionNode(async (context, token) =>
         {
             await entered.Writer.WriteAsync((context.WorkflowId, token), token).ConfigureAwait(false);
@@ -30,14 +31,14 @@ public sealed class SourceCancellationTests
                 string other = "other";
                 if (string.Equals(context.WorkflowId, other, StringComparison.Ordinal))
                 {
-                    await otherFinish.Task.WaitAsync(TimeSpan.FromSeconds(5), token).ConfigureAwait(false);
+                    await otherFinish.Task.WaitAsync(token).ConfigureAwait(false);
                 }
                 else
                 {
                     string valueKey = "value";
                     if (context.Inputs[valueKey].Json.GetInt32() == 1)
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(5), token).ConfigureAwait(false);
+                        await originalFinish.Task.WaitAsync(token).ConfigureAwait(false);
                     }
                 }
                 return NodeResult.Success();
@@ -57,23 +58,31 @@ public sealed class SourceCancellationTests
         };
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(5));
         CompiledWorkflow plan = fixture.Compiler.Compile(Definition("source-workflow")).Workflow!;
-        await fixture.Sources.ApplyAsync(plan, timeout.Token);
-        await fixture.Sources.ApplyAsync(fixture.Compiler.Compile(Definition("other")).Workflow!, timeout.Token);
-        await source.EmitAsync("source-workflow", 1, timeout.Token);
-        (string _, CancellationToken original) = await entered.Reader.ReadAsync(timeout.Token);
-        await source.EmitAsync("other", 1, timeout.Token);
-        (string _, CancellationToken independent) = await entered.Reader.ReadAsync(timeout.Token);
-        NodeResult stopped = await fixture.Sources.StopAsync("source-workflow", "source", true, cancellationToken: timeout.Token);
-        Assert.Equal(EOutcome.Cancelled, stopped.Outcome);
-        Assert.True(original.IsCancellationRequested);
-        Assert.False(independent.IsCancellationRequested);
-        Assert.Equal("source-workflow", Assert.Single(cancellations).WorkflowId);
-        otherFinish.TrySetResult();
-        await fixture.Sources.StartAsync(Request(fixture, plan), timeout.Token);
-        await source.EmitAsync("source-workflow", 2, timeout.Token);
-        (string _, CancellationToken restarted) = await entered.Reader.ReadAsync(timeout.Token);
-        Assert.False(restarted.IsCancellationRequested);
-        Assert.Single(cancellations);
+        try
+        {
+            await fixture.Sources.ApplyAsync(plan, timeout.Token);
+            await fixture.Sources.ApplyAsync(fixture.Compiler.Compile(Definition("other")).Workflow!, timeout.Token);
+            await source.EmitAsync("source-workflow", 1, timeout.Token);
+            (string _, CancellationToken original) = await entered.Reader.ReadAsync(timeout.Token);
+            await source.EmitAsync("other", 1, timeout.Token);
+            (string _, CancellationToken independent) = await entered.Reader.ReadAsync(timeout.Token);
+            NodeResult stopped = await fixture.Sources.StopAsync("source-workflow", "source", true, cancellationToken: timeout.Token);
+            Assert.Equal(EOutcome.Cancelled, stopped.Outcome);
+            Assert.True(original.IsCancellationRequested);
+            Assert.False(independent.IsCancellationRequested);
+            Assert.Equal("source-workflow", Assert.Single(cancellations).WorkflowId);
+            otherFinish.TrySetResult();
+            await fixture.Sources.StartAsync(Request(fixture, plan), timeout.Token);
+            await source.EmitAsync("source-workflow", 2, timeout.Token);
+            (string _, CancellationToken restarted) = await entered.Reader.ReadAsync(timeout.Token);
+            Assert.False(restarted.IsCancellationRequested);
+            Assert.Single(cancellations);
+        }
+        finally
+        {
+            originalFinish.TrySetResult();
+            otherFinish.TrySetResult();
+        }
     }
 
     /// <summary>停止保持中の入力は未実行にし、解除後に古い入力を再開しません。</summary>
@@ -122,7 +131,7 @@ public sealed class SourceCancellationTests
         fixture.Dispatcher.Handler = async (request, _) =>
         {
             delivering.TrySetResult();
-            await delivery.Task.WaitAsync(TimeSpan.FromSeconds(5), CancellationToken.None).ConfigureAwait(false);
+            await delivery.Task.ConfigureAwait(false);
             return await fixture.Executor.ExecuteAsync(request, CancellationToken.None).ConfigureAwait(false);
         };
         fixture.Engine.NodeCancellationHandler = async (request, token) =>
@@ -132,12 +141,19 @@ public sealed class SourceCancellationTests
             return accepted;
         };
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(5));
-        await fixture.Sources.ApplyAsync(fixture.Compiler.Compile(Definition("before-delivery")).Workflow!, timeout.Token);
-        await source.EmitAsync("before-delivery", 1, timeout.Token);
-        await delivering.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
-        Assert.Equal(EOutcome.Cancelled, (await fixture.Sources.StopAsync("before-delivery", "source", true, cancellationToken: timeout.Token)).Outcome);
-        Assert.Equal(0, calls);
-        Assert.DoesNotContain(fixture.Engine.Recent(), report => report.Outcome == EOutcome.Succeeded);
+        try
+        {
+            await fixture.Sources.ApplyAsync(fixture.Compiler.Compile(Definition("before-delivery")).Workflow!, timeout.Token);
+            await source.EmitAsync("before-delivery", 1, timeout.Token);
+            await delivering.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
+            Assert.Equal(EOutcome.Cancelled, (await fixture.Sources.StopAsync("before-delivery", "source", true, cancellationToken: timeout.Token)).Outcome);
+            Assert.Equal(0, calls);
+            Assert.DoesNotContain(fixture.Engine.Recent(), report => report.Outcome == EOutcome.Succeeded);
+        }
+        finally
+        {
+            delivery.TrySetResult();
+        }
     }
 
     /// <summary>取消配送を確認できなければ、続行中の実処理を停止済みとしません。</summary>
@@ -153,19 +169,25 @@ public sealed class SourceCancellationTests
         {
             actual = token;
             entered.TrySetResult();
-            await finish.Task.WaitAsync(TimeSpan.FromSeconds(5), token).ConfigureAwait(false);
+            await finish.Task.WaitAsync(token).ConfigureAwait(false);
             return NodeResult.Success();
         }, true));
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = fixture.ConfigureAwait(true);
         fixture.Dispatcher.Handler = (request, _) => fixture.Executor.ExecuteAsync(request, CancellationToken.None);
         fixture.Engine.NodeCancellationHandler = (_, _) => Task.FromResult(false);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(5));
-        await fixture.Sources.ApplyAsync(fixture.Compiler.Compile(Definition("unconfirmed")).Workflow!, timeout.Token);
-        await source.EmitAsync("unconfirmed", 1, timeout.Token);
-        await entered.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
-        Assert.Equal(EOutcome.Unknown, (await fixture.Sources.StopAsync("unconfirmed", "source", true, cancellationToken: timeout.Token)).Outcome);
-        Assert.False(actual.IsCancellationRequested);
-        finish.TrySetResult();
+        try
+        {
+            await fixture.Sources.ApplyAsync(fixture.Compiler.Compile(Definition("unconfirmed")).Workflow!, timeout.Token);
+            await source.EmitAsync("unconfirmed", 1, timeout.Token);
+            await entered.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
+            Assert.Equal(EOutcome.Unknown, (await fixture.Sources.StopAsync("unconfirmed", "source", true, cancellationToken: timeout.Token)).Outcome);
+            Assert.False(actual.IsCancellationRequested);
+        }
+        finally
+        {
+            finish.TrySetResult();
+        }
     }
 
     /// <summary>通常入力だけを有限処理へ渡します。</summary>

@@ -15,13 +15,16 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Compilation;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Configuration;
 
 /// <summary>削除前の復元候補と、共有削除・競合・再送の境界を確認します。</summary>
-public sealed class WorkflowDeletionTests
+public sealed class WorkflowDeletionTests : IDisposable
 {
+    private readonly MediaTestFiles files = new();
+
     /// <summary>開始だけ記録された削除は結果不明として照会し、再送で進めません。</summary>
     /// <returns>中断境界の保存状態です。</returns>
     [Fact]
@@ -112,9 +115,12 @@ public sealed class WorkflowDeletionTests
         Assert.NotNull(await store.GetAsync("demo"));
     }
 
+    /// <summary>全Peerの終了後に試験用の保存先を削除します。</summary>
+    public void Dispose() => files.Dispose();
+
     /// <summary>独立保存先です。</summary>
     /// <returns>失敗を注入できるSQLiteです。</returns>
-    private static FailingRepository Repository() => new(new SqliteRepository(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "state.db")));
+    private FailingRepository Repository() => new(new SqliteRepository(Path.Combine(files.Root, Guid.NewGuid().ToString("N"), "state.db")));
 
     /// <summary>明示初期化したPeerです。</summary>
     /// <returns>試験専用クラスタです。</returns>

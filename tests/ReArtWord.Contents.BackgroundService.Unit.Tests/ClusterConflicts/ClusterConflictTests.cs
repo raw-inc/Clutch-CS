@@ -84,22 +84,32 @@ public sealed class ClusterConflictTests
     public async Task NonConflictingNodeEditsMergeFromActualCommonAncestor()
     {
         string root = Path.Combine(Path.GetTempPath(), "contents-auto-fork-" + Guid.NewGuid().ToString("N"));
-        SqliteRepository first = new(Path.Combine(root, "a.db"));
-        SqliteRepository second = new(Path.Combine(root, "b.db"));
-        NodeDefinition one = new("one", "test.action", JsonSerializer.SerializeToElement(new { }));
-        WorkflowDefinition definition = new("demo", "original", [one, one with { Id = "two" }], []);
-        DurableReceipt baseline = await first.ApplyBatchAsync(Guid.NewGuid(), [new("workflows", "demo", null, NodeValue.FromObject(Stored(definition)))]);
-        await second.ImportAsync(await first.ExportAsync());
-        WorkflowDefinition left = definition with { Nodes = [one with { Position = new NodePosition(1, 2) }, definition.Nodes[1]] };
-        WorkflowDefinition right = definition with { Nodes = [one, definition.Nodes[1] with { Position = new NodePosition(3, 4) }] };
-        await first.ApplyBatchAsync(Guid.NewGuid(), [new("workflows", "demo", baseline.Entries[0].Version, NodeValue.FromObject(Stored(left)))]);
-        await second.ApplyBatchAsync(Guid.NewGuid(), [new("workflows", "demo", baseline.Entries[0].Version, NodeValue.FromObject(Stored(right)))]);
-        await first.ImportAsync(await second.ExportAsync());
-        (bool safe, NodeValue? value) = await ConflictAutoMerge.CreateAsync(await first.GetConflictsAsync(string.Empty), first);
-        Assert.True(safe);
-        StoredWorkflow merged = value!.Json.Deserialize<StoredWorkflow>()!;
-        Assert.Equal(new NodePosition(1, 2), merged.Definition.Nodes[0].Position);
-        Assert.Equal(new NodePosition(3, 4), merged.Definition.Nodes[1].Position);
+        try
+        {
+            SqliteRepository first = new(Path.Combine(root, "a.db"));
+            SqliteRepository second = new(Path.Combine(root, "b.db"));
+            NodeDefinition one = new("one", "test.action", JsonSerializer.SerializeToElement(new { }));
+            WorkflowDefinition definition = new("demo", "original", [one, one with { Id = "two" }], []);
+            DurableReceipt baseline = await first.ApplyBatchAsync(Guid.NewGuid(), [new("workflows", "demo", null, NodeValue.FromObject(Stored(definition)))]);
+            await second.ImportAsync(await first.ExportAsync());
+            WorkflowDefinition left = definition with { Nodes = [one with { Position = new NodePosition(1, 2) }, definition.Nodes[1]] };
+            WorkflowDefinition right = definition with { Nodes = [one, definition.Nodes[1] with { Position = new NodePosition(3, 4) }] };
+            await first.ApplyBatchAsync(Guid.NewGuid(), [new("workflows", "demo", baseline.Entries[0].Version, NodeValue.FromObject(Stored(left)))]);
+            await second.ApplyBatchAsync(Guid.NewGuid(), [new("workflows", "demo", baseline.Entries[0].Version, NodeValue.FromObject(Stored(right)))]);
+            await first.ImportAsync(await second.ExportAsync());
+            (bool safe, NodeValue? value) = await ConflictAutoMerge.CreateAsync(await first.GetConflictsAsync(string.Empty), first);
+            Assert.True(safe);
+            StoredWorkflow merged = value!.Json.Deserialize<StoredWorkflow>()!;
+            Assert.Equal(new NodePosition(1, 2), merged.Definition.Nodes[0].Position);
+            Assert.Equal(new NodePosition(3, 4), merged.Definition.Nodes[1].Position);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, true);
+            }
+        }
     }
 
     /// <summary>内容に一致する定義の保存用データを作ります。</summary>

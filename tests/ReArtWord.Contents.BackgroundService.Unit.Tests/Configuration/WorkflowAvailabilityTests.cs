@@ -17,19 +17,22 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Compilation;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Configuration;
 
 /// <summary>用途別の保存不能方針を実ワークフロー保存・明示適用・復旧へ接続して検証します。</summary>
-public sealed class WorkflowAvailabilityTests
+public sealed class WorkflowAvailabilityTests : IDisposable
 {
+    private readonly MediaTestFiles files = new();
+
     /// <summary>未保存候補の採用結果が不明でも別操作による同候補再適用を行いません。</summary>
     /// <returns>保存失敗と採用不明を別に保つ結果です。</returns>
     [Fact]
     public async Task UnknownCandidateAdoptionIsNotExecutedAgain()
     {
-        string root = Path.Combine(Path.GetTempPath(), "contents-workflow-unknown-" + Guid.NewGuid().ToString("N"));
+        string root = files.Root;
         FailingRepository repository = new(new SqliteRepository(Path.Combine(root, "state.db")));
         using AvailabilityService availability = new("one", new(new Dictionary<EStoragePurpose, AvailabilityPolicy> { [EStoragePurpose.Configuration] = new(EAvailabilitySaveFailure.UseUnsaved) }), repository, root);
         await using PeerCluster cluster = Create(root, repository);
@@ -63,7 +66,7 @@ public sealed class WorkflowAvailabilityTests
     [InlineData(true, true)]
     public async Task RealJsonWriteFailureUsesOnlyExplicitRecoveryBackend(bool fallback, bool newWorkflow)
     {
-        string root = Path.Combine(Path.GetTempPath(), "contents-workflow-io-" + Guid.NewGuid().ToString("N"));
+        string root = files.Root;
         IDurableRepository repository = await RepositoryFactory.CreateAsync(root, "one", new(EStorageBackend.Sqlite, new Dictionary<EStoragePurpose, EStorageBackend> { [EStoragePurpose.Configuration] = EStorageBackend.Json }));
         EStorageBackend? backend = null;
         if (fallback)
@@ -114,7 +117,7 @@ public sealed class WorkflowAvailabilityTests
     [InlineData(EAvailabilitySaveFailure.UseUnsaved)]
     public async Task SaveFailurePolicyControlsActualEffectiveWithoutChangingRecovery(EAvailabilitySaveFailure policy)
     {
-        string root = Path.Combine(Path.GetTempPath(), "contents-workflow-availability-" + Guid.NewGuid().ToString("N"));
+        string root = files.Root;
         FailingRepository repository = new(new SqliteRepository(Path.Combine(root, "state.db")));
         using AvailabilityService availability = new("one", new(new Dictionary<EStoragePurpose, AvailabilityPolicy> { [EStoragePurpose.Configuration] = new(policy) }), repository, root);
         await using PeerCluster cluster = Create(root, repository);
@@ -151,7 +154,7 @@ public sealed class WorkflowAvailabilityTests
     [Fact]
     public async Task ExplicitCandidateAndLaterSnapshotFailureKeepTheirOwnPhases()
     {
-        string root = Path.Combine(Path.GetTempPath(), "contents-workflow-availability-" + Guid.NewGuid().ToString("N"));
+        string root = files.Root;
         FailingRepository repository = new(new SqliteRepository(Path.Combine(root, "state.db")));
         using AvailabilityService availability = new("one", new(new Dictionary<EStoragePurpose, AvailabilityPolicy> { [EStoragePurpose.Configuration] = new(EAvailabilitySaveFailure.UseUnsaved) }), repository, root);
         await using PeerCluster cluster = Create(root, repository);
@@ -183,6 +186,9 @@ public sealed class WorkflowAvailabilityTests
         DurableEntry effectiveRow = (await repository.ReadAsync("peer:one:effective", "demo").ConfigureAwait(true))!;
         Assert.Equal("original", effectiveRow.Value!.Json.Deserialize<StoredWorkflow>()!.Definition.Name);
     }
+
+    /// <summary>全Peerの終了後に試験用の保存先を削除します。</summary>
+    public void Dispose() => files.Dispose();
 
     /// <summary>独立ポートで通常参加する一Peerを用意します。</summary>
     /// <returns>実保存・複製を行うPeerです。</returns>

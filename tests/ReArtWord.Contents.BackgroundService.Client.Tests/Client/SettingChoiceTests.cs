@@ -28,6 +28,7 @@ public sealed class SettingChoiceTests
     [InlineData(true)]
     public async Task InventoryFollowsExecutionSelectionAndTheInterfaceConsumerAsync(bool comments)
     {
+        EditorTestClock clock = new();
         Guid selectedInstance = Guid.NewGuid();
         ServiceStatus status = new("selected", selectedInstance, "leader", EPeerStatus.Ready, [
             new("selected", selectedInstance, "host-selected", "127.0.0.1", 1, EPeerStatus.Ready, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
@@ -50,7 +51,7 @@ public sealed class SettingChoiceTests
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(JsonSerializer.Serialize(response, ContractJson.Options), Encoding.UTF8, "application/json") });
         });
         using HttpClient http = new(handler) { BaseAddress = new Uri("http://localhost/") };
-        ManagementApi api = new(http);
+        ManagementApi api = new(http, new(clock));
         ConnectionState connection = new(api);
         await connection.SelectTargetAsync("cluster", "selected").ConfigureAwait(true);
         EditorDocument model = new(new(new BrowserTestRuntime()));

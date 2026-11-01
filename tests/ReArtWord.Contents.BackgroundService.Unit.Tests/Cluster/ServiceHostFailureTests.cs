@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting.WindowsServices;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using ReArtWord.Contents.BackgroundService.CoreService.Hosting;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Cluster;
@@ -12,7 +13,7 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Cluster;
 public sealed class ServiceHostFailureTests
 {
     /// <summary>SCMへの終了コードは停止通知の前に設定され、通常停止は0を維持します。</summary>
-    [Fact]
+    [WindowsFact]
     public void WindowsFailureIsMarkedBeforeHostStop()
     {
         if (!OperatingSystem.IsWindows())

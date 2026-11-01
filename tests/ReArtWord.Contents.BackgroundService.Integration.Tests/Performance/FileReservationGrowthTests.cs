@@ -161,7 +161,7 @@ public sealed class FileReservationGrowthTests(ITestOutputHelper output)
     /// <returns>ファイル関連の保持本文件数です。再実行防止の小さい索引は含めません。</returns>
     private static long RetainedBodies(string path)
     {
-        using SqliteConnection connection = new(new SqliteConnectionStringBuilder { DataSource = path, Mode = SqliteOpenMode.ReadOnly }.ToString());
+        using SqliteConnection connection = new(new SqliteConnectionStringBuilder { DataSource = path, Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString());
         connection.Open();
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = """

@@ -1,4 +1,5 @@
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Local;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Updates;
@@ -10,13 +11,9 @@ public sealed class UpdateDirectorySwitchTests : IDisposable
 
     /// <summary>Windowsがアクセス拒否を返す一時的なファイル占有の解消後に切り替えます。</summary>
     /// <returns>待機後もファイルの内容を保持した切替の確認です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task OpenFileReleasedBeforeRetryAllowsDirectoryMoveAsync()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
         string source = Directory.CreateDirectory(Path.Combine(root, "installed")).FullName;
         string destination = Path.Combine(root, "backup");
         string file = Path.Combine(source, "payload.txt");
@@ -36,13 +33,9 @@ public sealed class UpdateDirectorySwitchTests : IDisposable
 
     /// <summary>占有が解消しない場合は有限時間で失敗し、元の配置を保持します。</summary>
     /// <returns>切替未適用と元ファイルの保持の確認です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task PersistentlyOpenFilePreservesInstallationAsync()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
         string source = Directory.CreateDirectory(Path.Combine(root, "installed")).FullName;
         string destination = Path.Combine(root, "backup");
         string file = Path.Combine(source, "payload.txt");

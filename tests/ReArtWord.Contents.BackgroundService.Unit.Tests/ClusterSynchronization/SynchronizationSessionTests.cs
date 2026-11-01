@@ -6,10 +6,12 @@ using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Cluster;
+using ReArtWord.Contents.BackgroundService.Infrastructure.Cluster.Synchronization;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Documents;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Collaboration;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.ClusterSynchronization;
@@ -33,7 +35,10 @@ public sealed class SynchronizationSessionTests
             {
                 HeartbeatInterval = TimeSpan.FromMilliseconds(50), RequestTimeout = TimeSpan.FromMilliseconds(500), SyncSessionLifetime = TimeSpan.FromSeconds(1), MaximumSyncSessions = 1,
             };
-            PeerCluster target = new(options, repository) { ReadinessCheck = _ => ValueTask.FromResult(true) };
+
+            // 公開期限の判定だけを試験時計で進め、通信の所要時間と切り離します。
+            CollaborationClock clock = new();
+            PeerCluster target = new(options, repository, clock) { ReadinessCheck = _ => ValueTask.FromResult(true) };
             await using ConfiguredAsyncDisposable targetLifetime = ((IAsyncDisposable)target).ConfigureAwait(true);
             await target.StartAsync().ConfigureAwait(true);
             Guid instance = Guid.NewGuid();
@@ -75,7 +80,16 @@ public sealed class SynchronizationSessionTests
             Func<Guid, object> manifest = id => new
             {
                 Id = id, SourcePeerId = "source", SourceInstanceId = instance, TargetPeerId = "target", TargetInstanceId = target.LocalInstanceId,
-                Length = data.LongLength, Hash = Convert.ToHexString(SHA256.HashData(data)), ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(20),
+                Length = data.LongLength, Hash = Convert.ToHexString(SHA256.HashData(data)), ExpiresAt = clock.GetUtcNow().AddSeconds(20),
+            };
+            Func<Guid, Task> read = async id =>
+            {
+                SyncResponse observed = (await send("sync.read", new { Id = id, Offset = 0L, Length = 1 }).ConfigureAwait(true)).Deserialize<SyncResponse>()!;
+                Assert.Null(observed.Reason);
+                SyncChunk chunk = Assert.IsType<SyncChunk>(observed.Chunk);
+                Assert.Equal(id, chunk.Id);
+                Assert.Equal(0, chunk.Offset);
+                Assert.Single(chunk.Data);
             };
             Guid firstId = Guid.NewGuid();
             object firstManifest = manifest(firstId);
@@ -92,8 +106,8 @@ public sealed class SynchronizationSessionTests
             Assert.Equal(exported, repeated.GetProperty("Manifest").GetProperty("Id").GetGuid());
             Assert.Equal(reads, sourceReads);
             int receipts = (await repository.ExportAsync(timeout.Token).ConfigureAwait(true)).Receipts.Count;
-            _ = await send("sync.read", new { Id = exported, Offset = 0L, Length = 1 }).ConfigureAwait(true);
-            _ = await send("sync.read", new { Id = exported, Offset = 0L, Length = 1 }).ConfigureAwait(true);
+            await read(exported).ConfigureAwait(true);
+            await read(exported).ConfigureAwait(true);
             Assert.Equal(receipts, (await repository.ExportAsync(timeout.Token).ConfigureAwait(true)).Receipts.Count);
             _ = await send("sync.close", new { ExportId = exported, ImportId = firstId }).ConfigureAwait(true);
             JsonElement late = await send("sync.open", firstManifest).ConfigureAwait(true);
@@ -107,7 +121,10 @@ public sealed class SynchronizationSessionTests
                 result = await send("sync.result", secondId).ConfigureAwait(true);
             }
             Guid expiryExport = result.GetProperty("Manifest").GetProperty("Id").GetGuid();
-            await Task.Delay(1200, timeout.Token).ConfigureAwait(true);
+            DateTimeOffset expiresAt = result.GetProperty("Manifest").GetProperty("ExpiresAt").GetDateTimeOffset();
+            clock.Advance(expiresAt - clock.GetUtcNow() - TimeSpan.FromMilliseconds(1));
+            await read(expiryExport).ConfigureAwait(true);
+            clock.Advance(TimeSpan.FromMilliseconds(1));
             JsonElement expired = await send("sync.read", new { Id = expiryExport, Offset = 0L, Length = 1 }).ConfigureAwait(true);
             Assert.Equal("Sync.SessionUnavailable", expired.GetProperty("Reason").GetString());
             Assert.Equal(42, (await repository.ReadAsync("workflow:session", "value", timeout.Token).ConfigureAwait(true))!.Value!.Json.GetInt32());

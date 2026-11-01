@@ -76,9 +76,10 @@ public sealed class EditorPresenceSharingTests
     [Fact]
     public async Task ReconnectedBrowserHasOnePresenceAsync()
     {
+        EditorTestClock clock = new();
         Guid ui = Guid.NewGuid();
         PresenceUpdate update = new("flow", ui, "host", "editor", ["node"], 10, 20);
-        PresenceView old = new("old", Guid.NewGuid(), update, DateTimeOffset.UtcNow.AddSeconds(10));
+        PresenceView old = new("old", Guid.NewGuid(), update, clock.GetUtcNow().AddSeconds(10));
         PresenceView current = old with { PeerId = "new", ExpiresAt = old.ExpiresAt.AddSeconds(10) };
         using ClientHttpHandler handler = new((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
         {
@@ -87,7 +88,7 @@ public sealed class EditorPresenceSharingTests
         using HttpClient client = new(handler) { BaseAddress = new("http://localhost/") };
         EditorDocument model = new(new(new BrowserTestRuntime()));
         model.Import(new("flow", "name", [], []));
-        EditorPresence presence = new(model, new(client));
+        EditorPresence presence = new(model, new(client, new(clock)));
         await presence.RefreshAsync("host").ConfigureAwait(true);
         Assert.Equal("new", Assert.Single(presence.Items).PeerId);
     }

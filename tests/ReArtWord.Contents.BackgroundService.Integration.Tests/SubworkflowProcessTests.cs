@@ -51,6 +51,7 @@ public sealed class SubworkflowProcessTests
     [Fact]
     public async Task CancellationCrossesTheRemoteCallBoundary()
     {
+        using ControlledHttpEndpoint response = new();
         string cluster = Guid.NewGuid().ToString("N");
         int port = CorePeer.AvailablePort();
         CorePeer first = new(cluster, "a", port, true, priority: 10);
@@ -61,8 +62,11 @@ public sealed class SubworkflowProcessTests
         await second.StartAsync().ConfigureAwait(true);
         await ReadyAsync(first).ConfigureAwait(true);
         NodeDefinition input = new("input", SubworkflowInterface.InputType, JsonSerializer.SerializeToElement(new { name = "text", valueType = new { type = "string" }, hasDefault = true, defaultValue = "hello" }));
-        NodeDefinition delay = new("delay", "control.delay", JsonSerializer.SerializeToElement(new { milliseconds = 60000 }), Target: new(EExecutionScope.One, ["a"]));
-        WorkflowDefinition child = new("wait-child", "Wait child", [input, delay], [new("input", "value", "delay", "value")]);
+        NodeDefinition delay = new("delay", "http.request", JsonSerializer.SerializeToElement(new
+        {
+            interfaceId = first.InterfaceId, localAddress = "127.0.0.1", url = response.Url, method = "GET", authentication = "none", responseBodyFormat = "text", timeoutMs = 0,
+        }), Target: new(EExecutionScope.One, ["a"]));
+        WorkflowDefinition child = new("wait-child", "Wait child", [input, delay], [new("input", "value", "delay", "trigger")]);
         WorkflowSaveResult savedChild = await first.PostAsync<WorkflowSaveResult>("workflows.save", new WorkflowSaveRequest(Guid.NewGuid(), child, null)).ConfigureAwait(true);
         Assert.Equal(EOutcome.Succeeded, savedChild.Activation.Outcome);
         string recipe = SubworkflowInterface.CallType(child.Id);
@@ -75,6 +79,8 @@ public sealed class SubworkflowProcessTests
         Assert.True(preview.IsRuntime);
         Assert.Equal(saved.Revision, preview.Revision);
         WorkflowRunStatus run = await first.PostAsync<WorkflowRunStatus>("runs.start", new WorkflowRunRequest(Guid.NewGuid(), parent.Id, saved.Revision)).ConfigureAwait(true);
+        using CancellationTokenSource accepting = new(TimeSpan.FromSeconds(30));
+        Assert.Equal(string.Empty, await response.AcceptAsync(accepting.Token).ConfigureAwait(true));
         await CorePeer.WaitAsync(async token => (await first.GetAsync<JsonElement>("status", token).ConfigureAwait(true)).GetProperty("nodeValues").EnumerateArray()
             .Any(item => string.Equals(item.GetProperty("nodeId").GetString(), RecipeNodeIdentity.Child("call", delay.Id), StringComparison.Ordinal) && item.GetProperty("completedAt").ValueKind == JsonValueKind.Null)).ConfigureAwait(true);
         WorkflowCancelResult cancelled = await first.PostAsync<WorkflowCancelResult>("runs.cancel", new WorkflowCancelRequest(Guid.NewGuid(), run.OperationId, run.OwnerInstanceId!.Value)).ConfigureAwait(true);

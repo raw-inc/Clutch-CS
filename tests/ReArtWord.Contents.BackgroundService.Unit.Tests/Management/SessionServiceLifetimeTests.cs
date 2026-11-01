@@ -36,12 +36,15 @@ public sealed class SessionServiceLifetimeTests
         ManagementReply opened = await registry.ExecuteAsync(Command("state-stream.open", Guid.NewGuid()));
         Assert.Equal(EOutcome.Succeeded, opened.Outcome);
         StateStreamTicket ticket = opened.Value!.Json.Deserialize<StateStreamTicket>()!;
+        Task stopping = Task.CompletedTask;
         try
         {
             // .NET 10で起動待ちの監視が取り消される状態を、スケジューラーの速さに依存せず再現します。
             await service.StartAsync(new CancellationToken(cancelStartup));
-            await service.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
-            await service.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+            stopping = service.StopAsync(CancellationToken.None);
+            await stopping.WaitAsync(TimeSpan.FromSeconds(5));
+            stopping = service.StopAsync(CancellationToken.None);
+            await stopping.WaitAsync(TimeSpan.FromSeconds(5));
             ManagementReply count = await registry.ExecuteAsync(Command("state-stream.status", null));
             Assert.Equal(0, count.Value!.Json.GetInt32());
             Assert.Equal(EOutcome.NotExecuted, (await registry.ExecuteAsync(Command("state-stream.open", Guid.NewGuid()))).Outcome);
@@ -58,6 +61,11 @@ public sealed class SessionServiceLifetimeTests
             catch (SocketException)
             {
                 // 正常に回収された待受には接続できません。
+            }
+            finally
+            {
+                await stopping.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+                await service.StopAsync(CancellationToken.None).ConfigureAwait(true);
             }
         }
     }
@@ -110,11 +118,21 @@ public sealed class SessionServiceLifetimeTests
         }
         using (service)
         {
-            await service.StartAsync(new CancellationToken(true));
-            await service.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
-            ManagementReply result = await registry.ExecuteAsync(Command(operation, body));
-            Assert.Equal(EOutcome.NotExecuted, result.Outcome);
-            Assert.Equal("Management.InvalidRequest", result.Reason);
+            Task stopping = Task.CompletedTask;
+            try
+            {
+                await service.StartAsync(new CancellationToken(true));
+                stopping = service.StopAsync(CancellationToken.None);
+                await stopping.WaitAsync(TimeSpan.FromSeconds(5));
+                ManagementReply result = await registry.ExecuteAsync(Command(operation, body));
+                Assert.Equal(EOutcome.NotExecuted, result.Outcome);
+                Assert.Equal("Management.InvalidRequest", result.Reason);
+            }
+            finally
+            {
+                await stopping.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+                await service.StopAsync(CancellationToken.None).ConfigureAwait(true);
+            }
         }
     }
 

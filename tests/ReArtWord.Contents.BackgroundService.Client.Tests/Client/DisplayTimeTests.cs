@@ -80,6 +80,7 @@ public sealed class DisplayTimeTests
     [Fact]
     public async Task CascadeChangesTimeWithoutChangingInstantAsync()
     {
+        using ClientCultureScope culture = new("en-US");
         ServiceCollection services = new();
         CascadeActivator activator = new();
         services.AddLogging();
