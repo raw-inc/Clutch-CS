@@ -10,6 +10,9 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Processes;
 /// <summary>実プロセスの標準pipeで文字境界、長い出力、無出力時の取消を確認します。</summary>
 public sealed class BoundedProcessRunnerTests
 {
+    /// <summary>実停止の確認10秒とパイプの排出2秒を含む、取消完了の待機上限です。</summary>
+    private static TimeSpan CancellationCompletionLimit => TimeSpan.FromSeconds(15);
+
     /// <summary>診断追加前にコンパイルした呼出しが使う、七引数の構築と分解代入を維持します。</summary>
     [Fact]
     public void DiagnosticsPreserveCommandLimitsBinaryContract()
@@ -100,8 +103,9 @@ public sealed class BoundedProcessRunnerTests
         string config = Path.Combine(files.Root, "diagnostics.txt");
         await File.WriteAllTextAsync(config, failed ? "diagnostic-failure"
                                                     : "diagnostic-success").ConfigureAwait(true);
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
         List<string> diagnostics = [];
-        Task<string> running = BoundedProcessRunner.RunAsync(Executable(), ["--config", config], new ProcessRunLimits { DiagnosticOutput = diagnostics.Add });
+        Task<string> running = BoundedProcessRunner.RunAsync(Executable(), ["--config", config], new ProcessRunLimits { DiagnosticOutput = diagnostics.Add }, timeout.Token);
         if (failed)
         {
             await Assert.ThrowsAsync<InvalidDataException>(() => running).ConfigureAwait(true);
@@ -134,7 +138,8 @@ public sealed class BoundedProcessRunnerTests
         string config = Path.Combine(files.Root, "diagnostics.txt");
         await File.WriteAllTextAsync(config, failed ? "7"
                                                     : "0").ConfigureAwait(true);
-        Task<string> running = BoundedProcessRunner.RunAsync(Executable(), ["--config", config], new ProcessRunLimits { DiagnosticOutput = _ => throw new InvalidOperationException("diagnostic sink failed") });
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
+        Task<string> running = BoundedProcessRunner.RunAsync(Executable(), ["--config", config], new ProcessRunLimits { DiagnosticOutput = _ => throw new InvalidOperationException("diagnostic sink failed") }, timeout.Token);
         if (failed)
         {
             await Assert.ThrowsAsync<InvalidDataException>(() => running).ConfigureAwait(true);
@@ -170,7 +175,8 @@ public sealed class BoundedProcessRunnerTests
         await File.WriteAllTextAsync(config, "input");
         string input = empty ? string.Empty
                              : string.Concat(Enumerable.Repeat("日本語🚀\"\\\n", 16384));
-        string result = await BoundedProcessRunner.RunAsync(Executable(), ["--config", config], new ProcessRunLimits(StandardInput: input, OutputEncoding: System.Text.Encoding.UTF8)).WaitAsync(TimeSpan.FromSeconds(15));
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
+        string result = await BoundedProcessRunner.RunAsync(Executable(), ["--config", config], new ProcessRunLimits(StandardInput: input, OutputEncoding: System.Text.Encoding.UTF8), timeout.Token);
         Assert.Equal(new string('o', 8192) + input, result);
     }
 
@@ -182,7 +188,8 @@ public sealed class BoundedProcessRunnerTests
         using MediaTestFiles files = new();
         string config = Path.Combine(files.Root, "behavior.txt");
         await File.WriteAllTextAsync(config, "pipe");
-        string actual = await BoundedProcessRunner.RunAsync(Executable(), ["--config", config]).WaitAsync(TimeSpan.FromSeconds(10));
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
+        string actual = await BoundedProcessRunner.RunAsync(Executable(), ["--config", config], timeout.Token);
         Assert.Equal("日本語🚀" + new string('x', 8192), actual);
     }
 
@@ -206,7 +213,7 @@ public sealed class BoundedProcessRunnerTests
         finally
         {
             await cancellation.CancelAsync();
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await running.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false));
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await running.WaitAsync(CancellationCompletionLimit).ConfigureAwait(false));
             Assert.Contains("CanceledException", Assert.Single(diagnostics), StringComparison.Ordinal);
             if (child is not null)
             {
@@ -244,7 +251,7 @@ public sealed class BoundedProcessRunnerTests
             await cancellation.CancelAsync();
             foreach (Task<string> task in running)
             {
-                await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false));
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await task.WaitAsync(CancellationCompletionLimit).ConfigureAwait(false));
             }
             foreach (Process child in children)
             {

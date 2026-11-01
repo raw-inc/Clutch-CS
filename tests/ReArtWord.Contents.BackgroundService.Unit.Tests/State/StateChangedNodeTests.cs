@@ -45,6 +45,7 @@ public sealed class StateChangedNodeTests
             return ValueTask.CompletedTask;
         }, stop.Token);
         Task<NodeResult> running = node.RunAsync(source, cancellation.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = new TestTaskLifetime(running, cancellation).ConfigureAwait(true);
         await ready.Task.WaitAsync(cancellation.Token).ConfigureAwait(true);
         Assert.Empty(emissions);
         foreach (int value in new[] { 11, 12 })

@@ -37,6 +37,7 @@ public sealed class ParallelReplicationTests
         Guid operation = Guid.NewGuid();
         left.PausedOperation = right.PausedOperation = operation;
         Task<DurableReceipt> writing = first.ReplicateAsync(operation, [new("configuration", "parallel", null, NodeValue.FromObject(42))], timeout.Token).AsTask();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable writingLifetime = new TestTaskLifetime(writing, timeout).ConfigureAwait(true);
         try
         {
             await Task.WhenAll(left.Entered.Task, right.Entered.Task).WaitAsync(timeout.Token);
@@ -66,7 +67,6 @@ public sealed class ParallelReplicationTests
         {
             left.Release.TrySetResult();
             right.Release.TrySetResult();
-            await writing.WaitAsync(timeout.Token);
         }
     }
 

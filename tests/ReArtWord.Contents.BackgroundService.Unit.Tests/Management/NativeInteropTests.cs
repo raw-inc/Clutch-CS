@@ -6,6 +6,7 @@ using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Tray;
 using ReArtWord.Contents.BackgroundService.CoreService.Windows;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Resources.Probes;
 using ReArtWord.Contents.BackgroundService.Runtime.Processes.Commands;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
@@ -14,7 +15,7 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
 public sealed partial class NativeInteropTests
 {
     /// <summary>本番で使用するWindowsの宣言を実DLLのexportと照合し、暗黙のW接尾辞への依存を残しません。</summary>
-    [Fact, SupportedOSPlatform("windows")]
+    [WindowsFact, SupportedOSPlatform("windows")]
     public void WindowsLibraryImportsResolveTheirDeclaredEntryPoints()
     {
         if (!OperatingSystem.IsWindows())
@@ -55,7 +56,7 @@ public sealed partial class NativeInteropTests
     }
 
     /// <summary>表示しないwindowの日本語名を読み、指定文字数より後の領域を変更しません。</summary>
-    [Fact, SupportedOSPlatform("windows")]
+    [WindowsFact, SupportedOSPlatform("windows")]
     public void WindowTextPreservesUnicodeAndCallerBufferBounds()
     {
         if (!OperatingSystem.IsWindows())
@@ -80,7 +81,7 @@ public sealed partial class NativeInteropTests
     }
 
     /// <summary>Unicode名の構造体登録を確認し、後片付けが元の登録失敗コードを消しません。</summary>
-    [Fact, SupportedOSPlatform("windows")]
+    [WindowsFact, SupportedOSPlatform("windows")]
     public void WindowClassPreservesUnicodeAndDuplicateRegistrationError()
     {
         if (!OperatingSystem.IsWindows())
@@ -111,7 +112,7 @@ public sealed partial class NativeInteropTests
     }
 
     /// <summary>現在利用者のprofile名を二段階で取得し、必要文字数と終端、出力上限を確認します。</summary>
-    [Fact, SupportedOSPlatform("windows")]
+    [WindowsFact, SupportedOSPlatform("windows")]
     public void ProfileDirectoryPreservesRequiredCharacterCountAndBufferBounds()
     {
         if (!OperatingSystem.IsWindows())

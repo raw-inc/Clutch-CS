@@ -7,6 +7,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Cluster.Synchronizatio
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Documents;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Receipts;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Cluster;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.ClusterSynchronization;
@@ -72,7 +73,9 @@ public sealed class SynchronizationRecoveryTests
     public async Task MatchingDigestRetriesFailedTransferAndRecoversMissingHistory()
     {
         RepositorySnapshot snapshot = Snapshot();
-        SyncRecoveryPeer peer = new(snapshot) { DropReads = true };
+        RequestTestClock clock = new();
+        clock.Freeze();
+        SyncRecoveryPeer peer = new(snapshot, clock: clock) { DropReads = true };
         await using ConfiguredAsyncDisposable lifetime = peer.ConfigureAwait(true);
         await peer.StartAsync().ConfigureAwait(true);
         Assert.True(await peer.Repository.ImportAsync(snapshot with { Receipts = [] }).ConfigureAwait(true));
@@ -89,6 +92,9 @@ public sealed class SynchronizationRecoveryTests
         Assert.Equal(attempts, peer.Opens);
         Assert.Equal("Sync.ChunkUnconfirmed", peer.Target.SynchronizationProblem);
         peer.DropReads = false;
+
+        // 失敗後の最初の再試行間隔だけ進めます。UDPの配送期限と観測待ちは実時間のままです。
+        clock.AdvanceAndResume(TimeSpan.FromSeconds(1));
         while (peer.Target.SynchronizationProblem is not null)
         {
             await peer.AnnounceAsync(digest, cancellationToken: timeout.Token).ConfigureAwait(true);

@@ -74,11 +74,17 @@ public sealed class DeviceBatchTests
             await store.SaveAsync(previous);
             using DeviceBatches batches = new(store, remote);
             await batches.StartAsync(CancellationToken.None);
-            DeviceBatchRequest next = new(Guid.NewGuid(), [Change("host", "TEMP")]);
-            await Assert.ThrowsAsync<InvalidOperationException>(() => batches.EnqueueAsync(next));
-            DeviceBatchState accepted = await batches.EnqueueAsync(next with { AcknowledgeUnconfirmed = true });
-            Assert.NotEqual(previous.Request.OperationId, accepted.Request.OperationId);
-            await batches.StopAsync(CancellationToken.None);
+            try
+            {
+                DeviceBatchRequest next = new(Guid.NewGuid(), [Change("host", "TEMP")]);
+                await Assert.ThrowsAsync<InvalidOperationException>(() => batches.EnqueueAsync(next));
+                DeviceBatchState accepted = await batches.EnqueueAsync(next with { AcknowledgeUnconfirmed = true });
+                Assert.NotEqual(previous.Request.OperationId, accepted.Request.OperationId);
+            }
+            finally
+            {
+                await batches.StopAsync(CancellationToken.None);
+            }
             Assert.Equal(EOutcome.Unknown, (await store.ReadAsync(previous.Request.OperationId))!.Results[0]!.Outcome);
             Assert.Single(await batches.UnconfirmedHostsAsync());
         }

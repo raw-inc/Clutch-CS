@@ -318,11 +318,13 @@ jobs:
           persist-credentials: false
       - name: Prepare Windows build tools
         uses: ./.github/actions/prepare-windows
-      - name: Build the installation test host
+      - name: Build the package validation test hosts
         run: |
           dotnet restore Clutch-CS.slnx
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           dotnet build tests/ReArtWord.Contents.BackgroundService.Installer.Tests/ReArtWord.Contents.BackgroundService.Installer.Tests.csproj -c Release --no-restore -warnaserror "-p:Version=$env:RELEASE_VERSION"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet build tests/ReArtWord.Contents.BackgroundService.Unit.Tests/ReArtWord.Contents.BackgroundService.Unit.Tests.csproj -c Release --no-restore -warnaserror "-p:Version=$env:RELEASE_VERSION"
       - name: Ensure the publishing runtime
         run: |
           $required = [version]$env:PACKAGE_RUNTIME_VERSION
@@ -349,12 +351,19 @@ jobs:
       - name: Build the bundled Windows installer
         run: |
           ./installer/New-InstallPackage.ps1 -OutputRoot (Join-Path $PWD 'artifacts/package') -ReleaseId $env:RELEASE_TAG -Version $env:RELEASE_VERSION -RuntimeIdentifier win-x64 -RuntimeVersion $env:PACKAGE_RUNTIME_VERSION
+      - name: Test the packaged native capture worker
+        id: native_capture_tests
+        continue-on-error: true
+        run: |
+          $env:CONTENTS_SIGNAL_CAPTURE_EXECUTABLE = Join-Path $PWD 'artifacts/package/files/core/tools/signal-capture/SignalCapture.exe'
+          dotnet test tests/ReArtWord.Contents.BackgroundService.Unit.Tests/ReArtWord.Contents.BackgroundService.Unit.Tests.csproj -c Release --no-build --no-restore --filter 'FullyQualifiedName~ReArtWord.Contents.BackgroundService.SignalCapture.Protocol.Tests.PipeProcessTests' --settings eng/testing/ci.runsettings --logger trx --logger 'console;verbosity=normal' --results-directory artifacts/NativeCaptureTestResults -- RunConfiguration.TreatNoTestsAsError=true
       - name: Test install, update, repair and uninstall in an isolated cluster
         id: install_tests
         continue-on-error: true
         run: |
           $env:CLUTCH_TEST_PACKAGE = Join-Path $PWD 'artifacts/package/files'
-          dotnet test tests/ReArtWord.Contents.BackgroundService.Installer.Tests/ReArtWord.Contents.BackgroundService.Installer.Tests.csproj -c Release --no-build --no-restore --filter 'FullyQualifiedName~RealInstallationTests|FullyQualifiedName~RealWebClientTests|FullyQualifiedName~RealWebClientUpdateTests' --settings eng/testing/ci.runsettings --logger trx --logger 'console;verbosity=normal' --results-directory artifacts/InstallTestResults -- RunConfiguration.TreatNoTestsAsError=true
+          # 試験本体の30分を先に満了させ、取消後の後処理に5分の猶予を設けます。
+          dotnet test tests/ReArtWord.Contents.BackgroundService.Installer.Tests/ReArtWord.Contents.BackgroundService.Installer.Tests.csproj -c Release --no-build --no-restore --filter 'FullyQualifiedName~RealInstallationTests|FullyQualifiedName~RealWebClientTests|FullyQualifiedName~RealWebClientUpdateTests' --settings eng/testing/ci.runsettings --blame-hang-timeout 35m --blame-hang-dump-type mini --logger trx --logger 'console;verbosity=normal' --results-directory artifacts/InstallTestResults -- RunConfiguration.TreatNoTestsAsError=true
       - name: Summarize installation coverage
         if: always() && steps.install_tests.outcome != 'skipped' && steps.install_tests.outcome != ''
         run: |
@@ -415,6 +424,7 @@ jobs:
           overwrite: true
           path: |
             artifacts/InstallTestResults/**
+            artifacts/NativeCaptureTestResults/**
             .work/integration/**/startup-error.txt
             .work/integration/**/startup-failure.json
             .work/integration/**/state/logs/**/*.jsonl

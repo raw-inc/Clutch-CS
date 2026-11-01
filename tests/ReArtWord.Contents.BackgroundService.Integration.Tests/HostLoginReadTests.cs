@@ -1,5 +1,6 @@
 using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement;
 using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement.Login;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
@@ -9,7 +10,7 @@ public sealed class HostLoginReadTests
 {
     /// <summary>パスワードの認証や保存を行わず、同じCoreで公開鍵と内容版を維持します。</summary>
     /// <returns>秘密値を含まない設定の照会です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task ReadsStableLoginSettingsAndAProcessOwnedPublicKeyAsync()
     {
         if (!OperatingSystem.IsWindows())

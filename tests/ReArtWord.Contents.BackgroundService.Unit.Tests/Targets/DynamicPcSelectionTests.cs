@@ -167,6 +167,7 @@ public sealed class DynamicPcSelectionTests
         {
             releaseA.TrySetResult();
             finish.TrySetResult();
+            await running.ConfigureAwait(true);
         }
         Assert.Equal(EOutcome.Succeeded, (await running.ConfigureAwait(true)).Outcome);
     }

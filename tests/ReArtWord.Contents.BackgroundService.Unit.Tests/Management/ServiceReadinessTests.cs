@@ -47,7 +47,8 @@ public sealed class ServiceReadinessTests
     [InlineData("peer:peer:operational-effective", true)]
     public async Task FailedInitialSeedRevokesProvisionalReady(string failingScope, bool canPrepare)
     {
-        string root = Path.Combine(Path.GetTempPath(), "contents-readiness-" + Guid.NewGuid().ToString("N"));
+        using Media.MediaTestFiles files = new();
+        string root = Path.Combine(files.Root, "peer");
         using UdpClient socket = new(new IPEndPoint(IPAddress.Loopback, 0));
         int port = ((IPEndPoint)socket.Client.LocalEndPoint!).Port;
         socket.Close();

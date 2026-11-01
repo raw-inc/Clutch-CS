@@ -5,6 +5,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Updates.Fleet;
 using ReArtWord.Contents.BackgroundService.Contracts.Updates.Releases;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Client.Tests.Management;
@@ -14,13 +15,9 @@ public sealed class FleetUpdateStoreContentionTests
 {
     /// <summary>準備後の進捗保存が競合しても、保存完了を待って同じ操作を一度だけ配送します。</summary>
     /// <returns>今回の更新ワーカー停止条件と副作用境界の回帰確認です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task ContendedProgressWaitsBeforeDispatchingTheOriginalOperationAsync()
     {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
         string directory = Path.Combine(Path.GetTempPath(), "contents-fleet-contention-" + Guid.NewGuid().ToString("N"));
         FleetUpdateStore store = new(directory);
         FleetUpdateTarget target = new("cluster", new("peer", Guid.NewGuid(), "host", "127.0.0.1", 1234, EPeerStatus.Ready, 0, null, DateTimeOffset.UtcNow),
@@ -56,11 +53,11 @@ public sealed class FleetUpdateStoreContentionTests
                     File.SetAttributes(path, FileAttributes.Normal);
                     await saving.ConfigureAwait(true);
                 }
-            });
+            }).ConfigureAwait(true);
             Assert.Equal(EOutcome.Succeeded, result.Outcome);
             Assert.Equal(observedOperation, Assert.Single(result.Peers[0].Attempts).OperationId);
             Assert.Equal(["stage:host/cluster", "dispatch:host/cluster", "release:host/cluster"], remote.Events.ToArray());
-            Assert.Equal(EOutcome.Succeeded, (await store.ReadAsync(request.OperationId))!.Outcome);
+            Assert.Equal(EOutcome.Succeeded, (await store.ReadAsync(request.OperationId).ConfigureAwait(true))!.Outcome);
         }
         finally
         {

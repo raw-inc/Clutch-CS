@@ -11,9 +11,9 @@ internal sealed class ObserverCoreProcess : IAsyncDisposable
     private readonly Process process;
 
     /// <summary>試験専用設定と保存先でCoreを起動します。</summary>
-    public ObserverCoreProcess(string clusterId, string peerId, int udpPort, string interfaceId, bool initialize)
+    public ObserverCoreProcess(string root, string clusterId, string peerId, int udpPort, string interfaceId, bool initialize)
     {
-        string directory = Path.Combine(Path.GetTempPath(), "ContentsObserver", clusterId, peerId);
+        string directory = Path.Combine(root, clusterId, peerId);
         Directory.CreateDirectory(directory);
         string configuration = Path.Combine(directory, "contents.toml");
         File.WriteAllText(configuration, $$"""
@@ -32,8 +32,9 @@ internal sealed class ObserverCoreProcess : IAsyncDisposable
             interfaceId = '{{interfaceId}}'
             listenPort = 0
             """);
-        ProcessStartInfo start = new("dotnet") { UseShellExecute = false, CreateNoWindow = true };
-        start.ArgumentList.Add(CoreAssembly());
+
+        // アプリホスト経由で起動し、検証用のDOTNET_ROOTを子プロセスにも適用する。
+        ProcessStartInfo start = new(CoreExecutable()) { UseShellExecute = false, CreateNoWindow = true };
         start.ArgumentList.Add("--config");
         start.ArgumentList.Add(configuration);
         process = Process.Start(start) ?? throw new IOException("試験用Coreを開始できません。");
@@ -48,15 +49,20 @@ internal sealed class ObserverCoreProcess : IAsyncDisposable
         }
     }
 
-    /// <summary>現在のbuild構成と同じCore実行物を使用します。</summary>
-    /// <returns>実Core assemblyの場所です。</returns>
-    private static string CoreAssembly()
+    /// <summary>現在のビルド構成と同じCore実行ファイルを使用します。</summary>
+    /// <returns>Coreの実行ファイルの場所です。</returns>
+    private static string CoreExecutable()
     {
         DirectoryInfo? directory = new(AppContext.BaseDirectory);
         string configuration = directory.Parent!.Name;
+        string name = "Clutch-CS.CoreService";
+        if (OperatingSystem.IsWindows())
+        {
+            name += ".exe";
+        }
         while (directory is not null)
         {
-            string candidate = Path.Combine(directory.FullName, "src", "ReArtWord.Contents.BackgroundService.CoreService", "bin", configuration, "net10.0", "Clutch-CS.CoreService.dll");
+            string candidate = Path.Combine(directory.FullName, "src", "ReArtWord.Contents.BackgroundService.CoreService", "bin", configuration, "net10.0", name);
             if (File.Exists(candidate))
             {
                 return candidate;

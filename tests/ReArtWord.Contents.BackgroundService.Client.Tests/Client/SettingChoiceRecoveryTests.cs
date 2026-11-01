@@ -61,15 +61,23 @@ public sealed class SettingChoiceRecoveryTests
         using HttpClient http = new(handler) { BaseAddress = new("http://localhost/") };
         SettingChoiceProvider provider = new(new(http) { SelectedClusterId = "cluster" });
         using CancellationTokenSource cancelled = new();
+        using HttpResponseMessage restored = Reply(Network("restored"));
         Task<SettingNetworkChoices> first = provider.GetAsync(Node(), cancellationToken: cancelled.Token);
         Task<SettingNetworkChoices> second = provider.GetAsync(Node());
-        await cancelled.CancelAsync().ConfigureAwait(true);
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => first).ConfigureAwait(true);
-        Assert.False(transportToken.IsCancellationRequested);
-        using HttpResponseMessage restored = Reply(Network("restored"));
-        reply.SetResult(restored);
-        Assert.Equal("restored", Assert.Single((await second.ConfigureAwait(true)).Interfaces).Id);
-        Assert.Equal(1, requests);
+        try
+        {
+            await cancelled.CancelAsync().ConfigureAwait(true);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => first).ConfigureAwait(true);
+            Assert.False(transportToken.IsCancellationRequested);
+            reply.SetResult(restored);
+            Assert.Equal("restored", Assert.Single((await second.ConfigureAwait(true)).Interfaces).Id);
+            Assert.Equal(1, requests);
+        }
+        finally
+        {
+            reply.TrySetCanceled();
+            await ((Task)Task.WhenAll(first, second)).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
     }
 
     /// <summary>同じPeer IDの再起動で旧照会を破棄し、遅延応答を新しい候補へ混ぜません。</summary>
@@ -77,6 +85,7 @@ public sealed class SettingChoiceRecoveryTests
     [Fact]
     public async Task RestartInvalidatesCacheAndRejectsLateInventoryAsync()
     {
+        ChoiceClock clock = new();
         Guid instance = Guid.NewGuid();
         TaskCompletionSource<HttpResponseMessage> old = new(TaskCreationOptions.RunContinuationsAsynchronously);
         int requests = 0;
@@ -93,22 +102,30 @@ public sealed class SettingChoiceRecoveryTests
             return Task.FromResult(Reply(new ServiceStatus("peer", instance, "peer", EPeerStatus.Ready, [peer], [], [], null, JsonSerializer.SerializeToElement(new { }))));
         });
         using HttpClient http = new(handler) { BaseAddress = new("http://localhost/") };
-        ManagementApi api = new(http);
+        ManagementApi api = new(http, new(clock));
         ConnectionState connection = new(api);
         await connection.SelectTargetAsync("cluster", "peer").ConfigureAwait(true);
         SettingChoiceProvider provider = new(api, connection);
-        Task<SettingNetworkChoices> pending = provider.GetAsync(Node());
-        int unchanged = provider.Version;
-        await connection.RefreshAsync().ConfigureAwait(true);
-        Assert.Equal(unchanged, provider.Version);
-        instance = Guid.NewGuid();
-        await connection.RefreshAsync().ConfigureAwait(true);
-        Assert.Equal("new", Assert.Single((await provider.GetAsync(Node()).ConfigureAwait(true)).Interfaces).Id);
         using HttpResponseMessage stale = Reply(Network("old"));
-        old.SetResult(stale);
-        Assert.NotNull((await pending.ConfigureAwait(true)).Problem);
-        Assert.Equal("new", Assert.Single((await provider.GetAsync(Node()).ConfigureAwait(true)).Interfaces).Id);
-        Assert.Equal(2, requests);
+        Task<SettingNetworkChoices> pending = provider.GetAsync(Node());
+        try
+        {
+            int unchanged = provider.Version;
+            await connection.RefreshAsync().ConfigureAwait(true);
+            Assert.Equal(unchanged, provider.Version);
+            instance = Guid.NewGuid();
+            await connection.RefreshAsync().ConfigureAwait(true);
+            Assert.Equal("new", Assert.Single((await provider.GetAsync(Node()).ConfigureAwait(true)).Interfaces).Id);
+            old.SetResult(stale);
+            Assert.NotNull((await pending.ConfigureAwait(true)).Problem);
+            Assert.Equal("new", Assert.Single((await provider.GetAsync(Node()).ConfigureAwait(true)).Interfaces).Id);
+            Assert.Equal(2, requests);
+        }
+        finally
+        {
+            old.TrySetCanceled();
+            await ((Task)pending).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
     }
 
     /// <summary>候補更新が保存値を変更しない固定設定です。</summary>

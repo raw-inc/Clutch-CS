@@ -95,7 +95,11 @@ internal static class Program
         }
         if (string.Equals(text, grace, StringComparison.Ordinal))
         {
-            await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+            string release = args[1] + ".release";
+            while (!File.Exists(release))
+            {
+                await Task.Delay(20).ConfigureAwait(false);
+            }
             return 0;
         }
         return int.Parse(text, CultureInfo.InvariantCulture);

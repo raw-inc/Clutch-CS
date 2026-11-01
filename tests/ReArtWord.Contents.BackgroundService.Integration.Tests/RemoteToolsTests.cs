@@ -46,7 +46,8 @@ public sealed class RemoteToolsTests
     public async Task DashboardCacheAndCopyQueueSurviveIndependentRequests()
     {
         string clusterA = Guid.NewGuid().ToString("N"), clusterB = Guid.NewGuid().ToString("N");
-        int portA = CorePeer.AvailablePort(), portB = CorePeer.AvailablePort();
+        int[] ports = CorePeer.AvailableUdpPorts(2);
+        int portA = ports[0], portB = ports[1];
         CorePeer first = new(clusterA, "a", portA, true), second = new(clusterB, "b", portB, true);
         ClientHostProcess client = new(Path.Combine(first.DirectoryPath, "client"));
         ClientHostProcess reader = new(Path.Combine(first.DirectoryPath, "another-client"));

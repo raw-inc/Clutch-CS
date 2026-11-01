@@ -1,6 +1,7 @@
 using ReArtWord.Contents.BackgroundService.Contracts.Desktop;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Video;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
@@ -31,14 +32,11 @@ public sealed class DesktopVideoSettingsTests
 
     /// <summary>画面端の2px変化を最後のframeへ残し、同一frameだけを間引きます。</summary>
     /// <returns>実FFmpegのfilter出力の確認です。</returns>
-    [Theory, InlineData(0), InlineData(30), InlineData(62)]
+    [ConfiguredToolTheory("CONTENTS_TEST_FFMPEG"), InlineData(0), InlineData(30), InlineData(62)]
     public async Task StaticTailPreservesSmallChangesAtTheDisplayEdgeAsync(int x)
     {
-        string? executable = Environment.GetEnvironmentVariable("CONTENTS_TEST_FFMPEG");
-        if (string.IsNullOrEmpty(executable))
-        {
-            return;
-        }
+        string executable = Environment.GetEnvironmentVariable("CONTENTS_TEST_FFMPEG")
+            ?? throw new InvalidOperationException("The configured FFmpeg path is no longer available.");
         DesktopMonitor monitor = new(0, "test", 0, 0, 64, 64, true);
         System.Diagnostics.ProcessStartInfo start = DesktopEncoder.StartInfo(executable, monitor, "libx264", 20000, duplication: false);
         string filter = start.ArgumentList[start.ArgumentList.IndexOf("-vf") + 1];

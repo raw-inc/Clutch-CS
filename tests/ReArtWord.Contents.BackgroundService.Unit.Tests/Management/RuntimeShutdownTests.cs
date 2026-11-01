@@ -21,7 +21,7 @@ public sealed class RuntimeShutdownTests
         using UdpClient socket = new(new IPEndPoint(IPAddress.Any, 0));
         int port = ((IPEndPoint)socket.Client.LocalEndPoint!).Port;
         socket.Close();
-        Task<NodeResult> execution;
+        Task<NodeResult>? execution = null;
         try
         {
             ManagementTestPeer peer = new(root, Guid.NewGuid().ToString("N"), "peer", port, true);
@@ -53,9 +53,20 @@ public sealed class RuntimeShutdownTests
         }
         finally
         {
-            if (Directory.Exists(root))
+            try
             {
-                Directory.Delete(root, true);
+                if (execution is not null)
+                {
+                    // Host終了による取消を検証するため、呼出元からは取り消さず結果を回収します。
+                    await execution.ConfigureAwait(true);
+                }
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, true);
+                }
             }
         }
     }

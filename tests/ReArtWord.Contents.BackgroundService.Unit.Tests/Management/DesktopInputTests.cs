@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using ReArtWord.Contents.BackgroundService.Contracts.Desktop;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Input;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
@@ -13,7 +14,7 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
 public sealed class DesktopInputTests
 {
     /// <summary>長押し中の各押下をOSへ渡し、離脱時の解放は一回だけにします。</summary>
-    [Theory]
+    [WindowsTheory]
     [InlineData(65)]
     [InlineData(8)]
     [InlineData(37)]
@@ -41,7 +42,7 @@ public sealed class DesktopInputTests
     }
 
     /// <summary>入力停止は押下を解放し、再開までOSへのすべての操作入力を抑止します。</summary>
-    [Fact]
+    [WindowsFact]
     public void ViewOnlyReleasesHeldInputAndDropsCommandsUntilResumed()
     {
         if (!OperatingSystem.IsWindows())
@@ -78,7 +79,7 @@ public sealed class DesktopInputTests
     }
 
     /// <summary>確定したUnicode文字は配列依存のVKを使用せず、サロゲート対も順序を保って一度だけ送ります。</summary>
-    [Theory]
+    [WindowsTheory]
     [InlineData(0x41, "A")]
     [InlineData(0x65e5, "日")]
     [InlineData(0x1f680, "🚀")]
@@ -116,7 +117,7 @@ public sealed class DesktopInputTests
     }
 
     /// <summary>不正なUnicode・余分な入力情報をOSへ渡しません。</summary>
-    [Fact]
+    [WindowsFact]
     public void InvalidTextDoesNotSendOrLeaveHeldInput()
     {
         if (!OperatingSystem.IsWindows())
@@ -137,7 +138,7 @@ public sealed class DesktopInputTests
     }
 
     /// <summary>記号キーの押下と解放はVKへ読み替えず、同じ物理scan codeで送ります。</summary>
-    [Theory]
+    [WindowsTheory]
     [InlineData(0x0c)]
     [InlineData(0x0d)]
     [InlineData(0x27)]
@@ -179,7 +180,7 @@ public sealed class DesktopInputTests
     }
 
     /// <summary>現在のdesktopへ接続しても、実SendInputに必要な権限を失いません。</summary>
-    [Fact]
+    [WindowsFact]
     public void AttachedDesktopPermitsNativeInputWithoutMovingThePointer()
     {
         if (!OperatingSystem.IsWindows())
@@ -193,7 +194,7 @@ public sealed class DesktopInputTests
     }
 
     /// <summary>左上にある副画面も全画面の物理座標へ対応し、移動と押下を一度で送ります。</summary>
-    [Theory]
+    [WindowsTheory]
     [InlineData(0, 469, 258, 469, 258)]
     [InlineData(1, 0, 0, -1920, -1080)]
     [InlineData(1, 1919, 1079, -1, -1)]
@@ -230,7 +231,7 @@ public sealed class DesktopInputTests
     }
 
     /// <summary>失敗した押下や不正なボタンは保持・再送せず、OS呼出前に拒否します。</summary>
-    [Fact]
+    [WindowsFact]
     public void InvalidOrRejectedInputDoesNotCreateAReleaseOrRetry()
     {
         if (!OperatingSystem.IsWindows())
@@ -252,7 +253,7 @@ public sealed class DesktopInputTests
     }
 
     /// <summary>定常のpointer変換とINPUT再利用でmanaged allocationを増やしません。</summary>
-    [Fact]
+    [WindowsFact]
     public void RepeatedPointerInputDoesNotAllocate()
     {
         if (!OperatingSystem.IsWindows())

@@ -28,7 +28,8 @@ public sealed class ClusterArchiveProcessTests
     public async Task CliMovesSettingsAndLogsAcrossClustersAndRestoresEveryActivePeer()
     {
         string sourceId = Guid.NewGuid().ToString("N"), destinationId = Guid.NewGuid().ToString("N");
-        int sourcePort = CorePeer.AvailablePort(), destinationPort = CorePeer.AvailablePort();
+        int[] ports = CorePeer.AvailableUdpPorts(2);
+        int sourcePort = ports[0], destinationPort = ports[1];
         CorePeer sourceA = new(sourceId, "a", sourcePort, true, hostId: "host-a"), sourceB = new(sourceId, "b", sourcePort, false, hostId: "host-b");
         CorePeer destinationA = new(destinationId, "a", destinationPort, true, hostId: "host-a"), destinationB = new(destinationId, "b", destinationPort, false, hostId: "host-b");
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable sourceALifetime = sourceA.ConfigureAwait(true);

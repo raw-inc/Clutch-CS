@@ -120,7 +120,6 @@ internal sealed class ForwardingScenario(ITestOutputHelper output)
             await Task.Delay(startDelay, cancellationToken).ConfigureAwait(false);
         }
         List<LatencySample> measured = [];
-        using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         foreach (string branch in new[] { "1", "all" })
         {
             if (interval is int spacing)
@@ -143,18 +142,23 @@ internal sealed class ForwardingScenario(ITestOutputHelper output)
                 await sender.SendAsync(packet, new IPEndPoint(IPAddress.Loopback, inputPort), cancellationToken).ConfigureAwait(false);
                 double firstMs = 0;
                 HashSet<string> outputs = [];
-                timeout.CancelAfter(TimeSpan.FromSeconds(20));
-                for (int count = 0; count < expected; count++)
+
+                // 受信期限を入力ごとに設け、前の入力の取消を持ち越しません。
+                using (CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
                 {
-                    UdpReceiveResult received = await receiver.ReceiveAsync(timeout.Token).ConfigureAwait(false);
-                    double milliseconds = System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds;
-                    if (count == 0)
+                    timeout.CancelAfter(TimeSpan.FromSeconds(20));
+                    for (int count = 0; count < expected; count++)
                     {
-                        firstMs = milliseconds;
+                        UdpReceiveResult received = await receiver.ReceiveAsync(timeout.Token).ConfigureAwait(false);
+                        double milliseconds = System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+                        if (count == 0)
+                        {
+                            firstMs = milliseconds;
+                        }
+                        string addressText = Encoding.ASCII.GetString(received.Buffer.AsSpan(0, Array.IndexOf(received.Buffer, (byte)0)));
+                        Assert.EndsWith("/" + suffix, addressText, StringComparison.Ordinal);
+                        Assert.True(outputs.Add(addressText));
                     }
-                    string addressText = Encoding.ASCII.GetString(received.Buffer.AsSpan(0, Array.IndexOf(received.Buffer, (byte)0)));
-                    Assert.EndsWith("/" + suffix, addressText, StringComparison.Ordinal);
-                    Assert.True(outputs.Add(addressText));
                 }
                 Assert.Equal(ExpectedAddresses(branch, index), outputs.Order(StringComparer.Ordinal));
                 measured.Add(new(branch, index, firstMs, System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds, outputs.ToArray()));

@@ -38,20 +38,25 @@ public sealed class ServiceRunTests
         using ServiceFixture fixture = new(behavior);
         using CancellationTokenSource cancellation = new();
         Task<int> running = fixture.RunAsync(cancellationToken: cancellation.Token);
+        TestTaskLifetime lifetime = new(running, cancellation);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = lifetime.ConfigureAwait(true);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
         string startedPath = fixture.Config + ".started";
         while (!File.Exists(startedPath))
         {
             await Task.Delay(20, timeout.Token).ConfigureAwait(true);
         }
+        using Process child = Process.GetProcessById(fixture.Results()[0].GetProperty("processId").GetInt32());
+        Assert.False(child.HasExited);
         await cancellation.CancelAsync().ConfigureAwait(true);
+        fixture.Release();
         Assert.Equal(130, await running.ConfigureAwait(true));
         JsonElement final = fixture.Results().Last();
         Assert.Equal("exited", final.GetProperty("state").GetString());
         Assert.True(final.GetProperty("cancelled").GetBoolean());
         Assert.Equal(forced, final.GetProperty("forcedTerminationRequested").GetBoolean());
-        int id = final.GetProperty("processId").GetInt32();
-        Assert.Throws<ArgumentException>(() => Process.GetProcessById(id));
+        Assert.Equal(child.Id, final.GetProperty("processId").GetInt32());
+        Assert.True(child.HasExited);
     }
 
     /// <summary>未開始・OS起動失敗・開始前取消を成功へ変えません。</summary>
@@ -89,6 +94,9 @@ public sealed class ServiceRunTests
         {
             get;
         }
+
+        /// <summary>取消後の通常終了を確認するため、待機中の試験用子プロセスへ終了を許可します。</summary>
+        internal void Release() => File.WriteAllText(Config + ".release", "released");
 
         /// <summary>製品CLI入口からURLなしで子を起動します。</summary>
         /// <returns>CLIの実終了コードです。</returns>

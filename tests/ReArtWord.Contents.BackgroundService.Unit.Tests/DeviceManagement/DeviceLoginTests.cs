@@ -6,6 +6,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement.Login;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Infrastructure.DeviceManagement;
 using ReArtWord.Contents.BackgroundService.Infrastructure.DeviceManagement.Login;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.DeviceManagement;
@@ -180,7 +181,7 @@ public sealed class DeviceLoginTests
     }
 
     /// <summary>実Windowsでは候補と設定の読取りだけを行い、ログインは試行しません。</summary>
-    [Fact]
+    [WindowsFact]
     public void ReadsLocalUsersAndPasswordPresenceWithoutReturningSecretContents()
     {
         if (!OperatingSystem.IsWindows())

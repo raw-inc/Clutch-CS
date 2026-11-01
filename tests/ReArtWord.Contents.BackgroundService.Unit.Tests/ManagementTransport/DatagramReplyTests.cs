@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Scheduling;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.ManagementTransport;
@@ -17,7 +18,7 @@ public sealed class DatagramReplyTests
         WireMessage first = WireMessage.Reply(request, "source", responder, body);
         WireMessage repeated = WireMessage.Reply(request, "source", responder, body);
         Assert.Equal(first.Id, repeated.Id);
-        FragmentAssembler assembler = new(4194304, TimeProvider.System, new(request.SenderId, request.InstanceId, request.ClusterId));
+        FragmentAssembler assembler = new(4194304, new FixedClock(DateTimeOffset.UnixEpoch), new(request.SenderId, request.InstanceId, request.ClusterId));
         Assert.Null(Deliver(assembler, first, 0));
         byte[] complete = Assert.IsType<byte[]>(Deliver(assembler, repeated, 1));
         WireMessage actual = JsonSerializer.Deserialize<WireMessage>(complete)!;
@@ -35,7 +36,7 @@ public sealed class DatagramReplyTests
         WireMessage previous = WireMessage.Reply(request, "source", responder, JsonSerializer.SerializeToElement(new string('a', 4096)));
         WireMessage current = WireMessage.Reply(request, "source", responder, JsonSerializer.SerializeToElement(new string('b', 4096)));
         Assert.NotEqual(previous.Id, current.Id);
-        FragmentAssembler assembler = new(4194304, TimeProvider.System);
+        FragmentAssembler assembler = new(4194304, new FixedClock(DateTimeOffset.UnixEpoch));
         Assert.Null(Deliver(assembler, previous, 0));
         Assert.Null(Deliver(assembler, current, 1));
         byte[] complete = Assert.IsType<byte[]>(Deliver(assembler, current, 0));

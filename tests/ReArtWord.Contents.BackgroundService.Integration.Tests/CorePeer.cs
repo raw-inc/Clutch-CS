@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
@@ -10,7 +11,6 @@ using ReArtWord.Contents.BackgroundService.Contracts.Management;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Observers;
-using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 
@@ -45,7 +45,6 @@ internal sealed class CorePeer : IAsyncDisposable
         this.clusterId = clusterId;
         this.peerId = peerId;
         InterfaceId = NetworkInterface.GetAllNetworkInterfaces().First(item => item.GetIPProperties().UnicastAddresses.Any(address => address.Address.Equals(IPAddress.Loopback))).Id;
-        observer = new(new ObserverOptions(Guid.NewGuid().ToString("N"), new(InterfaceId, "127.0.0.1", "127.255.255.255", clusterPort)));
         File.WriteAllText(configurationPath, $$"""
             [cluster]
             id = "{{clusterId}}"
@@ -64,6 +63,9 @@ internal sealed class CorePeer : IAsyncDisposable
             interfaceId = '{{InterfaceId}}'
             listenPort = 0
             """);
+
+        // 設定保存の失敗時に、破棄できない待受を残さないよう最後に確保します。
+        observer = new(new ObserverOptions(Guid.NewGuid().ToString("N"), new(InterfaceId, "127.0.0.1", "127.255.255.255", clusterPort)));
     }
 
     /// <summary>失敗時の状態とログを調査する一時保存先です。</summary>
@@ -163,13 +165,20 @@ internal sealed class CorePeer : IAsyncDisposable
                 process.Kill(includeChildren);
             }
             await ProcessCompletion.WaitAsync(process, cancellationToken).ConfigureAwait(false);
-            string error = await errors.ConfigureAwait(false);
-            if (error.Length != 0)
+            try
             {
-                await File.WriteAllTextAsync(Path.Combine(DirectoryPath, "startup-error.txt"), error, cancellationToken).ConfigureAwait(false);
+                string error = await errors.ConfigureAwait(false);
+                if (error.Length != 0)
+                {
+                    await File.WriteAllTextAsync(Path.Combine(DirectoryPath, "startup-error.txt"), error, cancellationToken).ConfigureAwait(false);
+                }
             }
-            process.Dispose();
-            process = null;
+            finally
+            {
+                // 診断を保存できなくても、停止確認済みのプロセスハンドルは解放します。
+                process.Dispose();
+                process = null;
+            }
         }
     }
 
@@ -272,6 +281,39 @@ internal sealed class CorePeer : IAsyncDisposable
         }
     }
 
+    /// <summary>同じ試験で使うUDPポートを、選択が終わるまで保持して重複なく取得します。</summary>
+    /// <param name="count">必要なポート数です。</param>
+    /// <param name="excluded">まだ待受を開始していない、選択済みのポートです。</param>
+    /// <returns>予約を解放したポート番号です。</returns>
+    internal static int[] AvailableUdpPorts(int count, params int[] excluded)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count);
+        List<Socket> held = [];
+        List<int> ports = new(count);
+        try
+        {
+            while (ports.Count < count)
+            {
+                Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                held.Add(socket);
+                socket.Bind(new IPEndPoint(IPAddress.Any, 0));
+                int port = ((IPEndPoint)socket.LocalEndPoint!).Port;
+                if (!excluded.Contains(port))
+                {
+                    ports.Add(port);
+                }
+            }
+            return ports.ToArray();
+        }
+        finally
+        {
+            foreach (Socket socket in held)
+            {
+                socket.Dispose();
+            }
+        }
+    }
+
     /// <summary>試験用の構成ごとに使用可能なローカルポートを選択します。</summary>
     /// <returns>短時間だけ予約確認したポートです。</returns>
     internal static int AvailablePort(bool tcp = false)
@@ -292,7 +334,13 @@ internal sealed class CorePeer : IAsyncDisposable
     /// <returns>試験用の構成の終了です。</returns>
     async ValueTask IAsyncDisposable.DisposeAsync()
     {
-        await StopAsync().ConfigureAwait(false);
-        await ((IAsyncDisposable)observer).DisposeAsync().ConfigureAwait(false);
+        try
+        {
+            await StopAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            await ((IAsyncDisposable)observer).DisposeAsync().ConfigureAwait(false);
+        }
     }
 }

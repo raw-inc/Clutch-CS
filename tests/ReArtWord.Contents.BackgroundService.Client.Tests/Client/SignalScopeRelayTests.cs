@@ -33,8 +33,19 @@ public sealed class SignalScopeRelayTests
         using NamedPipeServerStream upstream = new(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
         using NamedPipeClientStream capture = new(".", name, PipeDirection.InOut, PipeOptions.Asynchronous);
         using Task attaching = upstream.WaitForConnectionAsync(timeout.Token);
-        await capture.ConnectAsync(timeout.Token).ConfigureAwait(true);
-        await attaching.ConfigureAwait(true);
+        try
+        {
+            await capture.ConnectAsync(timeout.Token).ConfigureAwait(true);
+            await attaching.ConfigureAwait(true);
+        }
+        finally
+        {
+            if (!attaching.IsCompleted)
+            {
+                await timeout.CancelAsync().ConfigureAwait(true);
+            }
+            await attaching.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
         using Task relay = SignalScopeRelay.RunAsync(upstream, relaySocket, cancellationToken: timeout.Token);
         try
         {

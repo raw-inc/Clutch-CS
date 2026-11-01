@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 using System.Diagnostics;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
@@ -9,7 +10,6 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Updates;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Local;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Releases;
 using Xunit;
-using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Updates;
 
@@ -143,17 +143,45 @@ public sealed class LocalUpdateTests
         start.ArgumentList.Add(input);
         using Process updater = new() { StartInfo = start };
         Assert.True(updater.Start());
-        Task<string> stdout = updater.StandardOutput.ReadToEndAsync();
-        Task<string> stderr = updater.StandardError.ReadToEndAsync();
-        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
-        await ProcessCompletion.WaitAsync(updater, timeout.Token).ConfigureAwait(true);
-        JsonElement health = await scope.HealthAsync().ConfigureAwait(true);
-        Assert.Equal("v2", health.GetProperty("buildVersion").GetString());
-        await scope.StopAsync().ConfigureAwait(true);
-        Assert.True(updater.ExitCode == 0, await stderr.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true));
-        Assert.Contains("completed", await stdout.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true), StringComparison.Ordinal);
-        LocalUpdateRecord? record = await new UpdateJournal(new UpdateLayout(job.Options, job.OperationId), job.PeerId).ReadAsync();
-        Assert.Equal(EUpdatePhase.Completed, record!.Result.Phase);
+        using CancellationTokenSource outputLifetime = new();
+        Task<string> stdout = updater.StandardOutput.ReadToEndAsync(outputLifetime.Token);
+        Task<string> stderr = updater.StandardError.ReadToEndAsync(outputLifetime.Token);
+        try
+        {
+            // 停止・起動はジョブの期限で検証し、試験全体のハングは共通runsettingsで検出します。
+            await ProcessCompletion.WaitAsync(updater).ConfigureAwait(true);
+            JsonElement health = await scope.HealthAsync().ConfigureAwait(true);
+            Assert.Equal("v2", health.GetProperty("buildVersion").GetString());
+            await scope.StopAsync().ConfigureAwait(true);
+            scope.StopProcesses();
+            Assert.True(updater.ExitCode == 0, await stderr.ConfigureAwait(true));
+            Assert.Contains("completed", await stdout.ConfigureAwait(true), StringComparison.Ordinal);
+            LocalUpdateRecord? record = await new UpdateJournal(new UpdateLayout(job.Options, job.OperationId), job.PeerId).ReadAsync();
+            Assert.Equal(EUpdatePhase.Completed, record!.Result.Phase);
+        }
+        finally
+        {
+            try
+            {
+                if (!updater.HasExited)
+                {
+                    updater.Kill(entireProcessTree: true);
+                }
+                await ProcessCompletion.WaitAsync(updater, CancellationToken.None).ConfigureAwait(true);
+            }
+            finally
+            {
+                try
+                {
+                    scope.StopProcesses();
+                }
+                finally
+                {
+                    await outputLifetime.CancelAsync().ConfigureAwait(true);
+                    await ((Task)Task.WhenAll(stdout, stderr)).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+                }
+            }
+        }
     }
 
     /// <summary>portable相対パスを越えるリリース項目を拒否します。</summary>

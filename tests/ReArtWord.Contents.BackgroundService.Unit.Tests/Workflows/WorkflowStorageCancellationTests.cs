@@ -39,31 +39,28 @@ public sealed class WorkflowStorageCancellationTests
         Assert.Empty(compiled.Issues);
         Guid id = Guid.NewGuid();
         Task<ExecutionReport> pending = fixture.Engine.ExecuteAsync(compiled.Workflow!, "gate", executionId: id);
-        await store.Entered.Task.WaitAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(true);
-        bool interrupted;
-        bool finished;
         try
         {
+            await store.Entered.Task.WaitAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(true);
             Assert.True(await fixture.Engine.RequestCancellationAsync(id).ConfigureAwait(true));
-            _ = await Task.WhenAny(store.Cancelled.Task, Task.Delay(TimeSpan.FromSeconds(1))).ConfigureAwait(true);
-            interrupted = store.Cancelled.Task.IsCompleted;
-            _ = await Task.WhenAny(pending, Task.Delay(TimeSpan.FromSeconds(1))).ConfigureAwait(true);
-            finished = pending.IsCompleted;
+            await store.Cancelled.Task.WaitAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(true);
+            ExecutionReport report = await pending.WaitAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(true);
+
+            // 試験側で保存待ちを解放せずに、取消だけで終了できることを確認します。
+            Assert.False(store.Release.Task.IsCompleted);
+            Assert.Empty(fixture.Engine.Active());
+            Assert.Equal(heldWrite - 1, effects);
+            if (heldWrite == 2)
+            {
+                NodeResult result = Assert.Single(Assert.Single(report.Nodes, node => node.NodeId is "action").Targets).Result;
+                Assert.Equal(EOutcome.Succeeded, result.Outcome);
+                Assert.Equal("value.retentionUnconfirmed", result.ReasonCode);
+            }
         }
         finally
         {
             store.Release.TrySetResult();
-        }
-        ExecutionReport report = await pending.WaitAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(true);
-        Assert.True(interrupted, "The workflow cancellation did not reach the retention wait.");
-        Assert.True(finished, "The workflow stayed active until storage was released separately.");
-        Assert.Empty(fixture.Engine.Active());
-        Assert.Equal(heldWrite - 1, effects);
-        if (heldWrite == 2)
-        {
-            NodeResult result = Assert.Single(Assert.Single(report.Nodes, node => node.NodeId is "action").Targets).Result;
-            Assert.Equal(EOutcome.Succeeded, result.Outcome);
-            Assert.Equal("value.retentionUnconfirmed", result.ReasonCode);
+            await pending.ConfigureAwait(true);
         }
     }
 

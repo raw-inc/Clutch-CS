@@ -31,6 +31,8 @@ public sealed class PreviewHistoryRenderingTests
     [InlineData(true, true)]
     public async Task ToggleLoadsOnlyHistoryAndKeepsLatestMediaExplicitAsync(bool media, bool multiplePeers)
     {
+        EditorTestClock clock = new();
+        using ClientCultureScope culture = new("en-US");
         BrowserTestRuntime script = new();
         EditorDocument model = new(new(script));
         NodeDefinition node = new("preview", "control.preview", JsonSerializer.SerializeToElement(new { }));
@@ -38,7 +40,7 @@ public sealed class PreviewHistoryRenderingTests
         await model.LoadAsync(new(document, "saved", DateTimeOffset.UtcNow, EActivationPolicy.Auto)).ConfigureAwait(true);
         using HistoryHandler handler = new();
         using HttpClient http = new(handler) { BaseAddress = new Uri("http://localhost") };
-        ManagementApi api = new(http) { SelectedClusterId = "cluster" };
+        ManagementApi api = new(http, new(clock)) { SelectedClusterId = "cluster" };
         PreviewActivator activator = new();
         ServiceCollection services = new();
         services.AddLogging();
@@ -59,7 +61,7 @@ public sealed class PreviewHistoryRenderingTests
             {
                 type = "image/png";
             }
-            NodePreviewSnapshot latest = new(Guid.NewGuid(), "flow", "saved", "preview", "a", DateTimeOffset.UtcNow, type, 6);
+            NodePreviewSnapshot latest = new(Guid.NewGuid(), "flow", "saved", "preview", "a", clock.GetUtcNow(), type, 6);
             NodePreviewSnapshot[] snapshots = [latest];
             if (multiplePeers)
             {
@@ -111,12 +113,13 @@ public sealed class PreviewHistoryRenderingTests
     [Fact]
     public async Task ProgressSessionsRenderSeparatelyWithoutChunkRequestsAsync()
     {
+        EditorTestClock clock = new();
         BrowserTestRuntime script = new();
         EditorDocument model = new(new(script));
         NodeDefinition node = new("progress", "control.progress", JsonSerializer.SerializeToElement(new { }));
         using HistoryHandler handler = new();
         using HttpClient http = new(handler) { BaseAddress = new Uri("http://localhost") };
-        ManagementApi api = new(http) { SelectedClusterId = "cluster" };
+        ManagementApi api = new(http, new(clock)) { SelectedClusterId = "cluster" };
         PreviewActivator activator = new();
         ServiceCollection services = new();
         services.AddLogging();
@@ -132,7 +135,7 @@ public sealed class PreviewHistoryRenderingTests
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = renderer.ConfigureAwait(true);
         await renderer.Dispatcher.InvokeAsync(async () =>
         {
-            DateTimeOffset now = DateTimeOffset.UtcNow;
+            DateTimeOffset now = clock.GetUtcNow();
             ProgressSession session = new(Guid.NewGuid(), "owner", Guid.NewGuid(), now);
             NodePreviewSnapshot first = new(Guid.NewGuid(), "flow", "saved", "progress", "worker", now, "text/plain", 40)
             { Session = session, Progress = new(10, 3) };

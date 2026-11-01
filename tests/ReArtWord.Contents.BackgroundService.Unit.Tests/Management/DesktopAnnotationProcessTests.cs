@@ -21,7 +21,7 @@ public sealed class DesktopAnnotationProcessTests
 {
     /// <summary>購読しない旧receiverへ新種別を送らず、購読した操作側へ閲覧側の指示を中継します。</summary>
     /// <returns>pipe、共有memory、実windowの確認です。</returns>
-    [HostedDesktopTheory, SupportedOSPlatform("windows")]
+    [HostedDesktopTheory(minimumWindows10Build: 19041), SupportedOSPlatform("windows")]
     [InlineData(false)]
     [InlineData(true)]
     public async Task WindowsWorkersShareAnnotationsAndRecoverAfterOwnerExitAsync(bool anotherGroupAlreadyActive)
@@ -106,7 +106,7 @@ public sealed class DesktopAnnotationProcessTests
         finally
         {
             first.Close(); second.Close(); unrelated.Close();
-            Stop(one); Stop(two); Stop(other);
+            await TestProcessCleanup.StopAsync(one, two, other).ConfigureAwait(true);
         }
     }
 
@@ -213,27 +213,6 @@ public sealed class DesktopAnnotationProcessTests
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             Assert.Fail(failure);
-        }
-    }
-
-    /// <summary>この試験が起動したprocessだけを回収します。</summary>
-    private static void Stop(Process? process)
-    {
-        if (process is null)
-        {
-            return;
-        }
-        try
-        {
-            if (!process.HasExited)
-            {
-                process.Kill(true);
-                Assert.True(process.WaitForExit(5000));
-            }
-        }
-        finally
-        {
-            process.Dispose();
         }
     }
 

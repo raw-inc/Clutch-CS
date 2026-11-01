@@ -3,6 +3,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement;
 using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement.Firewall;
 using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement.Network;
 using ReArtWord.Contents.BackgroundService.Infrastructure.DeviceManagement;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.DeviceManagement;
@@ -12,7 +13,7 @@ public sealed class DeviceBulkSettingsTests
 {
     /// <summary>詳細を省いたルールを複製可能と扱わず、IDをワイルドカード展開しません。</summary>
     /// <returns>実PowerShellでのJSON配列とOS条件の照合です。</returns>
-    [Theory]
+    [WindowsTheory]
     [InlineData("basic", true)]
     [InlineData("service", false)]
     [InlineData("package", false)]
@@ -25,7 +26,7 @@ public sealed class DeviceBulkSettingsTests
         {
             return;
         }
-        JsonElement result = await DevicePowerShellTests.RunFixtureAsync("FirewallTemplateBoundary", new { scenario });
+        JsonElement result = await DevicePowerShellTests.RunFixtureAsync("FirewallTemplateBoundary", new { scenario }).ConfigureAwait(true);
         DeviceFirewallTemplates templates = DeviceSnapshots.Read<DeviceFirewallTemplates>(result);
         Assert.Equal(2, templates.Rules.Count);
         Assert.Contains(templates.Rules, item => string.Equals(item.Rule.Id, "literal[*]", StringComparison.Ordinal));
@@ -34,7 +35,7 @@ public sealed class DeviceBulkSettingsTests
 
     /// <summary>DNSなしを自動取得への復帰と別のOS操作にし、選択したfamilyだけへ渡します。</summary>
     /// <returns>実NICを変更しない呼出境界の確認です。</returns>
-    [Theory]
+    [WindowsTheory]
     [InlineData(4, false)]
     [InlineData(6, false)]
     [InlineData(4, true)]
@@ -45,7 +46,7 @@ public sealed class DeviceBulkSettingsTests
             return;
         }
         DeviceNetworkChange change = new(family, AutomaticDns: false, Dns: []);
-        JsonElement result = await DevicePowerShellTests.RunFixtureAsync("NetworkBoundary", new { id = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", name = "literal[*]", change, fail });
+        JsonElement result = await DevicePowerShellTests.RunFixtureAsync("NetworkBoundary", new { id = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", name = "literal[*]", change, fail }).ConfigureAwait(true);
         Assert.Equal(!fail, result.GetProperty("success").GetBoolean());
         JsonElement call = Assert.Single(result.GetProperty("calls").EnumerateArray());
         Assert.Equal("dns-none", call.GetProperty("kind").GetString());

@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Management;
 using ReArtWord.Contents.BackgroundService.Contracts.Terminal;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
@@ -13,7 +14,7 @@ public sealed class TerminalIdentityProcessTests
 {
     /// <summary>候補収集後にShellが消えても、補助プロセスだけを成功したTerminalとして公開しません。</summary>
     /// <returns>作成拒否と一覧の整合性を実通信で確認します。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task MissingShellDoesNotPublishASuccessfulSessionAsync()
     {
         if (!OperatingSystem.IsWindows())
@@ -40,7 +41,7 @@ public sealed class TerminalIdentityProcessTests
 
     /// <summary>SYSTEM起動時も本人のプロファイルで通常・管理者を区別し、非管理者Coreは昇格を拒否します。</summary>
     /// <returns>実通信とシェル内の権限確認です。</returns>
-    [Theory]
+    [WindowsTheory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task ShellUsesAUserTokenWithTheRequestedElevationAsync(bool strict)

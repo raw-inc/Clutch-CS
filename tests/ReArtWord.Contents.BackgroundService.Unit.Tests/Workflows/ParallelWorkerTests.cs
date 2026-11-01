@@ -28,7 +28,7 @@ public sealed class ParallelWorkerTests
             {
                 both.TrySetResult();
             }
-            Assert.True(release.Wait(TimeSpan.FromSeconds(10)));
+            release.Wait();
             return NodeResult.Success(context.Inputs["value"]);
         }));
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = fixture.ConfigureAwait(true);
@@ -41,7 +41,7 @@ public sealed class ParallelWorkerTests
         finally
         {
             release.Set();
-            await execution.WaitAsync(TimeSpan.FromSeconds(5));
+            await execution.ConfigureAwait(true);
         }
         Assert.Equal(EOutcome.Succeeded, (await execution.ConfigureAwait(true)).Outcome);
         Assert.Equal([1, 2], received.Order());

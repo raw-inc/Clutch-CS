@@ -217,10 +217,7 @@ public sealed class PeriodicHeartbeatProbeTests(ITestOutputHelper output)
         /// <returns>終了確認です。</returns>
         async ValueTask IAsyncDisposable.DisposeAsync()
         {
-            foreach (CorePeer peer in peers)
-            {
-                await ((IAsyncDisposable)peer).DisposeAsync().ConfigureAwait(false);
-            }
+            await Task.WhenAll(peers.Select(static peer => ((IAsyncDisposable)peer).DisposeAsync().AsTask())).ConfigureAwait(false);
         }
     }
 

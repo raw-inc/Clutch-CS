@@ -1,4 +1,5 @@
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Tray;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
@@ -8,7 +9,7 @@ public sealed class DesktopTrayTests
 {
     /// <summary>三つ以上の接続で旧ownerが終わっても、追随側が引継ぎ済みのGUIDを削除しません。</summary>
     /// <returns>Shell自身が保持するアイコンの存在確認です。</returns>
-    [Fact, System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    [WindowsFact, System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public async Task FollowersDoNotDeleteTheNewOwnersSharedIconAsync()
     {
         if (!OperatingSystem.IsWindows())
@@ -18,22 +19,22 @@ public sealed class DesktopTrayTests
         string group = DesktopTrayPresence.ClassName + ".Handoff." + Guid.NewGuid().ToString("N");
         DesktopTrayPresence first = new(group);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = first.ConfigureAwait(true);
-        await WaitAsync(() => Shown(group).SequenceEqual([1]));
+        await WaitAsync(() => Shown(group).SequenceEqual([1])).ConfigureAwait(true);
         IntPtr firstWindow = Assert.Single(DesktopTrayPresence.ReadWindows(group));
         DesktopTrayPresence second = new(group);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable secondLifetime = second.ConfigureAwait(true);
-        await WaitAsync(() => Shown(group).SequenceEqual([2]));
+        await WaitAsync(() => Shown(group).SequenceEqual([2])).ConfigureAwait(true);
         IntPtr secondWindow = DesktopTrayPresence.ReadWindows(group).Single(window => window != firstWindow);
         Assert.True(KillTimer(secondWindow, new UIntPtr(1)));
         DesktopTrayPresence third = new(group);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable thirdLifetime = third.ConfigureAwait(true);
-        await WaitAsync(() => DesktopTrayPresence.ReadWindows(group).Count == 3);
+        await WaitAsync(() => DesktopTrayPresence.ReadWindows(group).Count == 3).ConfigureAwait(true);
         IntPtr thirdWindow = DesktopTrayPresence.ReadWindows(group).Single(window => window != firstWindow && window != secondWindow);
         Assert.True(KillTimer(thirdWindow, new UIntPtr(1)));
-        await WaitAsync(() => Shown(group).SequenceEqual([3]));
-        await first.DisposeAsync();
+        await WaitAsync(() => Shown(group).SequenceEqual([3])).ConfigureAwait(true);
+        await first.DisposeAsync().ConfigureAwait(true);
         _ = SendMessageW(secondWindow, 0x8001, UIntPtr.Zero, IntPtr.Zero);
-        await WaitAsync(() => Shown(group).SequenceEqual([2]));
+        await WaitAsync(() => Shown(group).SequenceEqual([2])).ConfigureAwait(true);
         _ = SendMessageW(thirdWindow, 0x8001, UIntPtr.Zero, IntPtr.Zero);
         IconIdentifier icon = new() { Size = (uint)System.Runtime.InteropServices.Marshal.SizeOf<IconIdentifier>(), Guid = DesktopTrayIdentity.Create(Environment.ProcessPath!, group) };
         Assert.Equal(0, ShellNotifyIconGetRect(ref icon, out _));
@@ -133,7 +134,7 @@ public sealed class DesktopTrayTests
 
     /// <summary>実Shellに一つだけ表示し、最初の接続終了後も残る接続の数へ更新します。</summary>
     /// <returns>2→1→0の表示とExplorer再作成messageからの復帰です。</returns>
-    [Fact, System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    [WindowsFact, System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public async Task WindowsTrayAggregatesAndHandsOffWithoutNotificationsAsync()
     {
         if (!OperatingSystem.IsWindows())
@@ -144,27 +145,27 @@ public sealed class DesktopTrayTests
         DesktopTrayPresence first = new(group), second = new(group);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = first.ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable secondLifetime = second.ConfigureAwait(true);
-        await WaitAsync(() => Shown(group).SequenceEqual([2]) && Controls(group) == 2);
+        await WaitAsync(() => Shown(group).SequenceEqual([2]) && Controls(group) == 2).ConfigureAwait(true);
         first.SetViewOnly(true);
-        await WaitAsync(() => Shown(group).SequenceEqual([2]) && Controls(group) == 1);
+        await WaitAsync(() => Shown(group).SequenceEqual([2]) && Controls(group) == 1).ConfigureAwait(true);
         second.SetViewOnly(true);
-        await WaitAsync(() => Shown(group).SequenceEqual([2]) && Controls(group) == 0);
+        await WaitAsync(() => Shown(group).SequenceEqual([2]) && Controls(group) == 0).ConfigureAwait(true);
         IntPtr owner = DesktopTrayPresence.ReadWindows(group).Single(window => WindowsTrayNative.GetPropW(window, DesktopTrayPresence.CountProperty) != IntPtr.Zero);
         uint recreate = WindowsTrayNative.RegisterWindowMessageW("TaskbarCreated");
         Assert.True(WindowsTrayNative.PostMessageW(owner, recreate, UIntPtr.Zero, IntPtr.Zero));
-        await WaitAsync(() => Shown(group).SequenceEqual([2]) && Controls(group) == 0);
-        await first.DisposeAsync();
-        await WaitAsync(() => Shown(group).SequenceEqual([1]) && Controls(group) == 0);
+        await WaitAsync(() => Shown(group).SequenceEqual([2]) && Controls(group) == 0).ConfigureAwait(true);
+        await first.DisposeAsync().ConfigureAwait(true);
+        await WaitAsync(() => Shown(group).SequenceEqual([1]) && Controls(group) == 0).ConfigureAwait(true);
         second.SetViewOnly(false);
-        await WaitAsync(() => Shown(group).SequenceEqual([1]) && Controls(group) == 1);
+        await WaitAsync(() => Shown(group).SequenceEqual([1]) && Controls(group) == 1).ConfigureAwait(true);
         Assert.Single(DesktopTrayPresence.ReadWindows(group));
-        await second.DisposeAsync();
-        await WaitAsync(() => DesktopTrayPresence.ReadWindows(group).Count == 0);
+        await second.DisposeAsync().ConfigureAwait(true);
+        await WaitAsync(() => DesktopTrayPresence.ReadWindows(group).Count == 0).ConfigureAwait(true);
     }
 
     /// <summary>未初期化のまま破棄しても接続数を残しません。</summary>
     /// <returns>生成・終了競合後のwindow解放です。</returns>
-    [Fact, System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    [WindowsFact, System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public async Task WindowsImmediateDisconnectLeavesNoPresenceAsync()
     {
         if (!OperatingSystem.IsWindows())
@@ -173,8 +174,8 @@ public sealed class DesktopTrayTests
         }
         string group = DesktopTrayPresence.ClassName + ".Test." + Guid.NewGuid().ToString("N");
         DesktopTrayPresence presence = new(group);
-        await presence.DisposeAsync();
-        await WaitAsync(() => DesktopTrayPresence.ReadWindows(group).Count == 0);
+        await presence.DisposeAsync().ConfigureAwait(true);
+        await WaitAsync(() => DesktopTrayPresence.ReadWindows(group).Count == 0).ConfigureAwait(true);
     }
 
     /// <summary>Shellへ実際に反映済みの数を参照します。</summary>
