@@ -54,37 +54,45 @@ public sealed class UpdateHealthProbeTests
         LocalUpdateJob job = new(Guid.NewGuid(), "target", Guid.NewGuid(), identity, new("fixture", "win-x64", "fixture.exe", [], []), Path.GetTempPath(), options, []);
         using CancellationTokenSource deadline = new(TimeSpan.FromSeconds(30));
         Task<UpdateHealthResult> observation = UpdateHealthProbe.WaitAsync(job, null, deadline.Token);
-        if (cancel)
+        try
+        {
+            if (cancel)
+            {
+                await deadline.CancelAsync().ConfigureAwait(true);
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() => observation).ConfigureAwait(true);
+                Assert.Equal(0, inspections);
+                return;
+            }
+            if (expire)
+            {
+                UpdateHealthResult unavailable = await observation.ConfigureAwait(true);
+                Assert.False(unavailable.Ready);
+                Assert.Null(unavailable.InstanceId);
+                Assert.Null(unavailable.Process);
+                Assert.False(deadline.IsCancellationRequested);
+                Assert.Equal(0, inspections);
+                return;
+            }
+
+            // 探索一回の10秒を超えても、設定した起動期限内なら新実体を確認できます。
+            await Task.Delay(TimeSpan.FromSeconds(11), deadline.Token).ConfigureAwait(true);
+            long sequence = 0;
+            while (!observation.IsCompleted)
+            {
+                PeerInfo peer = new("target", instance, "host", binding.BindAddress, port, EPeerStatus.Ready, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+                await target.SendAsync(new(Guid.NewGuid(), cluster, "target", instance, "hello", null, null, JsonSerializer.SerializeToElement(new PeerAnnouncement(peer, "digest", "target", null, ++sequence))), deadline.Token).ConfigureAwait(true);
+                await Task.Delay(20, deadline.Token).ConfigureAwait(true);
+            }
+            UpdateHealthResult result = await observation.ConfigureAwait(true);
+            Assert.True(result.Ready);
+            Assert.Equal(instance, result.InstanceId);
+            Assert.Equal(identity, result.Process);
+            Assert.True(0 < inspections);
+        }
+        finally
         {
             await deadline.CancelAsync().ConfigureAwait(true);
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => observation).ConfigureAwait(true);
-            Assert.Equal(0, inspections);
-            return;
+            await ((Task)observation).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
-        if (expire)
-        {
-            UpdateHealthResult unavailable = await observation.ConfigureAwait(true);
-            Assert.False(unavailable.Ready);
-            Assert.Null(unavailable.InstanceId);
-            Assert.Null(unavailable.Process);
-            Assert.False(deadline.IsCancellationRequested);
-            Assert.Equal(0, inspections);
-            return;
-        }
-
-        // 探索一回の10秒を超えても、設定した起動期限内なら新実体を確認できます。
-        await Task.Delay(TimeSpan.FromSeconds(11), deadline.Token).ConfigureAwait(true);
-        long sequence = 0;
-        while (!observation.IsCompleted)
-        {
-            PeerInfo peer = new("target", instance, "host", binding.BindAddress, port, EPeerStatus.Ready, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
-            await target.SendAsync(new(Guid.NewGuid(), cluster, "target", instance, "hello", null, null, JsonSerializer.SerializeToElement(new PeerAnnouncement(peer, "digest", "target", null, ++sequence))), deadline.Token).ConfigureAwait(true);
-            await Task.Delay(20, deadline.Token).ConfigureAwait(true);
-        }
-        UpdateHealthResult result = await observation.ConfigureAwait(true);
-        Assert.True(result.Ready);
-        Assert.Equal(instance, result.InstanceId);
-        Assert.Equal(identity, result.Process);
-        Assert.True(0 < inspections);
     }
 }

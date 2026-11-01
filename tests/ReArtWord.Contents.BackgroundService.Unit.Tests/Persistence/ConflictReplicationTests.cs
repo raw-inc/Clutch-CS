@@ -5,6 +5,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Json;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Receipts;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Persistence;
@@ -19,10 +20,10 @@ public sealed class ConflictReplicationTests
     [InlineData(false)]
     public async Task FullCandidateExportAndPreparedResolutionConverge(bool sqlite)
     {
-        string root = Path.Combine(Path.GetTempPath(), "contents-fork-" + Guid.NewGuid().ToString("N"));
-        IDurableRepository first = Create(root, "a", sqlite);
-        IDurableRepository second = Create(root, "b", sqlite);
-        IDurableRepository third = Create(root, "c", sqlite);
+        using MediaTestFiles files = new();
+        IDurableRepository first = Create(files.Root, "a", sqlite);
+        IDurableRepository second = Create(files.Root, "b", sqlite);
+        IDurableRepository third = Create(files.Root, "c", sqlite);
         DurableReceipt original = await first.ApplyBatchAsync(Guid.NewGuid(), [new("workflow:demo", "key", null, NodeValue.FromObject(0))]);
         Assert.True(await second.ImportAsync(await first.ExportAsync()));
         await first.ApplyBatchAsync(Guid.NewGuid(), [new("workflow:demo", "key", original.Entries[0].Version, NodeValue.FromObject(1))]);

@@ -19,13 +19,16 @@ using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Compilation;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Cluster;
 
 /// <summary>実UDPで発見・同期・操作記録を検証します。</summary>
-public sealed class PeerClusterTests
+public sealed class PeerClusterTests : IDisposable
 {
+    private readonly MediaTestFiles files = new();
+
     /// <summary>複製済み実値を新Peerが取得し、同じ要求は一回だけ実行します。</summary>
     /// <returns>検証完了。</returns>
     [Fact]
@@ -33,7 +36,7 @@ public sealed class PeerClusterTests
     {
         int port = GetPort();
         string id = Guid.NewGuid().ToString("N");
-        string path = Path.Combine(Path.GetTempPath(), id);
+        string path = Path.Combine(files.Root, id);
         SqliteRepository firstStore = new(Path.Combine(path, "first.db"));
         SqliteRepository secondStore = new(Path.Combine(path, "second.db"));
         await using PeerCluster first = Create(id, "first", port, true, firstStore);
@@ -108,7 +111,7 @@ public sealed class PeerClusterTests
     public async Task StartedOperationCompletesAfterCallerStopsWaiting()
     {
         string id = Guid.NewGuid().ToString("N");
-        SqliteRepository store = new(Path.Combine(Path.GetTempPath(), id, "state.db"));
+        SqliteRepository store = new(Path.Combine(files.Root, id, "state.db"));
         RequestTestClock clock = new();
         await using PeerCluster peer = Create(id, "one", GetPort(), true, store, clock);
         using CancellationTokenSource cancellation = new();
@@ -143,7 +146,7 @@ public sealed class PeerClusterTests
     public async Task StartedBeforeCrashIsNeverReexecuted()
     {
         string id = Guid.NewGuid().ToString("N");
-        SqliteRepository store = new(Path.Combine(Path.GetTempPath(), id, "state.db"));
+        SqliteRepository store = new(Path.Combine(files.Root, id, "state.db"));
         ClusterRequest request = new(Guid.NewGuid(), "test", "one", Guid.NewGuid(), DateTimeOffset.UtcNow.AddMinutes(1), NodeValue.FromObject(5));
         await store.ApplyBatchAsync(Guid.NewGuid(), [new("receipts:one", request.Id.ToString("N"), null, NodeValue.FromObject(new { Fingerprint = ContractJson.Hash(request), InstanceId = request.TargetInstanceId, request.ExpiresAt, Response = (ClusterResponse?)null }))]);
         await using PeerCluster peer = Create(id, "one", GetPort(), true, store);
@@ -164,7 +167,7 @@ public sealed class PeerClusterTests
     public async Task DetachedAllowsExplicitLocalOperationsAndSurvivesRestart()
     {
         string id = Guid.NewGuid().ToString("N");
-        SqliteRepository store = new(Path.Combine(Path.GetTempPath(), id, "state.db"));
+        SqliteRepository store = new(Path.Combine(files.Root, id, "state.db"));
         int port = GetPort();
         await using (PeerCluster peer = Create(id, "one", port, true, store))
         {
@@ -186,19 +189,20 @@ public sealed class PeerClusterTests
     {
         int port = GetPort();
         string id = Guid.NewGuid().ToString("N");
-        string path = Path.Combine(Path.GetTempPath(), id);
+        string path = Path.Combine(files.Root, id);
         SqliteRepository firstStore = new(Path.Combine(path, "first.db"));
         SqliteRepository secondStore = new(Path.Combine(path, "second.db"));
         RequestTestClock clock = new();
         await using PeerCluster first = Create(id, "first", port, true, firstStore, clock);
         await first.StartAsync();
-        PeerCluster second = Create(id, "second", port, false, secondStore);
-        await second.StartAsync();
-        await WaitAsync(() => first.GetPeers().Count(peer => peer.Status == EPeerStatus.Ready) == 2);
+        await using (PeerCluster second = Create(id, "second", port, false, secondStore))
+        {
+            await second.StartAsync();
+            await WaitAsync(() => first.GetPeers().Count(peer => peer.Status == EPeerStatus.Ready) == 2);
 
-        // 保存開始時の対象が確定するまでは、試験側の遅延で参加者を失効させません。
-        clock.Freeze();
-        await ((IAsyncDisposable)second).DisposeAsync();
+            // 保存開始時の対象が確定するまでは、試験側の遅延で参加者を失効させません。
+            clock.Freeze();
+        }
         Guid failedId = Guid.NewGuid();
         Task<DurableReceipt> saving = first.ReplicateAsync(failedId, [new("configuration", "value", null, NodeValue.FromObject(1))]).AsTask();
         DurableReceipt lost;
@@ -240,7 +244,7 @@ public sealed class PeerClusterTests
     {
         int port = GetPort();
         string id = Guid.NewGuid().ToString("N");
-        string path = Path.Combine(Path.GetTempPath(), id);
+        string path = Path.Combine(files.Root, id);
         await using PeerCluster first = Create(id, "same", port, true, new SqliteRepository(Path.Combine(path, "first.db")));
         await first.StartAsync();
         await Task.Delay(50);
@@ -257,7 +261,7 @@ public sealed class PeerClusterTests
     {
         int port = GetPort();
         string id = Guid.NewGuid().ToString("N");
-        string path = Path.Combine(Path.GetTempPath(), id);
+        string path = Path.Combine(files.Root, id);
         await using PeerCluster first = Create(id, "first", port, true, new SqliteRepository(Path.Combine(path, "first.db")));
         await first.StartAsync();
         using UdpClient poison = new(new IPEndPoint(IPAddress.Loopback, 0)) { EnableBroadcast = true };
@@ -275,7 +279,7 @@ public sealed class PeerClusterTests
     {
         int port = GetPort();
         string id = Guid.NewGuid().ToString("N");
-        string path = Path.Combine(Path.GetTempPath(), id);
+        string path = Path.Combine(files.Root, id);
         SqliteRepository repository = new(Path.Combine(path, "first.db"));
         await using PeerCluster first = Create(id, "first", port, true, repository);
         NodeStateStore state = new(repository, "first");
@@ -295,6 +299,9 @@ public sealed class PeerClusterTests
         Assert.Single(await repository.ListAsync("cluster:operations", deadline.Token));
         Assert.Single(await repository.ListAsync("cluster:replication-members", deadline.Token));
     }
+
+    /// <summary>全Peerの終了後に試験用の保存先を削除します。</summary>
+    public void Dispose() => files.Dispose();
 
     /// <summary>起動時の実必要条件を明示します。</summary>
     /// <returns>検証用Peer。</returns>

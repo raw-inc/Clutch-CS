@@ -43,9 +43,9 @@ public sealed class SynchronizationConflictRaceTests
         SyncDownload download = new(cluster, repository, files, options, TimeProvider.System, () => new(network, "127.0.0.1"));
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(5));
         Task<bool> importing = download.ImportSnapshotAsync(incoming, timeout.Token);
-        await repository.Imported.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         try
         {
+            await repository.Imported.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
             if (resolve)
             {
                 string[] candidates = (await repository.GetConflictsAsync(scope, timeout.Token).ConfigureAwait(true)).Select(entry => entry.Version).ToArray();
@@ -56,6 +56,7 @@ public sealed class SynchronizationConflictRaceTests
         finally
         {
             repository.Release.TrySetResult();
+            await ((Task)importing).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
         Assert.Equal(resolve, await importing.ConfigureAwait(true));
         Assert.Equal(resolve ? EPeerStatus.Ready

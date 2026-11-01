@@ -5,16 +5,30 @@ using Microsoft.Win32.SafeHandles;
 
 namespace ReArtWord.Contents.BackgroundService.Runtime.Processes.Commands;
 
-/// <summary>一人だけが読む標準pipeで、到着済みbyteだけを取り出し、空のpipeをThreadPool上で待ちません。</summary>
+/// <summary>Windowsの標準出力パイプを専有し、届いたデータだけを読み取ります。</summary>
 [SupportedOSPlatform("windows")]
 internal sealed partial class WindowsProcessPipe : Stream
 {
     private readonly FileStream source;
+    private readonly CancellationToken drainDeadline;
+    private int? remainingAtDeadline;
 
     /// <summary>元readerでは読まない同じhandleを引き受け、先読みを無効にしてOSの待機byte数と揃えます。</summary>
-    internal WindowsProcessPipe(SafeFileHandle handle)
+    internal WindowsProcessPipe(SafeFileHandle handle, CancellationToken drainDeadline)
     {
+        // .NETのProcessは、子プロセス側の同期I/Oとの互換性を保つため、同期の匿名パイプを作ります。
+        // https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Diagnostics.Process/src/System/Diagnostics/Process.Windows.cs#L811-L817
+        // 空のパイプで同期読取りを始めず、PeekNamedPipeで確認した分だけを読み取ります。
+        // 同期ハンドルのPeek自体も競合時には待機し得るため、元のreaderや別のReadとの併用は禁止です。
+        // https://learn.microsoft.com/en-us/windows/win32/api/namedpipeapi/nf-namedpipeapi-peeknamedpipe
         source = new FileStream(handle, FileAccess.Read, bufferSize: 1, isAsync: false);
+        this.drainDeadline = drainDeadline;
+    }
+
+    /// <summary>プロセス終了後の読取り期限に達したことを確認したかです。</summary>
+    internal bool DrainDeadlineReached
+    {
+        get; private set;
     }
 
     /// <inheritdoc />
@@ -48,6 +62,12 @@ internal sealed partial class WindowsProcessPipe : Stream
         while (!cancellationToken.IsCancellationRequested)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            bool expired = drainDeadline.IsCancellationRequested;
+            DrainDeadlineReached |= expired;
+            if (remainingAtDeadline == 0)
+            {
+                return 0;
+            }
             if (!PeekNamedPipe(source.SafeFileHandle, IntPtr.Zero, 0, IntPtr.Zero, out int available, IntPtr.Zero))
             {
                 int error = Marshal.GetLastPInvokeError();
@@ -57,12 +77,39 @@ internal sealed partial class WindowsProcessPipe : Stream
                 }
                 throw new IOException("標準出力pipeの状態を確認できません。", new Win32Exception(error));
             }
+            if (expired && remainingAtDeadline is null)
+            {
+                // 期限切れを初めて観測した時点の到着量で固定します。取消の瞬間の量を取得できるわけではありません。
+                // 毎回取り直すと、パイプを継承した子孫が書き続ける限り排出が終わらなくなるためです。
+                // 読取り再開が遅れても既存の出力は保持し、この観測後に追加された分は待ちません。
+                remainingAtDeadline = available;
+            }
+            if (remainingAtDeadline is int remaining)
+            {
+                available = Math.Min(available, remaining);
+            }
             if (0 < available)
             {
                 // 他のreaderや保留Readは存在しません。先読みなしで確認済みbyte数以内だけを読みます。
-                return source.Read(buffer.Span[..Math.Min(buffer.Length, available)]);
+                int read = source.Read(buffer.Span[..Math.Min(buffer.Length, available)]);
+                if (remainingAtDeadline is not null)
+                {
+                    remainingAtDeadline -= read;
+                }
+                return read;
             }
-            await Task.Delay(2, cancellationToken).ConfigureAwait(false);
+            if (expired)
+            {
+                return 0;
+            }
+            try
+            {
+                await Task.Delay(2, drainDeadline).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (drainDeadline.IsCancellationRequested)
+            {
+                // 期限切れを確認してから、パイプに残っている分だけ読み取ります。
+            }
         }
         throw new OperationCanceledException(cancellationToken);
     }

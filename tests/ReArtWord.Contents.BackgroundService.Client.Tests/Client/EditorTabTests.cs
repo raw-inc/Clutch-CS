@@ -206,15 +206,23 @@ public sealed class EditorTabTests
         using HttpClient client = new(handler) { BaseAddress = new Uri("http://127.0.0.1") };
         ManagementApi api = new(client);
         using EditorTargetSelection selection = new(model, storage, new(api), api);
-        Task changing = selection.SelectAsync("cluster", "peer", peer.InstanceId);
-        await observed.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
-        model.New();
-        string current = model.Draft.Document.Id;
         using HttpResponseMessage received = Response(new[] { new DiscoveredCluster("cluster", [peer], [peer.PeerId], DateTimeOffset.UtcNow) });
-        reply.SetResult(received);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => changing).ConfigureAwait(true);
-        Assert.Null(api.SelectedClusterId);
-        Assert.Equal(current, model.Draft.Document.Id);
+        Task changing = selection.SelectAsync("cluster", "peer", peer.InstanceId);
+        try
+        {
+            await observed.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
+            model.New();
+            string current = model.Draft.Document.Id;
+            reply.SetResult(received);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => changing).ConfigureAwait(true);
+            Assert.Null(api.SelectedClusterId);
+            Assert.Equal(current, model.Draft.Document.Id);
+        }
+        finally
+        {
+            reply.TrySetCanceled();
+            await changing.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
     }
 
     /// <summary>既定英語と明示日本語で表示だけを切り替えます。</summary>

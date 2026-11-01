@@ -46,6 +46,7 @@ public sealed class SocketNodeTests
         });
         ISourceNode node = (ISourceNode)Find("osc.udp.receive");
         Task<NodeResult> run = node.RunAsync(source, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, timeout).ConfigureAwait(true);
         int port = await listening.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         current = Context(settings, "new");
         using UdpClient client = new(AddressFamily.InterNetwork);
@@ -82,6 +83,7 @@ public sealed class SocketNodeTests
             return ValueTask.CompletedTask;
         });
         Task<NodeResult> run = ((ISourceNode)Find("tcp.listen")).RunAsync(source, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, timeout).ConfigureAwait(true);
         int port = await listening.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         NodeExecutionContext request = Context(Settings(new { remoteAddress = "127.0.0.1", remotePort = port, framing = "line", awaitReply = true }), input: NodeValue.FromObject("ping"));
         NodeResult response = await ((IActionNode)Find("tcp.request")).ExecuteAsync(request, timeout.Token).ConfigureAwait(true);
@@ -112,6 +114,7 @@ public sealed class SocketNodeTests
             return ValueTask.CompletedTask;
         }, stop.Token);
         Task<NodeResult> run = ((ISourceNode)Find("udp.receive")).RunAsync(source, cancel.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, cancel).ConfigureAwait(true);
         await listening.Task.WaitAsync(cancel.Token).ConfigureAwait(true);
         EOutcome expected = EOutcome.Succeeded;
         if (emergency)

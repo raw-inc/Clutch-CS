@@ -77,17 +77,25 @@ public sealed class ConcurrencyPresentationTests
         EditorConcurrencyQueues queues = new(api);
         WorkflowDefinition definition = new("workflow", "Workflow", [Node("limit", ConcurrencyNodeTypes.Start), Node("second", ConcurrencyNodeTypes.Start)], []);
         Task running = queues.RefreshAsync("cluster", "peer", definition);
-        await queues.RefreshAsync("cluster", "peer", definition).ConfigureAwait(true);
-        await queues.RefreshAsync("cluster", "peer", definition with { Id = "other" }).ConfigureAwait(true);
-        response.TrySetResult();
-        await running.ConfigureAwait(true);
-        Assert.Equal(1, calls);
-        Assert.Null(queues.Find("cluster", "workflow", "limit"));
-        Assert.Null(queues.Find("cluster", "other", "limit"));
-        await queues.RefreshAsync("cluster", "peer", definition with { Id = "other" }).ConfigureAwait(true);
-        Assert.Equal(1, queues.Find("cluster", "other", "limit")?.ActiveCount);
-        queues.Reset();
-        Assert.Null(queues.Find("cluster", "other", "limit"));
+        try
+        {
+            await queues.RefreshAsync("cluster", "peer", definition).ConfigureAwait(true);
+            await queues.RefreshAsync("cluster", "peer", definition with { Id = "other" }).ConfigureAwait(true);
+            response.TrySetResult();
+            await running.ConfigureAwait(true);
+            Assert.Equal(1, calls);
+            Assert.Null(queues.Find("cluster", "workflow", "limit"));
+            Assert.Null(queues.Find("cluster", "other", "limit"));
+            await queues.RefreshAsync("cluster", "peer", definition with { Id = "other" }).ConfigureAwait(true);
+            Assert.Equal(1, queues.Find("cluster", "other", "limit")?.ActiveCount);
+            queues.Reset();
+            Assert.Null(queues.Find("cluster", "other", "limit"));
+        }
+        finally
+        {
+            response.TrySetResult();
+            await running.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
     }
 
     /// <summary>専用の区間接続をデータと区別し、SubWorkflow分離で片方だけ移しません。</summary>

@@ -47,9 +47,16 @@ public sealed class FleetUpdateParallelTests
             attempts = current;
             Interlocked.Decrement(ref saving);
         }, timeout.Token);
-        await filled.Task.WaitAsync(timeout.Token);
-        Assert.Equal(limit, remote.Observations.Values.Count(peer => !peer.Ready));
-        release.TrySetResult();
+        try
+        {
+            await filled.Task.WaitAsync(timeout.Token);
+            Assert.Equal(limit, remote.Observations.Values.Count(peer => !peer.Ready));
+        }
+        finally
+        {
+            release.TrySetResult();
+            await ((Task)run).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
         FleetUpdateStatus result = await run.ConfigureAwait(true);
         Assert.Equal(limit, peak);
         Assert.Equal(EOutcome.Succeeded, result.Outcome);
@@ -83,9 +90,16 @@ public sealed class FleetUpdateParallelTests
         };
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
         Task<FleetUpdateStatus> run = new FleetUpdateRunner(remote).RunAsync(initial, (_, _) => Task.CompletedTask, timeout.Token);
-        await firstPair.Task.WaitAsync(timeout.Token);
-        Assert.Equal(["dispatch:a/one", "dispatch:c/three"], remote.Events.Where(item => item.StartsWith("dispatch:", StringComparison.Ordinal)));
-        release.TrySetResult();
+        try
+        {
+            await firstPair.Task.WaitAsync(timeout.Token);
+            Assert.Equal(["dispatch:a/one", "dispatch:c/three"], remote.Events.Where(item => item.StartsWith("dispatch:", StringComparison.Ordinal)));
+        }
+        finally
+        {
+            release.TrySetResult();
+            await ((Task)run).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
         Assert.Equal(EOutcome.Succeeded, (await run.ConfigureAwait(true)).Outcome);
     }
 
@@ -156,9 +170,17 @@ public sealed class FleetUpdateParallelTests
             }
             return Task.CompletedTask;
         }, timeout.Token);
-        await unknown.Task.WaitAsync(timeout.Token);
-        Assert.False(run.IsCompleted);
-        release.TrySetResult();
+        try
+        {
+            await unknown.Task.WaitAsync(timeout.Token);
+            Assert.False(run.IsCompleted);
+        }
+        finally
+        {
+            filled.TrySetResult();
+            release.TrySetResult();
+            await ((Task)run).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
         FleetUpdateStatus result = await run.ConfigureAwait(true);
         Assert.Equal(EOutcome.Unknown, result.Outcome);
         Assert.Equal(2, result.Peers.Count(peer => peer.State is "Completed"));

@@ -138,9 +138,16 @@ public sealed class UpdateProgressFileTests : IDisposable
         using (FileStream reader = new(path, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
             Task saving = UpdateProgressFile.WriteAsync(path, "next", cancellation.Token);
-            await Task.Delay(100).ConfigureAwait(true);
-            Assert.False(saving.IsCompleted);
-            await cancellation.CancelAsync().ConfigureAwait(true);
+            try
+            {
+                await Task.Delay(100).ConfigureAwait(true);
+                Assert.False(saving.IsCompleted);
+            }
+            finally
+            {
+                await cancellation.CancelAsync().ConfigureAwait(true);
+                await saving.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+            }
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => saving).ConfigureAwait(true);
         }
         Assert.Equal("previous", JsonSerializer.Deserialize<string>(await File.ReadAllTextAsync(path).ConfigureAwait(true)));

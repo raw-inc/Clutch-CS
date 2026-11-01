@@ -25,12 +25,12 @@ public sealed class DesktopTrayProcessTests
         string firstPipe = "contents-tray-test-" + Guid.NewGuid().ToString("N"), secondPipe = "contents-tray-test-" + Guid.NewGuid().ToString("N");
         using NamedPipeServerStream first = DesktopWorkerProcess.CreatePipe(firstPipe), second = DesktopWorkerProcess.CreatePipe(secondPipe);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(30));
-        using Process one = Start(firstPipe);
+        Process? one = null, two = null;
         Task firstDrain = Task.CompletedTask;
-        Process? two = null;
         Task secondDrain = Task.CompletedTask;
         try
         {
+            one = Start(firstPipe);
             await first.WaitForConnectionAsync(timeout.Token).ConfigureAwait(true);
             DesktopWorkerProcess.Verify(first, one);
             firstDrain = first.CopyToAsync(Stream.Null, timeout.Token);
@@ -58,20 +58,20 @@ public sealed class DesktopTrayProcessTests
         {
             first.Close();
             second.Close();
-            await timeout.CancelAsync().ConfigureAwait(true);
-            Stop(one);
-            if (two is not null)
-            {
-                Stop(two);
-                two.Dispose();
-            }
             try
             {
-                await Task.WhenAll(firstDrain, secondDrain).ConfigureAwait(true);
+                await Task.WhenAll(timeout.CancelAsync(), TestProcessCleanup.StopAsync(one, two)).ConfigureAwait(true);
             }
-            catch (Exception exception) when (exception is IOException or OperationCanceledException or ObjectDisposedException)
+            finally
             {
-                // 所有pipeの切断による読取り終了です。
+                try
+                {
+                    await Task.WhenAll(firstDrain, secondDrain).ConfigureAwait(true);
+                }
+                catch (Exception exception) when (exception is IOException or OperationCanceledException or ObjectDisposedException)
+                {
+                    // 所有pipeの切断による読取り終了です。
+                }
             }
         }
     }
@@ -146,16 +146,6 @@ public sealed class DesktopTrayProcessTests
         while (!condition())
         {
             await Task.Delay(50, cancellationToken).ConfigureAwait(false);
-        }
-    }
-
-    /// <summary>試験で作成したプロセスだけを停止します。</summary>
-    private static void Stop(Process process)
-    {
-        if (!process.HasExited)
-        {
-            process.Kill(true);
-            Assert.True(process.WaitForExit(5000));
         }
     }
 }

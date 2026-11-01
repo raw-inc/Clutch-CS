@@ -23,11 +23,22 @@ public sealed class DesktopStreamTimingTests
         byte[] request = new byte[24];
         BinaryPrimitives.WriteInt32BigEndian(request, 14);
         BinaryPrimitives.WriteInt32BigEndian(request.AsSpan(4), 1);
-        await timing.ReplyAsync(request).WaitAsync(TimeSpan.FromSeconds(1)).ConfigureAwait(true);
-        Assert.Equal(0, output.Length);
-        writes.Release();
-        await timing.ReplyAsync(request).WaitAsync(TimeSpan.FromSeconds(1)).ConfigureAwait(true);
-        Assert.Equal(48, output.Length);
+        using CancellationTokenSource lifetime = new();
+        Task replying = timing.ReplyAsync(request, lifetime.Token);
+        try
+        {
+            await replying.WaitAsync(TimeSpan.FromSeconds(1)).ConfigureAwait(true);
+            Assert.Equal(0, output.Length);
+            writes.Release();
+            replying = timing.ReplyAsync(request, lifetime.Token);
+            await replying.WaitAsync(TimeSpan.FromSeconds(1)).ConfigureAwait(true);
+            Assert.Equal(48, output.Length);
+        }
+        finally
+        {
+            await lifetime.CancelAsync().ConfigureAwait(true);
+            await replying.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
     }
 
     /// <summary>要求前は旧形式を維持し、要求後も映像の取得時刻とペイロードを変えません。</summary>
@@ -47,9 +58,7 @@ public sealed class DesktopStreamTimingTests
         string name = "desktop-timing-" + Guid.NewGuid().ToString("N");
         using NamedPipeServerStream pipe = new(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
         using NamedPipeClientStream worker = new(".", name, PipeDirection.InOut, PipeOptions.Asynchronous);
-        using Task attached = pipe.WaitForConnectionAsync(timeout.Token);
-        await worker.ConnectAsync(timeout.Token).ConfigureAwait(true);
-        await attached.ConfigureAwait(true);
+        await Task.WhenAll(pipe.WaitForConnectionAsync(timeout.Token), worker.ConnectAsync(timeout.Token)).ConfigureAwait(true);
         using Task bridge = DesktopSession.BridgeAsync(network, pipe, timeout.Token);
         try
         {

@@ -41,7 +41,10 @@ public sealed class ConcurrencyScopeTests
             }, .. inside.Nodes.Select(node => node with { Inputs = null }), WorkflowFixture.Definition("each-end", IterationNodeTypes.End)],
             Wires = [.. inside.Wires, new("each", "item", "limit", "value"), new("each", "loop", "each-end", "loop"), new("end", "value", "each-end", "value")],
         };
-        ExecutionReport report = await fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, definition)).WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
+        using CancellationTokenSource cancellation = new();
+        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, definition), cancellationToken: cancellation.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = new TestTaskLifetime(running, cancellation).ConfigureAwait(true);
+        ExecutionReport report = await running.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
         Assert.Equal(EOutcome.Succeeded, report.Outcome);
         Assert.Equal([1, 2, 3], observed.Order());
         Assert.Equal("[1,2,3]", report.Nodes.Single(node => node.NodeId is "each-end").Targets.Single().Result.Outputs["value"].Json.GetRawText());
@@ -89,6 +92,7 @@ public sealed class ConcurrencyScopeTests
         finally
         {
             release.TrySetResult();
+            await running.ConfigureAwait(true);
         }
         ExecutionReport completed = await running.ConfigureAwait(true);
         Assert.Equal(outcome, completed.Outcome);
@@ -121,6 +125,7 @@ public sealed class ConcurrencyScopeTests
         }, limiter);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = fixture.ConfigureAwait(true);
         Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, ConcurrencyWorkflowTests.Definition(true)), cancellationToken: cancellation.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = new TestTaskLifetime(running, cancellation).ConfigureAwait(true);
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
         await cancellation.CancelAsync().ConfigureAwait(true);
         Assert.Equal(EOutcome.Cancelled, (await running.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true)).Outcome);
@@ -162,7 +167,10 @@ public sealed class ConcurrencyScopeTests
             }],
             Wires = [new("limit", "value", "progress", "current"), new("limit", "value", "body", "value")],
         };
-        ExecutionReport result = await fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, definition)).ConfigureAwait(true);
+        using CancellationTokenSource cancellation = new(TimeSpan.FromSeconds(10));
+        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, definition), cancellationToken: cancellation.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = new TestTaskLifetime(running, cancellation).ConfigureAwait(true);
+        ExecutionReport result = await running.ConfigureAwait(true);
         Assert.Equal(EOutcome.Succeeded, result.Outcome);
         Assert.Empty(store.Read(query));
     }

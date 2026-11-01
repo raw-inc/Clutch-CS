@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Cluster;
+using ReArtWord.Contents.BackgroundService.Infrastructure.Cluster.Synchronization;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
 using Xunit;
@@ -40,7 +41,16 @@ public sealed class SynchronizationCapacityTests
             {
                 await Task.Delay(50, timeout.Token).ConfigureAwait(true);
             }
-            await Task.Delay(1000, timeout.Token).ConfigureAwait(true);
+
+            // 同じ最大一枠へ再要求し、容量超過の後も枠が返却されることを確認します。
+            SyncExportStore exports = new(first, source, options, TimeProvider.System, () => throw new InvalidOperationException("An oversized export must not open a stream."));
+            await using ConfiguredAsyncDisposable exportsLifetime = exports.ConfigureAwait(true);
+            PeerInfo local = Assert.Single(first.GetPeers(), peer => peer.InstanceId == first.LocalInstanceId);
+            for (int attempt = 0; attempt < 2; attempt++)
+            {
+                SyncFailureException failure = await Assert.ThrowsAsync<SyncFailureException>(() => exports.CreateAsync(local, false, timeout.Token)).ConfigureAwait(true);
+                Assert.Equal(reason, failure.Code);
+            }
             Assert.Equal(reason, second.SynchronizationProblem);
             Assert.Equal(EPeerStatus.Syncing, second.GetPeers().Single(peer => peer.InstanceId == second.LocalInstanceId).Status);
             Assert.Equal(EPeerStatus.Ready, first.GetPeers().Single(peer => peer.InstanceId == first.LocalInstanceId).Status);

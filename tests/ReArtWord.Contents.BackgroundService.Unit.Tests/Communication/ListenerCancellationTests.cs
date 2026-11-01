@@ -48,6 +48,7 @@ public sealed class ListenerCancellationTests
             }
         });
         Task<NodeResult> running = ((ISourceNode)SocketNodeTests.Find(type)).RunAsync(context, cancellation.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runningLifetime = new TestTaskLifetime(running, cancellation).ConfigureAwait(true);
         try
         {
             await reporting.Task.WaitAsync(cancellation.Token).ConfigureAwait(true);

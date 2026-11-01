@@ -25,6 +25,7 @@ public sealed class DashboardCombinedSummaryRenderingTests
     [InlineData(true, true)]
     public async Task CombinedSummaryShowsTotalsAndDirectionalBreakdownAsync(bool detailed, bool measured)
     {
+        using ClientCultureScope culture = new("en-US");
         Guid instance = Guid.NewGuid();
         DateTimeOffset now = DateTimeOffset.UtcNow;
         PeerInfo peer = new("peer", instance, "Test workstation", "127.0.0.1", 47740, EPeerStatus.Ready, 100, now, now);

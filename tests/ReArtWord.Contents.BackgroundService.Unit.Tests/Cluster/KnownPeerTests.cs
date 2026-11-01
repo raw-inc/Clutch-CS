@@ -9,6 +9,7 @@ using ReArtWord.Contents.BackgroundService.Runtime.Workflows;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Execution;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Configuration;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Execution;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Cluster;
@@ -93,7 +94,8 @@ public sealed class KnownPeerTests
     [Fact]
     public async Task KnownSetWriteFailureBlocksReadyAndMissingRetainedSetBlocksRestart()
     {
-        string root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        using MediaTestFiles files = new();
+        string root = files.Root;
         FailingRepository repository = new(new SqliteRepository(Path.Combine(root, "state.db"))) { FailScope = "peer:a:membership" };
         using UdpClient socket = new(new IPEndPoint(IPAddress.Loopback, 0));
         int port = ((IPEndPoint)socket.Client.LocalEndPoint!).Port;

@@ -28,6 +28,7 @@ public sealed class HttpNodeTests
             return ValueTask.CompletedTask;
         });
         Task<NodeResult> run = ((ISourceNode)SocketNodeTests.Find("http.listen")).RunAsync(source, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, timeout).ConfigureAwait(true);
         string url = await listening.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         NodeExecutionContext request = SocketNodeTests.Context(SocketNodeTests.Settings(new { url, secretId = "api", secretHeader = "X-Api-Key", secretScheme = "" }));
         string requestType = "http.request";
@@ -58,6 +59,7 @@ public sealed class HttpNodeTests
             return ValueTask.CompletedTask;
         });
         Task<NodeResult> run = ((ISourceNode)SocketNodeTests.Find("http.listen")).RunAsync(source, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, timeout).ConfigureAwait(true);
         string url = await listening.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         NodeValue value = NodeValue.FromObject(input);
         string graphQl = "graphql";
@@ -95,6 +97,7 @@ public sealed class HttpNodeTests
             return ValueTask.CompletedTask;
         });
         Task<NodeResult> run = ((ISourceNode)SocketNodeTests.Find("http.listen")).RunAsync(source, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, timeout).ConfigureAwait(true);
         string url = await listening.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         NodeExecutionContext request = SocketNodeTests.Context(SocketNodeTests.Settings(new { url }));
         NodeResult result = await ((IActionNode)SocketNodeTests.Find("http.request")).ExecuteAsync(request, timeout.Token).ConfigureAwait(true);

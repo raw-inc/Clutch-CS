@@ -159,9 +159,13 @@ public sealed class DevicePowerShellTests
             + Resource("VirtualSwitch.Read") + "\n" + Resource("VirtualSwitch.Change") + "\n"
             + networkRead + await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "DeviceManagement", fixture + ".ps1"), cancellationToken).ConfigureAwait(false);
         string bootstrap = "[Console]::InputEncoding=[Text.UTF8Encoding]::new($false); [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); $frame=[Console]::In.ReadToEnd() | ConvertFrom-Json; $request=$frame.request; & ([scriptblock]::Create($frame.code))";
+
+        // 製品のDevicePowerShellと同じ45秒で取り消し、子プロセスの停止と出力の回収まで待ちます。
+        using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(45));
         string output = await BoundedProcessRunner.RunAsync(Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe"),
             ["-NoProfile", "-NonInteractive", "-EncodedCommand", Convert.ToBase64String(Encoding.Unicode.GetBytes(bootstrap))],
-            new ProcessRunLimits(StandardInput: JsonSerializer.Serialize(new { code, request }, ContractJson.Options), OutputEncoding: Encoding.UTF8), cancellationToken).ConfigureAwait(false);
+            new ProcessRunLimits(StandardInput: JsonSerializer.Serialize(new { code, request }, ContractJson.Options), OutputEncoding: Encoding.UTF8), timeout.Token).ConfigureAwait(false);
         return JsonSerializer.Deserialize<JsonElement>(output);
     }
 

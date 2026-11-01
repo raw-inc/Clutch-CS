@@ -34,7 +34,8 @@ public sealed class SignalWatchdogProcessTests
             return status.GetProperty("peers").EnumerateArray().Count(peer => peer.GetProperty("status").GetString() is "ready") == 2
                 && (await first.GetAsync<ClusterOperationalState>("configuration.read", token).ConfigureAwait(false)).Effective is not null;
         }, timeout.Token).ConfigureAwait(true);
-        int mainPort = CorePeer.AvailablePort(), backupPort = CorePeer.AvailablePort();
+        int[] ports = CorePeer.AvailableUdpPorts(2);
+        int mainPort = ports[0], backupPort = ports[1];
         WorkflowDefinition definition = Definition(first, second, mainPort, backupPort, response.Url);
         WorkflowSaveResult saved = await first.PostAsync<WorkflowSaveResult>("workflows.save", new WorkflowSaveRequest(Guid.NewGuid(), definition, null), timeout.Token).ConfigureAwait(true);
         Assert.Equal(EOutcome.Succeeded, saved.Activation.Outcome);
@@ -75,6 +76,7 @@ public sealed class SignalWatchdogProcessTests
     /// <returns>外部APIや本番ポートを使用しない定義です。</returns>
     private static WorkflowDefinition Definition(CorePeer first, CorePeer second, int mainPort, int backupPort, string url)
     {
+        int[] ports = CorePeer.AvailableUdpPorts(2, mainPort, backupPort);
         JsonElement preview = JsonSerializer.SerializeToElement(new { mediaType = "text/plain" });
         TargetDefinition local = new(EExecutionScope.One, ["a"]), remote = new(EExecutionScope.One, ["b"]);
         NodeDefinition Receive(string id, int input, bool automatic = false) => new(id, "udp.receive",
@@ -82,7 +84,7 @@ public sealed class SignalWatchdogProcessTests
         return new("watchdog", "Watchdog recovery", [
             Receive("main", mainPort, true),
             new("watch", "control.signalWatchdog", JsonSerializer.SerializeToElement(new { timeoutMs = 1200 }), Target: remote, StartOnLoad: true),
-            Receive("backup", backupPort), Receive("independent", CorePeer.AvailablePort(), true), Receive("late", CorePeer.AvailablePort()),
+            Receive("backup", backupPort), Receive("independent", ports[0], true), Receive("late", ports[1]),
             new("accepted", "control.preview", preview, Target: remote),
             new("delay", "http.request", JsonSerializer.SerializeToElement(new
             {

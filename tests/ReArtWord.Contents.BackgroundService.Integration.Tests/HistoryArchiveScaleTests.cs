@@ -16,14 +16,16 @@ namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 /// <summary>実運用DBを使わず、有限量の履歴を段階的に圧縮して容量と元結果を確認します。</summary>
 public sealed class HistoryArchiveScaleTests(ITestOutputHelper output)
 {
-    /// <summary>明示実行では最大100万件まで増やせます。通常CIでは小さい同じ挙動を検査します。</summary>
+    /// <summary>既定の256件から最大100万件まで増やし、同じ圧縮・縮小を検査します。</summary>
     /// <returns>確定結果を保った圧縮・縮小の測定です。</returns>
     [Fact]
     public async Task BoundedBatchesArchiveHistoryAndPreserveSampledResults()
     {
         int count = 256;
         string setting = "CONTENTS_ARCHIVE_RECORDS";
-        if (int.TryParse(Environment.GetEnvironmentVariable(setting), out int requested) && requested is >= 1 and <= 1000000)
+
+        // 少量ではSQLiteのページ・索引の固定容量が支配的になるため、この容量測定は既定件数以上で行います。
+        if (int.TryParse(Environment.GetEnvironmentVariable(setting), out int requested) && requested is >= 256 and <= 1000000)
         {
             count = requested;
         }
@@ -71,10 +73,10 @@ public sealed class HistoryArchiveScaleTests(ITestOutputHelper output)
         elapsed.Restart();
         HistoryArchiveStatus compacted = await HistoryOfflineMaintenance.RunAsync(root, "fixture", persistence, false);
         double compactMilliseconds = elapsed.Elapsed.TotalMilliseconds;
-        Assert.True(compacted.DatabaseBytes < before);
         string report = JsonSerializer.Serialize(new { count, before, seedMilliseconds, archiveMilliseconds, compactMilliseconds, status, compacted });
         await File.WriteAllTextAsync(Path.Combine(root, "measurement.json"), report);
         output.WriteLine(report);
         output.WriteLine(root);
+        Assert.True(compacted.DatabaseBytes < before, report);
     }
 }
