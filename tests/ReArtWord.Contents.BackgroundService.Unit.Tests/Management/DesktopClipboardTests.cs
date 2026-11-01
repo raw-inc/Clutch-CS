@@ -129,10 +129,9 @@ public sealed class DesktopClipboardTests
         DesktopClipboard clipboard = new(() => Volatile.Read(ref version), () =>
         {
             entered.TrySetResult();
-            if (!release.Wait(TimeSpan.FromSeconds(10)))
-            {
-                throw new IOException("The test owner did not finish rendering.");
-            }
+
+            // 保留中のOS応答は、試験のfinallyで解放するまで完了させません。
+            release.Wait();
             return "late owner text";
         }, _ => throw new InvalidOperationException("Disabled clipboard must not be written."));
         using CancellationTokenSource lifetime = new(TimeSpan.FromSeconds(5));

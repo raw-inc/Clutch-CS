@@ -65,10 +65,18 @@ public sealed class OptionalAiSettingsProcessTests
             return !run.Running;
         }, timeout.Token).ConfigureAwait(true);
         Assert.True(run.Outcome == EOutcome.Succeeded, JsonSerializer.Serialize(run));
-        ExecutionHistoryPage history = await first.GetAsync<ExecutionHistoryPage>("executions.list", new ExecutionHistoryQuery(), timeout.Token).ConfigureAwait(true);
-        JsonElement[] received = history.Entries.Where(entry => entry.Report?.WorkflowId is "local-ai").SelectMany(entry => entry.Report!.Nodes)
-            .Where(node => node.NodeId is "receive").SelectMany(node => node.Targets).Where(target => target.Result.Outputs.ContainsKey("value"))
-            .Select(target => JsonSerializer.Deserialize<JsonElement>(target.Result.Outputs["value"].Json.GetProperty("body").GetString()!)).ToArray();
+        JsonElement[] received = [];
+
+        // HTTP応答の受信と、応答元WFの履歴への反映は別に完了します。
+        await CorePeer.WaitAsync(async token =>
+        {
+            ExecutionHistoryPage history = await first.GetAsync<ExecutionHistoryPage>("executions.list", new ExecutionHistoryQuery(), token).ConfigureAwait(true);
+            received = history.Entries.Where(entry => entry.Report?.WorkflowId is "local-ai").SelectMany(entry => entry.Report!.Nodes)
+                .Where(node => node.NodeId is "receive").SelectMany(node => node.Targets).Where(target => target.Result.Outputs.ContainsKey("value"))
+                .Select(target => JsonSerializer.Deserialize<JsonElement>(target.Result.Outputs["value"].Json.GetProperty("body").GetString()!)).ToArray();
+            Assert.InRange(received.Length, 0, 3);
+            return received.Length == 3;
+        }, timeout.Token).ConfigureAwait(true);
         Assert.Equal(3, received.Length);
         foreach (JsonElement body in received)
         {

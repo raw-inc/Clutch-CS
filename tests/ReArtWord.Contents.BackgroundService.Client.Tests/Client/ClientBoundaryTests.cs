@@ -289,6 +289,7 @@ public sealed class ClientBoundaryTests
     [Fact]
     public async Task IdlePresenceIsCoalescedButPointerChangesAreSentAsync()
     {
+        EditorTestClock clock = new();
         int requests = 0;
         using ClientHttpHandler handler = new((_, _) =>
         {
@@ -297,7 +298,7 @@ public sealed class ClientBoundaryTests
         });
         using HttpClient client = Client(handler);
         EditorDocument model = new(new(new BrowserTestRuntime()));
-        EditorCollaboration collaboration = new(model, new(client));
+        EditorCollaboration collaboration = new(model, new(client, new(clock)));
         await collaboration.SynchronizePresenceAsync("host").ConfigureAwait(true);
         await collaboration.SynchronizePresenceAsync("host").ConfigureAwait(true);
         Assert.Equal(2, requests);

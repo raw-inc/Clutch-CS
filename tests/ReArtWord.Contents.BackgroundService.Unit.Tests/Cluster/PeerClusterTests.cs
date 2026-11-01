@@ -192,19 +192,42 @@ public sealed class PeerClusterTests : IDisposable
         string path = Path.Combine(files.Root, id);
         SqliteRepository firstStore = new(Path.Combine(path, "first.db"));
         SqliteRepository secondStore = new(Path.Combine(path, "second.db"));
-        await using PeerCluster first = Create(id, "first", port, true, firstStore);
+        RequestTestClock clock = new();
+        await using PeerCluster first = Create(id, "first", port, true, firstStore, clock);
         await first.StartAsync();
         await using (PeerCluster second = Create(id, "second", port, false, secondStore))
         {
             await second.StartAsync();
             await WaitAsync(() => first.GetPeers().Count(peer => peer.Status == EPeerStatus.Ready) == 2);
+
+            // 保存開始時の対象が確定するまでは、試験側の遅延で参加者を失効させません。
+            clock.Freeze();
         }
         Guid failedId = Guid.NewGuid();
-        DurableReceipt lost = await first.ReplicateAsync(failedId, [new("configuration", "value", null, NodeValue.FromObject(1))]);
+        Task<DurableReceipt> saving = first.ReplicateAsync(failedId, [new("configuration", "value", null, NodeValue.FromObject(1))]).AsTask();
+        DurableReceipt lost;
+        try
+        {
+            using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(12));
+            string scope = "cluster:replication-members", key = failedId.ToString("N");
+            DurableEntry? fixedMembers;
+            while ((fixedMembers = await firstStore.ReadAsync(scope, key, timeout.Token)) is null)
+            {
+                await Task.Delay(50, timeout.Token);
+            }
+            Assert.Equal(2, fixedMembers.Value!.Json.GetArrayLength());
+            clock.AdvanceAndResume(TimeSpan.Zero);
+            await WaitAsync(() => first.GetPeers().Count(peer => peer.Status == EPeerStatus.Ready) == 1);
+            lost = await saving.ConfigureAwait(true);
+        }
+        finally
+        {
+            clock.AdvanceAndResume(TimeSpan.Zero);
+            await saving.ConfigureAwait(true);
+        }
         Assert.Equal(EOutcome.Unknown, lost.Outcome);
         Assert.Equal(EOutcome.Unknown, (await first.GetOperationAsync(failedId))!.Outcome);
         Assert.Null(await firstStore.ReadAsync("configuration", "value"));
-        await WaitAsync(() => first.GetPeers().Count(peer => peer.Status == EPeerStatus.Ready) == 1);
         Assert.Equal(EOutcome.Succeeded, (await first.ReplicateAsync(Guid.NewGuid(), [new("configuration", "value", null, NodeValue.FromObject(2))])).Outcome);
         Assert.Equal("Persistence.Aborted", (await firstStore.CommitAsync(failedId)).Reason);
         await using PeerCluster restarted = Create(id, "second", port, false, secondStore);

@@ -21,7 +21,8 @@ public sealed class PeerListTests
     [Fact]
     public async Task VersionsBelongToTheMatchingInstanceAndReadsDoNotChangeSelection()
     {
-        DiscoveredCluster[] clusters = [Cluster("a"), Cluster("b")];
+        EditorTestClock clock = new();
+        DiscoveredCluster[] clusters = [Cluster("a", clock.GetUtcNow()), Cluster("b", clock.GetUtcNow())];
         bool mismatch = false, failure = false, discoveryFailed = false;
         List<string> paths = [];
         using ClientHttpHandler handler = new(async (request, token) =>
@@ -52,12 +53,12 @@ public sealed class PeerListTests
                 {
                     instance = Guid.NewGuid();
                 }
-                return new DashboardPeerSnapshot(query.ClusterId, peer, DateTimeOffset.UtcNow, null,
+                return new DashboardPeerSnapshot(query.ClusterId, peer, clock.GetUtcNow(), null,
                     Health(query.ClusterId, peer.PeerId, instance, "1.0.0+" + query.ClusterId), []);
             }).ToArray());
         });
         using HttpClient client = new(handler) { BaseAddress = new Uri("http://localhost/") };
-        ManagementApi api = new(client) { SelectedClusterId = "selected", SelectedPeerId = "untouched" };
+        ManagementApi api = new(client, new(clock)) { SelectedClusterId = "selected", SelectedPeerId = "untouched" };
         PeerListTelemetry list = new(api);
         await list.RefreshAsync();
         Assert.Equal(2, list.Total);
@@ -185,8 +186,11 @@ public sealed class PeerListTests
 
     /// <summary>一つの同名Peerを含む新しい発見情報です。</summary>
     /// <returns>クラスタで独立した試験用の構成です。</returns>
-    private static DiscoveredCluster Cluster(string id)
-        => new(id, [new("same", Guid.NewGuid(), "pc", "127.0.0.1", 47740, EPeerStatus.Ready, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)], ["same"], DateTimeOffset.UtcNow);
+    private static DiscoveredCluster Cluster(string id, DateTimeOffset? observed = null)
+    {
+        DateTimeOffset now = observed ?? DateTimeOffset.UtcNow;
+        return new(id, [new("same", Guid.NewGuid(), "pc", "127.0.0.1", 47740, EPeerStatus.Ready, 1, now, now)], ["same"], now);
+    }
 
     /// <summary>実際の管理HTTP形式で返します。</summary>
     /// <returns>呼出元が破棄する応答です。</returns>

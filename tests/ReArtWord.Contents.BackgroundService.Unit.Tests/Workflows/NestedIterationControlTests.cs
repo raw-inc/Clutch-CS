@@ -37,6 +37,7 @@ public sealed class NestedIterationControlTests
     [Fact]
     public async Task OuterBreakStopsUnstartedNestedElementsWithoutAbandoningStartedWorkAsync()
     {
+        using CancellationTokenSource cancellation = new();
         TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource controlled = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -49,11 +50,11 @@ public sealed class NestedIterationControlTests
             {
                 values.Enqueue(value);
                 entered.TrySetResult();
-                await release.Task.WaitAsync(TimeSpan.FromSeconds(10), token).ConfigureAwait(false);
+                await release.Task.WaitAsync(token).ConfigureAwait(false);
             }
             else
             {
-                await entered.Task.WaitAsync(TimeSpan.FromSeconds(10), token).ConfigureAwait(false);
+                await entered.Task.WaitAsync(token).ConfigureAwait(false);
             }
             return IterationControlTestNode.Result(value);
         });
@@ -65,22 +66,25 @@ public sealed class NestedIterationControlTests
             Nodes = [.. source.Nodes, WorkflowFixture.Definition("stop", "test.iteration")],
             Wires = [.. source.Wires, new("each", "item", "stop", "value"), new("stop", CompletionPorts.Signal, "end", "break")],
         };
-        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, document));
+        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, document), cancellationToken: cancellation.Token);
         try
         {
             await controlled.Task.WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(true);
             Assert.False(running.IsCompleted);
             Assert.Equal([10], values);
+            release.TrySetResult();
+            ExecutionReport report = await running.ConfigureAwait(true);
+            Assert.True(report.Outcome == EOutcome.Succeeded, System.Text.Json.JsonSerializer.Serialize(report));
+            Assert.Equal([10], values);
+            Assert.Equal(1, IterationTests.Loop(report).Iteration!.Started);
+            Assert.Equal("[]", IterationResultTests.Outputs(report)["value"].Json.GetRawText());
         }
         finally
         {
             release.TrySetResult();
+            await cancellation.CancelAsync().ConfigureAwait(true);
+            await running.ConfigureAwait(true);
         }
-        ExecutionReport report = await running.ConfigureAwait(true);
-        Assert.True(report.Outcome == EOutcome.Succeeded, System.Text.Json.JsonSerializer.Serialize(report));
-        Assert.Equal([10], values);
-        Assert.Equal(1, IterationTests.Loop(report).Iteration!.Started);
-        Assert.Equal("[]", IterationResultTests.Outputs(report)["value"].Json.GetRawText());
     }
 
     /// <summary>内側の結果だけを外側へ渡す二重の有限反復を作ります。</summary>

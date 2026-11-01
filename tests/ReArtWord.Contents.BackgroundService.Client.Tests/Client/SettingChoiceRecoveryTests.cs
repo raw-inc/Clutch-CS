@@ -85,6 +85,7 @@ public sealed class SettingChoiceRecoveryTests
     [Fact]
     public async Task RestartInvalidatesCacheAndRejectsLateInventoryAsync()
     {
+        ChoiceClock clock = new();
         Guid instance = Guid.NewGuid();
         TaskCompletionSource<HttpResponseMessage> old = new(TaskCreationOptions.RunContinuationsAsynchronously);
         int requests = 0;
@@ -101,7 +102,7 @@ public sealed class SettingChoiceRecoveryTests
             return Task.FromResult(Reply(new ServiceStatus("peer", instance, "peer", EPeerStatus.Ready, [peer], [], [], null, JsonSerializer.SerializeToElement(new { }))));
         });
         using HttpClient http = new(handler) { BaseAddress = new("http://localhost/") };
-        ManagementApi api = new(http);
+        ManagementApi api = new(http, new(clock));
         ConnectionState connection = new(api);
         await connection.SelectTargetAsync("cluster", "peer").ConfigureAwait(true);
         SettingChoiceProvider provider = new(api, connection);

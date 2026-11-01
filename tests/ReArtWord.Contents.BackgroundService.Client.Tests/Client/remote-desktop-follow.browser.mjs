@@ -8,6 +8,7 @@ import { setTimeout } from 'node:timers/promises';
 import { chromium, firefox } from 'playwright';
 
 const root = path.resolve(process.env.CONTENTS_DESKTOP_WEBROOT ?? fileURLToPath(new URL('../../../src/ReArtWord.Contents.BackgroundService.Client/wwwroot/', import.meta.url)));
+const picture = await readFile(new URL('./fixtures/clipboard-frame.vp9', import.meta.url));
 let server, origin;
 before(async () =>
 {
@@ -53,7 +54,7 @@ after(async () =>
  */
 function frame(kind, value)
 {
-    const payload = Buffer.from(JSON.stringify(value)), result = Buffer.alloc(24 + payload.length);
+    const payload = Buffer.isBuffer(value) ? value : Buffer.from(JSON.stringify(value)), result = Buffer.alloc(24 + payload.length);
     result.writeInt32BE(kind, 0);
     result.writeInt32BE(payload.length, 8);
     payload.copy(result, 24);
@@ -71,7 +72,8 @@ async function mountAsync(page, annotations)
     ];
     await page.routeWebSocket('**/client/desktop?*', socket =>
     {
-        let details = null;
+        let details = null, videoTimer = null, timestamp = 0;
+        socket.onClose(() => clearInterval(videoTimer));
         socket.onMessage(message =>
         {
             const bytes = Buffer.from(message), values = Array.from({ length: 6 }, (_, index) => bytes.readInt32BE(index * 4));
@@ -86,6 +88,22 @@ async function mountAsync(page, annotations)
                 socket.send(frame(3, selected.map(monitor => ({ id: monitor.id, encoder: 'fixture', codec: values[2], selection: values[3], framesPerSecond: 60, maximumBitrateKbps: 10240,
                     variableBitrate: true, codecDetails: details, scanCodeInput: true, unicodeInput: true }))));
                 socket.send(frame(4, { sampleRate: 48000, channels: 2, format: 'f32le' }));
+
+                // 表示配置の確認中も、選択中の画面へ試験用の映像を送ります。
+                clearInterval(videoTimer);
+                videoTimer = setInterval(() =>
+                {
+                    timestamp += 200000;
+                    for (const monitor of selected)
+                    {
+                        const image = frame(2, picture);
+                        image.writeInt32BE(monitor.id, 4);
+                        image.writeInt32BE(1, 12);
+                        image.writeBigInt64BE(BigInt(timestamp), 16);
+                        socket.send(image);
+                    }
+                }, 200);
+                videoTimer.unref();
             }
         });
         socket.send(frame(7, { clusterId: 'test', hostId: 'remote', localAudioMuted: false, codecDetails: true, variableBitrate: true, viewOnly: annotations, annotations }));
@@ -153,6 +171,31 @@ async function geometryAsync(page)
     });
 }
 
+/** 入力後の描画を待ってから、スクロールしない操作の結果を確認します。
+ * @returns 次の描画までの待機です。
+ */
+async function renderedAsync(page)
+{
+    await page.evaluate(() => new Promise(resolve =>
+    {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+    }));
+}
+
+/** 全画面への切替後の表示幅を使い、追従先に到着するまで待ちます。
+ * @returns 指定座標への追従完了です。
+ */
+async function followedAsync(page, x)
+{
+    await page.waitForFunction(x =>
+    {
+        const viewport = document.querySelector('.desktop-viewport'), bounds = viewport.getBoundingClientRect();
+        const range = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+        const wanted = range * (x - bounds.left - viewport.clientLeft) / (viewport.clientWidth - 1);
+        return Math.abs(viewport.scrollLeft - wanted) <= 2;
+    }, x);
+}
+
 for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' }], ['Firefox', firefox, {}]])
 {
     for (const [density, annotations] of [[1, true], [2, false]])
@@ -182,9 +225,9 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
                 if (annotations)
                 {
                     const expected = [13, 0, Math.floor((x - current.canvas.left) * 2560 / current.canvas.width), Math.floor((y - current.canvas.top) * 1920 / current.canvas.height)];
-                    for (let attempt = 0; attempt < 100 && sent.findLast(packet => packet[0] === 13)?.[2] !== expected[2]; attempt++)
+                    while (sent.findLast(packet => packet[0] === 13)?.[2] !== expected[2])
                     {
-                        await setTimeout(10);
+                        await setTimeout(10, undefined, { signal: context.signal });
                     }
                     assert.deepEqual(sent.findLast(packet => packet[0] === 13).slice(0, 4), expected);
                 }
@@ -192,14 +235,14 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
             await page.getByRole('button', { name: 'Follow pointer', exact: true }).click();
             const stopped = await geometryAsync(page);
             await page.mouse.move(original.left + 30, original.top + 80);
-            await setTimeout(70);
+            await renderedAsync(page);
             assert.equal((await geometryAsync(page)).scrollLeft, stopped.scrollLeft);
             await page.getByRole('button', { name: 'Follow pointer', exact: true }).click();
             await page.getByRole('button', { name: 'Fullscreen', exact: true }).click();
             await page.waitForFunction(() => document.fullscreenElement?.id === 'desktop');
             const fullscreen = await geometryAsync(page);
             await page.mouse.move(fullscreen.left + fullscreen.width * 0.5, fullscreen.top + fullscreen.height * 0.5);
-            await setTimeout(70);
+            await followedAsync(page, fullscreen.left + fullscreen.width * 0.5);
             const pinned = await geometryAsync(page);
             assert.ok(Math.abs(pinned.headerTop - pinned.top) <= 1);
             assert.ok(Math.abs(pinned.labelLeft - pinned.left - 8) <= 1);
@@ -217,14 +260,19 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
             }
             const multiple = await geometryAsync(page);
             await page.mouse.move(multiple.left + multiple.width * 0.6, multiple.top + multiple.height * 0.4);
-            await setTimeout(70);
+            await followedAsync(page, multiple.left + multiple.width * 0.6);
             const followed = await geometryAsync(page);
             assert.ok(0 < followed.scrollLeft);
             assert.ok(Math.abs(followed.headerTop - followed.top) <= 1);
             assert.ok(Math.abs(followed.labelLeft - followed.left - 8) <= 1);
             await page.getByRole('button', { name: 'Dot by dot (1:1)', exact: true }).click();
+            await page.waitForFunction(() =>
+            {
+                const viewport = document.querySelector('.desktop-viewport');
+                return viewport.scrollWidth <= viewport.clientWidth && viewport.scrollLeft === 0;
+            });
             await page.mouse.move(multiple.left + 40, multiple.top + 80);
-            await setTimeout(70);
+            await renderedAsync(page);
             assert.equal((await geometryAsync(page)).scrollLeft, 0);
             assert.equal(sent.slice(start).some(packet => [1, 2, 3, 4, 5, 10].includes(packet[0])), false);
             await page.evaluate(() => window.desktop.dispose());

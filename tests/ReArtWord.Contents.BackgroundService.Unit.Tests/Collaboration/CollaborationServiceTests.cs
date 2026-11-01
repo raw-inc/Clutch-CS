@@ -168,8 +168,18 @@ public sealed class CollaborationServiceTests : IDisposable
         {
             await Task.Delay(20, timeout.Token);
         }
-        DraftView? recovered = await secondService.GetDraftAsync("new");
-        Assert.Equal("offline", recovered!.Definition.Name);
+        DraftView? recovered = null;
+
+        // 照会が戻っても未受信の場合があるため、草稿の到着を確認します。
+        while (recovered is null)
+        {
+            recovered = await secondService.GetDraftAsync("new", timeout.Token).ConfigureAwait(true);
+            if (recovered is null)
+            {
+                await Task.Delay(20, timeout.Token).ConfigureAwait(true);
+            }
+        }
+        Assert.Equal("offline", recovered.Definition.Name);
         Assert.Null(await secondRepository.ReadAsync("workflows", "new"));
         PresenceUpdate presence = new("new", Guid.NewGuid(), "secondHost", "user", ["selected"]);
         await secondService.UpdatePresenceAsync(presence);

@@ -112,16 +112,13 @@ const b = { clusterId: 'cluster-b', hostId: 'host-b', peerId: 'peer-b', instance
  */
 const shell = id => ({ sessionId: id, shell: 'pwsh.exe', elevated: false, exited: false, sequence: 0, owner: 'owner' });
 
-/** 保留した非同期処理を試験で指定した回数だけ進めます。
- * @returns 処理の完了と結果を伝えるPromiseです。
+/** 完了済みのPromiseの継続を、次のイベント処理まで待ちます。
+ * @returns 模擬応答を処理した後に完了します。
  */
-const turnsAsync = async() =>
+const turnsAsync = () => new Promise(resolve =>
 {
-    for (let i = 0;i < 25;i++)
-    {
-        await Promise.resolve();
-    }
-};
+    setImmediate(resolve);
+});
 
 /** 対象機能のブラウザー境界と操作可能な試験状態を構成します。
  * @returns 処理の完了と結果を伝えるPromiseです。
