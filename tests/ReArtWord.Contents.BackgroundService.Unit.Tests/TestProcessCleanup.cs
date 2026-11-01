@@ -22,10 +22,11 @@ internal static class TestProcessCleanup
                 bool matched = false;
                 try
                 {
-                    matched = process.MainModule?.FileName is string executable && Path.GetFullPath(executable).StartsWith(prefix, comparison);
-                    if (matched)
+                    if (process.MainModule?.FileName is string executable && Path.GetFullPath(executable).StartsWith(prefix, comparison))
                     {
+                        _ = process.SafeHandle;
                         owned.Add(process);
+                        matched = true;
                     }
                 }
                 catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception)
