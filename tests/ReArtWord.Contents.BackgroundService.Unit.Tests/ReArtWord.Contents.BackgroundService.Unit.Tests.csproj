@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../Shared/ProcessResourceSample.cs" Link="Performance/ProcessResourceSample.cs" />
+    <Compile Include="../Shared/TestProcessDirectory.cs" Link="Shared/TestProcessDirectory.cs" />
     <Compile Include="../Shared/ApplicationProcessFixture.cs" Link="Processes/ApplicationProcessFixture.cs" />
     <Compile Include="../Shared/PublishedFixtureFile.cs" Link="Processes/PublishedFixtureFile.cs" />
     <Compile Include="../Shared/PerformanceTestGroup.cs" Link="Performance/PerformanceTestGroup.cs" />

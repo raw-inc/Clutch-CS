@@ -84,21 +84,6 @@ internal sealed class ApplicationProcessFixture : IDisposable
                 // 既に終了した試験プロセスです。
             }
         }
-        Exception? pending = null;
-        for (int attempt = 0; attempt < 20; attempt++)
-        {
-            try
-            {
-                Directory.Delete(Root, true);
-                return;
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-            {
-                // 終了直後のイメージマッピングやOS検査による短い保持だけを有限時間待ちます。
-                pending = exception;
-                Thread.Sleep(50);
-            }
-        }
-        System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(pending!);
+        TestProcessDirectory.Delete(Root);
     }
 }
