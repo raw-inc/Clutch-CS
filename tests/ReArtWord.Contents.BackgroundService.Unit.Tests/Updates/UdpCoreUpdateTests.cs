@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -23,7 +22,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Health;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Local;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 using Xunit;
-using ReArtWord.Contents.BackgroundService.Runtime.Processes;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Updates;
 
@@ -103,7 +102,7 @@ public sealed class UdpCoreUpdateTests
         target.Start();
         using CancellationTokenSource deadline = new(TimeSpan.FromSeconds(30));
         List<ProcessIdentity> owned = [];
-        Task<JsonElement> observation = HealthAsync(observer, "target", owned, deadline.Token);
+        Task<JsonElement> observation = HealthAsync(observer, "target", owned, null, deadline.Token);
         try
         {
             if (cancel)
@@ -140,8 +139,6 @@ public sealed class UdpCoreUpdateTests
 
     /// <summary>固定対象とRID選択から自身入替・新実体確認までUDPだけで完了します。</summary>
     /// <returns>実プロセスと実UDPの確認完了です。</returns>
-    // 抑制理由: 専用配置の実行ファイル、PIDと実起動時刻で試験プロセスを確認します。
-    [SuppressMessage("SourceQuality", "RAW171", Justification = "試験プロセスの実起動時刻を照合します。")]
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -165,6 +162,7 @@ public sealed class UdpCoreUpdateTests
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = observer.ConfigureAwait(true);
         List<ProcessIdentity> owned = [];
         Dictionary<string, Guid> previous = new(StringComparer.Ordinal);
+        using TestProcessHandles handles = new();
         using CancellationTokenSource deadline = new(TimeSpan.FromMinutes(5));
         try
         {
@@ -212,9 +210,8 @@ public sealed class UdpCoreUpdateTests
                 ProcessStartInfo start = new(Path.Combine(installation, old.EntryPoint)) { UseShellExecute = false, CreateNoWindow = true };
                 start.ArgumentList.Add("--config");
                 start.ArgumentList.Add(path);
-                using Process child = Process.Start(start)!;
-                owned.Add(new(child.Id, new DateTimeOffset(child.StartTime.ToUniversalTime())));
-                JsonElement health = await HealthAsync(observer, peer, owned, deadline.Token).ConfigureAwait(true);
+                owned.Add(handles.Own(Process.Start(start)!));
+                JsonElement health = await HealthAsync(observer, peer, owned, handles, deadline.Token).ConfigureAwait(true);
                 previous.Add(peer, health.GetProperty("instanceId").GetGuid());
             }
             DateTimeOffset stopExpiry = DateTimeOffset.UtcNow.AddSeconds(10);
@@ -224,7 +221,7 @@ public sealed class UdpCoreUpdateTests
             ManagementReply denied = await observer.SendAsync(stop, false, deadline.Token).ConfigureAwait(true);
             Assert.Equal(EOutcome.Succeeded, denied.Outcome);
             Assert.False(denied.Value!.Json.GetBoolean());
-            JsonElement stillRunning = await HealthAsync(observer, "update-a", owned, deadline.Token).ConfigureAwait(true);
+            JsonElement stillRunning = await HealthAsync(observer, "update-a", owned, handles, deadline.Token).ConfigureAwait(true);
             Assert.Equal(previous["update-a"], stillRunning.GetProperty("instanceId").GetGuid());
             string payload = Path.Combine(root, "update-a", "staging", "bundle", "current");
             ReleaseManifest manifest = await PackageAsync(core, payload, "new", cancellationToken: deadline.Token).ConfigureAwait(true);
@@ -245,7 +242,7 @@ public sealed class UdpCoreUpdateTests
                 {
                     foreach (string peer in previous.Keys)
                     {
-                        await HealthAsync(observer, peer, owned, deadline.Token).ConfigureAwait(true);
+                        await HealthAsync(observer, peer, owned, handles, deadline.Token).ConfigureAwait(true);
                     }
                     Contracts.Cluster.PeerInfo current = await observer.FindAsync("update-a", cancellationToken: deadline.Token).ConfigureAwait(true);
                     ManagementReply status = await observer.SendAsync("update-a", current.InstanceId, "updates.read", UpdateObserver.Payload(request.OperationId), true, deadline.Token).ConfigureAwait(true);
@@ -264,7 +261,7 @@ public sealed class UdpCoreUpdateTests
             Assert.True(result?.Outcome == EOutcome.Succeeded, result?.Reason + " / " + JsonSerializer.Serialize(result?.Peers));
             foreach (string peer in previous.Keys)
             {
-                JsonElement health = await HealthAsync(observer, peer, owned, deadline.Token).ConfigureAwait(true);
+                JsonElement health = await HealthAsync(observer, peer, owned, handles, deadline.Token).ConfigureAwait(true);
                 Assert.NotEqual(previous[peer], health.GetProperty("instanceId").GetGuid());
                 Assert.Equal(JsonValueKind.Null, health.GetProperty("maintenance").ValueKind);
                 Assert.Equal("new", await File.ReadAllTextAsync(Path.Combine(root, peer, "installed", "release-marker.txt"), deadline.Token).ConfigureAwait(true));
@@ -273,22 +270,13 @@ public sealed class UdpCoreUpdateTests
         finally
         {
             // health未取得の新CoreやUpdaterも、専用配置の実行ファイルで所有を確認します。
-            await TestProcessCleanup.StopDirectoryAsync(root).ConfigureAwait(true);
-            foreach (ProcessIdentity identity in owned)
+            try
             {
-                try
-                {
-                    using Process child = Process.GetProcessById(identity.ProcessId);
-                    if (!child.HasExited && new DateTimeOffset(child.StartTime.ToUniversalTime()) == identity.StartedAt)
-                    {
-                        child.Kill(true);
-                        await ProcessCompletion.WaitAsync(child).ConfigureAwait(true);
-                    }
-                }
-                catch (ArgumentException)
-                {
-                    // 旧実体は既にUpdaterで終了しています。
-                }
+                await TestProcessCleanup.StopDirectoryAsync(root).ConfigureAwait(true);
+            }
+            finally
+            {
+                handles.Dispose();
             }
             for (int attempt = 0; Directory.Exists(root); attempt++)
             {
@@ -306,7 +294,7 @@ public sealed class UdpCoreUpdateTests
 
     /// <summary>新実体を含む実稼働確認を観測し、cleanup対象を固定します。</summary>
     /// <returns>readyな実体です。</returns>
-    private static async Task<JsonElement> HealthAsync(UpdateObserver observer, string peerId, List<ProcessIdentity> owned, CancellationToken cancellationToken = default)
+    private static async Task<JsonElement> HealthAsync(UpdateObserver observer, string peerId, List<ProcessIdentity> owned, TestProcessHandles? handles, CancellationToken cancellationToken = default)
     {
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -324,7 +312,9 @@ public sealed class UdpCoreUpdateTests
             if (reply.Value is not null)
             {
                 JsonElement health = reply.Value.Json;
-                owned.Add(new(health.GetProperty("processId").GetInt32(), health.GetProperty("processStartedAt").GetDateTimeOffset()));
+                ProcessIdentity identity = new(health.GetProperty("processId").GetInt32(), health.GetProperty("processStartedAt").GetDateTimeOffset());
+                owned.Add(identity);
+                handles?.Capture(identity);
                 string ready = "ready";
                 if (health.GetProperty(ready).GetBoolean())
                 {

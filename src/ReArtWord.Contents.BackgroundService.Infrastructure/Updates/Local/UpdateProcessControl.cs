@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Processes;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
@@ -16,6 +17,22 @@ internal static class UpdateProcessControl
     /// <returns>停止確認の結果です。</returns>
     internal static async Task<EOutcome> StopAsync(LocalUpdateJob job, ProcessIdentity identity, CancellationToken cancellationToken = default)
     {
+        using Process? process = ProcessOs.Open(identity);
+        if (process is null)
+        {
+            return EOutcome.Succeeded;
+        }
+        return await StopAsync(job, identity, process, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>起動時または停止前に確保したハンドルを、通常停止と強制停止の両方で維持します。</summary>
+    /// <returns>対象実体の終了確認です。ハンドルは呼出元が破棄します。</returns>
+    internal static async Task<EOutcome> StopAsync(LocalUpdateJob job, ProcessIdentity identity, Process process, CancellationToken cancellationToken = default)
+    {
+        if (ProcessOs.Identity(process) != identity)
+        {
+            return EOutcome.Unknown;
+        }
         if (job.Options.ServiceKind == EUpdateServiceKind.DirectProcess)
         {
             await RequestHostStopAsync(job, identity, cancellationToken).ConfigureAwait(false);
@@ -28,7 +45,7 @@ internal static class UpdateProcessControl
             }
             catch (Exception exception) when (exception is IOException or InvalidDataException or ProcessStopUnconfirmedException)
             {
-                if (ProcessOs.IsRunning(identity) != false)
+                if (!process.HasExited)
                 {
                     return EOutcome.Unknown;
                 }
@@ -39,7 +56,7 @@ internal static class UpdateProcessControl
         {
             policy = EProcessStopPolicy.Force;
         }
-        return await ProcessOs.StopAsync(identity, policy, job.Options.StopTimeoutMilliseconds, cancellationToken).ConfigureAwait(false);
+        return await ProcessOs.StopAsync(process, identity, policy, job.Options.StopTimeoutMilliseconds, new DefaultProcessPlatform(), cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>明示ジョブに対する常駐サービスの正常終了入口を呼びます。</summary>
@@ -71,8 +88,8 @@ internal static class UpdateProcessControl
     }
 
     /// <summary>固定したentryPointと引数から実サービスを再起動します。</summary>
-    /// <returns>直接起動で取得した実プロセス、OS サービスなら稼働確認確認待ちのnullです。</returns>
-    internal static async Task<ProcessIdentity?> StartAsync(LocalUpdateJob job, CancellationToken cancellationToken = default)
+    /// <returns>呼出元が終了確認まで保持するハンドルです。OSサービスなら稼働確認待ちのnullです。</returns>
+    internal static async Task<Process?> StartAsync(LocalUpdateJob job, CancellationToken cancellationToken = default)
     {
         if (job.Options.ServiceKind != EUpdateServiceKind.DirectProcess)
         {
@@ -91,7 +108,7 @@ internal static class UpdateProcessControl
         }
         arguments.AddRange(job.ApplicationArguments);
         ProcessDefinition definition = new("contents-service", EProcessMode.Managed, executable, arguments, job.Options.InstallationRoot!);
-        return ProcessOs.Start(definition);
+        return ProcessOs.StartTracked(definition);
     }
 
     /// <summary>shellを使わずOS サービス managerへ固定verbを渡します。</summary>

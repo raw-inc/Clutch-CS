@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -18,6 +17,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Updates;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Health;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Local;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Releases;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Updates;
@@ -25,7 +25,7 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Updates;
 /// <summary>実UDP子プロセスと入替専用rootを試験ごとに分離します。</summary>
 internal sealed class UpdateTestScope : IDisposable
 {
-    private readonly List<ProcessIdentity> owned = [];
+    private readonly TestProcessHandles owned = new();
     private readonly string fixtureDirectory;
 
     /// <summary>実OSサービスに触れない直接プロセスの配置を作ります。</summary>
@@ -111,8 +111,6 @@ internal sealed class UpdateTestScope : IDisposable
 
     /// <summary>初期リリースを実際に起動して旧実体を取得します。</summary>
     /// <returns>停止前の稼働確認とプロセスの識別子です。</returns>
-    // 抑制理由: 実子プロセスのPID再利用を防ぐためBCL時刻をDateTimeOffsetへ即時変換します。
-    [SuppressMessage("SourceQuality", "RAW171", Justification = "試験対象の実起動識別子を保存します。")]
     internal async Task<(Guid Instance, ProcessIdentity Process)> StartOriginalAsync(ReleaseManifest manifest, string payload, CancellationToken cancellationToken = default)
     {
         await ReleaseVerifier.CopyAsync(manifest, payload, Options.InstallationRoot!, cancellationToken).ConfigureAwait(false);
@@ -121,10 +119,7 @@ internal sealed class UpdateTestScope : IDisposable
         start.ArgumentList.Add(Path.Combine(Options.InstallationRoot!, manifest.EntryPoint));
         start.ArgumentList.Add(Port.ToString(System.Globalization.CultureInfo.InvariantCulture));
         start.ArgumentList.Add("fixture-peer");
-        using Process process = new() { StartInfo = start };
-        Assert.True(process.Start());
-        ProcessIdentity identity = new(process.Id, new DateTimeOffset(process.StartTime.ToUniversalTime()));
-        owned.Add(identity);
+        ProcessIdentity identity = owned.Own(Process.Start(start) ?? throw new IOException("The update fixture did not start."));
         JsonElement health = await HealthAsync(cancellationToken).ConfigureAwait(false);
         return (health.GetProperty("instanceId").GetGuid(), identity);
     }
@@ -151,7 +146,7 @@ internal sealed class UpdateTestScope : IDisposable
             if (reply.Outcome == EOutcome.Succeeded && reply.Value is not null)
             {
                 JsonElement health = reply.Value.Json.Clone();
-                owned.Add(new ProcessIdentity(health.GetProperty("processId").GetInt32(), health.GetProperty("processStartedAt").GetDateTimeOffset()));
+                owned.Capture(new ProcessIdentity(health.GetProperty("processId").GetInt32(), health.GetProperty("processStartedAt").GetDateTimeOffset()));
                 return health;
             }
             await Task.Delay(50, linked.Token).ConfigureAwait(false);
@@ -170,12 +165,10 @@ internal sealed class UpdateTestScope : IDisposable
     }
 
     /// <summary>稼働照会前に起動した実体も含め、この試験のプロセスを停止します。</summary>
-    // 抑制理由: PID再利用先を終了しないためBCL時刻を取得して即時変換・照合します。
-    [SuppressMessage("SourceQuality", "RAW171", Justification = "試験が所有するprocessの実体だけを終了します。")]
     internal void StopProcesses()
     {
         string root = ValidateCleanupRoot();
-        HashSet<ProcessIdentity> processes = [.. owned];
+        HashSet<ProcessIdentity> processes = [.. owned.Identities];
         List<Exception> failures = [];
         string processDirectory = Path.Combine(root, "fixture-processes");
         if (Directory.Exists(processDirectory))
@@ -202,37 +195,20 @@ internal sealed class UpdateTestScope : IDisposable
         {
             try
             {
-                Process process;
-                try
-                {
-                    process = Process.GetProcessById(identity.ProcessId);
-                }
-                catch (ArgumentException)
-                {
-                    // PIDが存在しない場合だけ、元の実体の終了として扱います。
-                    continue;
-                }
-                using (process)
-                {
-                    if (!process.HasExited && new DateTimeOffset(process.StartTime.ToUniversalTime()) != identity.StartedAt)
-                    {
-                        // 再利用されたPIDは別の実体なので終了しません。
-                        continue;
-                    }
-                    if (!process.WaitForExit(1000))
-                    {
-                        process.Kill(true);
-                        if (!process.WaitForExit(5000))
-                        {
-                            throw new TimeoutException($"Fixture process exit is unconfirmed: PID={identity.ProcessId}, startedAt={identity.StartedAt:O}, retainedRoot={root}");
-                        }
-                    }
-                }
+                owned.Capture(identity);
             }
             catch (Exception exception) when (exception is not OutOfMemoryException)
             {
                 failures.Add(exception);
             }
+        }
+        try
+        {
+            owned.Stop(gracefulMilliseconds: 1000, forcedMilliseconds: 5000);
+        }
+        catch (AggregateException exception)
+        {
+            failures.AddRange(exception.InnerExceptions);
         }
         if (failures.Count != 0)
         {
@@ -243,7 +219,14 @@ internal sealed class UpdateTestScope : IDisposable
     /// <summary>所有プロセスの終了後に、この試験の専用配置だけを削除します。</summary>
     public void Dispose()
     {
-        StopProcesses();
+        try
+        {
+            StopProcesses();
+        }
+        finally
+        {
+            owned.Dispose();
+        }
         string root = ValidateCleanupRoot();
         Stopwatch elapsed = Stopwatch.StartNew();
         bool deleted = false;

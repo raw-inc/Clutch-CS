@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Runtime.InteropServices;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
@@ -10,6 +11,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Processes;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Installation;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Local;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Releases;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Client;
 
@@ -52,12 +54,13 @@ public static class ClientUpdateExecutor
             }
             await ReleaseVerifier.VerifyAsync(previous, files.Installation, cancellationToken).ConfigureAwait(false);
             await ReleaseVerifier.VerifyAsync(job.Manifest, files.Candidate, cancellationToken).ConfigureAwait(false);
-            if (Directory.Exists(files.Backup) || ProcessOs.IsRunning(job.PreviousProcess) != true)
+            using Process? original = ProcessOs.Open(job.PreviousProcess);
+            if (Directory.Exists(files.Backup) || original is null || original.HasExited)
             {
                 return await files.SaveAsync("Failed", true, EOutcome.NotExecuted, "The original ClientHost or backup location changed.", cancellationToken).ConfigureAwait(false);
             }
             await files.SaveAsync("WaitingForExit", false, EOutcome.Unknown, cancellationToken: cancellationToken).ConfigureAwait(false);
-            if (!await WaitForExitAsync(job.PreviousProcess, job.TimeoutMilliseconds, cancellationToken).ConfigureAwait(false))
+            if (!await WaitForExitAsync(original, job.TimeoutMilliseconds, cancellationToken).ConfigureAwait(false))
             {
                 return await files.SaveAsync("Failed", true, EOutcome.NotExecuted, "The original ClientHost did not exit; its files were not changed.", cancellationToken).ConfigureAwait(false);
             }
@@ -85,8 +88,8 @@ public static class ClientUpdateExecutor
                 return await RestoreStartAsync(job, previous, files, cancellationToken).ConfigureAwait(false);
             }
             await files.SaveAsync("Starting", false, EOutcome.Unknown, cancellationToken: cancellationToken).ConfigureAwait(false);
-            ProcessIdentity? process = await ClientUpdateStartup.StartAsync(job, job.Manifest, cancellationToken).ConfigureAwait(false);
-            if (process is not null && await WaitReadyAsync(job, job.Manifest, process, cancellationToken).ConfigureAwait(false))
+            using Process? process = await ClientUpdateStartup.StartAsync(job, job.Manifest, cancellationToken).ConfigureAwait(false);
+            if (process is not null && await WaitReadyAsync(job, job.Manifest, ProcessOs.Identity(process), cancellationToken).ConfigureAwait(false))
             {
                 return await files.SaveAsync("Completed", true, EOutcome.Succeeded, cancellationToken: cancellationToken).ConfigureAwait(false);
             }
@@ -134,16 +137,14 @@ public static class ClientUpdateExecutor
 
     /// <summary>元ClientHostには停止要求も強制終了も追加せず、親が保存後に自然終了するのを待ちます。</summary>
     /// <returns>固定した実体が終了したことの確認です。</returns>
-    private static async Task<bool> WaitForExitAsync(ProcessIdentity process, int milliseconds, CancellationToken cancellationToken = default)
+    internal static async Task<bool> WaitForExitAsync(Process process, int milliseconds, CancellationToken cancellationToken = default)
     {
         using CancellationTokenSource deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(milliseconds);
         try
         {
-            while (ProcessOs.IsRunning(process) != false)
-            {
-                await Task.Delay(100, deadline.Token).ConfigureAwait(false);
-            }
+            // WaitingForExitを公開する前に確保したハンドルを使います。親は公開後すぐに終了し得ます。
+            await ProcessCompletion.WaitAsync(process, deadline.Token).ConfigureAwait(false);
             return true;
         }
         catch (OperationCanceledException)
@@ -192,8 +193,8 @@ public static class ClientUpdateExecutor
     private static async Task<ClientUpdateProgress> RestoreStartAsync(ClientUpdateJob job, ReleaseManifest previous, ClientUpdateFiles files, CancellationToken cancellationToken = default)
     {
         await ReleaseVerifier.VerifyAsync(previous, files.Installation, cancellationToken).ConfigureAwait(false);
-        ProcessIdentity? process = await ClientUpdateStartup.StartAsync(job, previous, cancellationToken).ConfigureAwait(false);
-        if (process is not null && await WaitReadyAsync(job, previous, process, cancellationToken).ConfigureAwait(false))
+        using Process? process = await ClientUpdateStartup.StartAsync(job, previous, cancellationToken).ConfigureAwait(false);
+        if (process is not null && await WaitReadyAsync(job, previous, ProcessOs.Identity(process), cancellationToken).ConfigureAwait(false))
         {
             return await files.SaveAsync("RolledBack", true, EOutcome.Failed, "ClientHost startup failed; the previous version was restored and verified.", cancellationToken).ConfigureAwait(false);
         }

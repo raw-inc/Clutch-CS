@@ -168,7 +168,7 @@ internal sealed class ProcessSession
         {
             return Result(EOutcome.Succeeded, running: false);
         }
-        EOutcome outcome = await ProcessOs.StopAsync(state.Identity, policy, timeoutMilliseconds, monitor.Platform, cancellationToken).ConfigureAwait(false);
+        EOutcome outcome = await monitor.StopAsync(definition.Id, state.Identity, policy, timeoutMilliseconds, cancellationToken).ConfigureAwait(false);
         if (outcome == EOutcome.Succeeded)
         {
             int? exitCode = monitor.Observe(definition.Id, state.Identity).ExitCode;

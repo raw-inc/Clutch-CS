@@ -12,7 +12,7 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Processes;
 /// <summary>実プロセスとローカル保存を試験ごとに分離します。</summary>
 internal sealed class ProcessTestScope : IDisposable
 {
-    private readonly List<ProcessIdentity> owned = [];
+    private readonly TestProcessHandles owned = new();
     private ApplicationProcessFixture? application;
 
     /// <summary>試験用の構成の許可対象実行物と保存先を固定します。</summary>
@@ -65,7 +65,7 @@ internal sealed class ProcessTestScope : IDisposable
     {
         if (result.Status?.Identity is not null)
         {
-            owned.Add(result.Status.Identity);
+            owned.Capture(result.Status.Identity);
         }
     }
 
@@ -76,6 +76,7 @@ internal sealed class ProcessTestScope : IDisposable
     internal static async Task CrashAsync(ProcessIdentity identity, CancellationToken cancellationToken = default)
     {
         using Process process = Process.GetProcessById(identity.ProcessId);
+        _ = process.SafeHandle;
         if (new DateTimeOffset(process.StartTime.ToUniversalTime()) != identity.StartedAt)
         {
             throw new InvalidOperationException("試験対象のプロセスの起動時刻が一致しません。");
@@ -85,30 +86,16 @@ internal sealed class ProcessTestScope : IDisposable
     }
 
     /// <summary>試験が作成したプロセスと保存先のルートだけを取り除きます。</summary>
-    // 抑制理由: PID再利用先を終了しないためBCLのStartTimeをUTCのDateTimeOffsetへ即時変換して比較します。
-    [SuppressMessage("SourceQuality", "RAW171", Justification = "試験所有processだけをcleanupするOS識別子の照合に必要です。")]
     public void Dispose()
     {
-        foreach (ProcessIdentity identity in owned)
+        try
         {
-            try
-            {
-                using Process process = Process.GetProcessById(identity.ProcessId);
-                if (!ProcessCompletion.HasExited(process) && new DateTimeOffset(process.StartTime.ToUniversalTime()) == identity.StartedAt)
-                {
-                    if (!process.HasExited)
-                    {
-                        process.Kill(true);
-                    }
-                    process.WaitForExit();
-                }
-            }
-            catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
-            {
-                // 試験途中で終了したプロセスは既にcleanup済みです。
-            }
+            owned.Dispose();
         }
-        application?.Dispose();
+        finally
+        {
+            application?.Dispose();
+        }
         Directory.Delete(Root, true);
     }
 }

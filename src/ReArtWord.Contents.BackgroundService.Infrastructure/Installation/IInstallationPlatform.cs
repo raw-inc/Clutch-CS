@@ -49,6 +49,10 @@ public interface IInstallationPlatform
     /// <returns>停止完了です。</returns>
     public Task StopAsync(InstallationRecord record, ProcessIdentity? process, CancellationToken cancellationToken = default);
 
+    /// <summary>対象実体を確保してから停止要求を公開し、同じ実体の終了を確認します。</summary>
+    /// <returns>要求の公開と停止確認の完了です。</returns>
+    public Task StopAsync(InstallationRecord record, ProcessIdentity? process, Func<CancellationToken, Task> requestStop, CancellationToken cancellationToken = default);
+
     /// <summary>所有する自動起動登録を削除します。</summary>
     /// <returns>削除完了です。</returns>
     public Task UnregisterAsync(InstallationRecord record, CancellationToken cancellationToken = default);

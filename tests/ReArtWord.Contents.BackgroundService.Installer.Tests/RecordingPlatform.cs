@@ -145,6 +145,14 @@ internal sealed class RecordingPlatform : IInstallationPlatform
     /// <returns>試験用処理の完了です。</returns>
     public Task StopAsync(InstallationRecord record, ProcessIdentity? process, CancellationToken cancellationToken = default) => RecordAsync("stop", cancellationToken);
 
+    /// <summary>停止要求の公開を伴うOS境界も、通常停止と同じ呼出記録へまとめます。</summary>
+    /// <returns>要求の公開と停止記録の完了です。</returns>
+    public async Task StopAsync(InstallationRecord record, ProcessIdentity? process, Func<CancellationToken, Task> requestStop, CancellationToken cancellationToken = default)
+    {
+        await requestStop(cancellationToken).ConfigureAwait(false);
+        await StopAsync(record, process, cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>配置試験の実行境界を記録または準備します。</summary>
 
     /// <returns>試験用処理の完了です。</returns>
