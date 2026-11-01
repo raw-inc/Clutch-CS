@@ -9,6 +9,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Processes;
 using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 
@@ -64,7 +65,7 @@ public sealed class ApplicationBootProcessTests
         if (exitWhileOffline)
         {
             app.Release();
-            await process.WaitForExitAsync(timeout.Token);
+            await ProcessCompletion.WaitAsync(process, timeout.Token);
         }
         await ReadyAsync(peer, timeout.Token);
         ApplicationView after = Assert.Single(await peer.GetAsync<ApplicationView[]>("processes.list", timeout.Token));

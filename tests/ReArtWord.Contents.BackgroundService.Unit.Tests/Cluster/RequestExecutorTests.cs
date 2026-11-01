@@ -71,7 +71,7 @@ public sealed class RequestExecutorTests
         finally
         {
             release.TrySetResult();
-            await executor.DrainAsync().WaitAsync(TimeSpan.FromSeconds(5));
+            await executor.DrainAsync().ConfigureAwait(true);
         }
         Assert.Equal(EOutcome.Succeeded, (await executor.ExecuteAsync(request, Handler, true, false)).Outcome);
         Assert.Equal(1, effects);
@@ -142,14 +142,14 @@ public sealed class RequestExecutorTests
             return FinishAsync(release.Task, token);
         }
         Task<ClusterResponse>[] admissions = Enumerable.Range(0, 4).Select(_ => executor.ExecuteAsync(request, Handler, true, false)).ToArray();
-        Assert.All(admissions, task => Assert.False(task.IsCompleted));
-        Assert.True((await executor.ReadStatusAsync(new(request.Id, ContractJson.Hash(request)))).Running);
-        Assert.Equal(1, repository.Reads);
-        ClusterResponse mismatch = await executor.ExecuteAsync(request with { Payload = NodeValue.FromObject(2) }, Handler, true, false);
-        Assert.Equal("Execution.RequestMismatch", mismatch.Reason);
-        repository.Claim.TrySetResult();
         try
         {
+            Assert.All(admissions, task => Assert.False(task.IsCompleted));
+            Assert.True((await executor.ReadStatusAsync(new(request.Id, ContractJson.Hash(request)))).Running);
+            Assert.Equal(1, repository.Reads);
+            ClusterResponse mismatch = await executor.ExecuteAsync(request with { Payload = NodeValue.FromObject(2) }, Handler, true, false);
+            Assert.Equal("Execution.RequestMismatch", mismatch.Reason);
+            repository.Claim.TrySetResult();
             foreach (ClusterResponse admission in await Task.WhenAll(admissions).WaitAsync(TimeSpan.FromSeconds(5)))
             {
                 Assert.Equal("Execution.Running", admission.Reason);
@@ -159,8 +159,16 @@ public sealed class RequestExecutorTests
         }
         finally
         {
+            repository.Claim.TrySetResult();
             release.TrySetResult();
-            await executor.DrainAsync().WaitAsync(TimeSpan.FromSeconds(5));
+            try
+            {
+                await Task.WhenAll(admissions).ConfigureAwait(true);
+            }
+            finally
+            {
+                await executor.DrainAsync().ConfigureAwait(true);
+            }
         }
         Assert.Equal(EOutcome.Succeeded, (await executor.ReadStatusAsync(new(request.Id, ContractJson.Hash(request)))).Response!.Outcome);
     }

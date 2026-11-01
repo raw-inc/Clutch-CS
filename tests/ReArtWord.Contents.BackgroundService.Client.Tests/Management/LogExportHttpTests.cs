@@ -95,7 +95,7 @@ public sealed class LogExportHttpTests
         }
         finally
         {
-            await app.StopAsync(timeout.Token);
+            await app.StopAsync(CancellationToken.None);
         }
     }
 }

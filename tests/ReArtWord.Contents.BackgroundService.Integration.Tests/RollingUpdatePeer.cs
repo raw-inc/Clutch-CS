@@ -13,6 +13,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Json;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Local;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Observers;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 
@@ -41,7 +42,6 @@ internal sealed class RollingUpdatePeer : IAsyncDisposable
         executable = Path.Combine(installed, manifest.EntryPoint);
         string nic = NetworkInterface.GetAllNetworkInterfaces().First(item => item.GetIPProperties().UnicastAddresses.Any(address => address.Address.Equals(IPAddress.Loopback))).Id;
         Binding = new(nic, "127.0.0.1", "127.255.255.255", port);
-        observer = new(new ObserverOptions(Guid.NewGuid().ToString("N"), Binding));
         string build = new DirectoryInfo(AppContext.BaseDirectory).Parent!.Name;
         string repository = Path.GetFullPath("../../../../../", AppContext.BaseDirectory);
         string updater = Path.Combine(repository, "src", "ReArtWord.Contents.BackgroundService.Updater", "bin", build, "net10.0", Executable("ReArtWord.Contents.BackgroundService.Updater"));
@@ -70,6 +70,9 @@ internal sealed class RollingUpdatePeer : IAsyncDisposable
             stopTimeoutMilliseconds = 10000
             startTimeoutMilliseconds = 20000
             """);
+
+        // 設定保存の失敗時に、破棄できない待受を残さないよう最後に確保します。
+        observer = new(new ObserverOptions(Guid.NewGuid().ToString("N"), Binding));
     }
 
     /// <summary>試験クラスタです。</summary>
@@ -160,7 +163,7 @@ internal sealed class RollingUpdatePeer : IAsyncDisposable
                     if (string.Equals(process.MainModule?.FileName, executable, StringComparison.OrdinalIgnoreCase))
                     {
                         process.Kill(true);
-                        await process.WaitForExitAsync().ConfigureAwait(false);
+                        await ProcessCompletion.WaitAsync(process).ConfigureAwait(false);
                     }
                 }
                 catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)

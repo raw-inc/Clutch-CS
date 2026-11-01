@@ -5,6 +5,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Nodes.FileSystem;
 using ReArtWord.Contents.BackgroundService.Nodes.FileSystem.Transfers;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.FileSystem;
 
@@ -83,7 +84,7 @@ internal sealed class FileTestDirectory : IDisposable
             start.ArgumentList.Add(path);
             start.ArgumentList.Add(target);
             using Process process = Process.Start(start) ?? throw new IOException("junction作成を開始できません。");
-            await process.WaitForExitAsync().ConfigureAwait(false);
+            await ProcessCompletion.WaitAsync(process).ConfigureAwait(false);
             if (process.ExitCode != 0)
             {
                 throw new IOException("junctionを作成できません。");

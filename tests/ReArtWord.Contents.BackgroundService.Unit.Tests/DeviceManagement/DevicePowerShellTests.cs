@@ -4,6 +4,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement.Network;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Infrastructure.DeviceManagement;
 using ReArtWord.Contents.BackgroundService.Runtime.Processes.Commands;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.DeviceManagement;
@@ -13,7 +14,7 @@ public sealed class DevicePowerShellTests
 {
     /// <summary>Firewallの列挙引数、正確なルール一致、管理対象外の拒否を確認します。</summary>
     /// <returns>実OSを変更しないparameter bindingの検証です。</returns>
-    [Theory]
+    [WindowsTheory]
     [InlineData("firewallProfile", false, true)]
     [InlineData("firewallRuleEnabled", false, true)]
     [InlineData("firewallRuleEnabled", true, true)]
@@ -29,7 +30,7 @@ public sealed class DevicePowerShellTests
         bool profile = string.Equals(action, profileAction, StringComparison.Ordinal);
         string resourceId = profile ? "profile/Private"
                                     : "rule/target[*]";
-        JsonElement result = await RunFixtureAsync("FirewallBoundary", new { action, query = new { resourceId }, change = new { enabled }, before = new { editable } });
+        JsonElement result = await RunFixtureAsync("FirewallBoundary", new { action, query = new { resourceId }, change = new { enabled }, before = new { editable } }).ConfigureAwait(true);
         Assert.Equal(editable, result.GetProperty("success").GetBoolean());
         if (editable)
         {
@@ -52,7 +53,7 @@ public sealed class DevicePowerShellTests
 
     /// <summary>AccessとUntaggedを別のOS引数へ写し、未対応モードと名前wildcardを区別します。</summary>
     /// <returns>管理OS用の正確なvNICだけに届くことの確認です。</returns>
-    [Theory]
+    [WindowsTheory]
     [InlineData("Access", 120, true)]
     [InlineData("Access", null, true)]
     [InlineData("Untagged", 200, true)]
@@ -63,7 +64,7 @@ public sealed class DevicePowerShellTests
         {
             return;
         }
-        JsonElement result = await RunFixtureAsync("VirtualNicBoundary", new { mode, vlanId });
+        JsonElement result = await RunFixtureAsync("VirtualNicBoundary", new { mode, vlanId }).ConfigureAwait(true);
         Assert.Equal(accepted, result.GetProperty("success").GetBoolean());
         Assert.Equal(accepted, result.GetProperty("started").GetBoolean());
         if (accepted)
@@ -85,7 +86,7 @@ public sealed class DevicePowerShellTests
 
     /// <summary>DNSだけの操作で他の設定関数を呼ばず、対象familyを固定します。</summary>
     /// <returns>実スクリプトの呼出順と部分失敗を検証します。</returns>
-    [Theory]
+    [WindowsTheory]
     [InlineData(4, false)]
     [InlineData(6, false)]
     [InlineData(4, true)]
@@ -98,7 +99,7 @@ public sealed class DevicePowerShellTests
         string dns = family == 4 ? "10.0.0.53"
                                  : "2001:db8::53";
         DeviceNetworkChange change = new(family, AutomaticDns: false, Dns: [dns]);
-        JsonElement result = await RunAsync(change, fail);
+        JsonElement result = await RunAsync(change, fail).ConfigureAwait(true);
         Assert.Equal(!fail, result.GetProperty("success").GetBoolean());
         Assert.True(result.GetProperty("started").GetBoolean());
         JsonElement call = Assert.Single(result.GetProperty("calls").EnumerateArray());
@@ -114,14 +115,14 @@ public sealed class DevicePowerShellTests
 
     /// <summary>DHCPとmetricを明示した場合だけ、両方を選択した同一IFへ送ります。</summary>
     /// <returns>入力文字列がコードにならない確認です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task ExplicitAddressingAndMetricAreIndependentAsync()
     {
         if (!OperatingSystem.IsWindows())
         {
             return;
         }
-        JsonElement result = await RunAsync(new(4, Dhcp: false, AutomaticMetric: false, Metric: 17), false);
+        JsonElement result = await RunAsync(new(4, Dhcp: false, AutomaticMetric: false, Metric: 17), false).ConfigureAwait(true);
         Assert.True(result.GetProperty("success").GetBoolean());
         JsonElement[] calls = result.GetProperty("calls").EnumerateArray().ToArray();
         Assert.Equal(2, calls.Length);
@@ -159,9 +160,13 @@ public sealed class DevicePowerShellTests
             + Resource("VirtualSwitch.Read") + "\n" + Resource("VirtualSwitch.Change") + "\n"
             + networkRead + await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "DeviceManagement", fixture + ".ps1"), cancellationToken).ConfigureAwait(false);
         string bootstrap = "[Console]::InputEncoding=[Text.UTF8Encoding]::new($false); [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); $frame=[Console]::In.ReadToEnd() | ConvertFrom-Json; $request=$frame.request; & ([scriptblock]::Create($frame.code))";
+
+        // 製品のDevicePowerShellと同じ45秒で取り消し、子プロセスの停止と出力の回収まで待ちます。
+        using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(45));
         string output = await BoundedProcessRunner.RunAsync(Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe"),
             ["-NoProfile", "-NonInteractive", "-EncodedCommand", Convert.ToBase64String(Encoding.Unicode.GetBytes(bootstrap))],
-            new ProcessRunLimits(StandardInput: JsonSerializer.Serialize(new { code, request }, ContractJson.Options), OutputEncoding: Encoding.UTF8), cancellationToken).ConfigureAwait(false);
+            new ProcessRunLimits(StandardInput: JsonSerializer.Serialize(new { code, request }, ContractJson.Options), OutputEncoding: Encoding.UTF8), timeout.Token).ConfigureAwait(false);
         return JsonSerializer.Deserialize<JsonElement>(output);
     }
 

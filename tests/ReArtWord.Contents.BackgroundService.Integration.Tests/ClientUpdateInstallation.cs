@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Runtime.InteropServices;
@@ -128,10 +129,13 @@ internal sealed class ClientUpdateInstallation : IAsyncDisposable
     /// <returns>元実体の終了確認です。</returns>
     internal async Task StopOriginalAsync(CancellationToken cancellationToken = default)
     {
-        if (original is not null && !original.HasExited)
+        if (original is not null)
         {
-            original.Kill(false);
-            await original.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            if (!original.HasExited)
+            {
+                original.Kill(false);
+            }
+            await ProcessCompletion.WaitAsync(original, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -139,35 +143,46 @@ internal sealed class ClientUpdateInstallation : IAsyncDisposable
     /// <returns>試験プロセスの終了です。</returns>
     public async ValueTask DisposeAsync()
     {
-        foreach (Process helper in helpers)
+        try
         {
-            if (!helper.HasExited)
+            foreach (Process helper in helpers)
             {
-                helper.Kill(false);
-                await helper.WaitForExitAsync().ConfigureAwait(false);
-            }
-            helper.Dispose();
-        }
-        await StopOriginalAsync().ConfigureAwait(false);
-        original?.Dispose();
-        foreach (Process process in Process.GetProcessesByName("Clutch-CS.ClientHost"))
-        {
-            using (process)
-            {
-                try
+                if (!helper.HasExited)
                 {
-                    if (string.Equals(process.MainModule?.FileName, Path.Combine(Installed, Manifest.EntryPoint), StringComparison.OrdinalIgnoreCase))
+                    helper.Kill(false);
+                }
+                await ProcessCompletion.WaitAsync(helper).ConfigureAwait(false);
+                helper.Dispose();
+            }
+            await StopOriginalAsync().ConfigureAwait(false);
+            original?.Dispose();
+            if (Manifest is null)
+            {
+                // 配布物を準備する前に失敗した場合、起動したClientHostはありません。
+                return;
+            }
+            foreach (Process process in Process.GetProcessesByName("Clutch-CS.ClientHost"))
+            {
+                using (process)
+                {
+                    try
                     {
-                        process.Kill(false);
-                        await process.WaitForExitAsync().ConfigureAwait(false);
+                        if (string.Equals(process.MainModule?.FileName, Path.Combine(Installed, Manifest.EntryPoint), StringComparison.OrdinalIgnoreCase))
+                        {
+                            process.Kill(false);
+                            await ProcessCompletion.WaitAsync(process).ConfigureAwait(false);
+                        }
+                    }
+                    catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException)
+                    {
                     }
                 }
-                catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException)
-                {
-                }
             }
         }
-        Http.Dispose();
+        finally
+        {
+            Http.Dispose();
+        }
     }
 
     /// <summary>試験用に対象RIDのビルドだけを複製します。</summary>

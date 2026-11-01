@@ -14,6 +14,7 @@ using Xunit.Abstractions;
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Persistence;
 
 /// <summary>同じ準備・確定結果を保ったまま、実SQLiteの書込み取引数と時間を比較します。</summary>
+[Collection("Performance")]
 public sealed class ReplicationStartCostTests(ITestOutputHelper output)
 {
     /// <summary>反復保存のジャーナル作成回数を観測し、耐久保存の回数削減を確認します。</summary>

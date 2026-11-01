@@ -50,7 +50,7 @@ public sealed class WindowsGpuProbeTests(ITestOutputHelper output)
 
     /// <summary>標準PDH/DXGIを実採取し、測定値と取得不能の理由を検証します。</summary>
     /// <returns>初回と次回の実OS観測結果です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task ActualWindowsCounterReportsMeasurementsOrUnavailableReasonsAfterWarmup()
     {
         if (!OperatingSystem.IsWindows())

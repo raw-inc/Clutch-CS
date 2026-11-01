@@ -1,5 +1,3 @@
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Processes;
@@ -10,6 +8,8 @@ namespace ReArtWord.Contents.BackgroundService.Tests.Shared;
 /// <summary>実アプリケーションの専用コピーと、試験で開始した実体だけを所有します。</summary>
 internal sealed class ApplicationProcessFixture : IDisposable
 {
+    private readonly TestProcessHandles owned = new();
+
     /// <summary>引数なしでも動く実行物と、試験専用の終了条件を配置します。</summary>
     internal ApplicationProcessFixture(int exitCode = 0, int delayMilliseconds = 0, bool withArguments = false)
     {
@@ -57,48 +57,34 @@ internal sealed class ApplicationProcessFixture : IDisposable
 
     /// <summary>起動回ごとのOS識別子と実際の引数を読みます。</summary>
     /// <returns>原子的に完成した起動記録だけです。</returns>
-    internal string[][] Starts() => Directory.GetFiles(Root, "*.started").Select(PublishedFixtureFile.ReadAllLines).ToArray();
+    internal string[][] Starts()
+    {
+        string[][] entries = Directory.GetFiles(Root, "*.started").Select(PublishedFixtureFile.ReadAllLines).ToArray();
+        foreach (string[] entry in entries)
+        {
+            owned.Capture(new(int.Parse(entry[0], CultureInfo.InvariantCulture), DateTimeOffset.Parse(entry[1], CultureInfo.InvariantCulture)));
+        }
+        return entries;
+    }
 
     /// <summary>長時間動く試験アプリケーションを自明終了させます。</summary>
-    internal void Release() => File.WriteAllText(Path.Combine(Root, "release"), string.Empty);
+    internal void Release()
+    {
+        _ = Starts();
+        File.WriteAllText(Path.Combine(Root, "release"), string.Empty);
+    }
 
     /// <summary>このコピーから起動した実体をPIDと開始時刻で再照合して解放します。</summary>
-    // 抑制理由: OSプロセスの開始時刻を照合し、PID再利用先の無関係なプロセスは停止しません。
-    [SuppressMessage("SourceQuality", "RAW171", Justification = "OSのDateTimeをUTCのDateTimeOffsetへ変換して実体を照合します。")]
     public void Dispose()
     {
-        foreach (string[] entry in Starts())
+        try
         {
-            try
-            {
-                using Process process = Process.GetProcessById(int.Parse(entry[0], CultureInfo.InvariantCulture));
-                DateTimeOffset started = DateTimeOffset.Parse(entry[1], CultureInfo.InvariantCulture);
-                if (!process.HasExited && new DateTimeOffset(process.StartTime.ToUniversalTime()) == started)
-                {
-                    process.Kill(true);
-                    process.WaitForExit(5000);
-                }
-            }
-            catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
-            {
-                // 既に終了した試験プロセスです。
-            }
+            _ = Starts();
         }
-        Exception? pending = null;
-        for (int attempt = 0; attempt < 20; attempt++)
+        finally
         {
-            try
-            {
-                Directory.Delete(Root, true);
-                return;
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-            {
-                // 終了直後のイメージマッピングやOS検査による短い保持だけを有限時間待ちます。
-                pending = exception;
-                Thread.Sleep(50);
-            }
+            owned.Dispose();
         }
-        System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(pending!);
+        TestProcessDirectory.Delete(Root);
     }
 }

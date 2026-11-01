@@ -37,6 +37,7 @@ public sealed class TcpMultiPortReplyTests
             return ValueTask.CompletedTask;
         });
         Task<NodeResult> run = node.RunAsync(source, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, timeout).ConfigureAwait(true);
         await listening.Task.WaitAsync(timeout.Token);
         using TcpClient first = new(), second = new();
         await first.ConnectAsync(IPAddress.Loopback, ports[0], timeout.Token);

@@ -12,6 +12,7 @@ using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Tray;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Desktop;
 using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
 
@@ -20,7 +21,7 @@ public sealed class DesktopAnnotationProcessTests
 {
     /// <summary>購読しない旧receiverへ新種別を送らず、購読した操作側へ閲覧側の指示を中継します。</summary>
     /// <returns>pipe、共有memory、実windowの確認です。</returns>
-    [HostedDesktopTheory, SupportedOSPlatform("windows")]
+    [HostedDesktopTheory(minimumWindows10Build: 19041), SupportedOSPlatform("windows")]
     [InlineData(false)]
     [InlineData(true)]
     public async Task WindowsWorkersShareAnnotationsAndRecoverAfterOwnerExitAsync(bool anotherGroupAlreadyActive)
@@ -87,14 +88,14 @@ public sealed class DesktopAnnotationProcessTests
             JsonElement controlled = await ReceiveAsync(second, 12, timeout.Token).ConfigureAwait(true);
             Assert.Single(controlled.GetProperty("cursors").EnumerateArray());
             one.Kill(true);
-            await one.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+            await ProcessCompletion.WaitAsync(one, timeout.Token).ConfigureAwait(true);
             await WaitAsync(() => Visible(two.Id) && !Present(one.Id), "The surviving annotation worker did not take over after the owner exited.", timeout.Token).ConfigureAwait(true);
             JsonElement cleared = await UntilAsync(second, value => value.GetProperty("cursors").GetArrayLength() == 0, timeout.Token).ConfigureAwait(true);
             Assert.Empty(cleared.GetProperty("cursors").EnumerateArray());
             await UntilAsync(second, value => value.GetProperty("points").GetArrayLength() == 0, timeout.Token).ConfigureAwait(true);
             await WaitAsync(() => !Visible(two.Id), "The annotation window remained visible after the shared points expired.", timeout.Token).ConfigureAwait(true);
             second.Close();
-            await two.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+            await ProcessCompletion.WaitAsync(two, timeout.Token).ConfigureAwait(true);
             Assert.Equal(0, two.ExitCode);
             Assert.False(Present(two.Id));
             if (other is not null)
@@ -105,7 +106,7 @@ public sealed class DesktopAnnotationProcessTests
         finally
         {
             first.Close(); second.Close(); unrelated.Close();
-            Stop(one); Stop(two); Stop(other);
+            await TestProcessCleanup.StopAsync(one, two, other).ConfigureAwait(true);
         }
     }
 
@@ -212,27 +213,6 @@ public sealed class DesktopAnnotationProcessTests
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             Assert.Fail(failure);
-        }
-    }
-
-    /// <summary>この試験が起動したprocessだけを回収します。</summary>
-    private static void Stop(Process? process)
-    {
-        if (process is null)
-        {
-            return;
-        }
-        try
-        {
-            if (!process.HasExited)
-            {
-                process.Kill(true);
-                Assert.True(process.WaitForExit(5000));
-            }
-        }
-        finally
-        {
-            process.Dispose();
         }
     }
 

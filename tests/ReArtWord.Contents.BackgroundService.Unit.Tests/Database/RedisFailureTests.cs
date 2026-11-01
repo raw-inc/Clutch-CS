@@ -26,6 +26,7 @@ public sealed class RedisFailureTests
         NodeExecutionContext context = NodeTestContext.Create(SocketNodeTests.Settings(new { remoteAddress = "127.0.0.1", remotePort = port, operation = "set" }).GetRawText(), NodeValue.FromObject("payload"),
             new Dictionary<string, NodeValue>(StringComparer.Ordinal) { ["key"] = NodeValue.FromObject("key") });
         Task<NodeResult> pending = node.ExecuteAsync(context, deadline.Token).AsTask();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = new TestTaskLifetime(pending, deadline).ConfigureAwait(true);
         using (TcpClient accepted = await listener.AcceptTcpClientAsync(deadline.Token).ConfigureAwait(true))
         {
             using NetworkStream stream = accepted.GetStream();

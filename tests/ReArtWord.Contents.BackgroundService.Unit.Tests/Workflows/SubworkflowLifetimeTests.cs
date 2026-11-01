@@ -40,7 +40,9 @@ public sealed class SubworkflowLifetimeTests
             }
             return await fixture.Executor.ExecuteAsync(request, token).ConfigureAwait(false);
         };
-        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(parent);
+        using CancellationTokenSource cancellation = new();
+        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(parent, cancellationToken: cancellation.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable executionLifetime = new TestTaskLifetime(running, cancellation).ConfigureAwait(true);
         try
         {
             await reached.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -112,6 +114,7 @@ public sealed class SubworkflowLifetimeTests
         Guid id = Guid.NewGuid();
         using CancellationTokenSource cancelled = new();
         Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(SubworkflowTests.Compile(fixture, new("parent", "Parent", [node], [])), executionId: id, cancellationToken: cancelled.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable executionLifetime = new TestTaskLifetime(running, cancelled).ConfigureAwait(true);
         try
         {
             await started.Task.WaitAsync(TimeSpan.FromSeconds(5));

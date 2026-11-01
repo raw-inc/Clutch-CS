@@ -165,6 +165,7 @@ public sealed class SignalMergeWorkflowTests
         finally
         {
             slow.TrySetResult();
+            await running.ConfigureAwait(true);
         }
         Assert.Equal(EOutcome.Succeeded, (await running.ConfigureAwait(true)).Outcome);
         Assert.Equal(expected, calls);

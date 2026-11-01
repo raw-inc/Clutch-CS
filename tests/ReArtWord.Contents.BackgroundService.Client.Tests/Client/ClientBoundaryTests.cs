@@ -30,13 +30,21 @@ public sealed class ClientBoundaryTests
         WorkflowDefinition definition = Definition();
         await model.LoadAsync(new(definition, ContractJson.Hash(definition), DateTimeOffset.UtcNow, EActivationPolicy.Auto)).ConfigureAwait(true);
         EditorCollaboration collaboration = new(model, new(client));
-        Task pending = collaboration.SynchronizeAsync(true, "host");
-        model.New();
-        string id = model.Draft.Document.Id;
         using HttpResponseMessage delivered = Reply(new DraftView(definition.Id, null, ContractJson.Hash(definition), definition, [], [], DateTimeOffset.UtcNow));
-        response.SetResult(delivered);
-        await pending.ConfigureAwait(true);
-        Assert.Equal(id, model.Draft.Document.Id);
+        Task pending = collaboration.SynchronizeAsync(true, "host");
+        try
+        {
+            model.New();
+            string id = model.Draft.Document.Id;
+            response.SetResult(delivered);
+            await pending.ConfigureAwait(true);
+            Assert.Equal(id, model.Draft.Document.Id);
+        }
+        finally
+        {
+            response.TrySetCanceled();
+            await pending.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
     }
 
     /// <summary>サーバー拒否時に編集を残し、修正後は新しい要求で再確認します。</summary>
@@ -281,6 +289,7 @@ public sealed class ClientBoundaryTests
     [Fact]
     public async Task IdlePresenceIsCoalescedButPointerChangesAreSentAsync()
     {
+        EditorTestClock clock = new();
         int requests = 0;
         using ClientHttpHandler handler = new((_, _) =>
         {
@@ -289,7 +298,7 @@ public sealed class ClientBoundaryTests
         });
         using HttpClient client = Client(handler);
         EditorDocument model = new(new(new BrowserTestRuntime()));
-        EditorCollaboration collaboration = new(model, new(client));
+        EditorCollaboration collaboration = new(model, new(client, new(clock)));
         await collaboration.SynchronizePresenceAsync("host").ConfigureAwait(true);
         await collaboration.SynchronizePresenceAsync("host").ConfigureAwait(true);
         Assert.Equal(2, requests);

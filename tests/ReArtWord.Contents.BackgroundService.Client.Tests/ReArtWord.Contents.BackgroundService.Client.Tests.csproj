@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>
   <ItemGroup>
+    <Compile Include="../Shared/WindowsFactAttribute.cs" Link="Shared/WindowsFactAttribute.cs" />
     <Compile Include="../ReArtWord.Contents.BackgroundService.Unit.Tests/Processes/PowerSchedulePeer.cs" Link="Management/PowerSchedulePeer.cs" />
     <ProjectReference Include="../../src/ReArtWord.Contents.BackgroundService.Client/ReArtWord.Contents.BackgroundService.Client.csproj" />
     <ProjectReference Include="../../src/ReArtWord.Contents.BackgroundService.ClientHost/ReArtWord.Contents.BackgroundService.ClientHost.csproj" />

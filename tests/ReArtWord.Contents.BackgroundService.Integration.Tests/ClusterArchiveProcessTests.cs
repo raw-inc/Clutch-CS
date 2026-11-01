@@ -13,6 +13,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Contracts.Workflow;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Archives;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 
@@ -27,7 +28,8 @@ public sealed class ClusterArchiveProcessTests
     public async Task CliMovesSettingsAndLogsAcrossClustersAndRestoresEveryActivePeer()
     {
         string sourceId = Guid.NewGuid().ToString("N"), destinationId = Guid.NewGuid().ToString("N");
-        int sourcePort = CorePeer.AvailablePort(), destinationPort = CorePeer.AvailablePort();
+        int[] ports = CorePeer.AvailableUdpPorts(2);
+        int sourcePort = ports[0], destinationPort = ports[1];
         CorePeer sourceA = new(sourceId, "a", sourcePort, true, hostId: "host-a"), sourceB = new(sourceId, "b", sourcePort, false, hostId: "host-b");
         CorePeer destinationA = new(destinationId, "a", destinationPort, true, hostId: "host-a"), destinationB = new(destinationId, "b", destinationPort, false, hostId: "host-b");
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable sourceALifetime = sourceA.ConfigureAwait(true);
@@ -154,7 +156,7 @@ public sealed class ClusterArchiveProcessTests
         Task<string> error = process.StandardError.ReadToEndAsync(cancellationToken);
         try
         {
-            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            await ProcessCompletion.WaitAsync(process, cancellationToken).ConfigureAwait(false);
             await Task.WhenAll(output, error).ConfigureAwait(false);
             string text = await output.ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(text))
@@ -168,8 +170,8 @@ public sealed class ClusterArchiveProcessTests
             if (!process.HasExited)
             {
                 process.Kill(true);
-                await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
             }
+            await ProcessCompletion.WaitAsync(process, CancellationToken.None).ConfigureAwait(false);
             await Task.WhenAll(output, error).ConfigureAwait(false);
         }
     }

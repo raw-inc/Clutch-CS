@@ -5,6 +5,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement.Power;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Infrastructure.DeviceManagement;
 using ReArtWord.Contents.BackgroundService.Infrastructure.DeviceManagement.Power;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.DeviceManagement;
@@ -82,7 +83,7 @@ public sealed class DevicePowerTests
     }
 
     /// <summary>実Windowsのネイティブ構造体と設定値を読取り専用で確認します。</summary>
-    [Fact]
+    [WindowsFact]
     public void ReadsWindowsWithoutChangingAnyPowerSetting()
     {
         if (!OperatingSystem.IsWindows())

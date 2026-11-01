@@ -13,6 +13,7 @@ if ($RequireAvx2Disabled -and ([System.Runtime.Intrinsics.X86.Avx2]::IsSupported
 $fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) ('contents-install-flow-' + [Guid]::NewGuid().ToString('N'))
 [void][IO.Directory]::CreateDirectory($fixtureRoot)
 $owned = [Collections.Generic.List[Diagnostics.Process]]::new()
+$testFailure = $null
 try {
     $network = [Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces() | Where-Object { $_.GetIPProperties().UnicastAddresses.Address.IPAddressToString -contains '127.0.0.1' } | Select-Object -First 1
     if (-not $network) { throw 'An explicit loopback NIC is required.' }
@@ -142,10 +143,25 @@ roots = ["$content"]
     }
     Write-Output 'PASS: two isolated Core processes install/create/join through UDP, preflight diagnostics retained, wrong RID/changed configuration rejected, fake OS permissions/registration/recovery, failed permissions/registration/recovery/start/Ready never succeeds.'
     if ($RequireAvx2Disabled) { Write-Output 'PASS: installation verification and both Core processes completed with DOTNET_EnableAVX2=0.' }
+} catch {
+    $testFailure = $_.Exception
+    throw
 } finally {
+    $cleanupFailures = [Collections.Generic.List[Exception]]::new()
     foreach ($process in $owned) {
-        if (-not $process.HasExited) { $process.Kill($true); $process.WaitForExit(10000) | Out-Null }
-        $process.Dispose()
+        try {
+            if (-not $process.HasExited) { $process.Kill($true) }
+            # 試験が起動したプロセスの終了後に、配置とデータを削除します。
+            $process.WaitForExit()
+        } catch {
+            $cleanupFailures.Add($_.Exception)
+        } finally {
+            $process.Dispose()
+        }
+    }
+    if ($cleanupFailures.Count -ne 0) {
+        if ($null -ne $testFailure) { $cleanupFailures.Insert(0, $testFailure) }
+        throw [AggregateException]::new('Installation test processes could not be stopped. The test files were retained.', $cleanupFailures)
     }
     $resolved = [IO.Path]::GetFullPath($fixtureRoot)
     $temporary = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())

@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 using System.Buffers.Binary;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
@@ -27,18 +28,26 @@ public sealed class DesktopClipboardTests
         start.ArgumentList.Add("clipboard-isolated");
         using System.Diagnostics.Process process = System.Diagnostics.Process.Start(start)!;
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
+        Task<string> errors = process.StandardError.ReadToEndAsync(timeout.Token);
         try
         {
-            Task<string> errors = process.StandardError.ReadToEndAsync(timeout.Token);
-            await process.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+            await ProcessCompletion.WaitAsync(process, timeout.Token).ConfigureAwait(true);
             Assert.True(process.ExitCode == 0, await errors.ConfigureAwait(true));
         }
         finally
         {
-            if (!process.HasExited)
+            try
             {
-                process.Kill(true);
-                await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(true);
+                if (!process.HasExited)
+                {
+                    process.Kill(true);
+                }
+                await ProcessCompletion.WaitAsync(process, CancellationToken.None).ConfigureAwait(true);
+            }
+            finally
+            {
+                await timeout.CancelAsync().ConfigureAwait(true);
+                await ((Task)errors).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
             }
         }
     }
@@ -121,10 +130,9 @@ public sealed class DesktopClipboardTests
         DesktopClipboard clipboard = new(() => Volatile.Read(ref version), () =>
         {
             entered.TrySetResult();
-            if (!release.Wait(TimeSpan.FromSeconds(10)))
-            {
-                throw new IOException("The test owner did not finish rendering.");
-            }
+
+            // 保留中のOS応答は、試験のfinallyで解放するまで完了させません。
+            release.Wait();
             return "late owner text";
         }, _ => throw new InvalidOperationException("Disabled clipboard must not be written."));
         using CancellationTokenSource lifetime = new(TimeSpan.FromSeconds(5));

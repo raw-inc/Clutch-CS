@@ -41,6 +41,7 @@ public sealed class IterationFailureTests
     [Fact]
     public async Task ParallelFailureAwaitsAlreadyStartedBodyAsync()
     {
+        using CancellationTokenSource cancellation = new();
         TaskCompletionSource both = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         int calls = 0;
@@ -50,23 +51,32 @@ public sealed class IterationFailureTests
             string valuePort = "value";
             if (context.Inputs[valuePort].Json.GetInt32() == 1)
             {
-                await both.Task.WaitAsync(TimeSpan.FromSeconds(5), token).ConfigureAwait(false);
+                await both.Task.WaitAsync(token).ConfigureAwait(false);
                 return NodeResult.Failure("test.failure", "fixture");
             }
             both.TrySetResult();
-            await release.Task.WaitAsync(TimeSpan.FromSeconds(5), token).ConfigureAwait(false);
+            await release.Task.WaitAsync(token).ConfigureAwait(false);
             return NodeResult.Success(context.Inputs["value"]);
         });
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = fixture.ConfigureAwait(true);
-        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, IterationTests.Definition(parallel: true)));
-        await both.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
-        await Task.Delay(30).ConfigureAwait(true);
-        Assert.False(running.IsCompleted);
-        release.TrySetResult();
-        ExecutionReport report = await running.ConfigureAwait(true);
-        Assert.Equal(EOutcome.Failed, report.Outcome);
-        Assert.Equal(2, calls);
-        Assert.Equal(2, IterationTests.Loop(report).Iteration!.Started);
+        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(IterationTests.Compile(fixture, IterationTests.Definition(parallel: true)), cancellationToken: cancellation.Token);
+        try
+        {
+            await both.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
+            await Task.Delay(30).ConfigureAwait(true);
+            Assert.False(running.IsCompleted);
+            release.TrySetResult();
+            ExecutionReport report = await running.ConfigureAwait(true);
+            Assert.Equal(EOutcome.Failed, report.Outcome);
+            Assert.Equal(2, calls);
+            Assert.Equal(2, IterationTests.Loop(report).Iteration!.Started);
+        }
+        finally
+        {
+            release.TrySetResult();
+            await cancellation.CancelAsync().ConfigureAwait(true);
+            await running.ConfigureAwait(true);
+        }
     }
 
     /// <summary>明示取消後に残りの要素を開始しません。</summary>

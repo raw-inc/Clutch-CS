@@ -5,6 +5,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Processes;
 using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Observability;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Processes;
 
@@ -114,7 +115,7 @@ public sealed class ApplicationRecoveryTests
         using Process process = Process.GetProcessById(identity.ProcessId);
         app.Release();
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
-        await process.WaitForExitAsync(timeout.Token);
+        await ProcessCompletion.WaitAsync(process, timeout.Token);
         using ProcessService second = scope.CreateService();
         ProcessOperationResult result = await second.RecoverAsync(app.Definition.Id);
         Assert.Equal("process.exitUnobserved", result.Reason);

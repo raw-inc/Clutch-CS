@@ -76,7 +76,7 @@ internal static partial class ProcessOs
         try
         {
             using Process process = Process.GetProcessById(identity.ProcessId);
-            return !process.HasExited && Identity(process) == identity;
+            return !ProcessCompletion.HasExited(process) && Identity(process) == identity;
         }
         catch (ArgumentException)
         {
@@ -85,6 +85,47 @@ internal static partial class ProcessOs
         catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException)
         {
             return null;
+        }
+    }
+
+    /// <summary>停止要求より前に実体を照合し、終了確認まで保持するハンドルを確保します。</summary>
+    /// <returns>呼出元が破棄するハンドルです。既に存在しない実体や再利用されたPIDはnullです。</returns>
+    // 抑制理由: 照合したハンドルの所有権を呼出元へ渡し、未移譲分だけをfinallyで回収します。
+    [SuppressMessage("SourceQuality", "RAW141", Justification = "停止要求から終了確認まで呼出元がハンドルを保持します。"),
+     SuppressMessage("SourceQuality", "RAW140", Justification = "照合失敗や例外時のハンドルはfinallyで回収します。")]
+    internal static Process? Open(ProcessIdentity? identity)
+    {
+        if (identity is null)
+        {
+            return null;
+        }
+        Process? process = null;
+        try
+        {
+            process = Process.GetProcessById(identity.ProcessId);
+
+            // GetProcessByIdはPIDの存在を確認するだけで、OSハンドルを保持しません。
+            // Windows/.NET 10.0.13では、終了処理中にPIDの列挙から消えてもファイルが解放されていない境界を再現しました。
+            // 停止後の再検索やIsRunning=falseを、資源解放の確認には使えません。
+            // https://github.com/dotnet/runtime/blob/v10.0.13/src/libraries/System.Diagnostics.Process/src/System/Diagnostics/Process.cs
+            // ハンドル確保後に開始時刻を照合し、停止要求とProcessCompletionの待機で同じ実体を使います。
+            // PID検索だけでOSの完全終了を確認できる保証がない限り、この保持は必要です。
+            _ = process.SafeHandle;
+            if (Identity(process) != identity)
+            {
+                return null;
+            }
+            Process captured = process;
+            process = null;
+            return captured;
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
+        finally
+        {
+            process?.Dispose();
         }
     }
 
@@ -97,40 +138,57 @@ internal static partial class ProcessOs
     /// <returns>指定した停止方針での確認結果です。</returns>
     internal static async Task<EOutcome> StopAsync(ProcessIdentity identity, EProcessStopPolicy policy, int timeoutMilliseconds, IProcessPlatform platform, CancellationToken cancellationToken = default)
     {
-        bool? running = IsRunning(identity);
-        if (running == false)
+        try
         {
-            return EOutcome.Succeeded;
+            using Process? process = Open(identity);
+            if (process is null)
+            {
+                return EOutcome.Succeeded;
+            }
+            return await StopAsync(process, identity, policy, timeoutMilliseconds, platform, cancellationToken).ConfigureAwait(false);
         }
-        if (running is null)
+        catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException)
         {
             return EOutcome.Unknown;
         }
+    }
+
+    /// <summary>所有元が確保したハンドルを使い、PIDを検索し直さずに停止を確認します。</summary>
+    /// <returns>終了、手動対応待ち、または停止結果不明です。ハンドルの所有権は移しません。</returns>
+    internal static async Task<EOutcome> StopAsync(Process process, ProcessIdentity identity, EProcessStopPolicy policy, int timeoutMilliseconds, IProcessPlatform platform, CancellationToken cancellationToken = default)
+    {
         try
         {
-            using Process process = Process.GetProcessById(identity.ProcessId);
+            _ = process.SafeHandle;
             if (Identity(process) != identity)
             {
                 return EOutcome.Unknown;
             }
-            cancellationToken.ThrowIfCancellationRequested();
-            if (OperatingSystem.IsWindows())
+            if (ProcessCompletion.HasExited(process))
             {
-                _ = await platform.CloseWindowAsync(identity, cancellationToken).ConfigureAwait(false);
+                return EOutcome.Succeeded;
             }
-            else
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!process.HasExited)
             {
-                if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
+                try
                 {
-                    return EOutcome.NotExecuted;
-                }
-                if (SendSignal(identity.ProcessId, 15) != 0)
-                {
-                    if (IsRunning(identity) == false)
+                    if (OperatingSystem.IsWindows())
                     {
-                        return EOutcome.Succeeded;
+                        _ = await platform.CloseWindowAsync(identity, cancellationToken).ConfigureAwait(false);
                     }
-                    return EOutcome.Unknown;
+                    else if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
+                    {
+                        return EOutcome.NotExecuted;
+                    }
+                    else if (SendSignal(identity.ProcessId, 15) != 0 && !process.HasExited)
+                    {
+                        return EOutcome.Unknown;
+                    }
+                }
+                catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException or ArgumentException && process.HasExited)
+                {
+                    // 通常終了要求の直前に終了が始まった場合も、保持したハンドルの終了シグナルまで待ちます。
                 }
             }
             using CancellationTokenSource grace = new(TimeSpan.FromMilliseconds(timeoutMilliseconds));
@@ -138,13 +196,13 @@ internal static partial class ProcessOs
             bool timedOut = false;
             try
             {
-                await process.WaitForExitAsync(linked.Token).ConfigureAwait(false);
+                await ProcessCompletion.WaitAsync(process, linked.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
                 timedOut = !cancellationToken.IsCancellationRequested;
             }
-            if (process.HasExited)
+            if (ProcessCompletion.HasExited(process))
             {
                 return EOutcome.Succeeded;
             }
@@ -162,15 +220,21 @@ internal static partial class ProcessOs
             }
             process.Kill(false);
             using CancellationTokenSource forced = new(TimeSpan.FromSeconds(10));
-            await process.WaitForExitAsync(forced.Token).ConfigureAwait(false);
+            await ProcessCompletion.WaitAsync(process, forced.Token).ConfigureAwait(false);
             return EOutcome.Succeeded;
         }
         catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException or ArgumentException or OperationCanceledException or NotSupportedException)
         {
-            bool? stopped = IsRunning(identity);
-            if (stopped == false)
+            try
             {
-                return EOutcome.Succeeded;
+                if (ProcessCompletion.HasExited(process))
+                {
+                    return EOutcome.Succeeded;
+                }
+            }
+            catch (Exception unavailable) when (unavailable is System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException)
+            {
+                // ハンドルの照会自体に失敗した場合、PID不在を根拠に成功へ変更しません。
             }
             return EOutcome.Unknown;
         }

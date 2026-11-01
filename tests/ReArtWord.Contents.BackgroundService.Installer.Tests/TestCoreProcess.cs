@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Security.Principal;
 using System.Text;
 using ReArtWord.Contents.BackgroundService.Runtime.Processes.Commands;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Installer.Tests;
 
@@ -90,10 +91,13 @@ internal sealed class TestCoreProcess(string executable, string configuration, s
         finally
         {
             using Process? owned = process ?? FindOwned();
-            if (owned is { HasExited: false })
+            if (owned is not null)
             {
-                owned.Kill(false);
-                await owned.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+                if (!owned.HasExited)
+                {
+                    owned.Kill(false);
+                }
+                await ProcessCompletion.WaitAsync(owned, CancellationToken.None).ConfigureAwait(false);
             }
         }
     }

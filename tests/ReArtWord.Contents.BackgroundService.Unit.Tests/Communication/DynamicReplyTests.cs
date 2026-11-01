@@ -26,6 +26,7 @@ public sealed class DynamicReplyTests
         TaskCompletionSource<string> listening = new(TaskCreationOptions.RunContinuationsAsynchronously);
         NodeExecutionContext initial = SocketNodeTests.Context(SocketNodeTests.Settings(new { replyMode = "workflow", count = 1 }));
         Task<NodeResult> run = Source(nodes, "http.listen").RunAsync(Context(initial, emissions, listening), timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, timeout).ConfigureAwait(true);
         string url = await listening.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         using HttpClient client = new();
         Task<HttpResponseMessage> request = client.GetAsync(new Uri(url), abortClient.Token);
@@ -51,6 +52,7 @@ public sealed class DynamicReplyTests
         NodeExecutionContext initial = SocketNodeTests.Context(SocketNodeTests.Settings(new { replyMode = "workflow", count = 1 }));
         NodeSourceContext source = Context(initial, emissions, listening, stop.Token);
         Task<NodeResult> run = Source(nodes, "http.listen").RunAsync(source, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, timeout).ConfigureAwait(true);
         string url = await listening.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         using HttpClient client = new();
         Task<HttpResponseMessage> responseTask = client.GetAsync(new Uri(url), timeout.Token);
@@ -82,6 +84,7 @@ public sealed class DynamicReplyTests
         TaskCompletionSource<string> listening = new(TaskCreationOptions.RunContinuationsAsynchronously);
         NodeExecutionContext initial = SocketNodeTests.Context(SocketNodeTests.Settings(new { replyMode = "workflow", count = 1, timeoutMs = 150 }));
         Task<NodeResult> run = Source(nodes, "http.listen").RunAsync(Context(initial, emissions, listening), timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, timeout).ConfigureAwait(true);
         string url = await listening.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         using HttpClient client = new();
         Task<HttpResponseMessage> responseTask = client.GetAsync(new Uri(url), timeout.Token);
@@ -107,6 +110,7 @@ public sealed class DynamicReplyTests
         TaskCompletionSource<string> listening = new(TaskCreationOptions.RunContinuationsAsynchronously);
         NodeExecutionContext initial = SocketNodeTests.Context(SocketNodeTests.Settings(new { replyMode = "workflow", framing = "line", count = 1 }));
         Task<NodeResult> run = Source(nodes, "tcp.listen").RunAsync(Context(initial, emissions, listening), timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, timeout).ConfigureAwait(true);
         IPEndPoint endpoint = IPEndPoint.Parse(await listening.Task.WaitAsync(timeout.Token).ConfigureAwait(true));
         using TcpClient client = new(AddressFamily.InterNetwork);
         await client.ConnectAsync(endpoint, timeout.Token).ConfigureAwait(true);
@@ -136,6 +140,7 @@ public sealed class DynamicReplyTests
         TaskCompletionSource<string> listening = new(TaskCreationOptions.RunContinuationsAsynchronously);
         NodeExecutionContext initial = SocketNodeTests.Context(SocketNodeTests.Settings(new { replyMode = "workflow", maxBytes = 16777216, count = 1 }));
         Task<NodeResult> run = Source(nodes, "tcp.listen").RunAsync(Context(initial, emissions, listening), timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, timeout).ConfigureAwait(true);
         IPEndPoint endpoint = IPEndPoint.Parse(await listening.Task.WaitAsync(timeout.Token).ConfigureAwait(true));
         using TcpClient client = new(AddressFamily.InterNetwork);
         client.ReceiveBufferSize = 1024;
@@ -145,6 +150,7 @@ public sealed class DynamicReplyTests
         NodeEmission input = await emissions.Reader.ReadAsync(timeout.Token).ConfigureAwait(true);
         NodeExecutionContext reply = ReplyContext(input.Result.Outputs["request"], NodeValue.FromBytes(new byte[8388608]));
         Task<NodeResult> send = Action(nodes, "tcp.reply").ExecuteAsync(reply, cancelReply.Token).AsTask();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable sendLifetime = new TestTaskLifetime(send, cancelReply).ConfigureAwait(true);
         byte[] prefix = new byte[4];
         await stream.ReadExactlyAsync(prefix, timeout.Token).ConfigureAwait(true);
         NodeResult confirmed = await send.ConfigureAwait(true);

@@ -64,6 +64,8 @@ public sealed class MediaConverterTests(ITestOutputHelper testOutput)
         IActionNode node = (IActionNode)MediaNodeRegistration.Create(files.Options)[1];
         using CancellationTokenSource cancellation = new();
         Task<NodeResult> run = node.ExecuteAsync(NodeTestContext.Create(JsonSerializer.Serialize(new { outputPath = output, format = "webm", width = 1024, height = 1024 }), NodeValue.FromObject(input)), cancellation.Token).AsTask();
+        TestTaskLifetime lifetime = new(run, cancellation);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = lifetime.ConfigureAwait(true);
         using CancellationTokenSource wait = new(TimeSpan.FromSeconds(10));
         string partialPattern = "cancelled.webm.*.partial";
         while (!Directory.EnumerateFiles(files.Root, partialPattern).Any() && !run.IsCompleted)

@@ -7,6 +7,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Processes;
 using ReArtWord.Contents.BackgroundService.Contracts.Observability.Logging;
 using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 
@@ -34,7 +35,7 @@ public sealed class ApplicationMonitoringLogProcessTests
         using (System.Diagnostics.Process process = System.Diagnostics.Process.GetProcessById(int.Parse(first[0], CultureInfo.InvariantCulture)))
         {
             process.Kill(true);
-            await process.WaitForExitAsync(deadline.Token);
+            await ProcessCompletion.WaitAsync(process, deadline.Token);
         }
         await CorePeer.WaitAsync(_ => Task.FromResult(app.Starts().Length == 2), deadline.Token);
         Assert.Equal(EOutcome.Succeeded, (await ApplicationLifecycleProcessTests.ActionAsync(peer, "process.stop", definition.Id, deadline.Token)).Outcome);
@@ -48,7 +49,7 @@ public sealed class ApplicationMonitoringLogProcessTests
         using (System.Diagnostics.Process process = System.Diagnostics.Process.GetProcessById(int.Parse(third[0], CultureInfo.InvariantCulture)))
         {
             process.Kill(true);
-            await process.WaitForExitAsync(deadline.Token);
+            await ProcessCompletion.WaitAsync(process, deadline.Token);
         }
         LogQuery query = new(Text: "Application.", Limit: 100, UncompressedOnly: true);
         LogQueryResult? logs = null;

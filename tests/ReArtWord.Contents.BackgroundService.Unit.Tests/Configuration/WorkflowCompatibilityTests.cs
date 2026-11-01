@@ -14,6 +14,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Compilation;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Configuration;
@@ -26,7 +27,8 @@ public sealed class WorkflowCompatibilityTests
     [Fact]
     public async Task InspectionIdentifiesStoredEffectiveAndSnapshotImpactWithoutMutationAsync()
     {
-        string root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        using MediaTestFiles files = new();
+        string root = files.Root;
         SqliteRepository repository = new(Path.Combine(root, "state.db"));
         PeerCluster cluster = Create(repository, root);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = cluster.ConfigureAwait(true);

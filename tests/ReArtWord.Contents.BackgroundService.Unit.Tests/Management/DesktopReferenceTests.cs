@@ -1,11 +1,10 @@
 using System.Diagnostics;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Desktop;
-using ReArtWord.Contents.BackgroundService.CoreService.Desktop;
-using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Capture;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Video;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
 
@@ -14,26 +13,15 @@ public sealed class DesktopReferenceTests
 {
     /// <summary>DDA取得後、別threadへ渡る入力がGPU surfaceではなく独立したCPU画素であることを実物で確認します。</summary>
     /// <returns>対話Windowsの取得graphをffprobeで開いた結果です。DDA非対応環境は対象外です。</returns>
-    [HostedDesktopDuplicationFact]
+    [DesktopDuplicationFact]
     public async Task DuplicationHandsOffCpuFramesBeforeEncodingAsync()
     {
         if (!OperatingSystem.IsWindows())
         {
             return;
         }
-        DesktopMonitor? monitor = null;
-        foreach (DesktopMonitor candidate in WindowsDesktop.Monitors())
-        {
-            if (DesktopDuplication.FindOutput(candidate.Name) is not null)
-            {
-                monitor = candidate;
-                break;
-            }
-        }
-        if (monitor is null)
-        {
-            return;
-        }
+        DesktopMonitor? monitor = DesktopDuplicationFactAttribute.FindMonitor();
+        Assert.NotNull(monitor);
         using MediaTestFiles files = new();
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
         ProcessStartInfo production = DesktopEncoder.StartInfo(files.Options.FfmpegPath, monitor, "hevc_nvenc", 20000, settings: new(120, 6000));
@@ -106,7 +94,7 @@ public sealed class DesktopReferenceTests
         Task<string> error = process.StandardError.ReadToEndAsync(cancellationToken);
         try
         {
-            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            await ProcessCompletion.WaitAsync(process, cancellationToken).ConfigureAwait(false);
             Assert.True(process.ExitCode == 0, await error.ConfigureAwait(false));
             return await output.ConfigureAwait(false);
         }
@@ -116,7 +104,7 @@ public sealed class DesktopReferenceTests
             {
                 process.Kill(true);
             }
-            await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+            await ProcessCompletion.WaitAsync(process, CancellationToken.None).ConfigureAwait(false);
             await Task.WhenAll(output, error).ConfigureAwait(false);
         }
     }

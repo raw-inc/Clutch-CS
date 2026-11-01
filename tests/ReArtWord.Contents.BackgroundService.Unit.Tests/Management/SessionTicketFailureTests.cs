@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop;
 using ReArtWord.Contents.BackgroundService.CoreService.SignalScope;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
@@ -11,7 +12,7 @@ public sealed class SessionTicketFailureTests
 {
     /// <summary>不正チケットでworkerを起動せず、RemoteDesktopの回収タスクを失敗させません。</summary>
     /// <returns>一接続の拒否と安全な回収です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task DesktopTicketFailureDoesNotEscapeSession()
     {
         if (!OperatingSystem.IsWindows())
@@ -21,7 +22,7 @@ public sealed class SessionTicketFailureTests
         SessionTestLog log = new();
         DesktopSession session = new("127.0.0.1", "unused", new(log, "test"), Guid.NewGuid());
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable owned = session.ConfigureAwait(true);
-        await RejectAsync(session.Ticket.Port, session.Completion, log);
+        await RejectAsync(session.Ticket.Port, session.Completion, log).ConfigureAwait(true);
     }
 
     /// <summary>不正チケットでキャプチャを開始せず、SignalScopeの回収タスクを失敗させません。</summary>

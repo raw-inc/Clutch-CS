@@ -78,13 +78,21 @@ public sealed class EditorPreviewTests
         EditorPreviews previews = new(api);
         WorkflowDefinition document = new("first", "first", [new("preview", "control.preview", JsonSerializer.SerializeToElement(new { }))], []);
         PeerInfo peer = Peer("a");
-        Task pending = previews.RefreshAsync("cluster", document, [peer]);
-        await previews.RefreshAsync("cluster", document with { Id = "second" }, [peer]).ConfigureAwait(true);
         using HttpResponseMessage delayed = new(HttpStatusCode.OK) { Content = JsonContent.Create(new[] { snapshot with { WorkflowId = "first" } }, options: ContractJson.Options) };
-        first.SetResult(delayed);
-        await pending.ConfigureAwait(true);
-        Assert.Equal(snapshot.Id, Assert.Single(previews.Find("cluster", "second", "preview")).Id);
-        Assert.Empty(previews.Find("cluster", "first", "preview"));
+        Task pending = previews.RefreshAsync("cluster", document, [peer]);
+        try
+        {
+            await previews.RefreshAsync("cluster", document with { Id = "second" }, [peer]).ConfigureAwait(true);
+            first.SetResult(delayed);
+            await pending.ConfigureAwait(true);
+            Assert.Equal(snapshot.Id, Assert.Single(previews.Find("cluster", "second", "preview")).Id);
+            Assert.Empty(previews.Find("cluster", "first", "preview"));
+        }
+        finally
+        {
+            first.TrySetCanceled();
+            await pending.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
     }
 
     /// <summary>明示ノードだけを各Peerへ照会し、クラスタ切替後に旧結果を表示しません。</summary>
@@ -92,13 +100,14 @@ public sealed class EditorPreviewTests
     [Fact]
     public async Task MetadataKeepsPeerAndClusterIdentity()
     {
+        EditorTestClock clock = new();
         using PreviewHandler handler = new((request, _) =>
         {
             string peer = Assert.Single(request.Headers.GetValues("X-Contents-Peer"));
             return new NodePreviewSnapshot[] { new(Guid.NewGuid(), "flow", "revision", "preview", peer, DateTimeOffset.UtcNow, "image/png", 100) };
         });
         using HttpClient client = new(handler) { BaseAddress = new Uri("http://localhost") };
-        ManagementApi api = new(client) { SelectedClusterId = "cluster" };
+        ManagementApi api = new(client, new(clock)) { SelectedClusterId = "cluster" };
         EditorPreviews previews = new(api);
         WorkflowDefinition document = new("flow", "flow", [new("preview", "control.preview", JsonSerializer.SerializeToElement(new { }))], []);
         PeerInfo[] peers = [Peer("a"), Peer("b")];

@@ -5,6 +5,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Processes;
 using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Observability;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Processes;
 
@@ -149,7 +150,7 @@ public sealed class ApplicationRecoveryReplacementTests
         Assert.Equal("process.replacementAmbiguous", blocked.Status!.ReplacementProblem);
         Assert.Equal(3, app.Starts().Length);
         two.Kill(true);
-        await two.WaitForExitAsync(timeout.Token);
+        await ProcessCompletion.WaitAsync(two, timeout.Token);
         await ApplicationReplacementTests.WaitAsync(service, app.Definition.Id, result => result.Status?.Identity?.ProcessId == one.Id, timeout.Token);
         Assert.Equal(3, app.Starts().Length);
     }

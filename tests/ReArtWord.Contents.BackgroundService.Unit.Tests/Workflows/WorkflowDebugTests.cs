@@ -172,6 +172,7 @@ public sealed class WorkflowDebugTests
         finally
         {
             release.TrySetResult();
+            await running.ConfigureAwait(true);
         }
         Assert.Equal(EOutcome.Succeeded, (await running.ConfigureAwait(true)).Outcome);
         Assert.Equal("debug.stopped", fixture.Engine.Debug.Read(new(arm.Id))!.Reason);

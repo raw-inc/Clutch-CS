@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO.Pipes;
 using System.Runtime.Versioning;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.CoreService.DeviceManagement;
 
@@ -36,7 +37,7 @@ internal static class ConsoleSettingsAccess
             {
                 process.Kill(true);
             }
-            await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+            await ProcessCompletion.WaitAsync(process, CancellationToken.None).ConfigureAwait(false);
         }
     }
 }

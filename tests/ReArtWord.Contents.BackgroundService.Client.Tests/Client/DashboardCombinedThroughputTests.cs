@@ -26,6 +26,7 @@ public sealed class DashboardCombinedThroughputTests
     [Fact]
     public void NetworkTotalUsesBothDirectionsWithStableByteScale()
     {
+        using ClientCultureScope culture = new("en-US");
         ResourceSample first = Sample(0, 0d) with { Metrics = [new("network.received.rate", "machine", 50000d, "bytes/s"), new("network.sent.rate", "machine", 100000d, "bytes/s")] };
         ResourceSample last = first with { Id = Guid.NewGuid(), ObservedAt = first.ObservedAt.AddSeconds(3), Metrics = [new("network.received.rate", "machine", 90000d, "bytes/s"), new("network.sent.rate", "machine", 210000d, "bytes/s")] };
         Assert.Equal(150000, DashboardMetrics.Value(first, "network.transfer.rate"));
@@ -61,19 +62,24 @@ public sealed class DashboardCombinedThroughputTests
         Assert.Equal(0, DashboardMetrics.Value(Sample(0, 0d), "disk.transfer.rate"));
     }
 
-    /// <summary>十進のbit/sを使い、合計・内訳とも同じ境界で単位を切り替えます。</summary>
+    /// <summary>十進のbit/sで単位を切り替え、数値は指定した地域設定で表示します。</summary>
     [Theory]
-    [InlineData(0d, "0.00", "Kbps")]
-    [InlineData(125d, "1.00", "Kbps")]
-    [InlineData(12500d, "100.00", "Kbps")]
-    [InlineData(124999d, "999.99", "Kbps")]
-    [InlineData(125000d, "1.00", "Mbps")]
-    [InlineData(12500000d, "100.00", "Mbps")]
-    [InlineData(null, "—", "Mbps")]
-    [InlineData(-1d, "—", "Mbps")]
-    [InlineData(double.NaN, "—", "Mbps")]
-    public void NetworkValuesUseDecimalAdaptiveUnits(double? bytes, string number, string unit)
+    [InlineData("en-US", 0d, "0.00", "Kbps")]
+    [InlineData("en-US", 125d, "1.00", "Kbps")]
+    [InlineData("en-US", 12500d, "100.00", "Kbps")]
+    [InlineData("en-US", 124999d, "999.99", "Kbps")]
+    [InlineData("en-US", 125000d, "1.00", "Mbps")]
+    [InlineData("en-US", 12500000d, "100.00", "Mbps")]
+    [InlineData("en-US", null, "—", "Mbps")]
+    [InlineData("en-US", -1d, "—", "Mbps")]
+    [InlineData("en-US", double.NaN, "—", "Mbps")]
+    [InlineData("fr-FR", 12500d, "100,00", "Kbps")]
+    [InlineData("fr-FR", 125000d, "1,00", "Mbps")]
+    [InlineData("fr-FR", null, "—", "Mbps")]
+    [InlineData("ja-JP", 125000d, "1.00", "Mbps")]
+    public void NetworkValuesUseDecimalAdaptiveUnits(string cultureName, double? bytes, string number, string unit)
     {
+        using ClientCultureScope culture = new(cultureName);
         Assert.Equal((number, unit), OverviewHostCard.NetworkThroughput(bytes));
     }
 

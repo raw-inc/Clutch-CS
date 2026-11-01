@@ -9,6 +9,7 @@ import { chromium, firefox } from 'playwright';
 
 /** 実際のRemoteDesktopモジュールを、実機へ入力を送らない接続先で確認します。 */
 const root = fileURLToPath(new URL('../../../src/ReArtWord.Contents.BackgroundService.Client/wwwroot/', import.meta.url));
+const picture = await readFile(new URL('./fixtures/clipboard-frame.vp9', import.meta.url));
 let server, origin;
 before(async () =>
 {
@@ -54,7 +55,7 @@ after(async () =>
  */
 function frame(kind, value)
 {
-    const payload = Buffer.from(JSON.stringify(value)), result = Buffer.alloc(24 + payload.length);
+    const payload = Buffer.isBuffer(value) ? value : Buffer.from(JSON.stringify(value)), result = Buffer.alloc(24 + payload.length);
     result.writeInt32BE(kind, 0);
     result.writeInt32BE(payload.length, 8);
     payload.copy(result, 24);
@@ -64,11 +65,11 @@ function frame(kind, value)
 /** ブラウザーの入力が非同期にWebSocketへ届くまで有限時間だけ待ちます。
  * @returns 指定件数までに届いた操作入力です。
  */
-async function inputsAsync(sent, count)
+async function inputsAsync(sent, count, signal)
 {
-    for (let attempt = 0; attempt < 100 && sent.filter(item => item[0] === 4).length < count; attempt++)
+    while (sent.filter(item => item[0] === 4).length < count)
     {
-        await setTimeout(10);
+        await setTimeout(10, undefined, { signal });
     }
     return sent.filter(item => item[0] === 4);
 }
@@ -85,7 +86,8 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         await page.routeWebSocket('**/client/desktop?*', socket =>
         {
             connections.push(socket);
-            let details = null;
+            let details = null, videoTimer = null, timestamp = 0;
+            socket.onClose(() => clearInterval(videoTimer));
             socket.onMessage(message =>
             {
                 const bytes = Buffer.from(message), values = Array.from({ length: 6 }, (_, index) => bytes.readInt32BE(index * 4));
@@ -99,6 +101,17 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
                     socket.send(frame(3, [{ id: 0, encoder: 'fixture', codec: values[2], selection: values[3], framesPerSecond: 60, maximumBitrateKbps: 10240,
                         variableBitrate: true, codecDetails: details, scanCodeInput: true, unicodeInput: true }]));
                     socket.send(frame(4, { sampleRate: 48000, channels: 2, format: 'f32le' }));
+
+                    // 操作の確認中も映像を送り、初回フレーム未受信による再取得を起こしません。
+                    clearInterval(videoTimer);
+                    videoTimer = setInterval(() =>
+                    {
+                        const image = frame(2, picture);
+                        image.writeInt32BE(1, 12);
+                        image.writeBigInt64BE(BigInt(timestamp += 200000), 16);
+                        socket.send(image);
+                    }, 200);
+                    videoTimer.unref();
                 }
             });
             socket.send(frame(7, { clusterId: 'test', hostId: 'remote', localAudioMuted: false, codecDetails: true, variableBitrate: true }));
@@ -186,7 +199,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
                 await page.keyboard.down(key);
             }
             await page.keyboard.up(key);
-            const keys = await inputsAsync(sent, total + 6);
+            const keys = await inputsAsync(sent, total + 6, context.signal);
             assert.deepEqual(keys.slice(total).map(value => value.slice(4)), [...Array.from({ length: 5 }, () => [code, 1]), [code, 0]]);
             total += 6;
         }
@@ -199,7 +212,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         }
         await page.keyboard.up('ArrowLeft');
         await page.keyboard.up('Control');
-        const modified = await inputsAsync(sent, total + 7);
+        const modified = await inputsAsync(sent, total + 7, context.signal);
         assert.deepEqual(modified.slice(total).map(value => value.slice(4)), [[0xa2, 1], [37, 1], [37, 1], [37, 1], [37, 1], [37, 0], [0xa2, 0]]);
         await page.getByRole('button', { name: 'Hide software keyboard', exact: true }).click();
         assert.equal(await page.getByRole('button', { name: 'Automatic reconnect', exact: true }).getAttribute('aria-pressed'), 'true');
@@ -207,9 +220,9 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         {
             const beforeReconnect = sent.length;
             await connections.at(-1).close({ code: 1011, reason: 'Desktop.UpstreamDisconnected' });
-            for (let attempt = 0; attempt < 100 && connections.length < count; attempt++)
+            while (connections.length < count)
             {
-                await setTimeout(10);
+                await setTimeout(10, undefined, { signal: context.signal });
             }
             assert.equal(connections.length, count);
             await page.waitForFunction(() => document.querySelector('.desktop-connection')?.textContent === 'Connected');
@@ -217,7 +230,6 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         }
         await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
         await page.waitForFunction(() => window.lastAction === 'Disconnect');
-        await setTimeout(30);
         assert.equal(connections.length, 3);
         assert.equal(await page.evaluate(() => document.fullscreenElement?.id), 'desktop');
         await page.getByRole('button', { name: 'Exit fullscreen', exact: true }).click();

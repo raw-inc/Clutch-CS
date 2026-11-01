@@ -24,8 +24,8 @@ public sealed class MultiNetworkClientTests
     {
         string firstId = Guid.NewGuid().ToString("N");
         string secondId = Guid.NewGuid().ToString("N");
-        int firstPort = CorePeer.AvailablePort();
-        int secondPort = CorePeer.AvailablePort();
+        int[] ports = CorePeer.AvailableUdpPorts(2);
+        int firstPort = ports[0], secondPort = ports[1];
         CorePeer first = new(firstId, "same-peer", firstPort, true);
         CorePeer second = new(secondId, "same-peer", secondPort, true);
         await using ConfiguredAsyncDisposable firstLifetime = ((IAsyncDisposable)first).ConfigureAwait(true);

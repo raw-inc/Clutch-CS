@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text.Json;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.CommandLine;
 
@@ -47,7 +48,7 @@ internal static class ServiceRunner
         bool forced = false;
         try
         {
-            await child.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            await ProcessCompletion.WaitAsync(child, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -115,12 +116,12 @@ internal static class ServiceRunner
         deadline.CancelAfter(duration);
         try
         {
-            await process.WaitForExitAsync(deadline.Token).ConfigureAwait(false);
+            await ProcessCompletion.WaitAsync(process, deadline.Token).ConfigureAwait(false);
             return true;
         }
         catch (OperationCanceledException)
         {
-            return process.HasExited;
+            return ProcessCompletion.HasExited(process);
         }
     }
 }

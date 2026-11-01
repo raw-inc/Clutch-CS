@@ -3,7 +3,9 @@ using System.Runtime.InteropServices;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Input;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Video;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
 
@@ -51,7 +53,7 @@ public sealed class DesktopSwitchTests
 
     /// <summary>起動desktopを明示した子processが、そのdesktop名を実際に報告します。</summary>
     /// <returns>非表示の試験desktopと子processの回収です。</returns>
-    [Theory]
+    [WindowsTheory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task CaptureProcessUsesTheSpecifiedDesktopWithoutChangingTheVisibleDesktopAsync(bool executableNameOnly)
@@ -82,7 +84,7 @@ public sealed class DesktopSwitchTests
             using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
             try
             {
-                await process.WaitForExitAsync(timeout.Token).ConfigureAwait(true);
+                await ProcessCompletion.WaitAsync(process, timeout.Token).ConfigureAwait(true);
                 Assert.Equal(0, process.ExitCode);
                 Assert.Equal(name, await File.ReadAllTextAsync(path, timeout.Token).ConfigureAwait(true));
                 Assert.Equal(before, WindowsInputDesktop.Name());
@@ -95,7 +97,7 @@ public sealed class DesktopSwitchTests
                 {
                     process.Kill(true);
                 }
-                await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(true);
+                await ProcessCompletion.WaitAsync(process, CancellationToken.None).ConfigureAwait(true);
             }
         }
         finally

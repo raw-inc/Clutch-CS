@@ -55,6 +55,19 @@ dotnet test tests/ReArtWord.Contents.BackgroundService.Installer.Tests -c Releas
 
 CIでも配布物生成後に同じ試験を選択します。Session 0ではユーザー自動起動を伴う試験がスキップされ、未確認の試験名と理由がTRXと「Installation coverage」サマリーに表示されます。
 
+配布物のSignalCaptureを検証する場合は、`CONTENTS_SIGNAL_CAPTURE_EXECUTABLE`で実行ファイルを指定してください。
+通常は開発用DLLを対象とするパイプ試験を、Native AOT版でも実行できます。試験にはデモ入力を使用します。CIでは配布物生成後にこの経路も検証します。
+
+~~~powershell
+$previousCapture = $env:CONTENTS_SIGNAL_CAPTURE_EXECUTABLE
+try {
+    $env:CONTENTS_SIGNAL_CAPTURE_EXECUTABLE = (Resolve-Path 'artifacts/package/files/core/tools/signal-capture/SignalCapture.exe').Path
+    dotnet test tests/ReArtWord.Contents.BackgroundService.Unit.Tests -c Release --no-build --no-restore --filter 'FullyQualifiedName~ReArtWord.Contents.BackgroundService.SignalCapture.Protocol.Tests.PipeProcessTests'
+} finally {
+    $env:CONTENTS_SIGNAL_CAPTURE_EXECUTABLE = $previousCapture
+}
+~~~
+
 CIの結合・性能試験では、リリースと同じReadyToRun方式で発行したCoreServiceを使用します。Windowsで同じ起動条件を確認する場合は、次を実行してから対象の試験を選択してください。通常のビルド出力へ戻す場合は `CONTENTS_TEST_CORE` を解除してください。
 
 ~~~powershell

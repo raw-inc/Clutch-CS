@@ -157,6 +157,7 @@ public sealed class AiGeneratorTests
         using CancellationTokenSource cancellation = new();
         Dictionary<string, object> extra = new(StringComparer.Ordinal) { ["model"] = "wan2.6-t2v", ["outputPath"] = Path.Combine(files.Root, "cancel.mp4"), ["duration"] = 2, ["size"] = "1280*720" };
         Task<NodeResult> run = Node(server, files, "ai.video.generate").ExecuteAsync(NodeTestContext.Create(Settings(server, extra), NodeValue.FromObject("prompt")), cancellation.Token).AsTask();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = new TestTaskLifetime(run, cancellation).ConfigureAwait(true);
         await polled.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
         await cancellation.CancelAsync().ConfigureAwait(true);
         NodeResult result = await run.ConfigureAwait(true);

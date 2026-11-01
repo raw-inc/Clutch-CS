@@ -3,16 +3,27 @@ using ReArtWord.Contents.BackgroundService.CoreService.Desktop;
 
 namespace ReArtWord.Contents.BackgroundService.DesktopFixture;
 
-/// <summary>製品workerを実行し、注釈の共有領域だけを試験ごとに分離します。</summary>
+/// <summary>管理機能の実プロセス試験を、指定した隔離条件で起動します。</summary>
 internal static class Program
 {
-    /// <summary>pipeと共有名を渡します。製品の起動引数や既定の共有範囲は変更しません。</summary>
-    /// <returns>通常切断は0、未対応OSまたは不正引数は2です。</returns>
+    /// <summary>試験用の起動モードを選び、対応する製品処理へ渡します。</summary>
+    /// <returns>実行結果の終了コードです。</returns>
     // 抑制理由: C#固定entrypointにはCancellationTokenとAsync接尾辞を追加できません。
     [SuppressMessage("SourceQuality", "RAW510", Justification = "C#固定entrypointです。"),
      SuppressMessage("SourceQuality", "RAW601", Justification = "C#固定entrypointです。")]
     private static async Task<int> Main(string[] args)
     {
+        string core = "--config", desktop = "--desktop-worker";
+        if (args.Length != 0 && (string.Equals(args[0], core, StringComparison.Ordinal) || string.Equals(args[0], desktop, StringComparison.Ordinal)))
+        {
+            string? group = Environment.GetEnvironmentVariable("CONTENTS_TEST_ANNOTATION_GROUP");
+            if (string.IsNullOrWhiteSpace(group))
+            {
+                await Console.Error.WriteLineAsync("An isolated annotation group must be configured.").ConfigureAwait(false);
+                return 2;
+            }
+            return await DesktopCoreScenario.RunAsync(args, group).ConfigureAwait(false);
+        }
         string clipboard = "clipboard-isolated";
         string wake = "wake-relay";
         string power = "power-schedule";

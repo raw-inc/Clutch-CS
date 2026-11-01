@@ -6,6 +6,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Desktop;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Annotations;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Desktop;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
@@ -14,7 +15,7 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
 public sealed class DesktopAnnotationTests
 {
     /// <summary>共有領域は別所有者へ引き継がれ、点の時刻は再読取で変わりません。</summary>
-    [Fact, SupportedOSPlatform("windows")]
+    [WindowsFact, SupportedOSPlatform("windows")]
     public void SharedAnnotationsKeepPointAgesAndReclaimCursors()
     {
         if (!OperatingSystem.IsWindows())
@@ -47,7 +48,7 @@ public sealed class DesktopAnnotationTests
     }
 
     /// <summary>停止したviewerのcursorとownerは期限で回収し、共有point数は上限を超えません。</summary>
-    [Fact, SupportedOSPlatform("windows")]
+    [WindowsFact, SupportedOSPlatform("windows")]
     public void DeadOwnerExpiresAndTheRingRemainsBounded()
     {
         if (!OperatingSystem.IsWindows())
@@ -70,7 +71,7 @@ public sealed class DesktopAnnotationTests
     }
 
     /// <summary>新種別は明示的な固定境界を持ち、座標とphaseの不正を拒否します。</summary>
-    [Fact, SupportedOSPlatform("windows")]
+    [WindowsFact, SupportedOSPlatform("windows")]
     public void AnnotationWireRejectsMalformedCoordinatesAndFlags()
     {
         if (!OperatingSystem.IsWindows())
@@ -115,7 +116,7 @@ public sealed class DesktopAnnotationTests
     }
 
     /// <summary>実windowのstyleとcapture除外を読み、描画してもforegroundとcursorが動かないことを確認します。</summary>
-    [Fact, SupportedOSPlatform("windows")]
+    [WindowsFact(minimumWindows10Build: 19041), SupportedOSPlatform("windows")]
     public void NativeOverlayIsClickThroughCaptureExcludedAndDoesNotActivate()
     {
         if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041))

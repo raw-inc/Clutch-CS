@@ -115,9 +115,12 @@ public sealed class RealInstallationTests
             using (process)
             {
                 string? path = Infrastructure.Processes.ProcessExecutable.GetPath(process);
-                if (path is not null && path.StartsWith(fixture + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) && !process.HasExited)
+                if (path is not null && path.StartsWith(fixture + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 {
-                    process.Kill(false);
+                    if (!process.HasExited)
+                    {
+                        process.Kill(false);
+                    }
                     Assert.True(process.WaitForExit(30000));
                 }
             }

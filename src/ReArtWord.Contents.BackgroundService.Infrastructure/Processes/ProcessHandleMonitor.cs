@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Processes;
 using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
@@ -13,6 +14,18 @@ internal sealed class ProcessHandleMonitor(IProcessPlatform platform) : IDisposa
 
     /// <summary>起動と通常終了要求に同じOS境界を使用します。</summary>
     internal IProcessPlatform Platform => platform;
+
+    /// <summary>登録単位の排他中に、監視が保持している同じ実体の終了を待ちます。</summary>
+    /// <returns>終了、手動対応待ち、または停止結果不明です。</returns>
+    internal Task<EOutcome> StopAsync(string id, ProcessIdentity identity, EProcessStopPolicy policy, int timeoutMilliseconds, CancellationToken cancellationToken = default)
+    {
+        if (handles.TryGetValue(id, out TrackedProcess? tracked) && tracked.Identity == identity)
+        {
+            // ProcessServiceの登録単位のgateが、待機中のReplace/Forgetを防ぎます。
+            return ProcessOs.StopAsync(tracked.Process, identity, policy, timeoutMilliseconds, platform, cancellationToken);
+        }
+        return ProcessOs.StopAsync(identity, policy, timeoutMilliseconds, platform, cancellationToken);
+    }
 
     /// <summary>起動済みハンドルの所有権を引き取り、次回の起動まで保持します。</summary>
     /// <returns>PIDの再利用を区別できる起動実体です。</returns>

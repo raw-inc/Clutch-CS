@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
@@ -8,6 +9,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Updates;
 using ReArtWord.Contents.BackgroundService.Contracts.Updates.Local;
 using ReArtWord.Contents.BackgroundService.Contracts.Updates.Releases;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Health;
+using ReArtWord.Contents.BackgroundService.Infrastructure.Processes;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Releases;
 using ReArtWord.Contents.BackgroundService.Runtime.Files;
 
@@ -158,8 +160,13 @@ public static class LocalUpdateExecutor
     {
         await Installation.InstallationRecovery.SynchronizeCoreAsync(layout.InstallationRoot, job.Manifest, cancellationToken).ConfigureAwait(false);
         await journal.WriteAsync(job, new UpdatePeerResult(job.OperationId, job.PeerId, EUpdatePhase.Starting, EOutcome.Unknown, BackupPath: layout.BackupPath), cancellationToken).ConfigureAwait(false);
-        ProcessIdentity? process = await UpdateProcessControl.StartAsync(job, cancellationToken).ConfigureAwait(false);
-        UpdateHealthResult health = await UpdateHealthProbe.WaitAsync(job, process, cancellationToken).ConfigureAwait(false);
+        using Process? process = await UpdateProcessControl.StartAsync(job, cancellationToken).ConfigureAwait(false);
+        ProcessIdentity? identity = null;
+        if (process is not null)
+        {
+            identity = ProcessOs.Identity(process);
+        }
+        UpdateHealthResult health = await UpdateHealthProbe.WaitAsync(job, identity, cancellationToken).ConfigureAwait(false);
         if (health.Ready)
         {
             await Installation.InstallationRecovery.RefreshCoreAsync(layout.InstallationRoot, job.Manifest, cancellationToken).ConfigureAwait(false);
@@ -177,7 +184,15 @@ public static class LocalUpdateExecutor
             return await RecordFailureAsync(job, journal, EOutcome.Unknown, "update.newProcessUnconfirmed", CancellationToken.None).ConfigureAwait(false);
         }
         await journal.WriteAsync(job, new UpdatePeerResult(job.OperationId, job.PeerId, EUpdatePhase.Restoring, EOutcome.Unknown, BackupPath: layout.BackupPath, InstanceId: health.InstanceId), cancellationToken).ConfigureAwait(false);
-        EOutcome stopped = await UpdateProcessControl.StopAsync(job, health.Process, cancellationToken).ConfigureAwait(false);
+        EOutcome stopped;
+        if (process is not null)
+        {
+            stopped = await UpdateProcessControl.StopAsync(job, health.Process, process, cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            stopped = await UpdateProcessControl.StopAsync(job, health.Process, cancellationToken).ConfigureAwait(false);
+        }
         if (stopped != EOutcome.Succeeded)
         {
             return await RecordFailureAsync(job, journal, EOutcome.Unknown, "update.rollbackStopUnconfirmed", CancellationToken.None).ConfigureAwait(false);
@@ -199,8 +214,13 @@ public static class LocalUpdateExecutor
         await ReleaseVerifier.VerifyAsync(previous, layout.InstallationRoot, cancellationToken).ConfigureAwait(false);
         LocalUpdateJob restore = job with { Manifest = previous };
         await Installation.InstallationRecovery.SynchronizeCoreAsync(layout.InstallationRoot, previous, cancellationToken).ConfigureAwait(false);
-        ProcessIdentity? process = await UpdateProcessControl.StartAsync(restore, cancellationToken).ConfigureAwait(false);
-        UpdateHealthResult health = await UpdateHealthProbe.WaitAsync(restore, process, cancellationToken).ConfigureAwait(false);
+        using Process? process = await UpdateProcessControl.StartAsync(restore, cancellationToken).ConfigureAwait(false);
+        ProcessIdentity? identity = null;
+        if (process is not null)
+        {
+            identity = ProcessOs.Identity(process);
+        }
+        UpdateHealthResult health = await UpdateHealthProbe.WaitAsync(restore, identity, cancellationToken).ConfigureAwait(false);
         UpdatePeerResult result = Failure(job, EOutcome.Unknown, "update.rollbackHealthUnconfirmed");
         if (health.Ready)
         {

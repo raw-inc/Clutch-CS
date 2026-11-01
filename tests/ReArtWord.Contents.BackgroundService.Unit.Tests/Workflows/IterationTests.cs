@@ -59,33 +59,43 @@ public sealed class IterationTests
     [Fact]
     public async Task ParallelBodiesAreBoundedAndCollectedInInputOrderAsync()
     {
+        using CancellationTokenSource cancellation = new();
         TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         int active = 0;
-        int maximum = 0;
+        ConcurrentBag<int> concurrency = [];
         WorkflowFixture fixture = Create(async (context, token) =>
         {
             int current = Interlocked.Increment(ref active);
-            maximum = Math.Max(maximum, current);
+            concurrency.Add(current);
             if (current == 2)
             {
                 entered.TrySetResult();
             }
-            await release.Task.WaitAsync(TimeSpan.FromSeconds(5), token).ConfigureAwait(false);
+            await release.Task.WaitAsync(token).ConfigureAwait(false);
             int value = context.Inputs["value"].Json.GetInt32();
             await Task.Delay((4 - value) * 10, token).ConfigureAwait(false);
             Interlocked.Decrement(ref active);
             return NodeResult.Success(NodeValue.FromObject(value));
         });
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = fixture.ConfigureAwait(true);
-        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(Compile(fixture, Definition(parallel: true)));
-        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
-        Assert.False(running.IsCompleted);
-        release.TrySetResult();
-        ExecutionReport report = await running.ConfigureAwait(true);
-        Assert.Equal(EOutcome.Succeeded, report.Outcome);
-        Assert.Equal(2, maximum);
-        Assert.Equal("[1,2,3]", Collected(report).Json.GetRawText());
+        Task<ExecutionReport> running = fixture.Engine.ExecuteAsync(Compile(fixture, Definition(parallel: true)), cancellationToken: cancellation.Token);
+        try
+        {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
+            Assert.False(running.IsCompleted);
+            release.TrySetResult();
+            ExecutionReport report = await running.ConfigureAwait(true);
+            Assert.Equal(EOutcome.Succeeded, report.Outcome);
+            Assert.Equal(2, concurrency.Max());
+            Assert.Equal("[1,2,3]", Collected(report).Json.GetRawText());
+        }
+        finally
+        {
+            release.TrySetResult();
+            await cancellation.CancelAsync().ConfigureAwait(true);
+            await running.ConfigureAwait(true);
+        }
     }
 
     /// <summary>空配列は正常なゼロ回実行です。</summary>

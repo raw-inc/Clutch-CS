@@ -70,13 +70,21 @@ public sealed class EditorPresenceTests
         EditorDocument model = new(new(new BrowserTestRuntime()));
         EditorCollaboration collaboration = new(model, new ManagementApi(client));
         string oldId = model.Draft.Document.Id;
-        Task waiting = collaboration.SynchronizePresenceAsync("host");
-        model.New();
         PresenceView old = new("peer", Guid.NewGuid(), new(oldId, Guid.NewGuid(), "other", "Other", [], 10, 20), DateTimeOffset.UtcNow.AddMinutes(1));
         using HttpResponseMessage delivered = Reply(new[] { old });
-        pending.SetResult(delivered);
-        await waiting.ConfigureAwait(true);
-        Assert.Empty(collaboration.Presence);
+        Task waiting = collaboration.SynchronizePresenceAsync("host");
+        try
+        {
+            model.New();
+            pending.SetResult(delivered);
+            await waiting.ConfigureAwait(true);
+            Assert.Empty(collaboration.Presence);
+        }
+        finally
+        {
+            pending.TrySetCanceled();
+            await waiting.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
     }
 
     /// <summary>実クライアントと同じJSON契約で応答します。</summary>

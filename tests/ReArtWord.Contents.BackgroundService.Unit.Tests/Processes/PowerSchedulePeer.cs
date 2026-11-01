@@ -6,6 +6,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Management;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Observers;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Processes;
 
@@ -44,11 +45,17 @@ internal sealed class PowerSchedulePeer : IAsyncDisposable
     internal void Start()
     {
         string build = new DirectoryInfo(AppContext.BaseDirectory).Parent!.Name;
-        string assembly = Path.GetFullPath("../../../../ReArtWord.Contents.BackgroundService.Unit.Tests/Management/FixtureHost/bin/" + build + "/net10.0/ContentsDesktopFixture.dll", AppContext.BaseDirectory);
-        Assert.True(File.Exists(assembly), "Build the isolated power schedule fixture before running this test.");
+        string name = "ContentsDesktopFixture";
+        if (OperatingSystem.IsWindows())
+        {
+            name += ".exe";
+        }
+        string executable = Path.GetFullPath("../../../../ReArtWord.Contents.BackgroundService.Unit.Tests/Management/FixtureHost/bin/" + build + "/net10.0/" + name, AppContext.BaseDirectory);
+        Assert.True(File.Exists(executable), "Build the isolated power schedule fixture before running this test.");
         File.Delete(Path.Combine(DirectoryPath, "stop"));
-        ProcessStartInfo start = new("dotnet") { UseShellExecute = false, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden };
-        start.ArgumentList.Add(assembly);
+
+        // アプリホスト経由で起動し、検証用のDOTNET_ROOTを子プロセスにも適用する。
+        ProcessStartInfo start = new(executable) { UseShellExecute = false, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden };
         start.ArgumentList.Add("power-schedule");
         start.ArgumentList.Add(configuration);
         process = Process.Start(start) ?? throw new IOException("Power schedule fixture did not start.");
@@ -101,8 +108,8 @@ internal sealed class PowerSchedulePeer : IAsyncDisposable
             if (!process.HasExited)
             {
                 process.Kill(true);
-                await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
             }
+            await ProcessCompletion.WaitAsync(process, cancellationToken).ConfigureAwait(false);
             process.Dispose();
             process = null;
         }

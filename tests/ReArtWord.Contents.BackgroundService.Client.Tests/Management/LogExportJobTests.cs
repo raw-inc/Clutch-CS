@@ -26,7 +26,7 @@ public sealed class LogExportJobTests
             if (change.ThreadContextChanged && change.CurrentValue && Interlocked.CompareExchange(ref deferred, 1, 0) == 0)
             {
                 entered.TrySetResult();
-                release.Wait(TimeSpan.FromSeconds(10));
+                release.Wait();
             }
         });
         using LogExportJobs jobs = new(Clusters, (_, _, _) => Task.FromResult<LogQueryResult?>(new([], null, true)), NamesAsync);
@@ -44,12 +44,15 @@ public sealed class LogExportJobTests
         {
             await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
             Assert.False(startup.IsCompleted);
+            release.Set();
+            await startup.WaitAsync(TimeSpan.FromSeconds(5));
+            await jobs.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
         }
         finally
         {
             release.Set();
-            await startup.WaitAsync(TimeSpan.FromSeconds(5));
-            await jobs.StopAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5));
+            await jobs.StopAsync(CancellationToken.None);
+            await startup.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
         Assert.Throws<OperationCanceledException>(() => jobs.Create(new(new())));
     }

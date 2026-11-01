@@ -50,7 +50,8 @@ public static class BoundedProcessRunner
     /// <summary>起動・入出力・停止を一回の所有範囲で処理します。</summary>
     /// <returns>正常終了時の上限付き標準出力です。</returns>
     // 抑制理由: 子プロセス停止を確認した後で取消を上位へ伝え、停止不能は結果不明へ分離します。
-    [SuppressMessage("SourceQuality", "RAW330", Justification = "停止完了後も元の取消tokenを保持します。"), SuppressMessage("SourceQuality", "RAW333", Justification = "停止を確認できなかった場合だけ結果不明専用例外へ変換します。")]
+    [SuppressMessage("SourceQuality", "RAW330", Justification = "停止完了後も元の取消tokenを保持します。"), SuppressMessage("SourceQuality", "RAW333", Justification = "停止を確認できなかった場合だけ結果不明専用例外へ変換します。"),
+     SuppressMessage("Reliability", "CA2025", Justification = "終了待機Taskを成功・取消の双方で完了まで待ち、最後にProcessを解放します。")]
     private static async Task<string> RunCoreAsync(string executable, IReadOnlyList<string> arguments, ProcessRunLimits limits, ProcessDiagnostics? diagnostics, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(arguments);
@@ -110,7 +111,7 @@ public static class BoundedProcessRunner
         bool exceeded = false;
         try
         {
-            Task exit = process.WaitForExitAsync(resourceLimit.Token);
+            Task exit = ProcessCompletion.WaitAsync(process, resourceLimit.Token);
             while (!exit.IsCompleted)
             {
                 await Task.WhenAny(exit, Task.Delay(100, resourceLimit.Token)).ConfigureAwait(false);
@@ -134,7 +135,7 @@ public static class BoundedProcessRunner
                     process.Kill(true);
                 }
                 using CancellationTokenSource stop = new(TimeSpan.FromSeconds(10));
-                await process.WaitForExitAsync(stop.Token).ConfigureAwait(false);
+                await ProcessCompletion.WaitAsync(process, stop.Token).ConfigureAwait(false);
             }
             catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception or OperationCanceledException)
             {
@@ -188,13 +189,17 @@ public static class BoundedProcessRunner
         }
     }
 
-    /// <summary>WindowsのCreateProcess内部の共通lockへ多数のThreadPoolスレッドを滞留させず、起動待ちを非同期化します。</summary>
+    /// <summary>Windows版Process.Startの共通ロックでスレッドが滞留しないよう、起動待ちを非同期化します。</summary>
     /// <returns>一回の起動確認です。起動済みプロセスの実行時間は直列化しません。</returns>
     private static async Task StartAsync(Process process, CancellationToken cancellationToken = default)
     {
         bool serialize = OperatingSystem.IsWindows();
         if (serialize)
         {
+            // .NETはパイプハンドルの誤継承を防ぐため、ハンドル作成からCreateProcessまでを共通ロックで保護します。
+            // https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Diagnostics.Process/src/System/Diagnostics/Process.Windows.cs#L452-L456
+            // その同期ロックへ入る前に非同期で待機させます。開始後の実行や出力読取りは並列のままです。
+            // 上流のロック範囲が変わった場合も、ハンドルの継承と並列起動時の待機を確認してから撤去を判断します。
             await windowsStarts.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
         try
@@ -216,11 +221,11 @@ public static class BoundedProcessRunner
 
     /// <summary>Windowsの同期pipeによるThreadPool占有を避け、文字コードとBOM判定を維持します。</summary>
     /// <returns>この一回の終了まで所有する出力readerです。</returns>
-    private static StreamReader Reader(StreamReader original)
+    private static StreamReader Reader(StreamReader original, CancellationToken drainDeadline)
     {
         if (OperatingSystem.IsWindows() && original.BaseStream is FileStream file && !file.IsAsync)
         {
-            return new StreamReader(new WindowsProcessPipe(file.SafeFileHandle), original.CurrentEncoding, detectEncodingFromByteOrderMarks: true);
+            return new StreamReader(new WindowsProcessPipe(file.SafeFileHandle, drainDeadline), original.CurrentEncoding, detectEncodingFromByteOrderMarks: true);
         }
         return original;
     }
@@ -244,14 +249,27 @@ public static class BoundedProcessRunner
     /// <returns>必要な標準出力だけを上限内で保持します。</returns>
     private static async Task<string> DrainAsync(StreamReader original, bool retain, ProcessRunLimits limits, Func<Task> limitReached, ProcessDiagnostics? diagnostics, CancellationToken cancellationToken = default)
     {
-        using StreamReader reader = Reader(original);
+        using StreamReader reader = Reader(original, cancellationToken);
+        CancellationToken readCancellation = cancellationToken;
+        if (OperatingSystem.IsWindows() && reader.BaseStream is WindowsProcessPipe)
+        {
+            // StreamReader.ReadAsyncは取消済みなら、内部バッファーを読む前に取消を返します。
+            // また、一回の読取り中に取消が起きても、それまでにコピーした文字数が結果として返る保証はありません。
+            // https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Private.CoreLib/src/System/IO/StreamReader.cs#L1076-L1099
+            // https://github.com/dotnet/runtime/blob/v10.0.0/src/libraries/System.Private.CoreLib/src/System/IO/StreamReader.cs#L1180-L1261
+            // .NET 10.0.13では、終了後の期限切れでパイプ内の返却JSON 31バイトを読めず、空の結果になる条件を再現しました。
+            // この期限は追加の到着を待つ上限です。WindowsProcessPipeが残量を固定してEOFを返すまで既存の出力を読み切ります。
+            // コマンド自体の取消・終了判定はRunAsyncに残し、StreamReaderのデコード中の文字を捨てる取消には使いません。
+            // 置換を検討する際は、WindowsProcessPipeTestsのBOM・Unicode・期限後の追加書込み・読取り取消の各条件を維持します。
+            readCancellation = CancellationToken.None;
+        }
         StringBuilder result = new();
         char[] buffer = new char[4096];
         int count;
         long total = 0;
         try
         {
-            while ((count = await reader.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false)) != 0)
+            while ((count = await reader.ReadAsync(buffer.AsMemory(), readCancellation).ConfigureAwait(false)) != 0)
             {
                 total += count;
                 if (!retain)
@@ -277,6 +295,13 @@ public static class BoundedProcessRunner
 
             // 本体終了後も子孫がpipeを保持する場合は、読取り期限までに受信した出力を返します。
             // 呼出元からの取消と終了コードはRunAsyncで別に判定します。
+        }
+        finally
+        {
+            if (OperatingSystem.IsWindows() && reader.BaseStream is WindowsProcessPipe { DrainDeadlineReached: true } && diagnostics is not null)
+            {
+                diagnostics.DrainTimedOut = true;
+            }
         }
         return result.ToString();
     }

@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -23,6 +22,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Health;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Local;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 using Xunit;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Updates;
 
@@ -102,37 +102,43 @@ public sealed class UdpCoreUpdateTests
         target.Start();
         using CancellationTokenSource deadline = new(TimeSpan.FromSeconds(30));
         List<ProcessIdentity> owned = [];
-        Task<JsonElement> observation = HealthAsync(observer, "target", owned, deadline.Token);
-        if (cancel)
+        Task<JsonElement> observation = HealthAsync(observer, "target", owned, null, deadline.Token);
+        try
+        {
+            if (cancel)
+            {
+                await deadline.CancelAsync().ConfigureAwait(true);
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() => observation).ConfigureAwait(true);
+                Assert.Empty(owned);
+                Assert.Equal(0, inspections);
+                Assert.Equal(0, mutations);
+                return;
+            }
+
+            // 探索一回の上限（10秒）を超えるまで存在通知を止め、更新中の一時的な不在を再現します。
+            await Task.Delay(TimeSpan.FromSeconds(11), deadline.Token).ConfigureAwait(true);
+            long sequence = 0;
+            while (!observation.IsCompleted)
+            {
+                PeerInfo peer = new("target", instance, "host", binding.BindAddress, port, EPeerStatus.Ready, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+                await target.SendAsync(new(Guid.NewGuid(), cluster, "target", instance, "hello", null, null, JsonSerializer.SerializeToElement(new PeerAnnouncement(peer, "digest", "target", null, ++sequence))), deadline.Token).ConfigureAwait(true);
+                await Task.Delay(20, deadline.Token).ConfigureAwait(true);
+            }
+            JsonElement health = await observation.ConfigureAwait(true);
+            Assert.Equal(instance, health.GetProperty("instanceId").GetGuid());
+            Assert.Equal(identity, Assert.Single(owned));
+            Assert.True(0 < inspections);
+            Assert.Equal(0, mutations);
+        }
+        finally
         {
             await deadline.CancelAsync().ConfigureAwait(true);
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => observation).ConfigureAwait(true);
-            Assert.Empty(owned);
-            Assert.Equal(0, inspections);
-            Assert.Equal(0, mutations);
-            return;
+            await ((Task)observation).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
-
-        // 探索一回の上限（10秒）を超えるまで存在通知を止め、更新中の一時的な不在を再現します。
-        await Task.Delay(TimeSpan.FromSeconds(11), deadline.Token).ConfigureAwait(true);
-        long sequence = 0;
-        while (!observation.IsCompleted)
-        {
-            PeerInfo peer = new("target", instance, "host", binding.BindAddress, port, EPeerStatus.Ready, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
-            await target.SendAsync(new(Guid.NewGuid(), cluster, "target", instance, "hello", null, null, JsonSerializer.SerializeToElement(new PeerAnnouncement(peer, "digest", "target", null, ++sequence))), deadline.Token).ConfigureAwait(true);
-            await Task.Delay(20, deadline.Token).ConfigureAwait(true);
-        }
-        JsonElement health = await observation.ConfigureAwait(true);
-        Assert.Equal(instance, health.GetProperty("instanceId").GetGuid());
-        Assert.Equal(identity, Assert.Single(owned));
-        Assert.True(0 < inspections);
-        Assert.Equal(0, mutations);
     }
 
     /// <summary>固定対象とRID選択から自身入替・新実体確認までUDPだけで完了します。</summary>
     /// <returns>実プロセスと実UDPの確認完了です。</returns>
-    // 抑制理由: 試験用の構成で起動したPIDとBCL実起動時刻だけを終了対象にします。
-    [SuppressMessage("SourceQuality", "RAW171", Justification = "自分の子process実体だけを追跡します。")]
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -143,7 +149,10 @@ public sealed class UdpCoreUpdateTests
         string repository = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../"));
         string configuration = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()!.Configuration;
         string core = Path.Combine(repository, "src", "ReArtWord.Contents.BackgroundService.CoreService", "bin", configuration, "net10.0");
-        string updater = Path.Combine(repository, "src", "ReArtWord.Contents.BackgroundService.Updater", "bin", configuration, "net10.0", Executable("ReArtWord.Contents.BackgroundService.Updater"));
+        string updaterName = "ReArtWord.Contents.BackgroundService.Updater";
+        string updaterSource = Path.Combine(repository, "src", updaterName, "bin", configuration, "net10.0");
+        string updaterRoot = Path.Combine(root, "updater");
+        string updater = Path.Combine(updaterRoot, Executable(updaterName));
         using UdpClient reservation = new(new IPEndPoint(IPAddress.Any, 0));
         int port = ((IPEndPoint)reservation.Client.LocalEndPoint!).Port;
         reservation.Close();
@@ -153,15 +162,18 @@ public sealed class UdpCoreUpdateTests
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = observer.ConfigureAwait(true);
         List<ProcessIdentity> owned = [];
         Dictionary<string, Guid> previous = new(StringComparer.Ordinal);
+        using TestProcessHandles handles = new();
         using CancellationTokenSource deadline = new(TimeSpan.FromMinutes(5));
         try
         {
+            // 応答を受け取る前に試験が失敗しても回収できるよう、Updaterも専用配置から起動します。
+            await PackageAsync(updaterSource, updaterRoot, "helper", updaterName, deadline.Token).ConfigureAwait(true);
             foreach (string peer in new[] { "update-a", "update-b" })
             {
                 string local = Path.Combine(root, peer);
                 string installation = Path.Combine(local, "installed");
                 Directory.CreateDirectory(local);
-                ReleaseManifest old = await PackageAsync(core, installation, "old", deadline.Token).ConfigureAwait(true);
+                ReleaseManifest old = await PackageAsync(core, installation, "old", cancellationToken: deadline.Token).ConfigureAwait(true);
                 await LocalUpdateExecutor.WriteManifestAsync(old, installation, deadline.Token).ConfigureAwait(true);
                 string fresh = "false";
                 string first = "update-a";
@@ -198,9 +210,8 @@ public sealed class UdpCoreUpdateTests
                 ProcessStartInfo start = new(Path.Combine(installation, old.EntryPoint)) { UseShellExecute = false, CreateNoWindow = true };
                 start.ArgumentList.Add("--config");
                 start.ArgumentList.Add(path);
-                using Process child = Process.Start(start)!;
-                owned.Add(new(child.Id, new DateTimeOffset(child.StartTime.ToUniversalTime())));
-                JsonElement health = await HealthAsync(observer, peer, owned, deadline.Token).ConfigureAwait(true);
+                owned.Add(handles.Own(Process.Start(start)!));
+                JsonElement health = await HealthAsync(observer, peer, owned, handles, deadline.Token).ConfigureAwait(true);
                 previous.Add(peer, health.GetProperty("instanceId").GetGuid());
             }
             DateTimeOffset stopExpiry = DateTimeOffset.UtcNow.AddSeconds(10);
@@ -210,10 +221,10 @@ public sealed class UdpCoreUpdateTests
             ManagementReply denied = await observer.SendAsync(stop, false, deadline.Token).ConfigureAwait(true);
             Assert.Equal(EOutcome.Succeeded, denied.Outcome);
             Assert.False(denied.Value!.Json.GetBoolean());
-            JsonElement stillRunning = await HealthAsync(observer, "update-a", owned, deadline.Token).ConfigureAwait(true);
+            JsonElement stillRunning = await HealthAsync(observer, "update-a", owned, handles, deadline.Token).ConfigureAwait(true);
             Assert.Equal(previous["update-a"], stillRunning.GetProperty("instanceId").GetGuid());
             string payload = Path.Combine(root, "update-a", "staging", "bundle", "current");
-            ReleaseManifest manifest = await PackageAsync(core, payload, "new", deadline.Token).ConfigureAwait(true);
+            ReleaseManifest manifest = await PackageAsync(core, payload, "new", cancellationToken: deadline.Token).ConfigureAwait(true);
             string payloadRoot = payload;
             IReadOnlyList<ReleaseVariant>? variants = null;
             if (bundle)
@@ -231,7 +242,7 @@ public sealed class UdpCoreUpdateTests
                 {
                     foreach (string peer in previous.Keys)
                     {
-                        await HealthAsync(observer, peer, owned, deadline.Token).ConfigureAwait(true);
+                        await HealthAsync(observer, peer, owned, handles, deadline.Token).ConfigureAwait(true);
                     }
                     Contracts.Cluster.PeerInfo current = await observer.FindAsync("update-a", cancellationToken: deadline.Token).ConfigureAwait(true);
                     ManagementReply status = await observer.SendAsync("update-a", current.InstanceId, "updates.read", UpdateObserver.Payload(request.OperationId), true, deadline.Token).ConfigureAwait(true);
@@ -250,7 +261,7 @@ public sealed class UdpCoreUpdateTests
             Assert.True(result?.Outcome == EOutcome.Succeeded, result?.Reason + " / " + JsonSerializer.Serialize(result?.Peers));
             foreach (string peer in previous.Keys)
             {
-                JsonElement health = await HealthAsync(observer, peer, owned, deadline.Token).ConfigureAwait(true);
+                JsonElement health = await HealthAsync(observer, peer, owned, handles, deadline.Token).ConfigureAwait(true);
                 Assert.NotEqual(previous[peer], health.GetProperty("instanceId").GetGuid());
                 Assert.Equal(JsonValueKind.Null, health.GetProperty("maintenance").ValueKind);
                 Assert.Equal("new", await File.ReadAllTextAsync(Path.Combine(root, peer, "installed", "release-marker.txt"), deadline.Token).ConfigureAwait(true));
@@ -258,29 +269,22 @@ public sealed class UdpCoreUpdateTests
         }
         finally
         {
-            foreach (ProcessIdentity identity in owned)
+            // health未取得の新CoreやUpdaterも、専用配置の実行ファイルで所有を確認します。
+            try
             {
-                try
-                {
-                    using Process child = Process.GetProcessById(identity.ProcessId);
-                    if (!child.HasExited && new DateTimeOffset(child.StartTime.ToUniversalTime()) == identity.StartedAt)
-                    {
-                        child.Kill(true);
-                        await child.WaitForExitAsync().ConfigureAwait(true);
-                    }
-                }
-                catch (ArgumentException)
-                {
-                    // 旧実体は既にUpdaterで終了しています。
-                }
+                await TestProcessCleanup.StopDirectoryAsync(root).ConfigureAwait(true);
             }
-            for (int attempt = 0; attempt < 20 && Directory.Exists(root); attempt++)
+            finally
+            {
+                handles.Dispose();
+            }
+            for (int attempt = 0; Directory.Exists(root); attempt++)
             {
                 try
                 {
                     Directory.Delete(root, true);
                 }
-                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                catch (Exception exception) when (attempt < 19 && exception is IOException or UnauthorizedAccessException)
                 {
                     await Task.Delay(100).ConfigureAwait(true);
                 }
@@ -290,7 +294,7 @@ public sealed class UdpCoreUpdateTests
 
     /// <summary>新実体を含む実稼働確認を観測し、cleanup対象を固定します。</summary>
     /// <returns>readyな実体です。</returns>
-    private static async Task<JsonElement> HealthAsync(UpdateObserver observer, string peerId, List<ProcessIdentity> owned, CancellationToken cancellationToken = default)
+    private static async Task<JsonElement> HealthAsync(UpdateObserver observer, string peerId, List<ProcessIdentity> owned, TestProcessHandles? handles, CancellationToken cancellationToken = default)
     {
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -308,7 +312,9 @@ public sealed class UdpCoreUpdateTests
             if (reply.Value is not null)
             {
                 JsonElement health = reply.Value.Json;
-                owned.Add(new(health.GetProperty("processId").GetInt32(), health.GetProperty("processStartedAt").GetDateTimeOffset()));
+                ProcessIdentity identity = new(health.GetProperty("processId").GetInt32(), health.GetProperty("processStartedAt").GetDateTimeOffset());
+                owned.Add(identity);
+                handles?.Capture(identity);
                 string ready = "ready";
                 if (health.GetProperty(ready).GetBoolean())
                 {
@@ -320,13 +326,13 @@ public sealed class UdpCoreUpdateTests
         throw new OperationCanceledException(cancellationToken);
     }
 
-    /// <summary>現RIDの実Coreだけを独立ペイロードへコピーします。</summary>
+    /// <summary>現RIDの実行物だけを独立ペイロードへコピーします。</summary>
     /// <returns>コピー後実体のチェックサム一覧です。</returns>
-    private static async Task<ReleaseManifest> PackageAsync(string source, string destination, string release, CancellationToken cancellationToken = default)
+    private static async Task<ReleaseManifest> PackageAsync(string source, string destination, string release, string application = "Clutch-CS.CoreService", CancellationToken cancellationToken = default)
     {
         Directory.CreateDirectory(destination);
         List<ReleaseFile> files = [];
-        foreach (string file in PayloadFiles(source))
+        foreach (string file in PayloadFiles(source, application))
         {
             string relative = Path.GetRelativePath(source, file).Replace(Path.DirectorySeparatorChar, '/');
             string runtimes = "runtimes/";
@@ -344,18 +350,17 @@ public sealed class UdpCoreUpdateTests
         await File.WriteAllTextAsync(Path.Combine(destination, "release-marker.txt"), release, cancellationToken).ConfigureAwait(false);
         byte[] marker = System.Text.Encoding.UTF8.GetBytes(release);
         files.Add(new("release-marker.txt", marker.Length, Convert.ToHexString(SHA256.HashData(marker))));
-        return new(release, RuntimeInformation.RuntimeIdentifier, Executable("Clutch-CS.CoreService"), files, ["old", "new"]);
+        return new(release, RuntimeInformation.RuntimeIdentifier, Executable(application), files, ["old", "new"]);
     }
 
     /// <summary>トップ直下の独立アプリ出力を再梱包せず、通常の資産階層だけ列挙します。</summary>
-    /// <returns>今のCore出力に属するファイルです。</returns>
-    private static IEnumerable<string> PayloadFiles(string source)
+    /// <returns>指定された実行物の出力に属するファイルです。</returns>
+    private static IEnumerable<string> PayloadFiles(string source, string application)
     {
         foreach (string file in Directory.EnumerateFiles(source))
         {
             yield return file;
         }
-        string application = "Clutch-CS.CoreService";
         foreach (string directory in Directory.EnumerateDirectories(source))
         {
             string dependencies = Path.Combine(directory, application + ".deps.json");

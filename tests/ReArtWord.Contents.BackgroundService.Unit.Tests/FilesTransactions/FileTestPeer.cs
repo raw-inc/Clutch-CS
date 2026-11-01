@@ -7,6 +7,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Routing;
 using ReArtWord.Contents.BackgroundService.Nodes.FileSystem;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.FilesTransactions;
 
@@ -14,12 +15,14 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.FilesTransactions;
 internal sealed class FileTestPeer : IAsyncDisposable
 {
     private readonly RepositoryRuntime runtime;
+    private readonly MediaTestFiles files;
 
     /// <summary>試験の終了まで保存先を所有し、Coreと同じ接続寿命を使用します。</summary>
-    private FileTestPeer(RepositoryRuntime runtime, string root, string clusterId, string peerId, int port, bool fresh, Func<INode, INode>? wrap)
+    private FileTestPeer(RepositoryRuntime runtime, MediaTestFiles files, string clusterId, string peerId, int port, bool fresh, Func<INode, INode>? wrap)
     {
         this.runtime = runtime;
-        Root = root;
+        this.files = files;
+        Root = files.Root;
         Repository = runtime.Repository;
         Cluster = new PeerCluster(new ClusterOptions(clusterId, peerId, peerId, "127.0.0.1", "127.255.255.255", port, 1, fresh, Root) { HeartbeatInterval = TimeSpan.FromMilliseconds(50), RequestTimeout = TimeSpan.FromSeconds(2) }, Repository) { ReadinessCheck = token => ValueTask.FromResult(true) };
         FileSystemOptions options = new([Root], RecoveryDirectory: Path.Combine(Root, "recovery"));
@@ -34,19 +37,22 @@ internal sealed class FileTestPeer : IAsyncDisposable
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW141", Justification = "返却する試験Peerが保存先を所有し、構築失敗時だけfinallyで破棄します。")]
     internal static async Task<FileTestPeer> CreateAsync(string clusterId, string peerId, int port, bool fresh, Func<INode, INode>? wrap = null, CancellationToken cancellationToken = default)
     {
-        string root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        RepositoryRuntime runtime = await RepositoryFactory.CreateRuntimeAsync(root, peerId, new(), cancellationToken).ConfigureAwait(false);
+        MediaTestFiles files = new();
+        RepositoryRuntime? runtime = null;
         bool transferred = false;
         try
         {
-            FileTestPeer peer = new(runtime, root, clusterId, peerId, port, fresh, wrap);
+            runtime = await RepositoryFactory.CreateRuntimeAsync(files.Root, peerId, new(), cancellationToken).ConfigureAwait(false);
+            FileTestPeer peer = new(runtime, files, clusterId, peerId, port, fresh, wrap);
             transferred = true;
             return peer;
         }
         finally
         {
-            using RepositoryRuntime? abandoned = transferred ? null
-                                                             : runtime;
+            using MediaTestFiles? abandonedFiles = transferred ? null
+                                                               : files;
+            using RepositoryRuntime? abandonedRuntime = transferred ? null
+                                                                    : runtime;
         }
     }
 
@@ -91,5 +97,6 @@ internal sealed class FileTestPeer : IAsyncDisposable
         await ((IAsyncDisposable)Cluster).DisposeAsync().ConfigureAwait(false);
         Transactions.Dispose();
         runtime.Dispose();
+        files.Dispose();
     }
 }

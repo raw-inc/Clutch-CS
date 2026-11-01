@@ -131,12 +131,21 @@ public sealed class InstallationPlatform : IInstallationPlatform
 
     /// <summary>配置に対応するOS操作を行います。</summary>
     /// <returns>OS側で確認した完了です。</returns>
-    public async Task StopAsync(InstallationRecord record, ProcessIdentity? process, CancellationToken cancellationToken = default)
+    public Task StopAsync(InstallationRecord record, ProcessIdentity? process, CancellationToken cancellationToken = default)
+        => StopAsync(record, process, static _ => Task.CompletedTask, cancellationToken);
+
+    /// <summary>停止要求で対象が終了する前にハンドルを確保します。</summary>
+    /// <returns>要求の公開と、対象実体の終了確認です。</returns>
+    public async Task StopAsync(InstallationRecord record, ProcessIdentity? process, Func<CancellationToken, Task> requestStop, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
-        if (process is not null)
+        ArgumentNullException.ThrowIfNull(requestStop);
+        using Process? original = ProcessOs.Open(process);
+        await requestStop(cancellationToken).ConfigureAwait(false);
+        if (original is not null && process is not null)
         {
-            EOutcome stopped = await ProcessOs.StopAsync(process, EProcessStopPolicy.WaitForManual, (int)InstallationDefaults.StopTimeout.TotalMilliseconds, cancellationToken).ConfigureAwait(false);
+            EOutcome stopped = await ProcessOs.StopAsync(original, process, EProcessStopPolicy.WaitForManual, (int)InstallationDefaults.StopTimeout.TotalMilliseconds,
+                new DefaultProcessPlatform(), cancellationToken).ConfigureAwait(false);
             if (stopped != EOutcome.Succeeded)
             {
                 throw new IOException("The original process has not stopped. Files were retained.");

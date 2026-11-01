@@ -6,6 +6,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement;
 using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement.Login;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Infrastructure.DeviceManagement.Login;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.DeviceManagement;
 
@@ -41,7 +42,7 @@ internal static class LoginTestCredential
             process.StandardInput.Close();
             string output = await process.StandardOutput.ReadToEndAsync(timeout.Token).ConfigureAwait(false);
             string error = await process.StandardError.ReadToEndAsync(timeout.Token).ConfigureAwait(false);
-            await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+            await ProcessCompletion.WaitAsync(process, timeout.Token).ConfigureAwait(false);
             if (process.ExitCode != 0)
             {
                 throw new IOException(error);
@@ -54,7 +55,7 @@ internal static class LoginTestCredential
             {
                 process.Kill(true);
             }
-            await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+            await ProcessCompletion.WaitAsync(process, CancellationToken.None).ConfigureAwait(false);
         }
     }
 }

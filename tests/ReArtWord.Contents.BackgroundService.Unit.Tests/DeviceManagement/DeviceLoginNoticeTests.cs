@@ -1,6 +1,7 @@
 using System.Runtime.Versioning;
 using Microsoft.Win32;
 using ReArtWord.Contents.BackgroundService.Infrastructure.DeviceManagement.Login;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.DeviceManagement;
@@ -10,7 +11,7 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.DeviceManagement;
 public sealed class DeviceLoginNoticeTests
 {
     /// <summary>新旧いずれかのタイトル・本文だけでも検出し、無関係の設定を削除しません。</summary>
-    [Theory]
+    [WindowsTheory]
     [InlineData("System", "legalnoticecaption", "Title")]
     [InlineData("System", "legalnoticetext", "Message")]
     [InlineData("Winlogon", "legalnoticecaption", "Title")]

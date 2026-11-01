@@ -2,6 +2,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Files;
 using ReArtWord.Contents.BackgroundService.Contracts.Files.Transfers;
 using ReArtWord.Contents.BackgroundService.CoreService.Files;
 using ReArtWord.Contents.BackgroundService.CoreService.Files.Transfers;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
@@ -14,7 +15,8 @@ public sealed class FileTransferQueueTests
     [Fact]
     public async Task JournalRestoresPendingAndMarksInterruptedCopiesUnknown()
     {
-        string directory = Path.Combine(Path.GetTempPath(), "contents-queue-" + Guid.NewGuid().ToString("N"));
+        using MediaTestFiles files = new();
+        string directory = Path.Combine(files.Root, "queue");
         FileTransferJournal journal = new(directory);
         FileTransferPeer peer = new("cluster", "peer", Guid.NewGuid(), 47740);
         FileTransferRequest request = new(Guid.NewGuid(), peer, peer, "source", "destination");

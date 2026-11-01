@@ -30,15 +30,26 @@ public sealed class ClusterOperationalFileTests
         using FileTestDirectory fixture = new();
         string path = Path.Combine(fixture.Root, "value");
         NodeExecutionContext context = FileTestDirectory.Context(new { path }, NodeValue.FromObject("after")) with { Operational = Snapshot(EFileConflictPolicy.Wait) };
-        Task<NodeResult> operation;
-        using (IDisposable held = await fixture.Service.Operations.AcquireAsync([new(path, true)]).ConfigureAwait(true))
+        using CancellationTokenSource cancellation = new();
+        Task<NodeResult>? operation = null;
+        try
         {
-            operation = fixture.Action("file.upsert").ExecuteAsync(context).AsTask();
-            await Task.Delay(75).ConfigureAwait(true);
-            Assert.False(operation.IsCompleted);
+            using (IDisposable held = await fixture.Service.Operations.AcquireAsync([new(path, true)]).ConfigureAwait(true))
+            {
+                operation = fixture.Action("file.upsert").ExecuteAsync(context, cancellation.Token).AsTask();
+                await Task.Delay(75).ConfigureAwait(true);
+                Assert.False(operation.IsCompleted);
+            }
+            Assert.Equal(EOutcome.Succeeded, (await operation.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true)).Outcome);
+            Assert.Equal("after", await File.ReadAllTextAsync(path).ConfigureAwait(true));
         }
-        Assert.Equal(EOutcome.Succeeded, (await operation.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true)).Outcome);
-        Assert.Equal("after", await File.ReadAllTextAsync(path).ConfigureAwait(true));
+        finally
+        {
+            if (operation is not null)
+            {
+                await new TestTaskLifetime(operation, cancellation).DisposeAsync().ConfigureAwait(true);
+            }
+        }
     }
 
     /// <summary>実途中失敗の復元可否はノード個別設定やTOML旧既定から独立します。</summary>
@@ -107,15 +118,26 @@ public sealed class ClusterOperationalFileTests
         await Assert.ThrowsAnyAsync<IOException>(() => restarted.OpenStageAsync(request with { Operational = Snapshot(EFileConflictPolicy.Wait, EFileInternalFailurePolicy.Restore) })).ConfigureAwait(true);
         FileStageToken reopened = await restarted.OpenStageAsync(request with { Operational = Snapshot(EFileConflictPolicy.Wait, zone: "Asia/Tokyo") }).ConfigureAwait(true);
         Assert.Equal(stage, reopened);
-        Task<FileStageCommitResult> commit;
-        using (IDisposable held = await restarted.Operations.AcquireAsync([new(destination, true)]).ConfigureAwait(true))
+        using CancellationTokenSource cancellation = new();
+        Task<FileStageCommitResult>? commit = null;
+        try
         {
-            commit = restarted.CommitStageAsync(reopened);
-            await Task.Delay(75).ConfigureAwait(true);
-            Assert.False(commit.IsCompleted);
+            using (IDisposable held = await restarted.Operations.AcquireAsync([new(destination, true)]).ConfigureAwait(true))
+            {
+                commit = restarted.CommitStageAsync(reopened, cancellation.Token);
+                await Task.Delay(75).ConfigureAwait(true);
+                Assert.False(commit.IsCompleted);
+            }
+            Assert.Equal(bytes.Length, (await commit.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true)).Bytes);
+            Assert.Equal(bytes, await File.ReadAllBytesAsync(destination).ConfigureAwait(true));
         }
-        Assert.Equal(bytes.Length, (await commit.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true)).Bytes);
-        Assert.Equal(bytes, await File.ReadAllBytesAsync(destination).ConfigureAwait(true));
+        finally
+        {
+            if (commit is not null)
+            {
+                await new TestTaskLifetime(commit, cancellation).DisposeAsync().ConfigureAwait(true);
+            }
+        }
     }
 
     /// <summary>保持段階の二方針を変更したノード実行は明示NotExecutedです。</summary>
@@ -174,20 +196,26 @@ public sealed class ClusterOperationalFileTests
         string path = Path.Combine(peer.Root, "shared");
         NodeExecutionContext first = FileTestDirectory.Context(new { path }, NodeValue.FromObject("first")) with { Operational = Snapshot(EFileConflictPolicy.Wait) };
         NodeExecutionContext second = FileTestDirectory.Context(new { path }, NodeValue.FromObject("second")) with { Operational = first.Operational };
-        Task<NodeResult> running = peer.Transactions.ExecuteFileAsync(action, first).AsTask();
-        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
-        Task<NodeResult> waiting = peer.Transactions.ExecuteFileAsync(action, second).AsTask();
+        using CancellationTokenSource cancellation = new();
+        Task<NodeResult> running = peer.Transactions.ExecuteFileAsync(action, first, cancellation.Token).AsTask();
+        Task<NodeResult>? waiting = null;
         try
         {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
+            waiting = peer.Transactions.ExecuteFileAsync(action, second, cancellation.Token).AsTask();
             await Task.Delay(100).ConfigureAwait(true);
             Assert.False(waiting.IsCompleted);
+            release.TrySetResult();
+            Assert.Equal(EOutcome.Succeeded, (await running.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true)).Outcome);
+            Assert.Equal(EOutcome.Succeeded, (await waiting.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true)).Outcome);
         }
         finally
         {
             release.TrySetResult();
+            Task complete = waiting is null ? running
+                                            : Task.WhenAll(running, waiting);
+            await new TestTaskLifetime(complete, cancellation).DisposeAsync().ConfigureAwait(true);
         }
-        Assert.Equal(EOutcome.Succeeded, (await running.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true)).Outcome);
-        Assert.Equal(EOutcome.Succeeded, (await waiting.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true)).Outcome);
     }
 
     /// <summary>一件に渡す内容版を生成します。</summary>

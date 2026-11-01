@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Text.Json;
@@ -19,8 +20,10 @@ public sealed class ReplicationPreparationCapabilityTests
 {
     /// <summary>実UDPの参照応答を起動実体ごとに一度だけ使い、旧実体の対応情報を再利用しません。</summary>
     /// <returns>通常形式へ戻る判断と照会の重複抑止です。</returns>
-    [Fact]
-    public async Task RestartRechecksSupportAndExplicitLegacyResponseIsCachedAsync()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RestartRechecksSupportAndExplicitLegacyResponseIsCachedAsync(bool dropFirstReply)
     {
         using MediaTestFiles files = new();
         string clusterId = Guid.NewGuid().ToString("N");
@@ -34,7 +37,7 @@ public sealed class ReplicationPreparationCapabilityTests
         foreach (int maximum in new[] { 1048576, 0 })
         {
             Guid instance = Guid.NewGuid();
-            int probes = 0;
+            ConcurrentQueue<Guid> probes = new();
             UdpTransport remote = new(new("remote", "127.0.0.1", "127.255.255.255", port, clusterId), instance, TimeProvider.System);
             await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = ((IAsyncDisposable)remote).ConfigureAwait(true);
             remote.Received = async (message, _, token) =>
@@ -44,7 +47,11 @@ public sealed class ReplicationPreparationCapabilityTests
                 {
                     return;
                 }
-                Interlocked.Increment(ref probes);
+                probes.Enqueue(message.Id);
+                if (probes.Count == 1 && dropFirstReply)
+                {
+                    return;
+                }
                 ClusterResponse result = new(EOutcome.NotExecuted, Reason: "Cluster.InspectionTargetUnavailable");
                 if (0 < maximum)
                 {
@@ -57,7 +64,13 @@ public sealed class ReplicationPreparationCapabilityTests
             PeerInfo target = new("remote", instance, "remote-host", "127.0.0.1", port, EPeerStatus.Ready, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
             Assert.Equal(maximum, await capabilities.MaximumBytesAsync(target, timeout.Token).ConfigureAwait(true));
             Assert.Equal(maximum, await capabilities.MaximumBytesAsync(target, timeout.Token).ConfigureAwait(true));
-            Assert.Equal(1, probes);
+
+            // 応答が届くまでの再送と、同じ実体への新しい照会を区別します。
+            Assert.Single(probes.Distinct());
+            if (dropFirstReply)
+            {
+                Assert.True(1 < probes.Count);
+            }
         }
     }
 }
