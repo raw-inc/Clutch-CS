@@ -35,21 +35,27 @@ public sealed class SignalScopeProxyTests
             using JsonDocument metadata = JsonDocument.Parse(frame.AsMemory(1));
             return Results.Json(new { origin = context.Request.Scheme + "://" + context.Request.Host, transport = metadata.RootElement.Clone() });
         });
-        await app.StartAsync(timeout.Token).ConfigureAwait(true);
-        using UdpClient udp = new(new IPEndPoint(IPAddress.Loopback, 0));
-        int udpPort = ((IPEndPoint)udp.Client.LocalEndPoint!).Port;
-        using HttpClient client = new() { BaseAddress = new(app.Urls.Single()) };
-        using HttpRequestMessage request = new(HttpMethod.Get, "/client/signal-scope");
-        request.Headers.Add("X-Forwarded-Proto", "https");
-        request.Headers.Add("X-Forwarded-Host", "scope.example.test");
-        request.Headers.Add("X-Forwarded-For", "192.0.2.20");
-        using HttpResponseMessage response = await client.SendAsync(request, timeout.Token).ConfigureAwait(true);
-        response.EnsureSuccessStatusCode();
-        using JsonDocument body = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(timeout.Token).ConfigureAwait(true));
-        Assert.Equal("https://scope.example.test", body.RootElement.GetProperty("origin").GetString());
-        JsonElement transportBody = body.RootElement.GetProperty("transport");
-        Assert.Contains(transportBody.GetProperty("excludedEndpoints").EnumerateArray(), endpoint => endpoint.GetProperty("transport").GetString() is "udp" && endpoint.GetProperty("address").GetString() is "127.0.0.1" && endpoint.GetProperty("port").GetInt32() == udpPort);
-        Assert.Contains(transportBody.GetProperty("endpoints").EnumerateArray(), endpoint => endpoint.GetProperty("port").GetInt32() == client.BaseAddress.Port);
-        await app.StopAsync(timeout.Token).ConfigureAwait(true);
+        try
+        {
+            await app.StartAsync(timeout.Token).ConfigureAwait(true);
+            using UdpClient udp = new(new IPEndPoint(IPAddress.Loopback, 0));
+            int udpPort = ((IPEndPoint)udp.Client.LocalEndPoint!).Port;
+            using HttpClient client = new() { BaseAddress = new(app.Urls.Single()) };
+            using HttpRequestMessage request = new(HttpMethod.Get, "/client/signal-scope");
+            request.Headers.Add("X-Forwarded-Proto", "https");
+            request.Headers.Add("X-Forwarded-Host", "scope.example.test");
+            request.Headers.Add("X-Forwarded-For", "192.0.2.20");
+            using HttpResponseMessage response = await client.SendAsync(request, timeout.Token).ConfigureAwait(true);
+            response.EnsureSuccessStatusCode();
+            using JsonDocument body = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(timeout.Token).ConfigureAwait(true));
+            Assert.Equal("https://scope.example.test", body.RootElement.GetProperty("origin").GetString());
+            JsonElement transportBody = body.RootElement.GetProperty("transport");
+            Assert.Contains(transportBody.GetProperty("excludedEndpoints").EnumerateArray(), endpoint => endpoint.GetProperty("transport").GetString() is "udp" && endpoint.GetProperty("address").GetString() is "127.0.0.1" && endpoint.GetProperty("port").GetInt32() == udpPort);
+            Assert.Contains(transportBody.GetProperty("endpoints").EnumerateArray(), endpoint => endpoint.GetProperty("port").GetInt32() == client.BaseAddress.Port);
+        }
+        finally
+        {
+            await app.StopAsync(CancellationToken.None).ConfigureAwait(true);
+        }
     }
 }

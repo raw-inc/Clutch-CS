@@ -68,10 +68,16 @@ public sealed class RetainedValueBurstTests
             await Task.Delay(50);
         }
         ExecutionHistoryPage history = new([], null);
+        JsonElement status = default;
         await CorePeer.WaitAsync(async token =>
         {
             history = await first.GetAsync<ExecutionHistoryPage>("executions.list", token).ConfigureAwait(true);
-            return history.Entries.Count == 20;
+            status = await first.GetAsync<JsonElement>("status", token).ConfigureAwait(true);
+
+            // 履歴の公開後に入力枠を解放するため、後処理の終了も同じ期限内で確認します。
+            return history.Entries.Count == 20 && status.GetProperty("sourceQueue").GetProperty("running").GetInt32() == 0
+                && status.GetProperty("sourceQueue").GetProperty("waiting").GetInt32() == 0
+                && status.GetProperty("runningNodes").GetArrayLength() == 0;
         }, TimeSpan.FromSeconds(90));
         Assert.All(history.Entries, entry =>
         {
@@ -79,7 +85,6 @@ public sealed class RetainedValueBurstTests
             NodeExecutionReport end = Assert.Single(entry.Report!.Nodes, node => node.NodeId is "end");
             Assert.Equal(Enumerable.Range(1, 12).Select(value => value * 10), Assert.Single(end.Targets).Result.Outputs["value"].Json.EnumerateArray().Select(value => value.GetInt32()));
         });
-        JsonElement status = await first.GetAsync<JsonElement>("status");
         Assert.Equal(0, status.GetProperty("sourceQueue").GetProperty("running").GetInt32());
         Assert.Equal(0, status.GetProperty("sourceQueue").GetProperty("waiting").GetInt32());
         Assert.Empty(status.GetProperty("runningNodes").EnumerateArray());

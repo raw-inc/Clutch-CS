@@ -2,12 +2,14 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using ReArtWord.Contents.BackgroundService.Contracts.Processes;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
+using ReArtWord.Contents.BackgroundService.Runtime.Processes.Commands;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Processes;
 
 /// <summary>終了確認と復旧の待機中に、同じ実行ファイルの一意な後継を探します。</summary>
-internal sealed class ProcessReplacementProbe
+internal sealed class ProcessReplacementProbe(Func<int, CancellationToken, Task<string[]?>>? readArguments = null)
 {
+    private readonly Func<int, CancellationToken, Task<string[]?>> argumentsReader = readArguments ?? ProcessArguments.ReadAsync;
     private readonly ConcurrentDictionary<string, ProbeCache> cache = new(StringComparer.Ordinal);
 
     /// <summary>高コストな引数照会を一秒以内に繰り返さず、同じ登録の排他内で候補を確認します。</summary>
@@ -28,7 +30,7 @@ internal sealed class ProcessReplacementProbe
 
     /// <summary>既に併存していた実体を除き、複数候補や取得不能から勝手に一つを選びません。</summary>
     /// <returns>新しい実体の照合結果です。</returns>
-    private static async ValueTask<(ProcessIdentity? Identity, string? Problem)> SearchAsync(ProcessReplacementWindow window, CancellationToken cancellationToken = default)
+    private async ValueTask<(ProcessIdentity? Identity, string? Problem)> SearchAsync(ProcessReplacementWindow window, CancellationToken cancellationToken = default)
     {
         string name = Path.GetFileName(window.ExecutablePath);
         StringComparison comparison = StringComparison.Ordinal;
@@ -76,7 +78,7 @@ internal sealed class ProcessReplacementProbe
                     }
                     if (window.Match == EProcessRestartMatch.ExecutableAndArguments)
                     {
-                        string[]? arguments = await ProcessArguments.ReadAsync(identity.ProcessId, cancellationToken).ConfigureAwait(false);
+                        string[]? arguments = await argumentsReader(identity.ProcessId, cancellationToken).ConfigureAwait(false);
                         if (arguments is null)
                         {
                             if (!HasExited(process))
@@ -107,8 +109,9 @@ internal sealed class ProcessReplacementProbe
                         problem = "process.replacementUnconfirmed";
                     }
                 }
-                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException or ArgumentException)
+                catch (Exception exception) when (exception is IOException or InvalidDataException or ProcessStopUnconfirmedException or UnauthorizedAccessException or System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException or ArgumentException)
                 {
+                    // 引数照会の異常終了・停止未確認も対象です。生存候補の照合不能を「候補なし」にしません。
                     if (!HasExited(process))
                     {
                         problem = "process.replacementUnconfirmed";

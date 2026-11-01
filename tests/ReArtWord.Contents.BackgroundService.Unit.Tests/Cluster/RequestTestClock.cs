@@ -1,6 +1,6 @@
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Cluster;
 
-/// <summary>要求の受付待ちだけ時刻を固定し、参加や復旧の待ち時間は進めます。</summary>
+/// <summary>参加者と受付期限の検証では時刻を固定し、復旧の確認では進めます。</summary>
 internal sealed class RequestTestClock : TimeProvider
 {
     private readonly Lock gate = new();
@@ -17,7 +17,7 @@ internal sealed class RequestTestClock : TimeProvider
         }
     }
 
-    /// <summary>参加完了後、送信から実処理の開始まで受付期限が切れないようにします。</summary>
+    /// <summary>開始前に参加者や受付期限が変わらないよう、試験時刻を固定します。</summary>
     internal void Freeze()
     {
         using (gate.EnterScope())
@@ -26,7 +26,7 @@ internal sealed class RequestTestClock : TimeProvider
         }
     }
 
-    /// <summary>受付確認後に指定時間だけ進め、結果照会やPeer復旧に必要な時計を再開します。</summary>
+    /// <summary>指定時間だけ進め、結果照会やPeer復旧に必要な時計を再開します。</summary>
     internal void AdvanceAndResume(TimeSpan amount)
     {
         using (gate.EnterScope())

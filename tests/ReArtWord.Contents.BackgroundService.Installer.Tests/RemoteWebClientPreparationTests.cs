@@ -108,11 +108,22 @@ public sealed class RemoteWebClientPreparationTests
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
         Task<PeerInfo> found = observer.FindAsync("target", instance, timeout.Token);
         long sequence = 0;
-        while (!found.IsCompleted)
+        try
         {
-            PeerInfo peer = new("target", instance, "host", binding.BindAddress, port, EPeerStatus.Ready, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
-            await target.SendAsync(new(Guid.NewGuid(), cluster, "target", instance, "hello", null, null, JsonSerializer.SerializeToElement(new PeerAnnouncement(peer, "digest", "target", null, ++sequence))), timeout.Token).ConfigureAwait(true);
-            await Task.Delay(20, timeout.Token).ConfigureAwait(true);
+            while (!found.IsCompleted)
+            {
+                PeerInfo peer = new("target", instance, "host", binding.BindAddress, port, EPeerStatus.Ready, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+                await target.SendAsync(new(Guid.NewGuid(), cluster, "target", instance, "hello", null, null, JsonSerializer.SerializeToElement(new PeerAnnouncement(peer, "digest", "target", null, ++sequence))), timeout.Token).ConfigureAwait(true);
+                await Task.Delay(20, timeout.Token).ConfigureAwait(true);
+            }
+        }
+        finally
+        {
+            if (!found.IsCompleted)
+            {
+                await timeout.CancelAsync();
+            }
+            await ((Task)found).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
         PeerInfo observed = await found.ConfigureAwait(true);
         if (mode.EndsWith(foreignSuffix, StringComparison.Ordinal))

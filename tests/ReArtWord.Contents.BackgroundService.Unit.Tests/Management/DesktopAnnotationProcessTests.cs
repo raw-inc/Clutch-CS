@@ -105,7 +105,7 @@ public sealed class DesktopAnnotationProcessTests
         finally
         {
             first.Close(); second.Close(); unrelated.Close();
-            Stop(one); Stop(two); Stop(other);
+            await TestProcessCleanup.StopAsync(one, two, other).ConfigureAwait(true);
         }
     }
 
@@ -212,27 +212,6 @@ public sealed class DesktopAnnotationProcessTests
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             Assert.Fail(failure);
-        }
-    }
-
-    /// <summary>この試験が起動したprocessだけを回収します。</summary>
-    private static void Stop(Process? process)
-    {
-        if (process is null)
-        {
-            return;
-        }
-        try
-        {
-            if (!process.HasExited)
-            {
-                process.Kill(true);
-                Assert.True(process.WaitForExit(5000));
-            }
-        }
-        finally
-        {
-            process.Dispose();
         }
     }
 

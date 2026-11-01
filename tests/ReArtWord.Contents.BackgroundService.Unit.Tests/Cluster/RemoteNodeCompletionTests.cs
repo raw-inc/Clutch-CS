@@ -10,13 +10,16 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 using ReArtWord.Contents.BackgroundService.Runtime.Configuration;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Cluster;
 
 /// <summary>通信待ち期限と開始済み処理の寿命を分けます。</summary>
-public sealed class RemoteNodeCompletionTests
+public sealed class RemoteNodeCompletionTests : IDisposable
 {
+    private readonly MediaTestFiles files = new();
+
     /// <summary>初回の準備確認に失敗しても、要求送信前の復旧待ちでは試験時計を止めません。</summary>
     /// <returns>二台が実通信で参加を完了する確認です。</returns>
     [Fact]
@@ -142,6 +145,7 @@ public sealed class RemoteNodeCompletionTests
         RemoteExecutionRequest cancelled = request with { Id = Guid.NewGuid(), ExpiresAt = clock.GetUtcNow().AddSeconds(1) };
         using CancellationTokenSource caller = new();
         Task<NodeResult> execution = first.ExecuteAsync(cancelled, caller.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable executionLifetime = new TestTaskLifetime(execution, caller).ConfigureAwait(true);
         try
         {
             await secondStarted.Task.WaitAsync(timeout.Token);
@@ -192,6 +196,9 @@ public sealed class RemoteNodeCompletionTests
         Assert.Equal("Execution.StartedWithoutResult", interrupted.Reason);
     }
 
+    /// <summary>全Peerの終了後に試験用の保存先を削除します。</summary>
+    public void Dispose() => files.Dispose();
+
     /// <summary>参加できなかった場合は、両側の状態と同期失敗の理由を残します。</summary>
     /// <returns>通常参加の観測です。</returns>
     private static async Task WaitForParticipationAsync(PeerCluster first, PeerCluster second, CancellationToken cancellationToken = default)
@@ -217,7 +224,7 @@ public sealed class RemoteNodeCompletionTests
 
     /// <summary>独立した保存先です。</summary>
     /// <returns>SQLite保存先。</returns>
-    private static SqliteRepository Repository() => new(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "state.db"));
+    private SqliteRepository Repository() => new(Path.Combine(files.Root, Guid.NewGuid().ToString("N"), "state.db"));
 
     /// <summary>試験用ポートを取得します。</summary>
     /// <returns>UDP port。</returns>

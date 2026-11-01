@@ -156,6 +156,10 @@ internal sealed class ManualSafetyFixture : IAsyncDisposable
         {
             repository.Dispose();
         }
+        if (Directory.Exists(root))
+        {
+            Directory.Delete(root, true);
+        }
     }
 
     /// <summary>この試験用の空UDPportを取得します。</summary>

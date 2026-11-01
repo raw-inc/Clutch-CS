@@ -85,6 +85,7 @@ public sealed class OscEmptyArgumentTests
         string type = tcp ? "osc.tcp.listen"
                           : "osc.udp.receive";
         Task<NodeResult> run = ((ISourceNode)SocketNodeTests.Find(type)).RunAsync(context, deadline.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runLifetime = new TestTaskLifetime(run, deadline).ConfigureAwait(true);
         int port = await listening.Task.WaitAsync(deadline.Token).ConfigureAwait(true);
         byte[][] packets = [Convert.FromHexString(LegacyPacket), Convert.FromHexString(StandardPacket)];
         if (tcp)

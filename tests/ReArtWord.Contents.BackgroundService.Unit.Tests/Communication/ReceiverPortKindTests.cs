@@ -45,6 +45,7 @@ public sealed class ReceiverPortKindTests
         ISourceNode node = (ISourceNode)SocketNodeTests.Find(type);
         Assert.Empty(node.Validate(new(initial.NodeId, type, initial.Settings)));
         Task<NodeResult> running = node.RunAsync(context, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable runningLifetime = new TestTaskLifetime(running, timeout).ConfigureAwait(true);
         int port = await listening.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
         byte[] bytes = Packet(format);
         if (tcp)

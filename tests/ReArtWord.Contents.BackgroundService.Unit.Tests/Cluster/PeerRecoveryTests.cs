@@ -4,6 +4,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Cluster;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Cluster;
@@ -18,13 +19,14 @@ public sealed class PeerRecoveryTests
     [InlineData(false)]
     public async Task DelayedReadinessRequiresExplicitCreationOrTrustedState(bool initialize)
     {
+        using MediaTestFiles files = new();
         int port;
         using (UdpClient socket = new(new IPEndPoint(IPAddress.Loopback, 0)))
         {
             port = ((IPEndPoint)socket.Client.LocalEndPoint!).Port;
         }
         string id = Guid.NewGuid().ToString("N");
-        SqliteRepository repository = new(Path.Combine(Path.GetTempPath(), id, "state.db"));
+        SqliteRepository repository = new(Path.Combine(files.Root, "state.db"));
         bool ready = false;
         PeerCluster peer = new(new ClusterOptions(id, "one", "host", "127.0.0.1", "127.255.255.255", port, 1, initialize, Path.GetTempPath()) { PeerTimeout = TimeSpan.FromMilliseconds(200), HeartbeatInterval = TimeSpan.FromMilliseconds(25) }, repository)
         {

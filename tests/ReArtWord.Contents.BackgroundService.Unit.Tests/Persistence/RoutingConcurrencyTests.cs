@@ -28,24 +28,39 @@ public sealed class RoutingConcurrencyTests
         using CancellationTokenSource deadline = new(TimeSpan.FromSeconds(15));
         List<Task<DurableEntry?>> interrupted = [];
         List<Task<DurableReceipt>> pending = [];
-        using (FileStream external = new(Path.Combine(files.Root, "routing.lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        try
         {
-            for (int index = 0; index < 32; index++)
+            using (FileStream external = new(Path.Combine(files.Root, "routing.lock"), FileMode.Open, FileAccess.ReadWrite, FileShare.None))
             {
-                interrupted.Add(first.ReadAsync("workflow:test", "absent", cancelled.Token).AsTask());
-                pending.Add(second.ApplyBatchAsync(Guid.NewGuid(), [new("workflow:test", index.ToString(System.Globalization.CultureInfo.InvariantCulture), null, NodeValue.FromObject(index))], deadline.Token).AsTask());
+                for (int index = 0; index < 32; index++)
+                {
+                    interrupted.Add(first.ReadAsync("workflow:test", "absent", cancelled.Token).AsTask());
+                    pending.Add(second.ApplyBatchAsync(Guid.NewGuid(), [new("workflow:test", index.ToString(System.Globalization.CultureInfo.InvariantCulture), null, NodeValue.FromObject(index))], deadline.Token).AsTask());
+                }
+                await cancelled.CancelAsync();
+                foreach (Task<DurableEntry?> operation in interrupted)
+                {
+                    await Assert.ThrowsAnyAsync<OperationCanceledException>(() => operation);
+                }
+                Assert.All(pending, operation => Assert.False(operation.IsCompleted));
             }
-            await cancelled.CancelAsync();
-            foreach (Task<DurableEntry?> operation in interrupted)
-            {
-                await Assert.ThrowsAnyAsync<OperationCanceledException>(() => operation);
-            }
-            Assert.All(pending, operation => Assert.False(operation.IsCompleted));
+            DurableReceipt[] results = await Task.WhenAll(pending).WaitAsync(deadline.Token);
+            Assert.All(results, result => Assert.Equal(EOutcome.Succeeded, result.Outcome));
+            Assert.Equal(32, (await first.ListAsync("workflow:test", deadline.Token)).Count);
+            Assert.Equal(await first.GetSharedVersionAsync(deadline.Token), await second.GetSharedVersionAsync(deadline.Token));
         }
-        DurableReceipt[] results = await Task.WhenAll(pending).WaitAsync(deadline.Token);
-        Assert.All(results, result => Assert.Equal(EOutcome.Succeeded, result.Outcome));
-        Assert.Equal(32, (await first.ListAsync("workflow:test", deadline.Token)).Count);
-        Assert.Equal(await first.GetSharedVersionAsync(deadline.Token), await second.GetSharedVersionAsync(deadline.Token));
+        finally
+        {
+            await Task.WhenAll(cancelled.CancelAsync(), deadline.CancelAsync()).ConfigureAwait(true);
+            try
+            {
+                await Task.WhenAll(interrupted.Cast<Task>().Concat(pending)).ConfigureAwait(true);
+            }
+            catch (OperationCanceledException) when (cancelled.IsCancellationRequested && deadline.IsCancellationRequested)
+            {
+                // 試験終了時に取り消した待機も、保存先を削除する前に回収します。
+            }
+        }
     }
 
     /// <summary>所有情報を一括取得しても共有履歴を落とさず、ローカル履歴を持ち出しません。</summary>

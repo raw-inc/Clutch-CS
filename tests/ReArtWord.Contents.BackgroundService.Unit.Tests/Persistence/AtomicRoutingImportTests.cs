@@ -11,6 +11,7 @@ using Xunit;
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Persistence;
 
 /// <summary>単一SQLiteの同期は、所有先を含む一取引で復旧できることを検証します。</summary>
+[Collection("Performance")]
 public sealed class AtomicRoutingImportTests
 {
     /// <summary>所有先の書込みで実DB例外が起きても、値・履歴・所有先の部分公開を防ぎます。</summary>
@@ -59,9 +60,9 @@ public sealed class AtomicRoutingImportTests
         }
         RepositorySnapshot snapshot = await source.ExportAsync().ConfigureAwait(true);
         Assert.True(await target.ImportAsync(snapshot).ConfigureAwait(true));
-        long allocated = GC.GetAllocatedBytesForCurrentThread();
+        long allocated = GC.GetTotalAllocatedBytes(true);
         Assert.True(await target.ImportAsync(snapshot).ConfigureAwait(true));
-        Assert.InRange(GC.GetAllocatedBytesForCurrentThread() - allocated, 0, 8388608);
+        Assert.InRange(GC.GetTotalAllocatedBytes(true) - allocated, 0, 8388608);
         Assert.Equal(64, (await target.ExportAsync().ConfigureAwait(true)).Receipts.Count);
         Assert.Equal(await source.GetSharedVersionAsync().ConfigureAwait(true), await target.GetSharedVersionAsync().ConfigureAwait(true));
     }

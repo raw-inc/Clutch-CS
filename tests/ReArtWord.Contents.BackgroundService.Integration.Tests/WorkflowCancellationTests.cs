@@ -58,8 +58,8 @@ public sealed class WorkflowCancellationTests
         string cluster = Guid.NewGuid().ToString("N");
         int port = CorePeer.AvailablePort();
         CorePeer first = new(cluster, "a", port, true);
-        CorePeer second = new(cluster, "b", port, false);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = first.ConfigureAwait(true);
+        CorePeer second = new(cluster, "b", port, false);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable secondLifetime = second.ConfigureAwait(true);
         await first.StartAsync().ConfigureAwait(true);
         await second.StartAsync().ConfigureAwait(true);

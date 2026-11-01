@@ -139,35 +139,46 @@ internal sealed class ClientUpdateInstallation : IAsyncDisposable
     /// <returns>試験プロセスの終了です。</returns>
     public async ValueTask DisposeAsync()
     {
-        foreach (Process helper in helpers)
+        try
         {
-            if (!helper.HasExited)
+            foreach (Process helper in helpers)
             {
-                helper.Kill(false);
-                await helper.WaitForExitAsync().ConfigureAwait(false);
-            }
-            helper.Dispose();
-        }
-        await StopOriginalAsync().ConfigureAwait(false);
-        original?.Dispose();
-        foreach (Process process in Process.GetProcessesByName("Clutch-CS.ClientHost"))
-        {
-            using (process)
-            {
-                try
+                if (!helper.HasExited)
                 {
-                    if (string.Equals(process.MainModule?.FileName, Path.Combine(Installed, Manifest.EntryPoint), StringComparison.OrdinalIgnoreCase))
+                    helper.Kill(false);
+                    await helper.WaitForExitAsync().ConfigureAwait(false);
+                }
+                helper.Dispose();
+            }
+            await StopOriginalAsync().ConfigureAwait(false);
+            original?.Dispose();
+            if (Manifest is null)
+            {
+                // 配布物を準備する前に失敗した場合、起動したClientHostはありません。
+                return;
+            }
+            foreach (Process process in Process.GetProcessesByName("Clutch-CS.ClientHost"))
+            {
+                using (process)
+                {
+                    try
                     {
-                        process.Kill(false);
-                        await process.WaitForExitAsync().ConfigureAwait(false);
+                        if (string.Equals(process.MainModule?.FileName, Path.Combine(Installed, Manifest.EntryPoint), StringComparison.OrdinalIgnoreCase))
+                        {
+                            process.Kill(false);
+                            await process.WaitForExitAsync().ConfigureAwait(false);
+                        }
+                    }
+                    catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException)
+                    {
                     }
                 }
-                catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException)
-                {
-                }
             }
         }
-        Http.Dispose();
+        finally
+        {
+            Http.Dispose();
+        }
     }
 
     /// <summary>試験用に対象RIDのビルドだけを複製します。</summary>

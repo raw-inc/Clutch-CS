@@ -28,8 +28,8 @@ public sealed class HostFileTransferTests
         string cluster = Guid.NewGuid().ToString("N");
         int port = CorePeer.AvailablePort();
         CorePeer source = new(cluster, "source-peer", port, true, "source-host");
-        CorePeer destination = new(cluster, "destination-peer", port, false, "destination-host");
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable sourceLifetime = ((IAsyncDisposable)source).ConfigureAwait(true);
+        CorePeer destination = new(cluster, "destination-peer", port, false, "destination-host");
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable destinationLifetime = ((IAsyncDisposable)destination).ConfigureAwait(true);
         await source.StartAsync().ConfigureAwait(true);
         await destination.StartAsync().ConfigureAwait(true);

@@ -7,6 +7,8 @@ using Xunit;
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Persistence;
 
 /// <summary>一時本文を削減しても、長さ・検証・コピー後の所有権を維持します。</summary>
+// 再利用時の割当量を計測するため、共有バッファーを他の試験が借用しない状態で実行します。
+[Collection("Performance")]
 public sealed class JsonAllocationTests
 {
     /// <summary>空白、Unicode、エスケープ、数値の元表記もUTF-8の長さへ含めます。</summary>

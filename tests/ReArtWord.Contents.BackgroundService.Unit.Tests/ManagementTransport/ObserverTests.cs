@@ -13,13 +13,16 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Observers;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.ManagementTransport;
 
 /// <summary>監視処理をCore参加へ混ぜず実UDP上で管理できることを確認します。</summary>
-public sealed class ObserverTests
+public sealed class ObserverTests : IDisposable
 {
+    private readonly MediaTestFiles files = new();
+
     /// <summary>再起動後は秘密ペイロードなしの指紋照会で元の完了結果だけを取得します。</summary>
     /// <returns>別実体で副作用を再実行しない検証完了。</returns>
     [Fact]
@@ -197,9 +200,11 @@ public sealed class ObserverTests
         await observer.StartAsync();
         await WaitAsync(() => observer.GetClusters().Count != 0);
         ManagementCommand command = Command(peer, "write", NodeValue.Null);
+        using CancellationTokenSource cancellation = new();
+        Task<ManagementReply> pending = observer.ExecuteAsync(command, cancellation.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable pendingLifetime = new TestTaskLifetime(pending, cancellation).ConfigureAwait(true);
         try
         {
-            Task<ManagementReply> pending = observer.ExecuteAsync(command);
             await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
             Assert.Equal(EOutcome.Unknown, (await pending.ConfigureAwait(true)).Outcome);
             Assert.True((await observer.QueryAsync(command)).Running);
@@ -243,6 +248,7 @@ public sealed class ObserverTests
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(8));
         Task<Contracts.Files.Transfers.FileStageCommitResult> pending = client.SendAsync<Contracts.Files.Transfers.FileStageCommitResult>(
             new(peer.LocalClusterId, peer.LocalPeerId, peer.LocalInstanceId), "transfer.commit", new Contracts.Files.Transfers.FileStageToken(Guid.NewGuid()), false, timeout.Token);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable pendingLifetime = new TestTaskLifetime(pending, timeout).ConfigureAwait(true);
         try
         {
             await entered.Task.WaitAsync(timeout.Token);
@@ -317,11 +323,11 @@ public sealed class ObserverTests
 
     /// <summary>独立保存先を作ります。</summary>
     /// <returns>SQLite保存先です。</returns>
-    private static SqliteRepository Repository() => new(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "state.db"));
+    private SqliteRepository Repository() => new(Path.Combine(files.Root, Guid.NewGuid().ToString("N"), "state.db"));
 
     /// <summary>Core用通信設定を作ります。</summary>
     /// <returns>一つのCluster/Peerの設定です。</returns>
-    private static ClusterOptions Options(string cluster, string peer, int port, bool initialize) => new(cluster, peer, "host", "127.0.0.1", "127.255.255.255", port, 1, initialize, Path.GetTempPath())
+    private ClusterOptions Options(string cluster, string peer, int port, bool initialize) => new(cluster, peer, "host", "127.0.0.1", "127.255.255.255", port, 1, initialize, Path.Combine(files.Root, cluster, peer))
     { HeartbeatInterval = TimeSpan.FromMilliseconds(50), PeerTimeout = TimeSpan.FromSeconds(2), RequestTimeout = TimeSpan.FromSeconds(2) };
 
     /// <summary>明示した入力をそのまま返します。</summary>
@@ -347,4 +353,7 @@ public sealed class ObserverTests
             await Task.Delay(20, timeout.Token).ConfigureAwait(false);
         }
     }
+
+    /// <summary>Peerと要求の終了後に、この試験の保存先を削除します。</summary>
+    public void Dispose() => files.Dispose();
 }

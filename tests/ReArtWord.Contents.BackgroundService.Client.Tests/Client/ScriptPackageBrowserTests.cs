@@ -71,15 +71,23 @@ public sealed class ScriptPackageBrowserTests
             await component.SetParametersAsync(ParameterView.FromDictionary(parameters)).ConfigureAwait(true);
             Assert.Contains("First package", rendered.ToHtmlString(), StringComparison.Ordinal);
             using Task old = (Task)select.Invoke(component, ["first", CancellationToken.None])!;
-            await ((Task)select.Invoke(component, ["second", CancellationToken.None])!).ConfigureAwait(true);
-            await component.SetParametersAsync(ParameterView.FromDictionary(parameters)).ConfigureAwait(true);
-            Assert.Contains("Current description", rendered.ToHtmlString(), StringComparison.Ordinal);
-            delayed.SetResult(Details("first", "Stale description"));
-            await old.ConfigureAwait(true);
-            await component.SetParametersAsync(ParameterView.FromDictionary(parameters)).ConfigureAwait(true);
-            Assert.DoesNotContain("Stale description", rendered.ToHtmlString(), StringComparison.Ordinal);
-            Assert.Contains("Current description", rendered.ToHtmlString(), StringComparison.Ordinal);
-            Assert.Equal(0, installs);
+            try
+            {
+                await ((Task)select.Invoke(component, ["second", CancellationToken.None])!).ConfigureAwait(true);
+                await component.SetParametersAsync(ParameterView.FromDictionary(parameters)).ConfigureAwait(true);
+                Assert.Contains("Current description", rendered.ToHtmlString(), StringComparison.Ordinal);
+                delayed.SetResult(Details("first", "Stale description"));
+                await old.ConfigureAwait(true);
+                await component.SetParametersAsync(ParameterView.FromDictionary(parameters)).ConfigureAwait(true);
+                Assert.DoesNotContain("Stale description", rendered.ToHtmlString(), StringComparison.Ordinal);
+                Assert.Contains("Current description", rendered.ToHtmlString(), StringComparison.Ordinal);
+                Assert.Equal(0, installs);
+            }
+            finally
+            {
+                delayed.TrySetCanceled();
+                await old.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+            }
         }).ConfigureAwait(true);
     }
 

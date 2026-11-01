@@ -36,11 +36,17 @@ public sealed class RuntimeRequestExecutorTests
             Interlocked.Increment(ref effects);
             return Task.FromResult(new ClusterResponse(EOutcome.Succeeded));
         }
-        Assert.Equal(EOutcome.Succeeded, (await executor.ExecuteAsync(request, Handler, true, true)).Outcome);
-        ClusterRequest changed = request with { Payload = NodeValue.FromObject(node with { BufferedReceipt = !bufferedFirst }) };
-        Assert.Equal("Execution.RequestMismatch", (await executor.ExecuteAsync(changed, Handler, true, true)).Reason);
-        Assert.Equal(1, effects);
-        await executor.DrainAsync();
+        try
+        {
+            Assert.Equal(EOutcome.Succeeded, (await executor.ExecuteAsync(request, Handler, true, true)).Outcome);
+            ClusterRequest changed = request with { Payload = NodeValue.FromObject(node with { BufferedReceipt = !bufferedFirst }) };
+            Assert.Equal("Execution.RequestMismatch", (await executor.ExecuteAsync(changed, Handler, true, true)).Reason);
+            Assert.Equal(1, effects);
+        }
+        finally
+        {
+            await executor.DrainAsync().ConfigureAwait(true);
+        }
     }
 
     /// <summary>ディスクが停止しても確認済みの結果を返し、並行再送は同じ一回へ合流します。</summary>
@@ -71,7 +77,7 @@ public sealed class RuntimeRequestExecutorTests
         finally
         {
             repository.Release.TrySetResult();
-            await executor.DrainAsync().WaitAsync(TimeSpan.FromSeconds(3));
+            await executor.DrainAsync().ConfigureAwait(true);
         }
         Assert.True(repository.Saved);
         Assert.Equal(EOutcome.Succeeded, (await executor.ExecuteAsync(request, Handler, true, true)).Outcome);
@@ -94,9 +100,15 @@ public sealed class RuntimeRequestExecutorTests
             Interlocked.Increment(ref effects);
             return Task.FromResult(new ClusterResponse(EOutcome.Succeeded));
         }
-        Assert.Equal(EOutcome.Succeeded, (await executor.ExecuteAsync(request, Handler, true, true)).Outcome);
-        repository.Release.TrySetResult();
-        await executor.DrainAsync().WaitAsync(TimeSpan.FromSeconds(3));
+        try
+        {
+            Assert.Equal(EOutcome.Succeeded, (await executor.ExecuteAsync(request, Handler, true, true)).Outcome);
+        }
+        finally
+        {
+            repository.Release.TrySetResult();
+            await executor.DrainAsync().ConfigureAwait(true);
+        }
         Assert.Equal(EOutcome.Unknown, (await executor.ExecuteAsync(request, Handler, true, true)).Outcome);
         RuntimeRequestExecutor restarted = new(repository, "receipts:p", TimeProvider.System);
         Assert.Equal(EOutcome.Unknown, (await restarted.ExecuteAsync(request, Handler, false, true)).Outcome);
@@ -111,10 +123,18 @@ public sealed class RuntimeRequestExecutorTests
         BlockedRepository repository = new();
         RuntimeRequestExecutor executor = new(repository, "receipts:p", TimeProvider.System);
         ClusterRequest request = Request() with { Id = Guid.CreateVersion7(DateTimeOffset.UtcNow.AddMinutes(-7)) };
-        ClusterResponse result = await executor.ExecuteAsync(request, (_, _) => throw new InvalidOperationException("must not execute"), true, true);
-        Assert.Equal(EOutcome.NotExecuted, result.Outcome);
-        Assert.Equal("Execution.RuntimeDeadlineInvalid", result.Reason);
-        Assert.Equal(0, repository.Reads);
+        try
+        {
+            ClusterResponse result = await executor.ExecuteAsync(request, (_, _) => throw new InvalidOperationException("must not execute"), true, true);
+            Assert.Equal(EOutcome.NotExecuted, result.Outcome);
+            Assert.Equal("Execution.RuntimeDeadlineInvalid", result.Reason);
+            Assert.Equal(0, repository.Reads);
+        }
+        finally
+        {
+            repository.Release.TrySetResult();
+            await executor.DrainAsync().ConfigureAwait(true);
+        }
     }
 
     /// <summary>保存が詰まった場合は受付上限で副作用前に拒否し、待機結果を無制限に増やしません。</summary>
@@ -144,7 +164,7 @@ public sealed class RuntimeRequestExecutorTests
         finally
         {
             repository.Release.TrySetResult();
-            await executor.DrainAsync().WaitAsync(TimeSpan.FromSeconds(5));
+            await executor.DrainAsync().ConfigureAwait(true);
         }
         Assert.Equal(512, (await repository.ListAsync("receipts:p")).Count);
         System.Text.Json.JsonElement status = System.Text.Json.JsonSerializer.SerializeToElement(executor.Statistics);
@@ -173,13 +193,14 @@ public sealed class RuntimeRequestExecutorTests
             await finish.Task.WaitAsync(token).ConfigureAwait(true);
             return new(EOutcome.Succeeded, NodeValue.FromObject("finished"));
         }
-        if (active)
-        {
-            Assert.Equal(EOutcome.Unknown, (await executor.ExecuteAsync(original, Handler, true, false).ConfigureAwait(true)).Outcome);
-        }
-        Task drained = executor.DrainAsync();
+        Task? drained = null;
         try
         {
+            if (active)
+            {
+                Assert.Equal(EOutcome.Unknown, (await executor.ExecuteAsync(original, Handler, true, false).ConfigureAwait(true)).Outcome);
+            }
+            drained = executor.DrainAsync();
             ClusterResponse refused = await executor.ExecuteAsync(Request(), Handler, true, true).ConfigureAwait(true);
             Assert.Equal(EOutcome.NotExecuted, refused.Outcome);
             Assert.Equal("Execution.Stopping", refused.Reason);
@@ -194,7 +215,7 @@ public sealed class RuntimeRequestExecutorTests
         finally
         {
             finish.TrySetResult();
-            await drained.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
+            await (drained ?? executor.DrainAsync()).ConfigureAwait(true);
         }
         Assert.Equal(expectedEffects, (await repository.ListAsync("receipts:p").ConfigureAwait(true)).Count);
         if (active)

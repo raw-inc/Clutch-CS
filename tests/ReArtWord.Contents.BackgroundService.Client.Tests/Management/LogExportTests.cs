@@ -119,7 +119,7 @@ public sealed class LogExportTests
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2025", Justification = "finallyで取消し、書込みTaskの終了を検証してからStreamを破棄します。")]
     public async Task SlowStreamAppliesBackpressureAndCancellationAsync(ELogExportFormat format)
     {
-        using CancellationTokenSource cancellation = new(TimeSpan.FromSeconds(10));
+        using CancellationTokenSource cancellation = new();
         using PausingStream output = new();
         using LogExportStream stream = new(output, cancellation.Token);
         int reads = 0;
@@ -140,9 +140,10 @@ public sealed class LogExportTests
         using Task<(long Entries, bool Complete)> writing = write;
         try
         {
-            await output.Blocked.Task.WaitAsync(cancellation.Token);
+            await output.Blocked.Task.WaitAsync(TimeSpan.FromSeconds(10));
             Assert.Equal(1, reads);
             Assert.True(0 < output.Bytes);
+            Assert.False(writing.IsCompleted);
         }
         finally
         {

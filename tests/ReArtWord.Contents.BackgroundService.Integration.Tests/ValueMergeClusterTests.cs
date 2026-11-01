@@ -24,7 +24,8 @@ public sealed class ValueMergeClusterTests
     public async Task OscArrivalsKeepTheirFieldsAndSourcePeerAcrossRemoteDelayAsync()
     {
         string cluster = Guid.NewGuid().ToString("N");
-        int port = CorePeer.AvailablePort(), inputA = CorePeer.AvailablePort(), inputB = CorePeer.AvailablePort();
+        int[] ports = CorePeer.AvailableUdpPorts(3);
+        int port = ports[0], inputA = ports[1], inputB = ports[2];
         CorePeer first = new(cluster, "a", port, true, "host-a", 1000), second = new(cluster, "b", port, false, "host-b", 900);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = first.ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable secondLifetime = second.ConfigureAwait(true);

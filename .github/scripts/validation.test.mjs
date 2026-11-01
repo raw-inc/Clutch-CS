@@ -18,6 +18,17 @@ test('selected passing tests and skipped stages do not report a failure', () => 
     assert.equal(validationReport({ unit_tests: { outcome: 'success' }, integration_tests: { outcome: 'skipped' } }).failed, false);
 });
 
+test('packaged native capture failures remain visible after other stages succeed', () => {
+    const report = validationReport({ native_capture_tests: { outcome: 'failure', conclusion: 'success' },
+        install_tests: { outcome: 'success' } }, { unit_tests: 'success' });
+    const outcomes = Object.fromEntries(report.results.map(result => [result.id, result.outcome]));
+    assert.equal(report.failed, true);
+    assert.equal(outcomes.native_capture_tests, 'failure');
+    assert.equal(outcomes.unit_tests, 'success');
+    assert.equal(outcomes.install_tests, 'success');
+    assert.equal(validationReport({}, outcomes).failed, true);
+});
+
 test('cancelled validation stages are not counted as passing', () => {
     assert.equal(validationReport({ install_tests: { outcome: 'cancelled' } }).failed, true);
 });

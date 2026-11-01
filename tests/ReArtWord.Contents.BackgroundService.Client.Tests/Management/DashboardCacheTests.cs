@@ -264,6 +264,12 @@ public sealed class DashboardCacheTests
         int fast = 0, details = 0, maximumFast = 0, maximumDetails = 0;
         using DashboardCache cache = new(() => [new("cluster", peers, [], DateTimeOffset.UtcNow)], async (command, token) =>
         {
+            string combinedOperation = "dashboard.current";
+            if (string.Equals(command.Operation, combinedOperation, StringComparison.Ordinal))
+            {
+                // 未対応の応答を返し、並列数の検証を照会期限の経過に依存させません。
+                return null;
+            }
             bool diagnostic = command.Operation is "executions.list" or "executions.activity" or "logs.query";
             lock (gate)
             {

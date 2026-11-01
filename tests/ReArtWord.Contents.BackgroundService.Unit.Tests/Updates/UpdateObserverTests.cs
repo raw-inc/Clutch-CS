@@ -49,13 +49,24 @@ public sealed class UpdateObserverTests
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
         Task<PeerInfo> found = observer.FindAsync("target", instance, timeout.Token);
         long sequence = 0;
-        while (!found.IsCompleted)
+        try
         {
-            PeerInfo peer = new("target", instance, "host", binding.BindAddress, port, EPeerStatus.Ready, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
-            await target.SendAsync(new(Guid.NewGuid(), cluster, "target", instance, "hello", null, null, JsonSerializer.SerializeToElement(new PeerAnnouncement(peer, "digest", "target", null, ++sequence))), timeout.Token).ConfigureAwait(true);
-            await Task.Delay(20, timeout.Token).ConfigureAwait(true);
+            while (!found.IsCompleted)
+            {
+                PeerInfo peer = new("target", instance, "host", binding.BindAddress, port, EPeerStatus.Ready, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+                await target.SendAsync(new(Guid.NewGuid(), cluster, "target", instance, "hello", null, null, JsonSerializer.SerializeToElement(new PeerAnnouncement(peer, "digest", "target", null, ++sequence))), timeout.Token).ConfigureAwait(true);
+                await Task.Delay(20, timeout.Token).ConfigureAwait(true);
+            }
+            await found.ConfigureAwait(true);
         }
-        await found.ConfigureAwait(true);
+        finally
+        {
+            if (!found.IsCompleted)
+            {
+                await timeout.CancelAsync().ConfigureAwait(true);
+            }
+            await ((Task)found).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
         ManagementReply reply = await observer.SendAsync("target", instance, "setup.client.info", null, true, timeout.Token).ConfigureAwait(true);
         Assert.Equal(EOutcome.NotExecuted, reply.Outcome);
         Assert.Equal("Cluster.InspectionFailed", reply.Reason);
@@ -129,13 +140,24 @@ public sealed class UpdateObserverTests
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(20));
         Task<PeerInfo> found = observer.FindAsync("target", instance, timeout.Token);
         long sequence = 0;
-        while (!found.IsCompleted)
+        try
         {
-            PeerInfo peer = new("target", instance, "host", binding.BindAddress, port, EPeerStatus.Ready, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
-            await target.SendAsync(new(Guid.NewGuid(), cluster, "target", instance, "hello", null, null, JsonSerializer.SerializeToElement(new PeerAnnouncement(peer, "digest", "target", null, ++sequence))), timeout.Token).ConfigureAwait(true);
-            await Task.Delay(20, timeout.Token).ConfigureAwait(true);
+            while (!found.IsCompleted)
+            {
+                PeerInfo peer = new("target", instance, "host", binding.BindAddress, port, EPeerStatus.Ready, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+                await target.SendAsync(new(Guid.NewGuid(), cluster, "target", instance, "hello", null, null, JsonSerializer.SerializeToElement(new PeerAnnouncement(peer, "digest", "target", null, ++sequence))), timeout.Token).ConfigureAwait(true);
+                await Task.Delay(20, timeout.Token).ConfigureAwait(true);
+            }
+            await found.ConfigureAwait(true);
         }
-        await found.ConfigureAwait(true);
+        finally
+        {
+            if (!found.IsCompleted)
+            {
+                await timeout.CancelAsync().ConfigureAwait(true);
+            }
+            await ((Task)found).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
         ManagementCommand command = new(Guid.NewGuid(), cluster, "target", instance, DateTimeOffset.UtcNow.AddSeconds(6), "write", NodeValue.FromObject(true));
         ManagementReply reply = await observer.SendAsync(command, false, timeout.Token).ConfigureAwait(true);
         Assert.Equal(command.RequestId, Assert.Single(effects).Key);

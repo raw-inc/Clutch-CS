@@ -63,8 +63,9 @@ public sealed class ClusterArchiveServiceTests
     [Fact]
     public async Task ARecipeAndItsCallerCanBeImportedIntoAnEmptyCluster()
     {
-        ArchiveTestEnvironment source = new(), destination = new();
+        ArchiveTestEnvironment source = new();
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable sourceLifetime = source.ConfigureAwait(true);
+        ArchiveTestEnvironment destination = new();
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable destinationLifetime = destination.ConfigureAwait(true);
         await source.StartAsync();
         await destination.StartAsync();
@@ -96,8 +97,9 @@ public sealed class ClusterArchiveServiceTests
     [InlineData(EArchiveImportMode.Replace)]
     public async Task TransfersAndRestoresAnArchiveWithAnExplicitPreview(EArchiveImportMode mode)
     {
-        ArchiveTestEnvironment source = new(), destination = new();
+        ArchiveTestEnvironment source = new();
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable sourceLifetime = source.ConfigureAwait(true);
+        ArchiveTestEnvironment destination = new();
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable destinationLifetime = destination.ConfigureAwait(true);
         await source.StartAsync();
         await destination.StartAsync();

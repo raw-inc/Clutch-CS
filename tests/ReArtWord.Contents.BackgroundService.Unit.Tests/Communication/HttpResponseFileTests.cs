@@ -136,6 +136,7 @@ public sealed class HttpResponseFileTests
         JsonElement settings = SocketNodeTests.Settings(new { url, method = "GET", responseBodyFormat = format, secretId });
         IActionNode node = (IActionNode)CommunicationNodeRegistration.Create(new TestSecretStore("private-token")).Single(item => item.Descriptor.Type is "http.request");
         Task<NodeResult> pending = node.ExecuteAsync(SocketNodeTests.Context(settings), timeout.Token).AsTask();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable pendingLifetime = new TestTaskLifetime(pending, timeout).ConfigureAwait(true);
         using TcpClient client = await server.AcceptTcpClientAsync(timeout.Token).ConfigureAwait(true);
         using NetworkStream stream = client.GetStream();
         using StreamReader reader = new(stream, Encoding.ASCII, false, 1024, true);

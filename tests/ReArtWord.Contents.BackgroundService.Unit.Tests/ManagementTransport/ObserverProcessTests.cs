@@ -9,6 +9,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Management.Discovery;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Workflow;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Observers;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.ManagementTransport;
@@ -21,6 +22,7 @@ public sealed class ObserverProcessTests
     [Fact]
     public async Task TwoCoreProcessesCanBeManagedWithoutJoiningOrUsingHttp()
     {
+        using MediaTestFiles files = new();
         string clusterId = Guid.NewGuid().ToString("N");
         int port;
         using (UdpClient probe = new(new IPEndPoint(IPAddress.Loopback, 0)))
@@ -32,9 +34,9 @@ public sealed class ObserverProcessTests
         UdpObserver observer = new(new ObserverOptions("process-test", new ClientNetworkBinding(network.InterfaceId, address, "127.255.255.255", port)));
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable observerLifetime = observer.ConfigureAwait(false);
         await observer.StartAsync();
-        ObserverCoreProcess first = new(clusterId, "a", port, network.InterfaceId, true);
+        ObserverCoreProcess first = new(files.Root, clusterId, "a", port, network.InterfaceId, true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = first.ConfigureAwait(false);
-        ObserverCoreProcess second = new(clusterId, "b", port, network.InterfaceId, false);
+        ObserverCoreProcess second = new(files.Root, clusterId, "b", port, network.InterfaceId, false);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable secondLifetime = second.ConfigureAwait(false);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(30));
         DiscoveredCluster? discovered = null;

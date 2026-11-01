@@ -81,7 +81,10 @@ public sealed class ScopedSignalMergeTests
         {
             await preparing.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
             Assert.Empty(calls);
-            ExecutionReport fast = await fixture.Engine.ExecuteAsync(plan, "receive", Inputs("fast", true)).WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
+            using CancellationTokenSource cancellation = new();
+            Task<ExecutionReport> pending = fixture.Engine.ExecuteAsync(plan, "receive", Inputs("fast", true), cancellationToken: cancellation.Token);
+            await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable executionLifetime = new TestTaskLifetime(pending, cancellation).ConfigureAwait(true);
+            ExecutionReport fast = await pending.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
             Assert.Equal(EOutcome.Succeeded, fast.Outcome);
             Assert.Equal(64, calls.Count);
             Assert.All(calls, value => Assert.Equal("fast", value));

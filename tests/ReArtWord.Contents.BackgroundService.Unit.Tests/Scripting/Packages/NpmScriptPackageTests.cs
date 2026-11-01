@@ -27,11 +27,11 @@ public sealed class NpmScriptPackageTests
         string code = "import { read } from '@contents/entry'; import suffix from '@contents/entry/extra'; export async function run() { return read() + suffix; }";
         JsonElement manual = JsonSerializer.SerializeToElement(new { arguments = new { }, result = new { type = "string" } });
         string first = await fixture.SettingsAsync("javascript", code, manual).ConfigureAwait(true);
-        Assert.Equal("first!", (await fixture.Node("javascript").ExecuteAsync(NodeTestContext.Create(first)).ConfigureAwait(true)).Outputs["value"].GetString());
+        Assert.Equal("first!", (await fixture.ExecuteSuccessfullyAsync("javascript", first).ConfigureAwait(true)).Outputs["value"].GetString());
         Assert.Equal(EOutcome.Succeeded, (await fixture.ChangeAsync(EScriptPackageKind.Npm, "2.0.0").ConfigureAwait(true)).Outcome);
         string second = await fixture.SettingsAsync("javascript", code, manual).ConfigureAwait(true);
-        Assert.Equal("second!", (await fixture.Node("javascript").ExecuteAsync(NodeTestContext.Create(second)).ConfigureAwait(true)).Outputs["value"].GetString());
-        Assert.Equal("first!", (await fixture.Node("javascript").ExecuteAsync(NodeTestContext.Create(first)).ConfigureAwait(true)).Outputs["value"].GetString());
+        Assert.Equal("second!", (await fixture.ExecuteSuccessfullyAsync("javascript", second).ConfigureAwait(true)).Outputs["value"].GetString());
+        Assert.Equal("first!", (await fixture.ExecuteSuccessfullyAsync("javascript", first).ConfigureAwait(true)).Outputs["value"].GetString());
         string revision = fixture.Store.Current(EScriptPackageKind.Npm)!.Revision;
         ScriptPackageOperation failed = await fixture.ChangeAsync(EScriptPackageKind.Npm, "99.0.0").ConfigureAwait(true);
         Assert.Equal(EOutcome.Failed, failed.Outcome);
@@ -40,7 +40,7 @@ public sealed class NpmScriptPackageTests
         Assert.Equal(installed, fixture.Manager.Change(installed.Request));
         Assert.Equal(EOutcome.Succeeded, (await fixture.ChangeAsync(EScriptPackageKind.Npm, "2.0.0", remove: true).ConfigureAwait(true)).Outcome);
         Assert.Empty(fixture.Store.Current(EScriptPackageKind.Npm)!.Requested);
-        Assert.Equal("second!", (await fixture.Node("javascript").ExecuteAsync(NodeTestContext.Create(second)).ConfigureAwait(true)).Outputs["value"].GetString());
+        Assert.Equal("second!", (await fixture.ExecuteSuccessfullyAsync("javascript", second).ConfigureAwait(true)).Outputs["value"].GetString());
         string missing = await fixture.SettingsAsync("javascript", code, manual).ConfigureAwait(true);
         Assert.Equal(EOutcome.Failed, (await fixture.Node("javascript").ExecuteAsync(NodeTestContext.Create(missing)).ConfigureAwait(true)).Outcome);
         string outside = Path.Combine(fixture.DirectoryPath, "node_modules", "outside-package");
