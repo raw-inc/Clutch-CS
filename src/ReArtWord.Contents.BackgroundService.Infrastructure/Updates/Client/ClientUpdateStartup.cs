@@ -15,15 +15,15 @@ internal static class ClientUpdateStartup
     private static TimeSpan FailedProcessStopTimeout => TimeSpan.FromSeconds(1);
 
     /// <summary>通常の導入は直接起動し、サービス導入は同じサービスを開始します。</summary>
-    /// <returns>新しく起動した実体、または停止を確認した起動失敗です。</returns>
-    internal static async Task<ProcessIdentity?> StartAsync(ClientUpdateJob job, ReleaseManifest manifest, CancellationToken cancellationToken = default)
+    /// <returns>呼出元が起動確認と切り戻しまで保持するハンドル、または停止を確認した起動失敗です。</returns>
+    internal static async Task<Process?> StartAsync(ClientUpdateJob job, ReleaseManifest manifest, CancellationToken cancellationToken = default)
     {
         WebClientInstallation? service = await ReadServiceAsync(job, cancellationToken).ConfigureAwait(false);
         if (service is null)
         {
             try
             {
-                return ProcessOs.Start(new("client-update", EProcessMode.Managed, Path.Combine(job.InstallationRoot, manifest.EntryPoint),
+                return ProcessOs.StartTracked(new("client-update", EProcessMode.Managed, Path.Combine(job.InstallationRoot, manifest.EntryPoint),
                     ["--listen", job.Listen.AbsoluteUri, "--state", job.StateDirectory], job.InstallationRoot));
             }
             catch (System.ComponentModel.Win32Exception)
@@ -44,19 +44,10 @@ internal static class ClientUpdateStartup
         string executable = Path.Combine(job.InstallationRoot, manifest.EntryPoint);
         while (DateTimeOffset.UtcNow < deadline)
         {
-            foreach (Process process in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(executable)))
+            Process? process = FindStartedProcess(executable, job.PreviousProcess);
+            if (process is not null)
             {
-                using (process)
-                {
-                    if (string.Equals(ProcessExecutable.GetPath(process), executable, StringComparison.OrdinalIgnoreCase))
-                    {
-                        ProcessIdentity identity = ProcessOs.Identity(process);
-                        if (identity != job.PreviousProcess)
-                        {
-                            return identity;
-                        }
-                    }
-                }
+                return process;
             }
             await Task.Delay(InstallationDefaults.PollInterval, cancellationToken).ConfigureAwait(false);
         }
@@ -66,15 +57,52 @@ internal static class ClientUpdateStartup
 
     /// <summary>切り戻し前に、自分が開始した実体の停止を確認します。</summary>
     /// <returns>停止を確認できたかです。</returns>
-    internal static async Task<bool> StopAsync(ClientUpdateJob job, ProcessIdentity process, CancellationToken cancellationToken = default)
+    internal static async Task<bool> StopAsync(ClientUpdateJob job, Process process, CancellationToken cancellationToken = default)
     {
         WebClientInstallation? service = await ReadServiceAsync(job, cancellationToken).ConfigureAwait(false);
         if (service is not null)
         {
             await StopServiceAsync(StartupRegistration.ForClient(service), cancellationToken).ConfigureAwait(false);
-            return ProcessOs.IsRunning(process) == false;
+            return await ClientUpdateExecutor.WaitForExitAsync(process, (int)FailedProcessStopTimeout.TotalMilliseconds, cancellationToken).ConfigureAwait(false);
         }
-        return await ProcessOs.StopAsync(process, EProcessStopPolicy.Force, (int)FailedProcessStopTimeout.TotalMilliseconds, cancellationToken).ConfigureAwait(false) == EOutcome.Succeeded;
+        return await ProcessOs.StopAsync(process, ProcessOs.Identity(process), EProcessStopPolicy.Force, (int)FailedProcessStopTimeout.TotalMilliseconds,
+            new DefaultProcessPlatform(), cancellationToken).ConfigureAwait(false) == EOutcome.Succeeded;
+    }
+
+    /// <summary>サービス管理下で開始した実体のハンドルを確保します。</summary>
+    /// <returns>呼出元が破棄する対象実体、または未検出です。</returns>
+    // 抑制理由: 対象だけを呼出元へ移譲し、それ以外の列挙結果は例外時もfinallyで回収します。
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW141", Justification = "返したハンドルは更新処理が起動確認と切り戻しの完了まで所有します。")]
+    private static Process? FindStartedProcess(string executable, ProcessIdentity previous)
+    {
+        Process[] processes = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(executable));
+        Process? selected = null;
+        try
+        {
+            foreach (Process process in processes)
+            {
+                if (string.Equals(ProcessExecutable.GetPath(process), executable, StringComparison.OrdinalIgnoreCase))
+                {
+                    _ = process.SafeHandle;
+                    if (ProcessOs.Identity(process) != previous && string.Equals(ProcessExecutable.GetPath(process), executable, StringComparison.OrdinalIgnoreCase))
+                    {
+                        selected = process;
+                        return selected;
+                    }
+                }
+            }
+            return null;
+        }
+        finally
+        {
+            foreach (Process process in processes)
+            {
+                if (process != selected)
+                {
+                    process.Dispose();
+                }
+            }
+        }
     }
 
     /// <summary>導入記録が対象プログラムと保存先に一致する場合だけサービス操作を許可します。</summary>

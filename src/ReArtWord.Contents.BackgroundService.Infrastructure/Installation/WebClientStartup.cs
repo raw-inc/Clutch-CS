@@ -86,6 +86,14 @@ public static class WebClientStartup
     public static async Task StopAsync(WebClientInstallation client, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(client);
+        string executable = Path.Combine(WebClientCatalog.ProgramRoot(client), client.EntryPoint);
+        await InstallationProcesses.StopExecutableAsync(executable, token => StopServiceAsync(client, token), cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>サービス管理下の実体を、異常終了として自動復旧させず停止します。</summary>
+    /// <returns>サービス管理機構による停止確認です。</returns>
+    private static async Task StopServiceAsync(WebClientInstallation client, CancellationToken cancellationToken = default)
+    {
         if (client.AutomaticStartup && client.RunAsService)
         {
             StartupRegistration registration = StartupRegistration.ForClient(client);
@@ -98,7 +106,6 @@ public static class WebClientStartup
                 await UnixInstallation.StopAsync(registration, cancellationToken).ConfigureAwait(false);
             }
         }
-        await InstallationProcesses.StopExecutableAsync(Path.Combine(WebClientCatalog.ProgramRoot(client), client.EntryPoint), cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>このクライアントの起動登録だけを解除します。</summary>

@@ -23,6 +23,8 @@ public static class ProcessCompletion
     {
         ArgumentNullException.ThrowIfNull(process);
 
+        // 起動時のハンドル、または停止要求前にSafeHandleを確保したProcessを渡してください。
+        // PIDだけを持つProcessを終了後に開き直すと、Windowsでは資源解放前でも対象不在として扱われ得ます。
         // BeginOutputReadLine等で開始した出力イベントの排出も待つため、BCLの非同期待機を先に行います。
         // 呼出元が直接読み取っている標準出力や子孫プロセスの終了は、このメソッドの確認対象には含めません。
         await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);

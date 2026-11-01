@@ -25,25 +25,57 @@ internal static class InstallationProcesses
 
     /// <summary>確認済み実行パスのプロセスだけを停止します。</summary>
     /// <returns>全対象の停止確認です。</returns>
-    // 抑制理由: OSのprocess起動時刻を直ちにDateTimeOffsetへ変換してPID再利用を区別します。
-    [SuppressMessage("SourceQuality", "RAW171", Justification = "BCLの起動時刻をPID再利用防止のDateTimeOffsetへ変換します。")]
-    internal static async Task StopExecutableAsync(string executable, CancellationToken cancellationToken = default)
+    internal static Task StopExecutableAsync(string executable, CancellationToken cancellationToken = default)
+        => StopExecutableAsync(executable, null, cancellationToken);
+
+    /// <summary>サービス停止要求の前に対象を確保し、列挙から消えた実体も終了まで待ちます。</summary>
+    /// <returns>対象プロセスの終了確認です。</returns>
+    // 抑制理由: 列挙した全ハンドルは、停止待機の成功・失敗によらずfinallyで回収します。
+    [SuppressMessage("SourceQuality", "RAW141", Justification = "停止要求前に確保したハンドルをfinallyまで保持します。")]
+    internal static async Task StopExecutableAsync(string executable, Func<CancellationToken, Task>? requestStop, CancellationToken cancellationToken = default)
     {
-        foreach (Process process in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(executable)))
+        Process[] processes = Process.GetProcessesByName(Path.GetFileNameWithoutExtension(executable));
+        List<(Process Handle, ProcessIdentity Identity)> targets = [];
+        try
         {
-            using (process)
+            foreach (Process process in processes)
             {
                 if (!string.Equals(ProcessExecutable.GetPath(process), executable, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
-                ProcessIdentity identity = new(process.Id, new DateTimeOffset(process.StartTime.ToUniversalTime()));
-                EOutcome stopped = await ProcessOs.StopAsync(identity, EProcessStopPolicy.Force, (int)InstallationDefaults.StopTimeout.TotalMilliseconds, cancellationToken).ConfigureAwait(false);
+                _ = process.SafeHandle;
+                if (!string.Equals(ProcessExecutable.GetPath(process), executable, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+                targets.Add((process, ProcessOs.Identity(process)));
+            }
+            if (requestStop is not null)
+            {
+                await requestStop(cancellationToken).ConfigureAwait(false);
+            }
+            foreach ((Process process, ProcessIdentity identity) in targets)
+            {
+                EOutcome stopped = await ProcessOs.StopAsync(process, identity, EProcessStopPolicy.Force, (int)InstallationDefaults.StopTimeout.TotalMilliseconds,
+                    new DefaultProcessPlatform(), cancellationToken).ConfigureAwait(false);
                 if (stopped != EOutcome.Succeeded)
                 {
                     throw new IOException("The client process could not be stopped. Its files were retained.");
                 }
             }
+        }
+        finally
+        {
+            foreach (Process process in processes)
+            {
+                process.Dispose();
+            }
+        }
+        if (requestStop is not null)
+        {
+            // サービス停止中に起動した同じ配置の実体も、従来どおり停止対象に含めます。
+            await StopExecutableAsync(executable, cancellationToken).ConfigureAwait(false);
         }
     }
 }
