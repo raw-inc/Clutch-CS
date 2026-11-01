@@ -2,6 +2,7 @@ using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement;
 using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement.Network;
 using ReArtWord.Contents.BackgroundService.Infrastructure.DeviceManagement;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.DeviceManagement;
@@ -11,14 +12,14 @@ public sealed class DeviceProtocolTests
 {
     /// <summary>CIMの数値enumとgatewayが存在しない構成を従来の表示契約へ写します。</summary>
     /// <returns>Hyper-V読取りの並行完了を含む、実PowerShellの結果です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task CimReadsPreserveBothFamiliesAndPermitNoDefaultRouteAsync()
     {
         if (!OperatingSystem.IsWindows())
         {
             return;
         }
-        JsonElement result = await DevicePowerShellTests.RunFixtureAsync("NetworkReadBoundary", new { });
+        JsonElement result = await DevicePowerShellTests.RunFixtureAsync("NetworkReadBoundary", new { }).ConfigureAwait(true);
         DeviceNetworkInterface nic = Assert.Single(DeviceSnapshots.Read<DeviceNetworkState>(result).Interfaces);
         Assert.True(nic.IPv4!.Enabled);
         Assert.False(nic.IPv6!.Enabled);
@@ -36,7 +37,7 @@ public sealed class DeviceProtocolTests
 
     /// <summary>省略項目を持つ実際のJSONでも、StrictModeで指定bindingだけを変更します。</summary>
     /// <returns>未指定のDHCP・DNS・metricを触らない確認です。</returns>
-    [Theory, InlineData(4), InlineData(6)]
+    [WindowsTheory, InlineData(4), InlineData(6)]
     public async Task SparseBrowserPatchDisablesOnlyTheRequestedProtocolAsync(int family)
     {
         if (!OperatingSystem.IsWindows())
@@ -46,7 +47,7 @@ public sealed class DeviceProtocolTests
         JsonElement result = await DevicePowerShellTests.RunFixtureAsync("NetworkBoundary", new
         {
             id = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", name = "vEthernet [target]", change = new { family, enabled = false }, fail = false,
-        });
+        }).ConfigureAwait(true);
         Assert.True(result.GetProperty("success").GetBoolean());
         JsonElement call = Assert.Single(result.GetProperty("calls").EnumerateArray());
         Assert.Equal(family == 4 ? "ms_tcpip"
@@ -56,7 +57,7 @@ public sealed class DeviceProtocolTests
 
     /// <summary>両bindingの存在確認を先に行い、有効化を先行させ、途中失敗は成功にしません。</summary>
     /// <returns>OS境界の順序とpartial failureの記録です。</returns>
-    [Theory, InlineData(false, false), InlineData(true, false), InlineData(false, true)]
+    [WindowsTheory, InlineData(false, false), InlineData(true, false), InlineData(false, true)]
     public async Task CombinedProtocolsValidateBothBeforeChangingAndPreservePartialFailureAsync(bool fail, bool missingV6)
     {
         if (!OperatingSystem.IsWindows())
@@ -67,7 +68,7 @@ public sealed class DeviceProtocolTests
         {
             id = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", name = "vEthernet [target]", action = "networkProtocols",
             change = new { ipv4Enabled = true, ipv6Enabled = false }, initialV4 = false, fail, missingV6,
-        });
+        }).ConfigureAwait(true);
         Assert.Equal(!fail && !missingV6, result.GetProperty("success").GetBoolean());
         Assert.Equal(!missingV6, result.GetProperty("started").GetBoolean());
         JsonElement[] calls = result.GetProperty("calls").EnumerateArray().ToArray();

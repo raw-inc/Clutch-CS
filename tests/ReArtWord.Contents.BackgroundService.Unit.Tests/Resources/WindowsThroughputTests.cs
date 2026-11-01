@@ -2,6 +2,7 @@ using System.Net.NetworkInformation;
 using ReArtWord.Contents.BackgroundService.Contracts.Resources;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Resources.Counters;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Resources.Probes;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
@@ -11,7 +12,7 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Resources;
 public sealed class WindowsThroughputTests
 {
     /// <summary>実OSの64bit統計と一致する範囲を読み取り、native配置の誤りを検知します。</summary>
-    [Fact]
+    [WindowsFact]
     public void PhysicalNicCountersBracketManagedInterfaceStatistics()
     {
         if (!OperatingSystem.IsWindows())
@@ -41,7 +42,7 @@ public sealed class WindowsThroughputTests
     /// <returns>実カウンターを用いた取得と破棄の検証です。</returns>
     // 抑制理由: OSキャッシュへの書込みだけを測らないため、非同期版にないflushToDisk=trueを明示します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA1849", Justification = "物理ディスクへの書込みを検証するため、Flush(true)の同期完了を必要とします。")]
-    [Fact]
+    [WindowsFact]
     public async Task PhysicalDiskQueryMeasuresRealFileWritesAsync()
     {
         if (!OperatingSystem.IsWindows())

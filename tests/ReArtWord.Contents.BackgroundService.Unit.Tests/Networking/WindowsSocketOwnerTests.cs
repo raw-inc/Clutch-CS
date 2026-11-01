@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Networking;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Networking;
@@ -10,7 +11,7 @@ public sealed class WindowsSocketOwnerTests
 {
     /// <summary>TCPとUDPのプロトコル、実際の端点と所有者を照合します。</summary>
     /// <returns>Windowsが報告する実ソケットの確認です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task FindsOwnedTcpAndUdpWithoutAdministratorCommandsAsync()
     {
         if (!OperatingSystem.IsWindows())

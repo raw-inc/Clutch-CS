@@ -2,6 +2,7 @@ using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Desktop;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Input;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +25,7 @@ public sealed class WindowsPointerDevicesTests(ITestOutputHelper output)
     }
 
     /// <summary>実機の一覧を読むだけで、入力・設定・デバイス登録を変更しません。</summary>
-    [Fact]
+    [WindowsFact]
     public void WindowsCanReadHostMousePresence()
     {
         if (!OperatingSystem.IsWindows())

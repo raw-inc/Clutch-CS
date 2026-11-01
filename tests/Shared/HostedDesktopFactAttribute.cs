@@ -4,15 +4,16 @@ using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Tests.Shared;
 
-/// <summary>画面・音声を使用できないホステッドCIで、実デスクトップ試験を明示的に除外します。</summary>
+/// <summary>Windowsの条件と、ホステッドCIでの画面・音声の利用可否を確認します。</summary>
 [AttributeUsage(AttributeTargets.Method)]
 internal sealed partial class HostedDesktopFactAttribute : FactAttribute
 {
     /// <summary>対話セッション・画面・音声出力と、必要に応じて通知領域を確認します。</summary>
-    public HostedDesktopFactAttribute(bool requireShell = false)
+    public HostedDesktopFactAttribute(bool requireShell = false, int minimumWindows10Build = 0)
     {
         RequireShell = requireShell;
-        Skip = GetSkipReason(requireShell);
+        MinimumWindows10Build = minimumWindows10Build;
+        Skip = GetSkipReason(requireShell, minimumWindows10Build);
     }
 
     /// <summary>通知領域を必要とする試験かどうかです。</summary>
@@ -21,14 +22,25 @@ internal sealed partial class HostedDesktopFactAttribute : FactAttribute
         get;
     }
 
+    /// <summary>試験に必要なWindows 10以降のビルド番号です。</summary>
+    public int MinimumWindows10Build
+    {
+        get;
+    }
+
     /// <summary>機能不足による除外をGitHubホステッドランナーだけに限定します。</summary>
     internal static bool IsHostedRunner => string.Equals(Environment.GetEnvironmentVariable("GITHUB_ACTIONS"), "true", StringComparison.OrdinalIgnoreCase)
         && string.Equals(Environment.GetEnvironmentVariable("RUNNER_ENVIRONMENT"), "github-hosted", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>ローカル・実機ランナーは除外せず、ホステッドCIの不足機能を調べます。</summary>
+    /// <summary>OS条件を確認し、ホステッドCIでは画面・音声などの不足も調べます。</summary>
     /// <returns>実行不能の理由、または通常実行を表すnullです。</returns>
-    internal static string? GetSkipReason(bool requireShell = false)
+    internal static string? GetSkipReason(bool requireShell = false, int minimumWindows10Build = 0)
     {
+        string? platform = WindowsFactAttribute.GetSkipReason(minimumWindows10Build);
+        if (platform is not null)
+        {
+            return platform;
+        }
         if (OperatingSystem.IsWindows() && IsHostedRunner)
         {
             using Process process = Process.GetCurrentProcess();

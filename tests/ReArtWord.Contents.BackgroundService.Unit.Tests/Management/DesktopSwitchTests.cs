@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Input;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Video;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
@@ -51,7 +52,7 @@ public sealed class DesktopSwitchTests
 
     /// <summary>起動desktopを明示した子processが、そのdesktop名を実際に報告します。</summary>
     /// <returns>非表示の試験desktopと子processの回収です。</returns>
-    [Theory]
+    [WindowsTheory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task CaptureProcessUsesTheSpecifiedDesktopWithoutChangingTheVisibleDesktopAsync(bool executableNameOnly)

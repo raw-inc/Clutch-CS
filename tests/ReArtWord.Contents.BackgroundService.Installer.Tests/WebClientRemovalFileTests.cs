@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Installation;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Installation;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Installer.Tests;
@@ -12,7 +13,7 @@ public sealed class WebClientRemovalFileTests
 {
     /// <summary>実行物以外の占有も待ち、中断時には削除完了の記録を作りません。</summary>
     /// <returns>ファイル削除と所有記録の保持の確認です。</returns>
-    [Theory]
+    [WindowsTheory]
     [InlineData("app/client.exe", false)]
     [InlineData("app/release-manifest.json", false)]
     [InlineData("Open-Client.cmd", false)]
@@ -31,13 +32,13 @@ public sealed class WebClientRemovalFileTests
             return;
         }
         using SetupFixture fixture = new();
-        await fixture.InitializeAsync();
+        await fixture.InitializeAsync().ConfigureAwait(true);
         using TcpListener listener = new(IPAddress.Loopback, 0);
         listener.Start();
         int port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
         InstallationSettings settings = fixture.Settings with { WebClient = new(true, port) };
-        SetupResult installed = await fixture.RunAsync(new(Guid.NewGuid(), ESetupAction.Install, settings), "install");
+        SetupResult installed = await fixture.RunAsync(new(Guid.NewGuid(), ESetupAction.Install, settings), "install").ConfigureAwait(true);
         Assert.Equal(EOutcome.Succeeded, installed.Outcome);
         WebClientInstallation client = fixture.Platform.WebClient!;
         string state = WebClientStartup.StateDirectory(client);
@@ -50,7 +51,7 @@ public sealed class WebClientRemovalFileTests
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         if (!File.Exists(path))
         {
-            await File.WriteAllTextAsync(path, "owned file");
+            await File.WriteAllTextAsync(path, "owned file").ConfigureAwait(true);
         }
         using CancellationTokenSource cancellation = new(TimeSpan.FromSeconds(45));
         WebClientRemoval remover = new(fixture.Platform);
@@ -68,7 +69,7 @@ public sealed class WebClientRemovalFileTests
                 {
                     reader.Dispose();
                 }
-            }, () => remover.ExecuteAsync(job, journal, cancellation.Token));
+            }, () => remover.ExecuteAsync(job, journal, cancellation.Token)).ConfigureAwait(true);
             if (cancel)
             {
                 Assert.Equal(EOutcome.Unknown, result.Outcome);
@@ -80,17 +81,17 @@ public sealed class WebClientRemovalFileTests
             {
                 Assert.True(result.Outcome == EOutcome.Succeeded, result.Detail);
                 Assert.False(File.Exists(path));
-                Assert.Equal(client, await WebClientCatalog.ReadRemovedAsync(client.Root));
+                Assert.Equal(client, await WebClientCatalog.ReadRemovedAsync(client.Root).ConfigureAwait(true));
                 Assert.False(File.Exists(Path.Combine(client.Root, WebClientCatalog.RecordName)));
             }
             Assert.True(File.Exists(Path.Combine(settings.Root, "core", "core.exe")));
             Assert.Equal(1, fixture.Platform.ClientStops);
-            Assert.Equal(result, await remover.ExecuteAsync(job, journal));
+            Assert.Equal(result, await remover.ExecuteAsync(job, journal).ConfigureAwait(true));
             Assert.Equal(1, fixture.Platform.ClientStops);
         }
         finally
         {
-            await InstallationFiles.DeleteDirectoryAsync(Path.GetDirectoryName(state)!, Path.GetFileName(state), CancellationToken.None);
+            await InstallationFiles.DeleteDirectoryAsync(Path.GetDirectoryName(state)!, Path.GetFileName(state), CancellationToken.None).ConfigureAwait(true);
         }
     }
 }

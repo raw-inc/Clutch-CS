@@ -1,5 +1,6 @@
 using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement;
 using ReArtWord.Contents.BackgroundService.Contracts.DeviceManagement.Display;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
@@ -9,7 +10,7 @@ public sealed class HostDisplayReadTests
 {
     /// <summary>表示を変更せず、コンソールから取得した候補と個別の内容版を照合します。</summary>
     /// <returns>管理通信・pipe・実表示APIの読取り確認です。</returns>
-    [Fact]
+    [WindowsFact]
     public async Task ReadsConnectedDisplaysThroughTheOwnedInteractiveWorkerAsync()
     {
         if (!OperatingSystem.IsWindows())

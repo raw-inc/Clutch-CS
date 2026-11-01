@@ -1,5 +1,6 @@
 using ReArtWord.Contents.BackgroundService.Contracts.Installation;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Installation;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Installation;
@@ -10,7 +11,7 @@ public sealed class WindowsStartupTests
 {
     /// <summary>サービス起動とサインイン時起動を導入権限に合わせます。</summary>
     /// <returns>登録の再作成と所有を保った削除の検証です。</returns>
-    [Theory]
+    [WindowsTheory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task RegistrationRepairsMissingStartupAndRemovesOnlyItsOwnEntry(bool perUser)
@@ -56,7 +57,7 @@ public sealed class WindowsStartupTests
             }
             return Task.FromResult(state);
         });
-        await startup.RegisterAsync(registration);
+        await startup.RegisterAsync(registration).ConfigureAwait(true);
         Assert.Equal(registration.Command, commands[registration.Name]);
         Assert.Contains(client.Root, commands[registration.Name], StringComparison.Ordinal);
         Assert.Contains("--state", commands[registration.Name], StringComparison.Ordinal);
@@ -70,29 +71,29 @@ public sealed class WindowsStartupTests
             Assert.Contains(calls, call => string.Equals(call[0], "create", StringComparison.Ordinal) && string.Equals(call[4], "start=", StringComparison.Ordinal) && string.Equals(call[5], "auto", StringComparison.Ordinal));
             Assert.Contains(calls, call => string.Equals(call[0], "failure", StringComparison.Ordinal) && string.Equals(call[^1], InstallationDefaults.WindowsRecoveryActions, StringComparison.Ordinal));
             Assert.StartsWith(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), WebClientStartup.StateDirectory(client), StringComparison.OrdinalIgnoreCase);
-            await startup.StartAsync(registration);
-            await startup.StartAsync(registration);
+            await startup.StartAsync(registration).ConfigureAwait(true);
+            await startup.StartAsync(registration).ConfigureAwait(true);
             Assert.Single(calls, call => string.Equals(call[0], "start", StringComparison.Ordinal));
-            await startup.StopAsync(registration);
+            await startup.StopAsync(registration).ConfigureAwait(true);
             Assert.False(running);
         }
         commands.Remove(registration.Name);
-        await startup.RegisterAsync(registration);
+        await startup.RegisterAsync(registration).ConfigureAwait(true);
         Assert.True(startup.Owns(registration));
         string otherName = "Clutch-CS-other";
         commands[otherName] = "another.exe";
-        await startup.UnregisterAsync(registration);
+        await startup.UnregisterAsync(registration).ConfigureAwait(true);
         Assert.False(commands.ContainsKey(registration.Name));
         Assert.Equal("another.exe", commands[otherName]);
         commands[registration.Name] = "another.exe";
-        await Assert.ThrowsAsync<IOException>(() => startup.RegisterAsync(registration));
-        await Assert.ThrowsAsync<IOException>(() => startup.UnregisterAsync(registration));
+        await Assert.ThrowsAsync<IOException>(() => startup.RegisterAsync(registration)).ConfigureAwait(true);
+        await Assert.ThrowsAsync<IOException>(() => startup.UnregisterAsync(registration)).ConfigureAwait(true);
         Assert.Equal("another.exe", commands[registration.Name]);
     }
 
     /// <summary>更新で実行物が変わる場合も、元の所有確認を省略しません。</summary>
     /// <returns>更新と切り戻しの登録検証です。</returns>
-    [Theory]
+    [WindowsTheory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task ReplacingExecutableRequiresThePreviousCommand(bool perUser)
@@ -110,12 +111,12 @@ public sealed class WindowsStartupTests
             command = arguments[^1];
             return Task.FromResult(string.Empty);
         });
-        await startup.ReplaceAsync(previous, replacement);
+        await startup.ReplaceAsync(previous, replacement).ConfigureAwait(true);
         Assert.Equal(replacement.Command, command);
-        await startup.ReplaceAsync(replacement, previous);
+        await startup.ReplaceAsync(replacement, previous).ConfigureAwait(true);
         Assert.Equal(previous.Command, command);
         command = "another.exe";
-        await Assert.ThrowsAsync<IOException>(() => startup.ReplaceAsync(previous, replacement));
+        await Assert.ThrowsAsync<IOException>(() => startup.ReplaceAsync(previous, replacement)).ConfigureAwait(true);
         Assert.Equal("another.exe", command);
     }
 }

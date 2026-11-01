@@ -9,6 +9,8 @@
     <Compile Include="../Shared/PerformanceTestGroup.cs" Link="Performance/PerformanceTestGroup.cs" />
     <Compile Include="../Shared/HostedDesktopFactAttribute.cs" Link="Desktop/HostedDesktopFactAttribute.cs" />
     <Compile Include="../Shared/HostedDesktopTheoryAttribute.cs" Link="Desktop/HostedDesktopTheoryAttribute.cs" />
+    <Compile Include="../Shared/WindowsFactAttribute.cs" Link="WindowsFactAttribute.cs" />
+    <Compile Include="../Shared/WindowsTheoryAttribute.cs" Link="WindowsTheoryAttribute.cs" />
     <!-- 複数Coreを使う試験同士は直列にし、各試験内の並列処理と実通信は維持します。 -->
     <None Update="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
