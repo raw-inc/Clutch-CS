@@ -101,6 +101,9 @@ async function fixtureAsync(t, reduce = false)
     return {
         clock, chart, motion, frames, attributes, blurAttributes, bandAttributes, layers, clipAttributes, ...module,
 
+        /** ClientHostで校正した時刻を描画へ渡します。 */
+        update: (chart, path, origin, serverNow = 999_000 + clock.monotonic) => module.update(chart, path, origin, serverNow),
+
         clipWrites: () => clipWrites,
 
         resize: () => resize(),
@@ -168,6 +171,24 @@ test('wall clock corrections cannot move already rendered samples backwards', as
     f.frame(1000);
     assert.equal(f.offset(), -3);
 });
+
+for (const offset of [-3_600_000, 3_600_000])
+{
+    test(`browser clock offset ${offset} does not shift the server time axis`, async t =>
+    {
+        const f = await fixtureAsync(t);
+        f.clock.wall += offset;
+        f.update(f.chart, 'M297,50 L300,40', 997_000, 1_000_000);
+        assert.equal(f.offset(), -3);
+        f.frame(1000);
+        assert.equal(f.offset(), -4);
+        f.clock.wall -= offset * 2;
+        f.update(f.chart, 'M294,50 L297,40 L300,60', 1_000_000, 1_001_000);
+        assert.equal(f.offset(), -1);
+        f.frame(1000);
+        assert.equal(f.offset(), -2);
+    });
+}
 
 test('a frame timestamp captured before a render cannot rewind its immediate offset', async t =>
 {

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using ReArtWord.Contents.BackgroundService.Client.Overview.Telemetry;
+using ReArtWord.Contents.BackgroundService.Client.Services;
 using ReArtWord.Contents.BackgroundService.Contracts.Resources;
 
 namespace ReArtWord.Contents.BackgroundService.Client.Overview.Charts;
@@ -10,6 +11,13 @@ namespace ReArtWord.Contents.BackgroundService.Client.Overview.Charts;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1515", Justification = "Razor が生成する公開 partial 宣言と同じコンポーネント型を構成するため。")]
 public sealed partial class OverviewTrend : IAsyncDisposable
 {
+    [Inject]
+    private ManagementApi Api
+    {
+        get;
+        set;
+    } = null!;
+
     [Inject]
     private IJSRuntime Js
     {
@@ -111,7 +119,7 @@ public sealed partial class OverviewTrend : IAsyncDisposable
 
             if (module is not null)
             {
-                await module.InvokeVoidAsync("update", UiCancellation, chart, path, origin).ConfigureAwait(true);
+                await module.InvokeVoidAsync("update", UiCancellation, chart, path, origin, Api.UtcNow.ToUnixTimeMilliseconds()).ConfigureAwait(true);
             }
         }
         finally
