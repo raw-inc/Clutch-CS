@@ -6,6 +6,7 @@ using ReArtWord.Contents.BackgroundService.Runtime.Workflows;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Compilation;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Workflows;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.AI;
@@ -17,7 +18,7 @@ public sealed class RuntimeAiSettingsTests
 
     /// <summary>登録済みVoice ID・保存先・言語を一回ごとに固定し、静的文字列を要求しません。</summary>
     /// <returns>二回の合成要求と取得したWAVの確認です。</returns>
-    [Fact]
+    [MediaFact]
     public async Task QwenAcceptsRuntimeVoiceAndOutputSettingsAsync()
     {
         using MediaTestFiles files = new();

@@ -3,6 +3,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Data;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.AI;
@@ -13,8 +14,8 @@ public sealed class OptionalAiRequestTests
     /// <summary>ノード検証を通して送信し、サービス別の名前変換後にも省略を確認します。</summary>
     /// <returns>外部APIを使わない三種類の要求本文です。</returns>
     [Theory]
-    [InlineData(0)]
-    [InlineData(1)]
+    [MediaInlineData(0)]
+    [MediaInlineData(1)]
     [InlineData(2)]
     public async Task NullSettingsAreOmittedBeforeProviderValidationAndDispatchAsync(int provider)
     {

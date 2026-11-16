@@ -5,6 +5,7 @@ using ReArtWord.Contents.BackgroundService.Nodes.AI;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Data;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.AI;
@@ -36,9 +37,9 @@ public sealed class AiRouterTests
     /// <returns>検証が終了するまでの非同期処理。</returns>
     [Theory]
     [InlineData("text", "text")]
-    [InlineData("audio", "input_audio")]
-    [InlineData("picture", "image_url")]
-    [InlineData("video", "image_url")]
+    [MediaInlineData("audio", "input_audio")]
+    [MediaInlineData("picture", "image_url")]
+    [MediaInlineData("video", "image_url")]
     public async Task ClassificationUsesMediaAndReportsFrameCoverage(string kind, string contentType)
     {
         using MediaTestFiles files = new();

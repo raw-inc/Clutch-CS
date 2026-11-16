@@ -11,6 +11,7 @@ using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Compilation;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Workflows;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.AI;
@@ -20,7 +21,7 @@ public sealed class OptionalQwenWorkflowTests
 {
     /// <summary>欠落・null・明示値を同じ反復へ混ぜ、各HTTP本文と完成ファイルを確認します。</summary>
     /// <returns>実ランタイム・HTTP・WAV保存を通した再現試験です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task IterationKeepsPcCandidatesAndOmitsOnlyAbsentParametersAsync(bool parallel)

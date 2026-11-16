@@ -4,6 +4,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Data;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.AI;
@@ -31,7 +32,7 @@ public sealed class QwenSpeechTests
 
     /// <summary>600 Unicode文字を送信し、音声URLを認証なしで取得して実WAVを確定します。</summary>
     /// <returns>既定言語と明示言語の要求・実媒体の検証です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData(null, "Auto")]
     [InlineData("Japanese", "Japanese")]
     public async Task CompletedSpeechDownloadsProbedWaveWithoutForwardingSecretAsync(string? language, string expectedLanguage)
@@ -118,7 +119,7 @@ public sealed class QwenSpeechTests
 
     /// <summary>HTTP拒否と終端を確認できない合成応答を区別し、再送・downloadしません。</summary>
     /// <returns>確定失敗と結果不明の区別です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData(401, "{\"error\":\"fixture-secret-not-valid\"}", EOutcome.Failed)]
     [InlineData(500, "{\"error\":\"fixture-secret-not-valid\"}", EOutcome.Unknown)]
     [InlineData(200, "{}", EOutcome.Unknown)]
@@ -142,7 +143,7 @@ public sealed class QwenSpeechTests
 
     /// <summary>生成完了後のdownload拒否・壊れたWAV・サイズ超過は出力を確定しません。</summary>
     /// <returns>生成済み音声の取得・検証失敗境界です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData(404, 1024)]
     [InlineData(200, 1024)]
     [InlineData(200, 1)]
@@ -201,7 +202,7 @@ public sealed class QwenSpeechTests
 
     /// <summary>試験用の構成のorigin外にある生成物URLへ要求も認証情報も送信しません。</summary>
     /// <returns>別ポートの実サーバーに要求が届かないことの確認です。</returns>
-    [Fact]
+    [MediaFact]
     public async Task ForeignArtifactOriginIsRejectedWithoutDispatchAsync()
     {
         using MediaTestFiles files = new();

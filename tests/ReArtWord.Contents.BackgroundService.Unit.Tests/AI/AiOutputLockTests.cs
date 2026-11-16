@@ -1,6 +1,7 @@
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.AI;
@@ -46,7 +47,7 @@ public sealed class AiOutputLockTests
     /// <returns>送信済み要求の再試行なしに保存方針を適用する確認です。</returns>
     // 抑制理由: 実行途中に別のハンドルを開く試験です。finallyで応答を解放しpendingをawaitしてからfixtureを破棄します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2025", Justification = "生成とロック取得を重ね、finallyのawaitでfixtureの寿命内に必ず完了させます。")]
-    [Theory]
+    [MediaTheory]
     [InlineData("error", EOutcome.Failed)]
     [InlineData("skip", EOutcome.Succeeded)]
     public async Task LockAcquiredDuringGenerationUsesCommitPolicyAsync(string mode, EOutcome expected)

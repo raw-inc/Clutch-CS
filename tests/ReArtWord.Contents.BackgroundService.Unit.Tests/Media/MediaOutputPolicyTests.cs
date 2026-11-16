@@ -4,6 +4,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Nodes.Media;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Data;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ public sealed class MediaOutputPolicyTests(ITestOutputHelper testOutput)
 {
     /// <summary>存在しない階層へ実変換し、既存時の各方針で正しい内容を維持します。</summary>
     /// <returns>実ffmpeg・ffprobeで検証した媒体と、未実行のスキップです。</returns>
-    [Fact]
+    [MediaFact]
     public async Task ConversionCreatesParentsAndSharesOutputChoicesAsync()
     {
         using MediaTestFiles files = new(testOutput);

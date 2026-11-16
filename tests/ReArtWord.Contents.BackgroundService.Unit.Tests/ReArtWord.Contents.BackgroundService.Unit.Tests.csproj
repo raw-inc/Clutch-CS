@@ -5,6 +5,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../Shared/MediaFactAttribute.cs" Link="Shared/MediaFactAttribute.cs" />
+    <Compile Include="../Shared/MediaTheoryAttribute.cs" Link="Shared/MediaTheoryAttribute.cs" />
+    <Compile Include="../Shared/MediaInlineDataAttribute.cs" Link="Shared/MediaInlineDataAttribute.cs" />
     <Compile Include="../Shared/ProcessResourceSample.cs" Link="Performance/ProcessResourceSample.cs" />
     <Compile Include="../Shared/TestProcessDirectory.cs" Link="Shared/TestProcessDirectory.cs" />
     <Compile Include="../Shared/TestProcessHandles.cs" Link="Shared/TestProcessHandles.cs" />

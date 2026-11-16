@@ -6,6 +6,7 @@ using ReArtWord.Contents.BackgroundService.Nodes.Media;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Data;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.AI;
@@ -15,7 +16,7 @@ public sealed class AiOutputPreparationTests
 {
     /// <summary>各音声サービスで親を再帰作成し、その後で一度だけ生成要求を送ります。</summary>
     /// <returns>サービスに依存しないディレクトリ作成の確認です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData("ai.audio.qwen.generate", "qwen3-tts-vc-2026-01-22")]
     [InlineData("ai.audio.generate", "gpt-4o-mini-tts")]
     [InlineData("ai.audio.elevenlabs.generate", "eleven_multilingual_v2")]

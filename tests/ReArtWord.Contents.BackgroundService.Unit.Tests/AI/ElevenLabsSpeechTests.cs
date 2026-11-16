@@ -8,6 +8,7 @@ using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Data;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Workflows;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,7 +36,7 @@ public sealed class ElevenLabsSpeechTests(ITestOutputHelper testOutput)
 
     /// <summary>各モデルの文字数上限を送り、認証と要求形式・完成MP3を確認します。</summary>
     /// <returns>実HTTPと実ffprobeを通した成功確認です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData("eleven_multilingual_v2", 10000)]
     [InlineData("eleven_v3", 5000)]
     public async Task BothModelsProduceVerifiedMp3WithApiKeyAuthenticationAsync(string model, int maximumCharacters)
@@ -119,7 +120,7 @@ public sealed class ElevenLabsSpeechTests(ITestOutputHelper testOutput)
 
     /// <summary>HTTP拒否と未確定障害を区別し、秘密をそのまま返さず再生成しません。</summary>
     /// <returns>拒否時Failedと受理不明時Unknownの確認です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData(401, EOutcome.Failed)]
     [InlineData(422, EOutcome.Failed)]
     [InlineData(429, EOutcome.Failed)]
@@ -139,7 +140,7 @@ public sealed class ElevenLabsSpeechTests(ITestOutputHelper testOutput)
 
     /// <summary>完了した本文がJSONや別媒体ならMP3として確定しません。</summary>
     /// <returns>壊れた出力と実WAVの形式不一致を拒否する確認です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task CompletedInvalidMediaFailsWithoutCommitAsync(bool validWave)
@@ -162,7 +163,7 @@ public sealed class ElevenLabsSpeechTests(ITestOutputHelper testOutput)
 
     /// <summary>本文転送の上限超過は完了を断定せず、部分ファイルを残しません。</summary>
     /// <returns>有効MP3でもサイズ上限を守る確認です。</returns>
-    [Fact]
+    [MediaFact]
     public async Task OversizedBodyRemainsUnknownAndDoesNotCommitAsync()
     {
         using MediaTestFiles files = new(testOutput);
@@ -206,7 +207,7 @@ public sealed class ElevenLabsSpeechTests(ITestOutputHelper testOutput)
 
     /// <summary>転送先へのredirectを追わずAPIキーを外部へ送りません。</summary>
     /// <returns>別originに要求が届かない認証境界です。</returns>
-    [Fact]
+    [MediaFact]
     public async Task RedirectDoesNotForwardApiKeyAsync()
     {
         using MediaTestFiles files = new(testOutput);
@@ -223,7 +224,7 @@ public sealed class ElevenLabsSpeechTests(ITestOutputHelper testOutput)
 
     /// <summary>送信後の期限切れは結果不明として扱い、暗黙に再生成しません。</summary>
     /// <returns>再送なしのタイムアウト境界です。</returns>
-    [Fact]
+    [MediaFact]
     public async Task TimeoutAfterDispatchRemainsUnknownAsync()
     {
         using MediaTestFiles files = new(testOutput);

@@ -6,6 +6,7 @@ using ReArtWord.Contents.BackgroundService.Nodes.AI;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Data;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.AI;
@@ -15,7 +16,7 @@ public sealed class AudioRecipeTests
 {
     /// <summary>効果音の任意項目は未指定時に送らず、指定時にはAPI名へ変換します。</summary>
     /// <returns>完成MP3と送信契約の確認です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task SoundEffectsUseOptionalParametersAsync(bool configured)
@@ -52,7 +53,7 @@ public sealed class AudioRecipeTests
 
     /// <summary>モデル固有設定を誤ったレシピへ送らず、指定済みvoice settingsをネストします。</summary>
     /// <returns>v3の安定度と任意seedの送信です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData(0)]
     [InlineData(0.35)]
     [InlineData(0.375)]
@@ -84,7 +85,7 @@ public sealed class AudioRecipeTests
 
     /// <summary>指定URLをそのまま使い、不要なリージョンを読みません。</summary>
     /// <returns>Qwenの通常モデルと音声URLの認証分離です。</returns>
-    [Fact]
+    [MediaFact]
     public async Task QwenEndpointOverridesRegionWithoutChangingProtocolAsync()
     {
         using MediaTestFiles files = new();
@@ -114,7 +115,7 @@ public sealed class AudioRecipeTests
 
     /// <summary>認証不要の互換Speech APIにも指定URLとオプションを渡せます。</summary>
     /// <returns>実WAVの検証とbodyの確認です。</returns>
-    [Fact]
+    [MediaFact]
     public async Task OpenAiSpeechSupportsEndpointInstructionsAndSpeedAsync()
     {
         using MediaTestFiles files = new();
