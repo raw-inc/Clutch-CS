@@ -133,25 +133,17 @@ jobs:
           dotnet restore Clutch-CS.slnx
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           dotnet build Clutch-CS.slnx -c Release --no-restore -warnaserror "-p:Version=$env:RELEASE_VERSION"
-      - name: Prepare media tools for integration tests
+      - name: Prepare media test tools
         id: media_tools
         continue-on-error: true
-        run: |
-          if (-not (Get-Command ffprobe -ErrorAction SilentlyContinue) -or -not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
-            choco install ffmpeg --version=9.0.1 --yes --no-progress
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
-          $probe = (Get-Command ffprobe -ErrorAction Stop).Source
-          $encoder = (Get-Command ffmpeg -ErrorAction Stop).Source
-          & $probe -version
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          @("CONTENTS_TEST_FFPROBE=$probe", "CONTENTS_TEST_FFMPEG=$encoder") | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        run: ./.github/scripts/prepare-media-tools.ps1
       - name: Test versioning, packaging, platform scripts and JavaScript
         id: platform_tests
         continue-on-error: true
         if: github.event_name != 'workflow_dispatch' || !inputs.skip_scripts
         run: |
           ./eng/versioning/Test-BuildVersion.ps1
+          ./.github/scripts/Test-PrepareMediaTools.ps1
           ./tests/ReArtWord.Contents.BackgroundService.Installer.Tests/Test-SourcePackage.ps1
           # 配布先と同じWindows PowerShellで実行し、NetSecurityは試験用の境界へ差し替える。
           & "$env:WINDIR/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tests/ReArtWord.Contents.BackgroundService.Installer.Tests/Test-WindowsFirewall.ps1

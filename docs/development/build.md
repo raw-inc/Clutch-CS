@@ -84,6 +84,8 @@ $env:CONTENTS_TEST_FFMPEG = 'C:/tools/ffmpeg/bin/ffmpeg.exe'
 $env:CONTENTS_TEST_FFPROBE = 'C:/tools/ffmpeg/bin/ffprobe.exe'
 ~~~
 
+CIでFFmpeg/ffprobeを取得できなかった場合は、これらを必要とする試験だけがスキップされます。対象と理由はTRXに、取得結果は実行サマリーに表示されます。ツールを必要としない試験は継続されます。
+
 実デスクトップ試験は、画面と音声出力デバイスが利用できる Windows の対話セッションで実行してください。通知アイコンには Windows Shell、画面取得には Desktop Duplication 対応環境、GPU 実測には対応する GPU が必要です。GitHub ホステッドランナーでは、利用できない画面機能の試験が理由付きでスキップされます。
 
 RemoteDesktopの閲覧端末判定・時刻プローブ・正常切断の実プロセス試験も、接続時に音声取得を開始するため、同じ実機条件が必要です。デバイスを使わない閲覧端末判定や時刻プローブの通信処理は、単体試験で検証します。
