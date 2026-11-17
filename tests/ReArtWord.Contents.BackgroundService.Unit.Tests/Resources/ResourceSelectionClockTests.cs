@@ -20,8 +20,8 @@ public sealed class ResourceSelectionClockTests : IDisposable
 {
     private readonly MediaTestFiles files = new();
 
-    /// <summary>未確認の相手から届いた日時だけで、時計差のある標本を新鮮と判定しません。</summary>
-    /// <returns>版の照会より先に届く旧形式通知を保留することです。</returns>
+    /// <summary>新しい照会方式への対応を確認するまでは、先に届いた旧形式の通知を比較に使わないことを確認します。</summary>
+    /// <returns>対応確認前の通知が採用されないことを検証するタスクです。</returns>
     [Fact]
     public async Task UnconfirmedCapabilityDoesNotTrustLegacyTimestamps()
     {
@@ -34,8 +34,8 @@ public sealed class ResourceSelectionClockTests : IDisposable
         Assert.Empty(incoming.Capture());
     }
 
-    /// <summary>PC間の時計差・再照会・時計補正が、十秒の採取鮮度を変えません。</summary>
-    /// <returns>新しい標本だけを選び、収集停止後は選ばないことです。</returns>
+    /// <summary>PC間の時計差や時刻補正があっても、採取から10秒を超えた標本が比較対象から外れることを確認します。</summary>
+    /// <returns>鮮度の判定と再取得時の扱いを検証するタスクです。</returns>
     [Theory]
     [InlineData(-3600)]
     [InlineData(3600)]
@@ -81,8 +81,8 @@ public sealed class ResourceSelectionClockTests : IDisposable
         Assert.Empty(await new SqliteRepository(Path.Combine(files.Root, "source.db")).ListAsync("receipts:source", timeout.Token));
     }
 
-    /// <summary>応答遅延を鮮度から除外せず、未来や別実体の標本も採用しません。</summary>
-    /// <returns>遅い応答・不正な標本を低負荷の候補にしないことです。</returns>
+    /// <summary>通信待ちも標本の古さに加算し、採取時刻が不正な標本や別のCoreプロセスの標本を除外することを確認します。</summary>
+    /// <returns>応答遅延と不正な標本の扱いを検証するタスクです。</returns>
     [Theory]
     [InlineData("delay")]
     [InlineData("future")]
@@ -117,8 +117,8 @@ public sealed class ResourceSelectionClockTests : IDisposable
         Assert.NotNull(Compare(source, received, clock).Reason);
     }
 
-    /// <summary>日時が一致する旧Coreの通知は、従来どおり有限の鮮度で利用します。</summary>
-    /// <returns>未対応の照会を確認した後の互換経路です。</returns>
+    /// <summary>旧Coreからの通知は、PC間の時計が合っていれば従来どおり比較に使えることを確認します。</summary>
+    /// <returns>未対応の応答を受けてから旧形式の通知を採用することを検証するタスクです。</returns>
     [Fact]
     public async Task LegacyNotificationsRemainAvailableForOlderPeers()
     {
@@ -161,8 +161,8 @@ public sealed class ResourceSelectionClockTests : IDisposable
         return new(options, new SqliteRepository(Path.Combine(files.Root, peer + ".db"))) { ReadinessCheck = _ => ValueTask.FromResult(true) };
     }
 
-    /// <summary>相互の参加確認後に資源比較を開始します。</summary>
-    /// <returns>通常の初回参加の完了です。</returns>
+    /// <summary>両Peerが互いをReadyと認識するまで待ちます。</summary>
+    /// <returns>両Peerの参加確認を表すタスクです。</returns>
     private static async Task ReadyAsync(PeerCluster first, PeerCluster second, CancellationToken cancellationToken = default)
     {
         while (first.GetPeers().Count(peer => peer.Status == EPeerStatus.Ready) != 2 || second.GetPeers().Count(peer => peer.Status == EPeerStatus.Ready) != 2)

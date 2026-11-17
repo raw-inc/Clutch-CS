@@ -17,10 +17,10 @@ internal sealed class ResourceSelectionClock : TimeProvider
     /// <summary>TimeSpanと同じ単位で経過時間を指定します。</summary>
     public override long TimestampFrequency => TimeSpan.TicksPerSecond;
 
-    /// <summary>時計の進みだけを変更し、実際の経過時間には加算しません。</summary>
+    /// <summary>UTC日時だけを変更し、PC間の時計差や時刻補正を再現します。</summary>
     internal void Adjust(TimeSpan offset) => now += offset;
 
-    /// <summary>試験中の実経過を進めます。</summary>
+    /// <summary>UTC日時と単調時計を同じ時間だけ進めます。</summary>
     internal void Advance(TimeSpan duration)
     {
         now += duration;

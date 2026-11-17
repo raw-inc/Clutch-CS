@@ -65,7 +65,7 @@ public sealed class ResourceSelectionExchange
         return snapshot;
     }
 
-    /// <summary>設定反映を通信待ちで止めず、最新観測の交換を3秒周期で独立して実行します。</summary>
+    /// <summary>他Peerへの照会が設定の反映を妨げないよう、計測値の交換を独立した3秒周期の処理で行います。</summary>
     /// <returns>停止要求までの交換処理です。</returns>
     public async Task RunAsync(CancellationToken cancellationToken = default)
     {
@@ -77,8 +77,8 @@ public sealed class ResourceSelectionExchange
         while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false));
     }
 
-    /// <summary>採取済みの比較値を一巡交換します。追加採取や永続化は行いません。</summary>
-    /// <returns>有限の照会と、旧版向け通知の送信です。</returns>
+    /// <summary>他Peerの最新の計測値を照会し、自分の計測値は旧版向けにも通知します。</summary>
+    /// <returns>計測値の送受信が一巡するまでの処理です。</returns>
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
         PeerInfo[] peers = cluster.GetPeers().ToArray();
@@ -113,8 +113,8 @@ public sealed class ResourceSelectionExchange
             new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = cancellationToken }, RefreshPeerAsync).ConfigureAwait(false);
     }
 
-    /// <summary>応答の採取元時刻を使い、往復の通信時間を差し引かず鮮度に含めます。</summary>
-    /// <returns>そのPeer実体の比較値の更新です。</returns>
+    /// <summary>採取から応答までの時間と、要求開始からの経過時間を使って、計測値の古さを評価します。</summary>
+    /// <returns>指定したPeerの計測値を照会し、検証して保存する処理です。</returns>
     private async ValueTask RefreshPeerAsync(PeerInfo peer, CancellationToken cancellationToken = default)
     {
         if (capabilities.TryGetValue(peer.InstanceId, out bool supported) && !supported)
@@ -154,7 +154,8 @@ public sealed class ResourceSelectionExchange
                 return;
             }
 
-            // 同じ標本の再照会では基準を取り直しません。応答待ちと収集停止の時間を保持します。
+            // 同じ標本でも、採取元の時刻補正によって採取からの経過時間が小さく計算されることがあります。
+            // 再照会で有効期間が延びないよう、同じ標本IDでは最初の観測と計測開始点を残します。
             ResourceSelectionObservation observation = new(SelectMetrics(sample), requestedAt, age);
             observations.AddOrUpdate(peer.PeerId, observation, (_, previous) =>
             {
@@ -167,11 +168,12 @@ public sealed class ResourceSelectionExchange
         }
         catch (Exception error) when (error is IOException or System.Net.Sockets.SocketException or JsonException or InvalidOperationException or ArgumentException)
         {
-            // 一度対応を確認した実体では旧通知へ戻しません。最後の標本が自然に期限切れになります。
+            // 照会に失敗しても、時計差を補正できない旧形式の通知には切り替えません。
+            // 最後に確認できた標本を保持し、通信時間も含めた経過時間が10秒を超えたら比較対象から外します。
         }
     }
 
-    /// <summary>通知元の識別と実体が観測と一致する場合だけ最新値を更新します。</summary>
+    /// <summary>新しい照会方式に未対応と確認できたPeerからだけ、旧形式の計測値を受け取ります。</summary>
     /// <returns>検証と最新値更新の完了。</returns>
     private Task ReceiveAsync(string peerId, Guid instance, NodeValue value, CancellationToken cancellationToken = default)
     {
