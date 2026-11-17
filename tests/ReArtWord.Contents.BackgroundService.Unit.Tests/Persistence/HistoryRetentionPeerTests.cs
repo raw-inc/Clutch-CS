@@ -51,12 +51,11 @@ public sealed class HistoryRetentionPeerTests
         HistoryTimeReference reference = new(source.InstanceId, DateTimeOffset.UtcNow.AddDays(-31), 0);
         await retention.ReceiveAsync(source.PeerId, source.InstanceId, NodeValue.FromObject(new { Sequence = 10L, Reference = reference }), watchdog.Token);
         Assert.True(await retention.ReadyAsync(watchdog.Token));
+
+        // Peer一覧を固定し、Peer自体の無通信判定と、通知だけの期限判定を分けて確認します。
+        await peer.Target.StopAsync(watchdog.Token);
+        Assert.Contains(peer.Target.GetPeers(), item => item.InstanceId == source.InstanceId && item.Status == EPeerStatus.Ready);
         time.Advance(TimeSpan.FromSeconds(6));
-        await peer.AnnounceAsync(await peer.Repository.GetSharedVersionAsync(watchdog.Token), cancellationToken: watchdog.Token);
-        while (!peer.Target.GetPeers().Any(item => item.InstanceId == source.InstanceId && item.Status == EPeerStatus.Ready && source.LastSeen != item.LastSeen))
-        {
-            await Task.Delay(10, watchdog.Token);
-        }
         await retention.ReceiveAsync(source.PeerId, source.InstanceId, NodeValue.FromObject(new { Sequence = 10L, Reference = reference }), watchdog.Token);
         Assert.False(await retention.ReadyAsync(watchdog.Token));
         await retention.ReceiveAsync(source.PeerId, Guid.NewGuid(), NodeValue.FromObject(new { Sequence = 11L, Reference = reference }), watchdog.Token);
