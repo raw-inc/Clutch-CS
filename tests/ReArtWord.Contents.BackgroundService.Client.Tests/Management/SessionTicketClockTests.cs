@@ -74,6 +74,11 @@ public sealed class SessionTicketClockTests : IDisposable
             {
                 value = NodeValue.FromObject(new { port, token = Convert.ToHexString(secret), expiresAt = DateTimeOffset.UtcNow.AddSeconds(offsetSeconds + 15) });
             }
+            else if (!string.Equals(command.Operation, transferKind, StringComparison.Ordinal))
+            {
+                // 実装していない新しい能力を、旧Coreの代役が対応済みと返さないようにします。
+                return Task.FromResult(new ManagementReply(EOutcome.NotExecuted, Reason: "Management.OperationMissing"));
+            }
             return Task.FromResult(new ManagementReply(EOutcome.Succeeded, value));
         }
         _ = new PeerManagementEndpoint(peer, HandleAsync, name => !string.Equals(name, operation, StringComparison.Ordinal), name => string.Equals(name, operation, StringComparison.Ordinal));
