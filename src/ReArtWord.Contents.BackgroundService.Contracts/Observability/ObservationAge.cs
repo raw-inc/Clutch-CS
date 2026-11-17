@@ -26,7 +26,15 @@ public readonly record struct ObservationAge
     }
 
     /// <summary>元の採取からの経過時間です。</summary>
-    public TimeSpan Elapsed => initial + (clock?.GetElapsedTime(started) ?? TimeSpan.Zero);
+    public TimeSpan Elapsed
+    {
+        get
+        {
+            TimeSpan elapsed = clock?.GetElapsedTime(started) ?? TimeSpan.Zero;
+            return TimeSpan.MaxValue - initial < elapsed ? TimeSpan.MaxValue
+                                                         : initial + elapsed;
+        }
+    }
 
     /// <summary>同じ計画の途中で標本の期限判定が変わらないよう、現在の古さを固定します。</summary>
     /// <returns>以降は時間が進まない、選択時点の値です。</returns>

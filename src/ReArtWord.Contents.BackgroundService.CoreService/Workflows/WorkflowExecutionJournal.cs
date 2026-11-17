@@ -10,8 +10,9 @@ using ReArtWord.Contents.BackgroundService.Runtime.Workflows.History;
 namespace ReArtWord.Contents.BackgroundService.CoreService.Workflows;
 
 /// <summary>ノードごとの同期記録を重ねず、確認したWF結果を有限の診断履歴として後から保存します。</summary>
-internal sealed class WorkflowExecutionJournal(IDurableRepository repository, string peerId, WorkflowEngine engine) : IDisposable
+internal sealed class WorkflowExecutionJournal(IDurableRepository repository, string peerId, WorkflowEngine engine, TimeProvider? timeProvider = null) : IDisposable
 {
+    private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
     private readonly SemaphoreSlim writes = new(1, 1);
     private readonly Lock gate = new();
     private readonly Dictionary<int, WorkflowHistoryRecord> records = [];
@@ -62,8 +63,8 @@ internal sealed class WorkflowExecutionJournal(IDurableRepository repository, st
 
             // 完了順で循環スロットから外れても、開始順の表示範囲に残る保存済みIDを再記録しません。
             persisted.IntersectWith(recent.Select(Identity));
-            ExecutionResultView[] pending = recent.OrderByDescending(view => WorkflowHistoryCodec.State(view).CompletedAt)
-                .Take(256).Where(view => !persisted.Contains(Identity(view))).Reverse().ToArray();
+            ExecutionResultView[] pending = recent.OrderByDescending(view => view.CompletionOrder).Take(256).Reverse()
+                .Where(view => !persisted.Contains(Identity(view))).ToArray();
             int batchSize = repository is ILocalSnapshotBatches ? 256
                                                                 : 1;
             foreach (ExecutionResultView[] batch in pending.Chunk(batchSize))
@@ -200,7 +201,10 @@ internal sealed class WorkflowExecutionJournal(IDurableRepository repository, st
         {
             foreach (WorkflowHistoryRecord result in restored)
             {
-                records[(int)(result.Sequence % 256)] = result;
+                records[(int)(result.Sequence % 256)] = result with { View = result.View with
+                {
+                    CompletionAge = new(clock), CompletionAgeIsLowerBound = true, CompletionOrder = null, CompletionAgeTicks = null, ObservationSequence = null
+                } };
                 persisted.Add(Identity(result.View));
                 sequence = Math.Max(sequence, result.Sequence);
             }
