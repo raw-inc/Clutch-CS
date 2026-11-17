@@ -24,6 +24,11 @@ internal sealed class SnapshotRequestDelivery(IDurableRepository repository,
                              : Ready(saved);
     }
 
+    /// <summary>初回に保存した本文の形式を照合します。配送の可否はPrepareAsyncで別途確認します。</summary>
+    /// <returns>受付時計の準備中も含む、変更しない元要求です。</returns>
+    internal async Task<ClusterRequest?> ReadOriginalAsync(string scope, Guid id, CancellationToken cancellationToken = default)
+        => (await LoadAsync(scope, id, cancellationToken).ConfigureAwait(false))?.Request;
+
     /// <summary>元要求と補助記録を照合し、準備中と準備済みを区別します。</summary>
     /// <returns>保存された要求と期限の版です。</returns>
     private async Task<SavedRequest?> LoadAsync(string scope, Guid id, CancellationToken cancellationToken = default)

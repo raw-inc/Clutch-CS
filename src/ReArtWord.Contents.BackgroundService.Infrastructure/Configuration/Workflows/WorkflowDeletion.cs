@@ -35,6 +35,7 @@ internal sealed class WorkflowDeletion(WorkflowStore store, IDurableRepository r
     /// <returns>削除の段階結果です。結果不明は同じ操作IDで照会します。</returns>
     internal async Task<WorkflowDeleteResult> DeleteAsync(WorkflowDeleteRequest request, bool allowed, CancellationToken cancellationToken = default)
     {
+        using DerivedIdentityScope identities = new(EDerivedIdFormat.Uuid8);
         ArgumentNullException.ThrowIfNull(request);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.WorkflowId);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.ExpectedRevision);

@@ -119,6 +119,7 @@ public sealed class FileTransactionService : IFileTransactionDispatcher, IDispos
                 members = [local];
             }
             FileTransactionOperation operation = new(ContractJson.Hash(request), request, members, cluster.LocalPeerId, cluster.LocalInstanceId, null, new FileTransactionResult(request.OperationId, EOutcome.Unknown, request.Targets.Select(Empty).ToArray(), "File.InProgress"));
+            operation = operation with { IdentityFormat = EDerivedIdFormat.Uuid8 };
             await journal.BeginAsync(operation, cancellationToken).ConfigureAwait(false);
             return await RunAsync(operation, false, cancellationToken).ConfigureAwait(false);
         }
@@ -163,6 +164,7 @@ public sealed class FileTransactionService : IFileTransactionDispatcher, IDispos
     /// <returns>確認済みの段階結果。</returns>
     private async Task<FileTransactionResult> RunAsync(FileTransactionOperation operation, bool recover, CancellationToken cancellationToken = default)
     {
+        using DerivedIdentityScope identities = new(operation.IdentityFormat);
         try
         {
             if (!MembersRemain(operation.Members) || operation.Request.Targets.Count == 0 || operation.Request.Targets.Select(target => target.Id).Distinct().Count() != operation.Request.Targets.Count)

@@ -55,6 +55,7 @@ internal sealed class DetachedNodeStateStore(IDurableRepository repository, Peer
         {
             return new(false, State(current, old?.Pending == true), EOutcome.Failed, "State.VersionConflict", true);
         }
+        using DerivedIdentityScope identities = new(EDerivedIdFormat.Uuid8);
         Guid id = Guid.NewGuid();
         DurableEntry updated = new(scope, key, id.ToString("N"), value?.Copy(), baseline?.Version);
         DurableReceipt saved = await repository.ApplyBatchAsync(WorkflowStore.PhaseId(id, "detached.state.save"),

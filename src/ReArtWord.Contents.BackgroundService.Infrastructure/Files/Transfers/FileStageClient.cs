@@ -63,5 +63,6 @@ internal sealed class FileStageClient(PeerCluster cluster, IDurableRepository re
 
     /// <summary>段階の一件識別子を元の実行IDから固定します。</summary>
     /// <returns>元操作と段階に固有のID。</returns>
-    public static Guid Identity(Guid id, string phase) => new(Convert.FromHexString(ContractJson.Hash(new { id, phase })).AsSpan(0, 16));
+    public static Guid Identity(Guid id, string phase)
+        => DerivedOperationIdentity.FromHash(Convert.FromHexString(ContractJson.Hash(new { id, phase })), DerivedIdentityScope.Current);
 }

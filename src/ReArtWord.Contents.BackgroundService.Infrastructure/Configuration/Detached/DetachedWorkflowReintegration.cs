@@ -74,6 +74,7 @@ internal sealed class DetachedWorkflowReintegration(IDurableRepository repositor
     /// <returns>競合か、通常保存の段階結果です。</returns>
     internal async Task<WorkflowMergeResult> ResolveAsync(DetachedWorkflowResolution request, CancellationToken cancellationToken = default)
     {
+        using DerivedIdentityScope identities = new(EDerivedIdFormat.Uuid8);
         ArgumentNullException.ThrowIfNull(request);
         request = ContractJson.Copy(request);
         string kind = "detached.resolve";

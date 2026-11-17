@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
@@ -69,10 +70,11 @@ public sealed class ClusterStopService
         {
             return Empty(request.OperationId, EOutcome.NotExecuted, "ClusterStop.MembershipUnconfirmed");
         }
+        using DerivedIdentityScope identities = new(EDerivedIdFormat.Uuid8);
         Guid clearId = Identity(request.OperationId, "clear");
         ClusterRequest[] commands = targets.Select(target => ClusterRequest.Start(Identity(request.OperationId, target.PeerId), Kind, target.PeerId, target.InstanceId,
             TimeSpan.FromMinutes(2), NodeValue.FromObject(new StopCommand(request.OperationId, clearId)))).ToArray();
-        operation = new(request, members, commands);
+        operation = new(request, members, commands) { IdentityFormat = EDerivedIdFormat.Uuid8 };
         DurableReceipt journal = await cluster.ReplicateFixedAsync(Identity(request.OperationId, "journal"), [new DurableMutation(Scope, key, null, NodeValue.FromObject(operation))], members, cancellationToken).ConfigureAwait(false);
         if (journal.Outcome != EOutcome.Succeeded)
         {
@@ -112,6 +114,7 @@ public sealed class ClusterStopService
             return null;
         }
         StopOperation operation = journal.Value.Json.Deserialize<StopOperation>(ContractJson.Options)!;
+        using DerivedIdentityScope identities = new(operation.IdentityFormat);
         List<TraceStopTargetResult> results = [];
         foreach (ClusterRequest command in operation.Commands)
         {
@@ -144,6 +147,7 @@ public sealed class ClusterStopService
         StopCommand command = request.Payload.Json.Deserialize<StopCommand>(ContractJson.Options) ?? throw new InvalidDataException("停止要求が不正です。");
         DurableEntry? journal = await repository.ReadAsync(Scope, command.OperationId.ToString("N"), cancellationToken).ConfigureAwait(false);
         StopOperation? operation = journal?.Value?.Json.Deserialize<StopOperation>(ContractJson.Options);
+        using DerivedIdentityScope identities = new(operation?.IdentityFormat ?? EDerivedIdFormat.Legacy);
         Guid expectedClear = Identity(command.OperationId, "clear");
         if (command.ClearOperationId != expectedClear || operation is null
             || !operation.Commands.Any(saved => string.Equals(ContractJson.Hash(saved), ContractJson.Hash(request), StringComparison.Ordinal)))
@@ -177,14 +181,22 @@ public sealed class ClusterStopService
 
     /// <summary>段階ごとに元操作から一定の識別子を作ります。</summary>
     /// <returns>段階識別子です。</returns>
-    private static Guid Identity(Guid id, string phase) => new(Convert.FromHexString(ContractJson.Hash(new { id, phase })).AsSpan(0, 16));
+    private static Guid Identity(Guid id, string phase) => DerivedOperationIdentity.FromHash(Convert.FromHexString(ContractJson.Hash(new { id, phase })), DerivedIdentityScope.Current);
 
     /// <summary>副作用を実施していない結果です。</summary>
     /// <returns>対象未処理の結果です。</returns>
     private static TraceClusterStopResult Empty(Guid id, EOutcome outcome, string reason) => new(id, outcome, EOutcome.NotExecuted, [], reason);
 
     /// <summary>停止対象と要求期限を初回から変えない操作記録です。</summary>
-    private sealed record StopOperation(TraceClusterStopRequest Request, IReadOnlyList<PeerInfo> Members, IReadOnlyList<ClusterRequest> Commands);
+    private sealed record StopOperation(TraceClusterStopRequest Request, IReadOnlyList<PeerInfo> Members, IReadOnlyList<ClusterRequest> Commands)
+    {
+        /// <summary>保存済みの要求を照会するときも、初回と同じ解除IDを参照します。</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public EDerivedIdFormat IdentityFormat
+        {
+            get; init;
+        }
+    }
 
     /// <summary>追跡解除の確認元を指す停止要求です。</summary>
     private sealed record StopCommand(Guid OperationId, Guid ClearOperationId);
