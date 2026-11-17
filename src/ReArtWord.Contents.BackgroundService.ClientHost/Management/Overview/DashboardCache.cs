@@ -21,6 +21,7 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
 {
     private readonly Func<IReadOnlyList<DiscoveredCluster>> discover;
     private readonly Func<ManagementCommand, CancellationToken, Task<JsonElement?>> inspect;
+    private readonly TimeProvider clock;
     private readonly ConcurrentDictionary<(string Cluster, string Peer, Guid Instance), DashboardPeerSnapshot> snapshots = new();
     private readonly ConcurrentDictionary<(string Cluster, string Peer, Guid Instance), DateTimeOffset> legacyUntil = new();
     private readonly DashboardHostStore? hosts;
@@ -38,10 +39,11 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
     }
 
     /// <summary>発見と読取りの通信境界を指定します。</summary>
-    internal DashboardCache(Func<IReadOnlyList<DiscoveredCluster>> discover, Func<ManagementCommand, CancellationToken, Task<JsonElement?>> inspect)
+    internal DashboardCache(Func<IReadOnlyList<DiscoveredCluster>> discover, Func<ManagementCommand, CancellationToken, Task<JsonElement?>> inspect, TimeProvider? timeProvider = null)
     {
         this.discover = discover;
         this.inspect = inspect;
+        clock = timeProvider ?? TimeProvider.System;
     }
 
     /// <summary>発見中の同じ実体だけを返し、古い状態をReadyの証明にしません。</summary>
@@ -54,7 +56,7 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
         {
             return null;
         }
-        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset now = clock.GetUtcNow();
         if (snapshot.CheckedAt is null || now < snapshot.CheckedAt || TimeSpan.FromSeconds(15) < now - snapshot.CheckedAt)
         {
             snapshot = snapshot with { Status = null, Health = null, Problem = "The latest read is unconfirmed" };
@@ -115,7 +117,7 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
         {
             interval = TimeSpan.FromSeconds(10);
         }
-        using PeriodicTimer timer = new(interval);
+        using PeriodicTimer timer = new(interval, clock);
         do
         {
             (string Cluster, PeerInfo Peer)[] targets = discover()
@@ -161,25 +163,30 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
         if (details)
         {
             Task<JsonElement?> executions = InspectAsync(cluster, peer, "executions.list", new ExecutionHistoryQuery(100, MaximumBytes: 65536), cancellationToken);
-            Task<JsonElement?> logs = InspectAsync(cluster, peer, "logs.query", new LogQuery(From: DateTimeOffset.UtcNow.AddMinutes(-15), Limit: 8, MaximumBytes: 32768), cancellationToken);
+            Task<JsonElement?> logs = InspectAsync(cluster, peer, "logs.query", new LogQuery(From: clock.GetUtcNow().AddMinutes(-15), Limit: 8, MaximumBytes: 32768), cancellationToken);
             await Task.WhenAll(executions, logs).ConfigureAwait(false);
             ExecutionHistoryPage? history = Deserialize<ExecutionHistoryPage>(await executions.ConfigureAwait(false));
             ExecutionHistoryPage? completions = await ReadActivityAsync(cluster, peer, cancellationToken).ConfigureAwait(false) ?? history;
             LogQueryResult? recent = Deserialize<LogQueryResult>(await logs.ConfigureAwait(false));
-            snapshots.AddOrUpdate(key, empty with { Executions = DashboardHistory.Activity(null, completions, DateTimeOffset.UtcNow), Logs = recent, NodeExecutions = DashboardHistory.NodeResults(null, history, peer.PeerId, DateTimeOffset.UtcNow) },
-                (_, previous) => previous with { Executions = DashboardHistory.Activity(previous.Executions, completions, DateTimeOffset.UtcNow), Logs = recent, NodeExecutions = DashboardHistory.NodeResults(previous.NodeExecutions, history, peer.PeerId, DateTimeOffset.UtcNow) });
+            snapshots.AddOrUpdate(key, empty with { Executions = DashboardHistory.Activity(null, completions, clock.GetUtcNow()), Logs = recent, NodeExecutions = DashboardHistory.NodeResults(null, history, peer.PeerId, clock.GetUtcNow()) },
+                (_, previous) => previous with { Executions = DashboardHistory.Activity(previous.Executions, completions, clock.GetUtcNow()), Logs = recent, NodeExecutions = DashboardHistory.NodeResults(previous.NodeExecutions, history, peer.PeerId, clock.GetUtcNow()) });
             return;
         }
-        (JsonElement? health, JsonElement? status, JsonElement? resource) = await ReadCurrentAsync(cluster, peer, cancellationToken).ConfigureAwait(false);
+        DateTimeOffset requestStartedAt = clock.GetUtcNow();
+        (JsonElement? health, JsonElement? status, JsonElement? resource, DateTimeOffset? sourceNow) = await ReadCurrentAsync(cluster, peer, cancellationToken).ConfigureAwait(false);
         JsonElement? confirmedHealth = Validate(health, cluster, peer);
         JsonElement? confirmedStatus = Validate(status, cluster, peer);
         ResourceSample? sample = Deserialize<ResourceSample>(resource);
+        if (sample is not null && sourceNow is { } observedAt)
+        {
+            sample = DashboardSampleHistory.Rebase(sample, observedAt, requestStartedAt);
+        }
         ResourceSample[] incoming = [];
         if (sample?.InstanceId == peer.InstanceId && string.Equals(sample.PeerId, peer.PeerId, StringComparison.Ordinal))
         {
             incoming = [DashboardSampleHistory.Project(sample)];
         }
-        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset now = clock.GetUtcNow();
         snapshots.AddOrUpdate(key, _ => Updated(empty), (_, previous) => Updated(previous));
 
         DashboardPeerSnapshot Updated(DashboardPeerSnapshot previous) => previous with
@@ -201,7 +208,7 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
     {
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(2));
-        DateTimeOffset from = DateTimeOffset.UtcNow.AddMinutes(-1);
+        DateTimeOffset from = clock.GetUtcNow().AddMinutes(-1);
         List<ExecutionResultView> entries = [];
         string? cursor = null;
         do
@@ -235,10 +242,10 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
     /// <returns>確認した応答だけです。失敗した応答を成功へ置き換えません。</returns>
     // 抑制理由: 開始した照会TaskはWhenAllで完了を確認し、待機ハンドルを作成しません。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW141", Justification = "所有する全照会TaskをWhenAllでawaitします。")]
-    private async Task<(JsonElement? Health, JsonElement? Status, JsonElement? Resource)> ReadCurrentAsync(string cluster, PeerInfo peer, CancellationToken cancellationToken = default)
+    private async Task<(JsonElement? Health, JsonElement? Status, JsonElement? Resource, DateTimeOffset? SourceNow)> ReadCurrentAsync(string cluster, PeerInfo peer, CancellationToken cancellationToken = default)
     {
         (string, string, Guid) key = (cluster, peer.PeerId, peer.InstanceId);
-        if (!legacyUntil.TryGetValue(key, out DateTimeOffset next) || next <= DateTimeOffset.UtcNow)
+        if (!legacyUntil.TryGetValue(key, out DateTimeOffset next) || next <= clock.GetUtcNow())
         {
             JsonElement? bundle = await InspectAsync(cluster, peer, "dashboard.current", null, cancellationToken).ConfigureAwait(false);
             string healthKey = "health", statusKey = "status", resourceKey = "resource";
@@ -246,15 +253,25 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
                 && current.TryGetProperty(statusKey, out JsonElement status) && current.TryGetProperty(resourceKey, out JsonElement resource))
             {
                 legacyUntil.TryRemove(key, out _);
-                return (health, status, resource);
+                DateTimeOffset? sourceNow = null;
+                string observedAtKey = "observedAt";
+                if (current.TryGetProperty(observedAtKey, out JsonElement timestamp))
+                {
+                    if (timestamp.ValueKind != JsonValueKind.String || !timestamp.TryGetDateTimeOffset(out DateTimeOffset observedAt))
+                    {
+                        return (health, status, null, null);
+                    }
+                    sourceNow = observedAt;
+                }
+                return (health, status, resource, sourceNow);
             }
-            legacyUntil[key] = DateTimeOffset.UtcNow.AddMinutes(1);
+            legacyUntil[key] = clock.GetUtcNow().AddMinutes(1);
         }
         Task<JsonElement?> healthRead = InspectAsync(cluster, peer, "health", null, cancellationToken);
         Task<JsonElement?> statusRead = InspectAsync(cluster, peer, "status", null, cancellationToken);
         Task<JsonElement?> resourceRead = InspectAsync(cluster, peer, "resources.latest", new ResourceSampleQuery(Summary: true), cancellationToken);
         await Task.WhenAll(healthRead, statusRead, resourceRead).ConfigureAwait(false);
-        return (await healthRead.ConfigureAwait(false), await statusRead.ConfigureAwait(false), await resourceRead.ConfigureAwait(false));
+        return (await healthRead.ConfigureAwait(false), await statusRead.ConfigureAwait(false), await resourceRead.ConfigureAwait(false), null);
     }
 
     /// <summary>照会ごとの期限と障害境界を設け、他の成功した照会を破棄しません。</summary>
@@ -267,7 +284,7 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
         {
             NodeValue? body = payload is null ? null
                                               : NodeValue.FromJson(JsonSerializer.SerializeToElement(payload, ContractJson.Options));
-            return await inspect(new(Guid.NewGuid(), cluster, peer.PeerId, peer.InstanceId, DateTimeOffset.UtcNow.AddSeconds(2), operation, body), timeout.Token).ConfigureAwait(false);
+            return await inspect(new(Guid.NewGuid(), cluster, peer.PeerId, peer.InstanceId, clock.GetUtcNow().AddSeconds(2), operation, body), timeout.Token).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or OperationCanceledException or JsonException)
         {

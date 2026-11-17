@@ -1,7 +1,6 @@
 // Own the series and its offset together so a render never paints a new path with an old origin.
 const charts = new Map();
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-const epoch = Date.now() - performance.now();
 let frame;
 let lastDraw = -Infinity;
 
@@ -33,8 +32,8 @@ function resizeShadow(chart, state)
 /** 対象の配置位置を計算して反映します。 */
 function position(state, now)
 {
-    // A peer clock can lead this browser. A signed offset keeps existing points fixed at a rebase.
-    const seconds = (0) < (state.origin) && !reducedMotion.matches ? (epoch + now - state.origin) / 1000 : 0;
+    // Use the same ClientHost clock as the samples; subsequent frames use monotonic elapsed time.
+    const seconds = (0) < (state.origin) && !reducedMotion.matches ? (state.epoch + now - state.origin) / 1000 : 0;
     state.series.setAttribute("transform", `translate(${-seconds} 0)`);
 }
 
@@ -101,7 +100,7 @@ function shadowGeometry(path, depth, bottom)
 }
 
 /** 現在の設定と状態から表示を更新します。 */
-export function update(chart, path, origin)
+export function update(chart, path, origin, serverNow)
 {
     if (!chart?.isConnected)
     {
@@ -119,6 +118,7 @@ export function update(chart, path, origin)
         state.resize.observe(chart);
         resizeShadow(chart, state);
     }
+    state.epoch = Number(serverNow) - performance.now();
     state.origin = Number(origin) || 0;
     if (state.path !== path)
     {

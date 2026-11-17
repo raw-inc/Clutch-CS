@@ -189,7 +189,7 @@ public sealed partial class OverviewHostCard
 
     /// <summary>同一PCの実測を過去値として扱うべきか確認します。</summary>
     /// <returns>指定した条件を満たすかどうかです。</returns>
-    private bool Previous(OverviewPeer item) => IsPrevious?.Invoke(item) ?? (item.Problem is not null || DashboardMetrics.IsStale(item.Latest, DateTimeOffset.UtcNow));
+    private bool Previous(OverviewPeer item) => IsPrevious?.Invoke(item) ?? (item.Problem is not null || DashboardMetrics.IsStale(item.Latest, Api.UtcNow));
 
     /// <summary>未計測を区別した使用率の表示を作ります。</summary>
     /// <returns>小数点以下1桁の使用率、未計測ならダッシュです。</returns>
