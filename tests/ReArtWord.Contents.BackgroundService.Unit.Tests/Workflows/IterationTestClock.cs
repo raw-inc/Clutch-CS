@@ -7,6 +7,7 @@ internal sealed class IterationTestClock : TimeProvider
     private readonly List<ClockTimer> timers = [];
     private readonly DateTimeOffset origin = DateTimeOffset.UtcNow;
     private long ticks;
+    private long utcAdjustment;
 
     /// <summary>経過時間をTimeSpanと同じ単位で表します。</summary>
     public override long TimestampFrequency => TimeSpan.TicksPerSecond;
@@ -29,7 +30,10 @@ internal sealed class IterationTestClock : TimeProvider
 
     /// <summary>実行要求の受付期限にも同じ経過時間を使用します。</summary>
     /// <returns>試験内のUTC時刻です。</returns>
-    public override DateTimeOffset GetUtcNow() => origin.AddTicks(GetTimestamp());
+    public override DateTimeOffset GetUtcNow() => origin.AddTicks(GetTimestamp()).AddTicks(Interlocked.Read(ref utcAdjustment));
+
+    /// <summary>タイマーを進めずにOSの日時補正だけを再現します。</summary>
+    internal void Adjust(TimeSpan amount) => Interlocked.Add(ref utcAdjustment, amount.Ticks);
 
     /// <summary>Task.Delayが登録した待ち時間を、時刻を進めたときだけ通知します。</summary>
     /// <returns>取消可能な試験タイマーです。</returns>
