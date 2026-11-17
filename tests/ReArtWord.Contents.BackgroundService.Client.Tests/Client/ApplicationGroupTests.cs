@@ -62,7 +62,7 @@ public sealed class ApplicationGroupTests
         {
             Assert.Equal("cluster", Assert.Single(request.Headers.GetValues("X-Contents-Cluster")));
             Assert.Equal("peer", Assert.Single(request.Headers.GetValues("X-Contents-Peer")));
-            string commandPath = "/api/process-groups/command";
+            string commandPath = "/api/v2/process-groups/command";
             object value;
             if (string.Equals(request.RequestUri!.AbsolutePath, commandPath, StringComparison.Ordinal))
             {

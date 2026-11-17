@@ -37,7 +37,7 @@ export async function mutateHostFileAsync(ctx, peer, operation, path)
     const request = { id, causationId: id, workflowId: '$file-transfer', revision: 'file-transfer-v1',
         node: { id: operation, type: operation, settings }, inputs: {}, targetPeerId: peer.peerId, targetInstanceId: peer.instanceId,
         expiresAt: admission.expiresAt };
-    const result = await ctx.api('/api/nodes/execute-clocked', peer, { request, timing: admission.timing }, ctx.signal);
+    const result = await ctx.api('/api/v2/nodes/execute-clocked', peer, { request, timing: admission.timing }, ctx.signal);
     const succeeded = 'succeeded';
     if (result?.outcome !== succeeded)
     {

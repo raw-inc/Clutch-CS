@@ -63,7 +63,7 @@ internal sealed class ManualSafetyRouter(PeerCluster cluster, IDurableRepository
                 return Result(change, EOutcome.NotExecuted, "safety.coordinatorUnavailable");
             }
             command = ClusterRequest.Start(change.OperationId, "safety.change", owner.PeerId, owner.InstanceId, TimeSpan.FromMinutes(5), NodeValue.FromObject(change));
-            DurableReceipt saved = await repository.ApplyBatchAsync(Identity(change.OperationId, "route"), [new DurableMutation(scope, key, null, NodeValue.FromObject(command))], cancellationToken).ConfigureAwait(false);
+            DurableReceipt saved = await repository.ApplyBatchAsync(Identity(change.OperationId, "route", EDerivedIdFormat.Uuid8), [new DurableMutation(scope, key, null, NodeValue.FromObject(command))], cancellationToken).ConfigureAwait(false);
             if (saved.Outcome != EOutcome.Succeeded)
             {
                 return Result(change, EOutcome.Unknown, "safety.routeUnconfirmed");
@@ -101,7 +101,8 @@ internal sealed class ManualSafetyRouter(PeerCluster cluster, IDurableRepository
 
     /// <summary>元操作と用途だけから一定のローカル処理IDを作ります。</summary>
     /// <returns>用途別の一定IDです。</returns>
-    internal static Guid Identity(Guid operationId, string purpose) => new(Convert.FromHexString(ContractJson.Hash(new { operationId, purpose })).AsSpan(0, 16));
+    internal static Guid Identity(Guid operationId, string purpose, EDerivedIdFormat format = EDerivedIdFormat.Legacy)
+        => DerivedOperationIdentity.FromHash(Convert.FromHexString(ContractJson.Hash(new { operationId, purpose })), format);
 
     /// <summary>取得不能を実施済みへ丸めません。</summary>
     /// <returns>元要求を識別する結果です。</returns>

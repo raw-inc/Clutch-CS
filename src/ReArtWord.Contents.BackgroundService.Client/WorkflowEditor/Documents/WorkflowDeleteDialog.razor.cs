@@ -99,7 +99,7 @@ public sealed partial class WorkflowDeleteDialog
             {
                 submitted = true;
                 Guid operation = Guid.NewGuid();
-                JsonElement response = await Journal.StartAsync(operation, Ui["Delete workflow"], "/api/workflows/delete", "/api/workflows/deletions/" + operation,
+                JsonElement response = await Journal.StartAsync(operation, Ui["Delete workflow"], "/api/v2/workflows/delete", "/api/workflows/deletions/" + operation,
                     new WorkflowDeleteRequest(operation, id, revision), cancellationToken: cancellationToken).ConfigureAwait(true);
                 result = response.Deserialize<WorkflowDeleteResult>(ContractJson.Options);
                 if (result?.Deleted.Outcome != EOutcome.Succeeded)

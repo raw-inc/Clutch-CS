@@ -19,6 +19,7 @@ internal sealed class ConfigurationOperationJournal(IDurableRepository repositor
     internal async Task<ConfigurationPhaseResult> ActivateAsync(ActivationRequest request, Func<ActivationRequest, CancellationToken, Task<ConfigurationPhaseResult>> apply,
         CancellationToken cancellationToken = default)
     {
+        using DerivedIdentityScope identities = new(EDerivedIdFormat.Uuid8);
         string kind = "workflow-activate";
         try
         {
@@ -67,14 +68,17 @@ internal sealed class ConfigurationOperationJournal(IDurableRepository repositor
     public async Task<ConfigurationOperation?> ReadAsync(string kind, Guid id, CancellationToken cancellationToken = default)
     {
         DurableEntry? entry = await repository.ReadAsync("cluster:configuration-operations:" + kind, id.ToString("N"), cancellationToken).ConfigureAwait(false);
-        return entry?.Value?.Json.Deserialize<ConfigurationOperation>();
+        ConfigurationOperation? operation = entry?.Value?.Json.Deserialize<ConfigurationOperation>();
+        return operation is null ? null
+                                 : ConfigurationIdentityContext.Read(operation);
     }
 
     /// <summary>一度だけ操作開始と固定条件を保存します。</summary>
     /// <returns>開始記録を作成できたか。</returns>
     public async Task<bool> BeginAsync<T>(string kind, Guid id, T request, JsonElement? context = null, CancellationToken cancellationToken = default)
     {
-        ConfigurationOperation operation = new(ContractJson.Hash(request), DateTimeOffset.UtcNow, context, null);
+        ConfigurationOperation operation = new(ContractJson.Hash(request), DateTimeOffset.UtcNow,
+            ConfigurationIdentityContext.Write(context, DerivedIdentityScope.Current), null);
         DurableReceipt receipt = await repository.ApplyBatchAsync(WorkflowStore.PhaseId(id, kind + ".begin"), [new DurableMutation("cluster:configuration-operations:" + kind, id.ToString("N"), null, NodeValue.FromObject(operation))], cancellationToken).ConfigureAwait(false);
         return receipt.Outcome == EOutcome.Succeeded;
     }

@@ -128,7 +128,7 @@ function hostPanel(root, ctx, host, signal)
         resultStatus.textContent = ctx.t('powerSchedule.saving');
         try
         {
-            const result = await ctx.api('power-schedules/save', { operationId: crypto.randomUUID(), clusterId: expected.clusterId, hostId: expected.hostId,
+            const result = await ctx.api('power-schedules/save', { identityFormat: 'uuid8', operationId: crypto.randomUUID(), clusterId: expected.clusterId, hostId: expected.hostId,
                 expectedRevision: expected.revision, schedules }, signal);
             const succeeded = 'succeeded';
             if (result.outcome !== succeeded || !result.view)

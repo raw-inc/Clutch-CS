@@ -22,7 +22,7 @@ public sealed partial class Dashboard
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "UIコールバックの呼出し署名を維持し、取消可能なI/Oには画面が所有するトークンを渡します。")]
     private Task DetachAsync() => GuardAsync(async () =>
     {
-        result = await Api.PostAsync<JsonElement>("/api/cluster/detach", new
+        result = await Api.PostAsync<JsonElement>("/api/v2/cluster/detach", new
         {
         }, cancellationToken: lifetime.Token).ConfigureAwait(true);
         message = "Detachment requested. The peer remains outside normal cluster targets until rejoined.";
@@ -35,7 +35,7 @@ public sealed partial class Dashboard
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "UIコールバックの呼出し署名を維持し、取消可能なI/Oには画面が所有するトークンを渡します。")]
     private Task RejoinAsync() => GuardAsync(async () =>
     {
-        result = await Api.PostAsync<JsonElement>("/api/cluster/rejoin", new
+        result = await Api.PostAsync<JsonElement>("/api/v2/cluster/rejoin", new
         {
         }, cancellationToken: lifetime.Token).ConfigureAwait(true);
         message = "Rejoin requested. Synchronization and readiness are confirmed separately.";
@@ -54,7 +54,7 @@ public sealed partial class Dashboard
         }
 
         WorkflowRunRequest? request = new WorkflowRunRequest(Guid.NewGuid(), item.Id!, item.EffectiveRevision);
-        await Journal.StartAsync(request.OperationId, Ui["Manual run"], "/api/runs", "/api/runs/" + request.OperationId, request, cancellationToken: lifetime.Token).ConfigureAwait(true);
+        await Journal.StartAsync(request.OperationId, Ui["Manual run"], "/api/v2/runs", "/api/runs/" + request.OperationId, request, cancellationToken: lifetime.Token).ConfigureAwait(true);
         message = Ui.Format("Accepted {0}: {1}", request.OperationId, OperationJournal.Outcome(Journal.LastResult));
     });
 
@@ -71,7 +71,7 @@ public sealed partial class Dashboard
             return;
         }
         ActivationRequest? request = new ActivationRequest(Guid.NewGuid(), item.Id!, item.SavedRevision, true, activationImpact.Token);
-        result = await Api.PostAsync<JsonElement>("/api/workflows/activate", request, cancellationToken: lifetime.Token).ConfigureAwait(true);
+        result = await Api.PostAsync<JsonElement>("/api/v2/workflows/activate", request, cancellationToken: lifetime.Token).ConfigureAwait(true);
         activation = null;
         await RefreshAsync().ConfigureAwait(true);
     });
@@ -86,7 +86,7 @@ public sealed partial class Dashboard
         {
             return;
         }
-        NodeResult? value = await Api.PostAsync<NodeResult>("/api/sources/stop", new SourceStopRequest(source.WorkflowId, source.NodeId, cancel, source.Id, source.PeerInstanceId), cancellationToken: lifetime.Token).ConfigureAwait(true);
+        NodeResult? value = await Api.PostAsync<NodeResult>("/api/v2/sources/stop", new SourceStopRequest(source.WorkflowId, source.NodeId, cancel, source.Id, source.PeerInstanceId), cancellationToken: lifetime.Token).ConfigureAwait(true);
         result = JsonSerializer.SerializeToElement(value, ContractJson.Options);
         message = Ui.Format("{0}: {1}", cancel ? Ui["Cancel accepted work too"]
                                                : Ui["Stop intake"], value?.Outcome);
@@ -114,7 +114,7 @@ public sealed partial class Dashboard
     {
         try
         {
-            await Api.PutAsync<JsonElement>("/api/secrets", new SecretChangeRequest(secretName, secretValue), cancellationToken: lifetime.Token).ConfigureAwait(true);
+            await Api.PutAsync<JsonElement>("/api/v2/secrets", new SecretChangeRequest(secretName, secretValue), cancellationToken: lifetime.Token).ConfigureAwait(true);
             message = "Secret persistence confirmed.";
         }
         finally

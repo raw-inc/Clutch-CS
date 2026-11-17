@@ -89,6 +89,7 @@ internal sealed class SnapshotEditorArbitration
         {
             return new ConfigurationPhaseResult(EOutcome.NotExecuted, "Snapshot.EditorPeerUnavailable");
         }
+        using DerivedIdentityScope identities = new(request.Request.IdentityFormat);
         Guid id = WorkflowStore.PhaseId(request.Request.OperationId, "draft:" + ContractJson.Hash(request));
         ClusterRequest command = ClusterRequest.Start(id, "snapshot.editor.resolve", peer.PeerId, peer.InstanceId, TimeSpan.FromMinutes(5), NodeValue.FromObject(request));
         string scope = "peer:" + cluster.LocalPeerId + ":snapshot-draft-requests";

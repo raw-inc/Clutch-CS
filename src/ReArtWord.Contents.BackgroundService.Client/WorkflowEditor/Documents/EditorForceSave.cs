@@ -99,7 +99,7 @@ internal sealed class EditorForceSave(EditorDocument model, ManagementApi api, B
         EnsureCurrent(preview);
         OperationId = operation;
         WorkflowSaveRequest request = new(operation, preview.Draft.Document, preview.Saved?.Revision, activation);
-        JsonElement response = await journal.StartAsync(operation, "Force save workflow", "/api/workflows/save", "/api/workflows/operations/" + operation,
+        JsonElement response = await journal.StartAsync(operation, "Force save workflow", "/api/v2/workflows/save", "/api/workflows/operations/" + operation,
             request, targetPeer: preview.Peer, targetCluster: preview.Cluster, cancellationToken: cancellationToken).ConfigureAwait(false);
         return Accept(response);
     }

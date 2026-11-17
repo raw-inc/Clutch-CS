@@ -176,6 +176,7 @@ public sealed class WorkflowStore
     /// <returns>段階結果。</returns>
     private async Task<WorkflowSaveResult> SaveTrackedAsync(WorkflowSaveRequest request, CancellationToken cancellationToken = default)
     {
+        using DerivedIdentityScope identities = new(EDerivedIdFormat.Uuid8);
         if (IsRestoreLocked?.Invoke(request.Definition.Id) == true)
         {
             return UnknownSave(request.OperationId, EOutcome.NotExecuted, "Workflow.RestoreLocked");
@@ -359,7 +360,7 @@ public sealed class WorkflowStore
 
     /// <summary>論理操作から各段階の一定IDを作ります。</summary>
     /// <returns>段階別操作ID。</returns>
-    internal static Guid PhaseId(Guid operationId, string phase) => new(Convert.FromHexString(ContractJson.Hash(new { operationId, phase })).AsSpan(0, 16));
+    internal static Guid PhaseId(Guid operationId, string phase, EDerivedIdFormat? format = null) => DerivedOperationIdentity.FromHash(Convert.FromHexString(ContractJson.Hash(new { operationId, phase })), format ?? DerivedIdentityScope.Current);
 
     /// <summary>確認できない段階を成功へ丸めず返します。</summary>
     /// <returns>同じ非成功状態を明示した結果。</returns>
@@ -368,5 +369,4 @@ public sealed class WorkflowStore
         ConfigurationPhaseResult phase = new(outcome, reason);
         return new WorkflowSaveResult(operationId, null, [], phase, phase, phase, phase);
     }
-
 }

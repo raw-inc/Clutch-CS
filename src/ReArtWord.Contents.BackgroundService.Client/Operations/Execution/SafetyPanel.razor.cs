@@ -178,7 +178,7 @@ public sealed partial class SafetyPanel
     private async Task ApplyAsync(ManualSafetyChange request)
     {
         lastOperation = request.OperationId;
-        result = await Api.PostAsync<JsonElement>("/api/safety", request, cancellationToken: UiCancellation).ConfigureAwait(true);
+        result = await Api.PostAsync<JsonElement>("/api/v2/safety", request, cancellationToken: UiCancellation).ConfigureAwait(true);
         if (result is JsonElement value && value.ValueKind == JsonValueKind.Object && value.TryGetProperty(MatchOperationId, out JsonElement identity) && identity.GetGuid() != request.OperationId)
         {
             result = null;

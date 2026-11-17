@@ -176,7 +176,7 @@ public sealed partial class ScriptRuntimePicker
         problem = null;
         try
         {
-            ScriptRuntimeCatalog? result = await Api.PostForPeerAsync<ScriptRuntimeCatalog>("/api/scripts/runtimes/change",
+            ScriptRuntimeCatalog? result = await Api.PostForPeerAsync<ScriptRuntimeCatalog>("/api/v2/scripts/runtimes/change",
                 new ScriptRuntimeChange(Language, path, setDefault, catalog.Revision), PeerId, ClusterId, cancellationToken: cancellationToken).ConfigureAwait(true);
             if (ComponentDisposed || !string.Equals(identity, captured, StringComparison.Ordinal))
             {

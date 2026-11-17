@@ -27,7 +27,7 @@ internal sealed class WakeHostDispatch(ObserverConnection connection, WakeHostCa
         {
             throw new ArgumentException("wake.invalidRequest", nameof(request));
         }
-        Guid commandId = ClientCommandLedger.Identity(request.OperationId, Operation);
+        Guid commandId = ClientCommandLedger.Identity(request.OperationId, Operation, request.IdentityFormat);
         bool submitted = false;
         try
         {
@@ -66,8 +66,8 @@ internal sealed class WakeHostDispatch(ObserverConnection connection, WakeHostCa
                 return new(request.OperationId, EOutcome.NotExecuted, 0, 0, "wake.noRelay");
             }
             HostWakeRequest payload = new(request.OperationId, request.HostId, macs);
-            ManagementCommand command = await ledger.PrepareTimedAsync(commandId, selected.Cluster, selected.Peer.PeerId, Operation,
-                NodeValue.FromObject(payload), selected.Peer, observer.PrepareClockAsync, cancellationToken).ConfigureAwait(false);
+            ManagementCommand command = await ledger.PrepareDerivedTimedAsync(request.OperationId, request.IdentityFormat, selected.Cluster, selected.Peer.PeerId, Operation,
+                NodeValue.FromObject(payload), selected.Peer, observer.PrepareClockAsync, cancellationToken: cancellationToken).ConfigureAwait(false);
             submitted = true;
             ManagementReply reply = await observer.ExecuteAsync(command, cancellationToken).ConfigureAwait(false);
             return Result(request.OperationId, reply);

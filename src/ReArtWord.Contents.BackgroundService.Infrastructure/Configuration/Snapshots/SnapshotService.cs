@@ -134,6 +134,7 @@ public sealed class SnapshotService
     private async Task<SnapshotRestoreResult> RestoreJournaledAsync(SnapshotRestoreRequest request, bool recover, CancellationToken cancellationToken = default)
     {
         ConfigurationOperation? operation = await journal.ReadAsync("restore", request.OperationId, cancellationToken).ConfigureAwait(false);
+        using DerivedIdentityScope identities = new(operation?.IdentityFormat ?? EDerivedIdFormat.Uuid8);
         if (recover && operation is null)
         {
             return new SnapshotRestoreResult(request.OperationId, EOutcome.NotExecuted, [], "Snapshot.OriginalOperationMissing");

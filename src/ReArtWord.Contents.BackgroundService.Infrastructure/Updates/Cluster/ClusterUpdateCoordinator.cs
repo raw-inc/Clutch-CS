@@ -59,7 +59,7 @@ public sealed class ClusterUpdateCoordinator
             return old;
         }
         List<UpdatePeerResult> peers = [];
-        ClusterUpdateStatus status = new(owned, EOutcome.Unknown, false, peers.ToArray());
+        ClusterUpdateStatus status = new(owned, EOutcome.Unknown, false, peers.ToArray()) { IdentityFormat = EDerivedIdFormat.Uuid8 };
         await SaveAsync(status, true, cancellationToken).ConfigureAwait(false);
         Dictionary<string, ClusterUpdateRequest> selections = new(StringComparer.Ordinal);
         try

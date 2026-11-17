@@ -182,7 +182,7 @@ public sealed partial class RetentionDialog
             {
                 Retention = retention, RollingTime = rollingTime, TimeZoneId = timeZone
             }, applyExisting, expand, OperationId: id, ExpectedRevision: shared?.Configuration.Saved?.Revision, DataRetention: data);
-            JsonElement response = await Journal.StartAsync(id, "Save shared log retention", "/api/logs/retention", "/api/configuration/operations/" + id,
+            JsonElement response = await Journal.StartAsync(id, "Save shared log retention", "/api/v2/logs/retention", "/api/configuration/operations/" + id,
                 request, cancellationToken: UiCancellation).ConfigureAwait(true);
             ClusterOperationalSaveResult? result = response.Deserialize<ClusterOperationalSaveResult>(ContractJson.Options);
             message = Ui.Deferred("Saved {0} / shared {1} / snapshot {2} / applied {3}", result?.Saved.Outcome, result?.Shared.Outcome, result?.Snapshot.Outcome, result?.Activation.Outcome);

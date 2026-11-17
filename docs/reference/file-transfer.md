@@ -91,7 +91,7 @@ networksFile = "transfer-networks.json"
 
 ノードが終了した際は、失敗・取消の場合も自身の予約を解放します。外部AIの結果不明とローカルのファイルアクセス完了は別々に保持し、ローカル終了を確認できた生成処理は予約を解放します。解放の応答を失った場合も、所有ピアが終了確認済みの記録だけを参照して回収します。元の実行や生成要求は再実行しません。
 
-旧版で残った予約などは、元CoreService実体が既に終了しており、対象ファイルへのアクセス終了を運用者が確認できた場合に限り、所有ピアへ `POST /api/files/reservations/release` を送って明示解放できます。本文は `id`（元の予約ID）、`expectedOwnerInstanceId`（元のCoreService実体ID）、`fileAccessEndedConfirmed: true` です。
+旧版で残った予約などは、元CoreService実体が既に終了しており、対象ファイルへのアクセス終了を運用者が確認できた場合に限り、所有ピアへ `POST /api/v2/files/reservations/release` を送って明示解放できます。本文は `id`（元の予約ID）、`expectedOwnerInstanceId`（元のCoreService実体ID）、`fileAccessEndedConfirmed: true` です。
 
 通常の管理操作と同じ接続先ヘッダーと一回分の `X-Contents-Request` を使用します。元実体が現在の実体と同じ、所有者が異なる、復旧記録がない場合は解放しません。元の結果不明を成功へ書き換えず、保持中の別処理の予約や実ファイルの内容にも触れません。
 

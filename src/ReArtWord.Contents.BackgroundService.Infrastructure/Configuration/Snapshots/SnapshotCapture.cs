@@ -17,6 +17,8 @@ namespace ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Snap
 /// <summary>取得操作の一回性と保存結果を保管します。</summary>
 internal sealed class SnapshotCapture(IDurableRepository repository, PeerCluster cluster)
 {
+    private readonly SnapshotRequestSender sender = new(repository, cluster);
+
     /// <summary>実際に開始した取得操作と確認できた結果の通知先。</summary>
     internal IWorkflowEvents? Events
     {
@@ -39,6 +41,7 @@ internal sealed class SnapshotCapture(IDurableRepository repository, PeerCluster
     /// <returns>実取得と共有保存の結果。</returns>
     public async Task<SnapshotCaptureResult> CaptureAsync(Guid operationId, SnapshotTarget target, bool permanent, CancellationToken cancellationToken = default)
     {
+        using DerivedIdentityScope identities = new(EDerivedIdFormat.Uuid8);
         ArgumentNullException.ThrowIfNull(target);
         target = ContractJson.Copy(target);
         object identity = target;
@@ -70,7 +73,6 @@ internal sealed class SnapshotCapture(IDurableRepository repository, PeerCluster
         {
             return new SnapshotCaptureResult(new ConfigurationPhaseResult(EOutcome.Unknown, "Snapshot.StartUnconfirmed"), null);
         }
-        SnapshotRequestSender sender = new(repository, cluster);
         await WorkflowEventBoundary.PublishAsync(Events, new WorkflowEvent(WorkflowStore.PhaseId(operationId, "hook.capture.started"), "snapshot.capture.started", DateTimeOffset.UtcNow,
             cluster.LocalPeerId, ContractJson.ToValue(new { operationId, target }), CausationId: operationId), CancellationToken.None).ConfigureAwait(false);
         ClusterResponse response = await sender.SendAsync(kind, kind, operationId, target, peer, null, cancellationToken).ConfigureAwait(false);

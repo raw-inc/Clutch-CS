@@ -27,7 +27,16 @@ public sealed class BrowserCommandHttpTests
     /// <summary>HostとCoreの時計差があっても、初回操作を実行し、同じ要求の再送では重ねて実行しません。</summary>
     /// <returns>実台帳と通信経路を通した一回の処理結果です。</returns>
     [Fact]
-    public async Task PreparedNodeCommandKeepsItsDeadlineAcrossHttpReplayAsync()
+    public Task PreparedNodeCommandKeepsItsDeadlineAcrossHttpReplayAsync() => VerifyReplayAsync(EDerivedIdFormat.Legacy);
+
+    /// <summary>新しいURLはUUIDv8を使い、保存した受付期限・本文・対象を再送でも維持します。</summary>
+    /// <returns>新形式の実HTTP・UDP経路を通した重複実行防止です。</returns>
+    [Fact]
+    public Task VersionedNodeCommandKeepsItsOpaqueIdAcrossHttpReplayAsync() => VerifyReplayAsync(EDerivedIdFormat.Uuid8);
+
+    /// <summary>旧URLと新URLをそれぞれ使い、同じ元要求が一回だけ実行されることを確認します。</summary>
+    /// <returns>選択した方式での通信と台帳の検証です。</returns>
+    private static async Task VerifyReplayAsync(EDerivedIdFormat format)
     {
         DirectoryInfo directory = Directory.CreateTempSubdirectory("clutch-browser-http-");
         try
@@ -84,14 +93,20 @@ public sealed class BrowserCommandHttpTests
                 RemoteExecutionRequest request = new(id, id, "manual", "r", new("node", "test", JsonSerializer.SerializeToElement(new { })),
                     new Dictionary<string, NodeValue>(), peer.LocalPeerId, peer.LocalInstanceId, sample.ObservedAt.AddMinutes(5));
                 ClockedNodeCommand command = new(request, new(sample.InstanceId, sample.ElapsedTicks + TimeSpan.FromMinutes(5).Ticks, sample.ObservedAt));
+                string path = "/api/nodes/execute-clocked";
+                if (format == EDerivedIdFormat.Uuid8)
+                {
+                    path = "/api/v2/nodes/execute-clocked";
+                }
                 for (int index = 0; index < 2; index++)
                 {
-                    using HttpResponseMessage response = await client.PostAsJsonAsync("/api/nodes/execute-clocked", command, ContractJson.Options, timeout.Token).ConfigureAwait(true);
+                    using HttpResponseMessage response = await client.PostAsJsonAsync(path, command, ContractJson.Options, timeout.Token).ConfigureAwait(true);
                     Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                    Assert.Equal(ClientCommandLedger.Identity(id, "nodes.execute", format).ToString("D"), response.Headers.GetValues("X-Contents-Command").Single());
                     host.Adjust(4);
                 }
                 Assert.Equal(1, effects);
-                ClientCommandRecord recorded = (await ledger.ReadAsync(ClientCommandLedger.Identity(id, "nodes.execute"), timeout.Token).ConfigureAwait(true))!;
+                ClientCommandRecord recorded = (await ledger.ReadAsync(ClientCommandLedger.Identity(id, "nodes.execute", format), timeout.Token).ConfigureAwait(true))!;
                 Assert.Equal(request.ExpiresAt, recorded.ExpiresAt);
             }
             finally

@@ -31,7 +31,7 @@ internal sealed class WfDashboardActions(ManagementApi api, OperationJournal jou
             inputs = new Dictionary<string, NodeValue>(StringComparer.Ordinal) { ["trigger"] = NodeValue.FromObject(true) };
         }
         WorkflowRunRequest request = new(Guid.NewGuid(), state.Reference.WorkflowId, state.Revision, state.Reference.NodeId, inputs);
-        JsonElement response = await journal.StartAsync(request.OperationId, "WFDashboard button", "/api/runs", "/api/runs/" + request.OperationId,
+        JsonElement response = await journal.StartAsync(request.OperationId, "WFDashboard button", "/api/v2/runs", "/api/runs/" + request.OperationId,
             request, targetPeer: peer, targetCluster: cluster, cancellationToken: cancellationToken).ConfigureAwait(true);
         return response.Deserialize<WorkflowRunStatus>(ContractJson.Options) ?? throw UiError.InvalidOperation("The control response could not be confirmed. Check operation history before trying again.");
     }
@@ -59,7 +59,7 @@ internal sealed class WfDashboardActions(ManagementApi api, OperationJournal jou
         {
             throw UiError.InvalidOperation("The source workflow changed. Nothing was saved.");
         }
-        JsonElement response = await journal.StartAsync(edit.OperationId, "WFDashboard Value", "/api/workflows/save", "/api/workflows/operations/" + edit.OperationId,
+        JsonElement response = await journal.StartAsync(edit.OperationId, "WFDashboard Value", "/api/v2/workflows/save", "/api/workflows/operations/" + edit.OperationId,
             prepared.Request, targetPeer: peer, targetCluster: cluster, cancellationToken: cancellationToken).ConfigureAwait(true);
         return response.Deserialize<WorkflowSaveResult>(ContractJson.Options) ?? throw UiError.InvalidOperation("The save response could not be confirmed. Check operation history before trying again.");
     }

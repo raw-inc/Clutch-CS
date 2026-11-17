@@ -94,7 +94,7 @@ public sealed partial class WorkflowEditorPage
                     }
 
                     WorkflowMergeRequest? request = new WorkflowMergeRequest(id, draft.BaseRevision, definition, resolutions ?? new Dictionary<string, EEditResolution>(), activation);
-                    JsonElement response = await Journal.StartAsync(id, Ui["Resolve workflow save conflict"], "/api/workflows/merge", "/api/workflows/operations/" + id, request, cancellationToken: lifetime.Token).ConfigureAwait(true);
+                    JsonElement response = await Journal.StartAsync(id, Ui["Resolve workflow save conflict"], "/api/v2/workflows/merge", "/api/workflows/operations/" + id, request, cancellationToken: lifetime.Token).ConfigureAwait(true);
                     WorkflowMergeResult? merged = response.Deserialize<WorkflowMergeResult>(ContractJson.Options);
                     if (merged?.Conflicts.Count != 0)
                     {
@@ -110,7 +110,7 @@ public sealed partial class WorkflowEditorPage
                 else
                 {
                     WorkflowSaveRequest? request = new WorkflowSaveRequest(id, definition, draft.BaseRevision, activation);
-                    JsonElement response = await Journal.StartAsync(id, Ui["Save workflow"], "/api/workflows/save", "/api/workflows/operations/" + id, request, cancellationToken: lifetime.Token).ConfigureAwait(true);
+                    JsonElement response = await Journal.StartAsync(id, Ui["Save workflow"], "/api/v2/workflows/save", "/api/workflows/operations/" + id, request, cancellationToken: lifetime.Token).ConfigureAwait(true);
                     result = response.Deserialize<WorkflowSaveResult>(ContractJson.Options);
                 }
 
@@ -202,7 +202,7 @@ public sealed partial class WorkflowEditorPage
         }
         WorkflowRunRequest? request = new WorkflowRunRequest(Guid.NewGuid(), workflow, revision, startNode, inputs);
         pendingRunCluster = cluster;
-        JsonElement response = await Journal.StartAsync(request.OperationId, Ui["Manual run"], "/api/runs", "/api/runs/" + request.OperationId, request, targetPeer: peer, targetCluster: cluster, cancellationToken: lifetime.Token).ConfigureAwait(true);
+        JsonElement response = await Journal.StartAsync(request.OperationId, Ui["Manual run"], "/api/v2/runs", "/api/runs/" + request.OperationId, request, targetPeer: peer, targetCluster: cluster, cancellationToken: lifetime.Token).ConfigureAwait(true);
         WorkflowRunStatus? result = response.Deserialize<WorkflowRunStatus>(ContractJson.Options);
         pendingRun = result?.Running == true ? Journal.Items.First(item => item.OperationId == request.OperationId)
                                              : null;
@@ -253,7 +253,7 @@ public sealed partial class WorkflowEditorPage
         {
             return;
         }
-        ConfigurationPhaseResult? result = await Api.PostAsync<ConfigurationPhaseResult>("/api/workflows/activate", new ActivationRequest(Guid.NewGuid(), Model.Draft.Document.Id, Model.Draft.BaseRevision!, true, activationImpact.Token), lifetime.Token).ConfigureAwait(true);
+        ConfigurationPhaseResult? result = await Api.PostAsync<ConfigurationPhaseResult>("/api/v2/workflows/activate", new ActivationRequest(Guid.NewGuid(), Model.Draft.Document.Id, Model.Draft.BaseRevision!, true, activationImpact.Token), lifetime.Token).ConfigureAwait(true);
         message = () => Ui.Format("Activation: {0} · {1}", Ui[result?.Outcome.ToString() ?? "Unconfirmed"], result?.Reason);
         activationOpen = false;
     }).ConfigureAwait(true);

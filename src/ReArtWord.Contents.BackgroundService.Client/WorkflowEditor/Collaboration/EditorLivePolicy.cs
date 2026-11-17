@@ -105,7 +105,7 @@ internal sealed class EditorLivePolicy(ManagementApi api, OperationJournal journ
             }
             Guid operation = Guid.NewGuid();
             ClusterOperationalSaveRequest request = new(operation, state.Saved.Settings with { LiveWorkflowUpdates = enabled }, state.Saved.Revision);
-            JsonElement reply = await journal.StartAsync(operation, "Save workflow editing policy", "/api/configuration/save", "/api/configuration/operations/" + operation,
+            JsonElement reply = await journal.StartAsync(operation, "Save workflow editing policy", "/api/v2/configuration/save", "/api/configuration/operations/" + operation,
                 request, targetPeer: targetPeer, targetCluster: targetCluster, cancellationToken: cancellationToken).ConfigureAwait(false);
             ClusterOperationalSaveResult? result = reply.Deserialize<ClusterOperationalSaveResult>(ContractJson.Options);
             State = await api.GetForPeerAsync<ClusterOperationalState>("/api/configuration", targetPeer, targetCluster, cancellationToken).ConfigureAwait(false);

@@ -30,6 +30,7 @@ internal sealed class SnapshotEndpoint
         cluster.RegisterHandler("snapshot.apply", ApplyAsync);
         cluster.RegisterHandler("snapshot.compare", CompareAsync);
         cluster.RegisterHandler("snapshot.release", ReleaseAsync);
+        cluster.RegisterInspection(SnapshotRequestSender.IdentityCapability, (_, _) => Task.FromResult(new ClusterResponse(EOutcome.Succeeded, NodeValue.FromObject(true))));
     }
 
     /// <summary>宣言した状態だけを復元可能にします。</summary>
@@ -227,6 +228,7 @@ internal sealed class SnapshotEndpoint
     private async Task<ClusterResponse> ApplyAsync(ClusterRequest request, CancellationToken cancellationToken = default)
     {
         SnapshotStep step = Read(request);
+        using DerivedIdentityScope identities = new(step.IdentityFormat);
         if (!locks.TryGetValue(step.Target, out Guid owner) || owner != step.OperationId || step.Value is null)
         {
             return new ClusterResponse(EOutcome.NotExecuted, Reason: "Snapshot.PreparationMissing");
@@ -310,7 +312,8 @@ internal sealed class SnapshotEndpoint
     /// <returns>検証した段階要求。</returns>
     private SnapshotStep Read(ClusterRequest request)
     {
-        SnapshotStep step = request.Payload.Json.Deserialize<SnapshotStep>() ?? throw new InvalidDataException("snapshot要求が不正です。");
+        (EDerivedIdFormat format, JsonElement payload) = DerivedIdentityPayload.Read(request.Payload.Json);
+        SnapshotStep step = (payload.Deserialize<SnapshotStep>() ?? throw new InvalidDataException("snapshot要求が不正です。")) with { IdentityFormat = format };
         if (!string.Equals(step.Target.PeerId, cluster.LocalPeerId, StringComparison.Ordinal))
         {
             throw new InvalidDataException("snapshot対象Peerが一致しません。");

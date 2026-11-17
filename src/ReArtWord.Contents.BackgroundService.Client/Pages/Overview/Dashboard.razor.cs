@@ -183,7 +183,7 @@ public sealed partial class Dashboard : IAsyncDisposable
         }
 
         WorkflowListPage? workflowPage = await Api.PostForPeerAsync<WorkflowListPage>("/api/workflows/query", new WorkflowListQuery(Cursor: workflowPageCursor), peer, cluster, cancellationToken: lifetime.Token).ConfigureAwait(true);
-        ExecutionHistoryPage? executionPage = await Api.PostForPeerAsync<ExecutionHistoryPage>("/api/executions/query", new ExecutionHistoryQuery(Cursor: executionPageCursor), peer, cluster, cancellationToken: lifetime.Token).ConfigureAwait(true);
+        ExecutionHistoryPage? executionPage = await Api.PostForPeerAsync<ExecutionHistoryPage>("/api/v2/executions/query", new ExecutionHistoryQuery(Cursor: executionPageCursor), peer, cluster, cancellationToken: lifetime.Token).ConfigureAwait(true);
         if (!SameTarget(cluster, peer) || Connection.Current?.InstanceId != instance)
         {
             return;
@@ -242,7 +242,7 @@ public sealed partial class Dashboard : IAsyncDisposable
 
         string? cluster = listCluster, peer = listPeer;
         executionPageCursor = executionCursor;
-        ExecutionHistoryPage? page = await Api.PostForPeerAsync<ExecutionHistoryPage>("/api/executions/query", new ExecutionHistoryQuery(Cursor: executionPageCursor), peer, cluster, cancellationToken: lifetime.Token).ConfigureAwait(true);
+        ExecutionHistoryPage? page = await Api.PostForPeerAsync<ExecutionHistoryPage>("/api/v2/executions/query", new ExecutionHistoryQuery(Cursor: executionPageCursor), peer, cluster, cancellationToken: lifetime.Token).ConfigureAwait(true);
         if (!SameTarget(cluster, peer))
         {
             return;

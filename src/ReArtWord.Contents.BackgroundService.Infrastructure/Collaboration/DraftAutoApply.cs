@@ -74,6 +74,10 @@ public sealed class DraftAutoApply(WorkflowStore workflows, CollaborationService
                 continue;
             }
             string fingerprint = ContractJson.Hash(new { draft.BaseRevision, draft.SessionVersion });
+            if (draft.AutoApplyOperationId is not null)
+            {
+                fingerprint = ContractJson.Hash(new { fingerprint, draft.AutoApplyOperationId });
+            }
             if (!candidates.TryGetValue(draft.WorkflowId, out Candidate? candidate) || !string.Equals(candidate.Fingerprint, fingerprint, StringComparison.Ordinal))
             {
                 candidates[draft.WorkflowId] = new(fingerprint, clock.GetUtcNow());
@@ -93,7 +97,7 @@ public sealed class DraftAutoApply(WorkflowStore workflows, CollaborationService
                 candidates.TryRemove(draft.WorkflowId, out _);
                 continue;
             }
-            Guid operation = WorkflowStore.PhaseId(Guid.Empty, "editor.live:" + draft.WorkflowId + ":" + fingerprint);
+            Guid operation = draft.AutoApplyOperationId ?? WorkflowStore.PhaseId(Guid.Empty, "editor.live:" + draft.WorkflowId + ":" + fingerprint);
             candidates[draft.WorkflowId] = candidate with { Attempted = true };
             WorkflowSaveResult? known = await workflows.GetSaveOperationAsync(operation, cancellationToken).ConfigureAwait(false);
             if (known is null)

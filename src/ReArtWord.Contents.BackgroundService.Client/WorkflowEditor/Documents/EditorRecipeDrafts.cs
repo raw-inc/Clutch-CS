@@ -113,7 +113,7 @@ internal sealed class EditorRecipeDrafts(EditorDocument model, BrowserStorage st
             {
                 throw UiError.InvalidOperation("Select a cluster and peer before saving.");
             }
-            WorkflowSaveResult? result = await api.PostForPeerAsync<WorkflowSaveResult>("/api/workflows/save", new WorkflowSaveRequest(operation, draft.Document, null), scope.Peer, scope.Cluster, cancellationToken: cancellationToken).ConfigureAwait(true);
+            WorkflowSaveResult? result = await api.PostForPeerAsync<WorkflowSaveResult>("/api/v2/workflows/save", new WorkflowSaveRequest(operation, draft.Document, null), scope.Peer, scope.Cluster, cancellationToken: cancellationToken).ConfigureAwait(true);
             Ensure(scope);
             if (result?.Saved.Outcome != EOutcome.Succeeded || result.Activation.Outcome != EOutcome.Succeeded)
             {

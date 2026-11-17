@@ -101,7 +101,7 @@ public sealed partial class TracePanel
 
         TraceStatus? current = state.States.FirstOrDefault(item => string.Equals(item.WorkflowId, workflow, StringComparison.Ordinal));
         TraceChange? request = new TraceChange(Guid.NewGuid(), workflow, enabled, current?.Version, new(inputs, outputs, raw, bytes));
-        await SendAsync(request.OperationId, "Change temporary tracing", "/api/trace", "/api/trace/operations/", request).ConfigureAwait(true);
+        await SendAsync(request.OperationId, "Change temporary tracing", "/api/v2/trace", "/api/trace/operations/", request).ConfigureAwait(true);
     }
 
     /// <summary>選択した対象の停止を要求し、元の操作結果を保持します。</summary>
@@ -117,7 +117,7 @@ public sealed partial class TracePanel
 
         TraceClusterStopRequest? request = new TraceClusterStopRequest(Guid.NewGuid(), state.Version, state.Targets);
         stopOpen = false;
-        await SendAsync(request.OperationId, "Request cluster stop", "/api/trace/cluster-stop", "/api/trace/cluster-stop/", request).ConfigureAwait(true);
+        await SendAsync(request.OperationId, "Request cluster stop", "/api/v2/trace/cluster-stop", "/api/trace/cluster-stop/", request).ConfigureAwait(true);
     }
 
     /// <summary>確認した対象の抑止解除を要求します。</summary>
@@ -132,7 +132,7 @@ public sealed partial class TracePanel
         }
 
         TraceStopReleaseRequest? request = new TraceStopReleaseRequest(Guid.NewGuid(), version);
-        await SendAsync(request.OperationId, "Release tracing restart hold", "/api/trace/cluster-stop/release", "/api/trace/operations/", request).ConfigureAwait(true);
+        await SendAsync(request.OperationId, "Release tracing restart hold", "/api/v2/trace/cluster-stop/release", "/api/trace/operations/", request).ConfigureAwait(true);
     }
 
     /// <summary>操作を記録してから管理先へ送信し、現時点の結果を保持します。</summary>

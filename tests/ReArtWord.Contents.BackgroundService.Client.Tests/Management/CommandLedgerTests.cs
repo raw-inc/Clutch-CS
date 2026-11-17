@@ -11,6 +11,45 @@ namespace ReArtWord.Contents.BackgroundService.Client.Tests.Management;
 /// <summary>クライアント再起動とPeer再起動を越える固定要求の保存境界を確認します。</summary>
 public sealed class CommandLedgerTests
 {
+    /// <summary>更新前の台帳を読み直しても、同じ元要求を別の生成方式で開始できません。</summary>
+    /// <returns>新旧両形式での固定ID・固定内容の復元と、方式変更の拒否です。</returns>
+    [Theory]
+    [InlineData(Contracts.Execution.EDerivedIdFormat.Legacy)]
+    [InlineData(Contracts.Execution.EDerivedIdFormat.Uuid8)]
+    public async Task RestartDoesNotReissueAnExistingSourceWithAnotherIdentityFormatAsync(Contracts.Execution.EDerivedIdFormat format)
+    {
+        DirectoryInfo directory = Directory.CreateTempSubdirectory("clutch-command-generation-");
+        try
+        {
+            Guid source = Guid.NewGuid();
+            PeerInfo peer = Peer();
+            Guid id = ClientCommandLedger.Identity(source, "secrets.set", format);
+            NodeValue body = NodeValue.FromObject("value");
+            ManagementCommand original;
+            using (ClientCommandLedger ledger = new(directory.FullName))
+            {
+                original = await ledger.PrepareTimedAsync(id, "cluster", peer.PeerId, "secrets.set", body, peer,
+                    (_, _) => Task.FromResult<Contracts.Execution.RequestClockStamp?>(null)).ConfigureAwait(true);
+            }
+            using ClientCommandLedger restarted = new(directory.FullName);
+            ManagementCommand restored = await restarted.PrepareDerivedTimedAsync(source, format, "cluster", peer.PeerId, "secrets.set", body, peer,
+                (_, _) => throw new InvalidOperationException("The original deadline must be reused.")).ConfigureAwait(true);
+            Assert.Equal(ContractJson.Hash(original), ContractJson.Hash(restored));
+            Contracts.Execution.EDerivedIdFormat other = Contracts.Execution.EDerivedIdFormat.Legacy;
+            if (format == other)
+            {
+                other = Contracts.Execution.EDerivedIdFormat.Uuid8;
+            }
+            await Assert.ThrowsAsync<InvalidDataException>(() => restarted.PrepareDerivedTimedAsync(source, other, "cluster", peer.PeerId, "secrets.set", body, peer,
+                (_, _) => throw new InvalidOperationException("A second request must not be prepared."))).ConfigureAwait(true);
+            Assert.Null(await restarted.ReadAsync(ClientCommandLedger.Identity(source, "secrets.set", other)).ConfigureAwait(true));
+        }
+        finally
+        {
+            directory.Delete(true);
+        }
+    }
+
     /// <summary>ClientHostを再起動しても、初回に換算した期限で再送されることを確認します。</summary>
     /// <returns>期限・対象・ハッシュの保持と、操作本文を保存しないことを検証するタスクです。</returns>
     [Fact]

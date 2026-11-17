@@ -58,7 +58,7 @@ internal sealed class ArchiveImporter(IDurableRepository repository, PeerCluster
             Members = members.Select(member => new { member.PeerId, member.InstanceId }) });
         ArchiveImportPreview preview = new(request.OperationId, confirmation, request.Mode, incoming.ClusterId, incoming.PeerId,
             incoming.CapturedAt, imported.Where(id => !current.Contains(id)).ToArray(), imported.Where(current.Contains).ToArray(), deleted, logs);
-        return new(preview, file, before, incoming, members);
+        return new(preview, file, before, incoming, members) { IdentityFormat = EDerivedIdFormat.Uuid8 };
     }
 
     /// <summary>事前確認後の変更がないことを確かめ、設定を一つのトランザクションで復元します。</summary>
@@ -66,6 +66,7 @@ internal sealed class ArchiveImporter(IDurableRepository repository, PeerCluster
     internal async Task<ArchiveOperationResult> ApplyAsync(ArchiveImportPlan plan, ArchiveWorkspace workspace,
         Func<ArchiveOperationResult, CancellationToken, Task> save, CancellationToken cancellationToken = default)
     {
+        using DerivedIdentityScope identities = new(plan.IdentityFormat);
         Guid id = plan.Preview.OperationId;
         ArchiveTransfer file = await workspace.VerifyAsync(id, cancellationToken).ConfigureAwait(false);
         if (!string.Equals(file.Sha256, plan.File.Sha256, StringComparison.Ordinal)
@@ -138,6 +139,7 @@ internal sealed class ArchiveImporter(IDurableRepository repository, PeerCluster
     /// <returns>再確認後の復元結果。</returns>
     internal async Task<ArchiveOperationResult> ReconcileAsync(ArchiveImportPlan plan, ArchiveOperationResult previous, CancellationToken cancellationToken = default)
     {
+        using DerivedIdentityScope identities = new(plan.IdentityFormat);
         Guid id = plan.Preview.OperationId;
         string protecting = "protecting";
         if (string.Equals(previous.Stage, protecting, StringComparison.Ordinal))

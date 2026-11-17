@@ -160,7 +160,7 @@ public sealed partial class SnapshotPanel
         foreach (SnapshotTarget? item in fixedTargets)
         {
             SnapshotCaptureRequest? request = new SnapshotCaptureRequest(Guid.CreateVersion7(), item, fixedPermanent);
-            await Journal.StartAsync(request.OperationId, "Capture selected snapshot scope", "/api/snapshots/capture", "/api/snapshots/captures/" + request.OperationId, request, cancellationToken: UiCancellation).ConfigureAwait(true);
+            await Journal.StartAsync(request.OperationId, "Capture selected snapshot scope", "/api/v2/snapshots/capture", "/api/snapshots/captures/" + request.OperationId, request, cancellationToken: UiCancellation).ConfigureAwait(true);
         }
 
         message = Ui.Deferred("Capture responses received for {0} targets. Check each operation’s actual result in history.", fixedTargets.Length);
@@ -174,7 +174,7 @@ public sealed partial class SnapshotPanel
     {
         SnapshotCaptureRequest? request = new SnapshotCaptureRequest(Guid.CreateVersion7(), Target(), permanent);
         captureOpen = false;
-        await Journal.StartAsync(request.OperationId, "Capture snapshot", "/api/snapshots/capture", "/api/snapshots/captures/" + request.OperationId, request, cancellationToken: UiCancellation).ConfigureAwait(true);
+        await Journal.StartAsync(request.OperationId, "Capture snapshot", "/api/v2/snapshots/capture", "/api/snapshots/captures/" + request.OperationId, request, cancellationToken: UiCancellation).ConfigureAwait(true);
         message = Ui.Deferred("Operation {0}: {1}", request.OperationId, OperationJournal.Outcome(Journal.LastResult));
     });
 
@@ -281,7 +281,7 @@ public sealed partial class SnapshotPanel
                                                                                                        : row.Choice;
             return new SnapshotSelection(row.Target, version, excluded);
         }).ToArray();
-        pendingRestore = new SnapshotRestoreRequest(Guid.NewGuid(), selections, point);
+        pendingRestore = new SnapshotRestoreRequest(Guid.NewGuid(), selections, point) { IdentityFormat = Contracts.Execution.EDerivedIdFormat.Uuid8 };
         restoreOpen = false;
         return Task.CompletedTask;
     });

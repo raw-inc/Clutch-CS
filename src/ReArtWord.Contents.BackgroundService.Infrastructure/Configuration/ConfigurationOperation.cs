@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Configuration;
 
@@ -7,4 +9,12 @@ namespace ReArtWord.Contents.BackgroundService.Infrastructure.Configuration;
 /// <param name="StartedAt">最初の開始時刻。</param>
 /// <param name="Context">固定参加集合等。</param>
 /// <param name="Result">完了結果。nullは未確認。</param>
-internal sealed record ConfigurationOperation(string Fingerprint, DateTimeOffset StartedAt, JsonElement? Context, JsonElement? Result);
+internal sealed record ConfigurationOperation(string Fingerprint, DateTimeOffset StartedAt, JsonElement? Context, JsonElement? Result)
+{
+    /// <summary>保存したContextの形式から読み取った生成方式です。旧操作はLegacyのまま回復します。</summary>
+    [JsonIgnore]
+    internal EDerivedIdFormat IdentityFormat
+    {
+        get; init;
+    }
+}

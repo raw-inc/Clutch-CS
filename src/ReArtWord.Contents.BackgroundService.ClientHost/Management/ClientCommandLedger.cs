@@ -28,36 +28,55 @@ internal sealed class ClientCommandLedger : IDisposable
 
     /// <summary>一つのドメイン操作IDを各管理段階の外側IDへ一意に対応させます。</summary>
     /// <returns>元IDと操作名で固定されたIDです。</returns>
-    public static Guid Identity(Guid id, string operation) => ManagementCommandIdentity.Create(id, operation);
+    public static Guid Identity(Guid id, string operation, EDerivedIdFormat format = EDerivedIdFormat.Legacy) => ManagementCommandIdentity.Create(id, operation, format);
+
+    /// <summary>元要求に固定した方式で受け付け、別方式で送信済みの同じ要求を新規実行にしません。</summary>
+    /// <returns>初回と同じ管理ID・対象・本文・期限を持つ要求です。</returns>
+    public Task<ManagementCommand> PrepareDerivedTimedAsync(Guid sourceId, EDerivedIdFormat format, string clusterId, string peerId,
+        string operation, NodeValue? payload, PeerInfo? peer, Func<ManagementCommand, CancellationToken, Task<RequestClockStamp?>> prepare,
+        RequestAdmission? initialAdmission = null, CancellationToken cancellationToken = default)
+    {
+        Guid id = Identity(sourceId, operation, format);
+        EDerivedIdFormat other = EDerivedIdFormat.Legacy;
+        if (format == EDerivedIdFormat.Legacy)
+        {
+            other = EDerivedIdFormat.Uuid8;
+        }
+        return PrepareCoreAsync(id, clusterId, peerId, operation, payload, peer, prepare, initialAdmission, Identity(sourceId, operation, other), cancellationToken);
+    }
 
     /// <summary>開始する実体を固定してから通信へ渡します。</summary>
     /// <returns>初回の実体と期限を維持する要求です。</returns>
     public Task<ManagementCommand> PrepareAsync(Guid id, string clusterId, string peerId, string operation, NodeValue? payload, PeerInfo? peer, CancellationToken cancellationToken = default)
-        => PrepareCoreAsync(id, clusterId, peerId, operation, payload, peer, null, null, cancellationToken);
+        => PrepareCoreAsync(id, clusterId, peerId, operation, payload, peer, null, null, null, cancellationToken);
 
     /// <summary>送信先と要求内容のハッシュを記録してからCoreの受付時計を照会し、換算した期限も保存してから送信に渡します。</summary>
     /// <returns>ClientHost再起動後も、初回と同じ送信先・本文・受付期限を使う要求です。</returns>
     public Task<ManagementCommand> PrepareTimedAsync(Guid id, string clusterId, string peerId, string operation, NodeValue? payload, PeerInfo? peer,
         Func<ManagementCommand, CancellationToken, Task<RequestClockStamp?>> prepare, CancellationToken cancellationToken = default)
-        => PrepareCoreAsync(id, clusterId, peerId, operation, payload, peer, prepare, null, cancellationToken);
+        => PrepareCoreAsync(id, clusterId, peerId, operation, payload, peer, prepare, null, null, cancellationToken);
 
     /// <summary>ブラウザー等で先に確定した受付期間を引き継ぎ、時計照会と保存にかかる時間も差し引きます。</summary>
     /// <returns>再送時は新たに受付期間を設けず、初回に保存した要求を復元します。</returns>
     public Task<ManagementCommand> PrepareTimedAsync(Guid id, string clusterId, string peerId, string operation, NodeValue? payload, PeerInfo? peer,
         Func<ManagementCommand, CancellationToken, Task<RequestClockStamp?>> prepare, RequestAdmission? initialAdmission, CancellationToken cancellationToken = default)
-        => PrepareCoreAsync(id, clusterId, peerId, operation, payload, peer, prepare, initialAdmission, cancellationToken);
+        => PrepareCoreAsync(id, clusterId, peerId, operation, payload, peer, prepare, initialAdmission, null, cancellationToken);
 
     /// <summary>初回の送信先Coreの実体ID、要求本文のハッシュ、受付期限を記録します。</summary>
     /// <returns>初回に確定した情報から構成した要求です。同じIDで対象や内容が変わった場合は例外にします。</returns>
     // 抑制理由: ファイル名は解析済みGuidのN形式と固定拡張子のみで構成し、入力文字列をパスへ連結しません。
     [SuppressMessage("Security", "CA3003", Justification = "信頼したstate directory配下でGuidの32桁16進表記だけをfile名に使用します。")]
     private async Task<ManagementCommand> PrepareCoreAsync(Guid id, string clusterId, string peerId, string operation, NodeValue? payload, PeerInfo? peer,
-        Func<ManagementCommand, CancellationToken, Task<RequestClockStamp?>>? prepare, RequestAdmission? initialAdmission, CancellationToken cancellationToken = default)
+        Func<ManagementCommand, CancellationToken, Task<RequestClockStamp?>>? prepare, RequestAdmission? initialAdmission, Guid? alternateId, CancellationToken cancellationToken = default)
     {
         await changes.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             ClientCommandRecord? previous = await ReadAsync(id, cancellationToken).ConfigureAwait(false);
+            if (alternateId is { } other && await ReadAsync(other, cancellationToken).ConfigureAwait(false) is not null)
+            {
+                throw new InvalidDataException("この元要求は別のID生成方式で受付済みです。最初に保存した操作記録を使用してください。");
+            }
             string hash = ContractJson.Hash(payload);
             if (previous is not null)
             {

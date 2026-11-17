@@ -64,8 +64,8 @@ internal sealed class DeviceRemote(ObserverConnection connection, ClientCommandL
         {
             (UdpObserver observer, PeerInfo peer) = Resolve(target, false);
             string operation = "host-manager.apply";
-            ManagementCommand command = await ledger.PrepareTimedAsync(ClientCommandLedger.Identity(change.Request.OperationId, operation),
-                target.ClusterId, target.PeerId, operation, NodeValue.FromObject(change.Request), peer, observer.PrepareClockAsync, cancellationToken).ConfigureAwait(false);
+            ManagementCommand command = await ledger.PrepareDerivedTimedAsync(change.Request.OperationId, change.IdentityFormat,
+                target.ClusterId, target.PeerId, operation, NodeValue.FromObject(change.Request), peer, observer.PrepareClockAsync, cancellationToken: cancellationToken).ConfigureAwait(false);
             sent = true;
             ManagementReply reply = await observer.ExecuteAsync(command, cancellationToken).ConfigureAwait(false);
             if (reply.Outcome == EOutcome.Succeeded && reply.Value is not null)
@@ -104,7 +104,7 @@ internal sealed class DeviceRemote(ObserverConnection connection, ClientCommandL
             {
                 return result;
             }
-            ClientCommandRecord? command = await ledger.ReadAsync(ClientCommandLedger.Identity(change.Request.OperationId, "host-manager.apply"), cancellationToken).ConfigureAwait(false);
+            ClientCommandRecord? command = await ledger.ReadAsync(ClientCommandLedger.Identity(change.Request.OperationId, "host-manager.apply", change.IdentityFormat), cancellationToken).ConfigureAwait(false);
             if (command is null)
             {
                 return null;

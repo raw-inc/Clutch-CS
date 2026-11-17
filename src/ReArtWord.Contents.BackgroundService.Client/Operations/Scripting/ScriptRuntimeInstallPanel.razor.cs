@@ -121,7 +121,7 @@ public sealed partial class ScriptRuntimeInstallPanel
         problem = null;
         try
         {
-            await Journal.StartAsync(id, "script-runtime", "/api/scripts/runtimes/install", "/api/scripts/runtimes/operations/" + id,
+            await Journal.StartAsync(id, "script-runtime", "/api/v2/scripts/runtimes/install", "/api/scripts/runtimes/operations/" + id,
                 new ScriptRuntimeInstallRequest(id, Language, version), targetPeer: PeerId, targetCluster: ClusterId, cancellationToken: cancellationToken).ConfigureAwait(true);
         }
         catch (Exception exception) when (exception is HttpRequestException or System.Text.Json.JsonException or InvalidOperationException or JSException or OperationCanceledException)
