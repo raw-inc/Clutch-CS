@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net.Http.Headers;
 using ReArtWord.Contents.BackgroundService.Contracts.Management;
+using ReArtWord.Contents.BackgroundService.Contracts.Observability;
 
 namespace ReArtWord.Contents.BackgroundService.Client.Services;
 
@@ -29,7 +30,16 @@ internal sealed class ServerClock(TimeProvider? provider = null)
     /// <returns>指定した起点からの経過時間です。</returns>
     internal TimeSpan ElapsedSince(long started) => clock.GetElapsedTime(started);
 
-    /// <summary>ClientHostの時刻軸で現在の観測年齢を判定します。</summary>
+    /// <summary>送信元での最終受信からの経過時間に通信待ちの上限を加え、以後は閲覧側の経過時間で管理します。</summary>
+    /// <returns>遅延した応答を受信時点で新鮮に戻さない年齢です。</returns>
+    internal ObservationAge ObserveAge(TimeSpan age, long requestStarted)
+    {
+        TimeSpan elapsed = ElapsedSince(requestStarted);
+        return new(clock, TimeSpan.MaxValue - age < elapsed ? TimeSpan.MaxValue
+                                                            : age + elapsed);
+    }
+
+    /// <summary>ClientHostの時刻軸で現在の最終受信からの経過時間を判定します。</summary>
     internal DateTimeOffset UtcNow
     {
         get
@@ -42,7 +52,7 @@ internal sealed class ServerClock(TimeProvider? provider = null)
         }
     }
 
-    /// <summary>古いキャッシュ応答では時計を巻き戻さず、通信待ち時間も観測年齢へ含めます。</summary>
+    /// <summary>古いキャッシュ応答では時計を巻き戻さず、通信待ち時間も最終受信からの経過時間へ含めます。</summary>
     internal void Observe(HttpResponseHeaders headers, long started, Guid requestId = default, long requestOrder = 0)
     {
         string format = "O";
