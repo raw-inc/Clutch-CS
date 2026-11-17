@@ -66,7 +66,7 @@ public sealed class UpdateObserver : IAsyncDisposable
     public async Task<ManagementReply> SendAsync(string peerId, Guid instanceId, string operation, NodeValue? payload, bool readOnly, CancellationToken cancellationToken = default)
     {
         await observer.StartAsync(cancellationToken).ConfigureAwait(false);
-        ManagementCommand command = new(Guid.NewGuid(), clusterId, peerId, instanceId, DateTimeOffset.UtcNow.AddMinutes(2), operation, payload);
+        ManagementCommand command = ManagementCommand.Start(Guid.NewGuid(), clusterId, peerId, instanceId, TimeSpan.FromMinutes(2), operation, payload);
         return await SendAsync(command, readOnly, cancellationToken).ConfigureAwait(false);
     }
 

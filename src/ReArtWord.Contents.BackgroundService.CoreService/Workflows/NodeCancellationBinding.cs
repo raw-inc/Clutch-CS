@@ -22,7 +22,7 @@ internal static class NodeCancellationBinding
             {
                 return new ClusterResponse(EOutcome.NotExecuted, Reason: "Execution.InvalidCancellation");
             }
-            bool accepted = await executor.RequestCancellationAsync(target.ExecutionId, target.StartBy, cancellation).ConfigureAwait(false);
+            bool accepted = await executor.RequestCancellationAsync(target.ExecutionId, target.StartBy, request.Admission, cancellation).ConfigureAwait(false);
             return new ClusterResponse(EOutcome.Succeeded, NodeValue.FromObject(accepted));
         });
         engine.NodeCancellationHandler = (original, cancellation) => SendAsync(cluster, original, cancellation);
@@ -32,10 +32,23 @@ internal static class NodeCancellationBinding
     /// <returns>取消を受け付けたと確認できた場合だけtrueです。</returns>
     private static async Task<bool> SendAsync(PeerCluster cluster, RemoteExecutionRequest original, CancellationToken cancellationToken = default)
     {
-        ClusterRequest request = new(Guid.NewGuid(), "node.cancel", original.TargetPeerId, original.TargetInstanceId,
-            DateTimeOffset.UtcNow.AddMinutes(1), NodeValue.FromObject(new NodeCancellationRequest(original.Id, original.ExpiresAt)));
+        ClusterRequest request = CreateRequest(original, DateTimeOffset.UtcNow);
         ClusterResponse response = await cluster.RequestAsync(request, cancellationToken).ConfigureAwait(false);
         return response.Outcome == EOutcome.Succeeded && response.Value?.Kind == EValueKind.Json
             && response.Value.Json.ValueKind == JsonValueKind.True;
+    }
+
+    /// <summary>元の実行要求の残り時間から、取消要求を送るPCの日時でStartByを作ります。</summary>
+    /// <returns>取消要求です。本文のStartByと外側のExpiresAtを同じPCの時刻系に揃え、受信側で残り時間を正しく換算できるようにします。</returns>
+    internal static ClusterRequest CreateRequest(RemoteExecutionRequest original, DateTimeOffset now)
+    {
+        DateTimeOffset startBy = original.ExpiresAt;
+        if (original.Admission is { } admission)
+        {
+            startBy = now + admission.Remaining;
+        }
+        return new(Guid.NewGuid(), "node.cancel", original.TargetPeerId, original.TargetInstanceId,
+            now.AddMinutes(1), NodeValue.FromObject(new NodeCancellationRequest(original.Id, startBy)))
+        { Admission = new(TimeProvider.System, TimeSpan.FromMinutes(1), now.AddMinutes(1), now) };
     }
 }

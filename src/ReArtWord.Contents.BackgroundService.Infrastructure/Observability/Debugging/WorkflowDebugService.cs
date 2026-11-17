@@ -257,7 +257,7 @@ public sealed class WorkflowDebugService
     /// <returns>配送確認または取得不能です。</returns>
     private Task<ClusterResponse> SendAsync(string kind, string peer, Guid instance, NodeValue value, bool read, CancellationToken cancellationToken = default)
     {
-        ClusterRequest request = new(Guid.CreateVersion7(), kind, peer, instance, DateTimeOffset.UtcNow.AddSeconds(15), value);
+        ClusterRequest request = ClusterRequest.Start(kind, peer, instance, TimeSpan.FromSeconds(15), value);
         return read ? cluster.InspectAsync(request, cancellationToken)
                     : cluster.RequestAsync(request, cancellationToken);
     }

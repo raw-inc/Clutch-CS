@@ -138,7 +138,12 @@ internal sealed class ScheduledTargetReadiness(IPeerDirectory peers, TimeProvide
                 {
                     return Reject(request, "schedule.hostChanged", "予定の実行先とは異なるPCになったため、別PCでは開始しません。");
                 }
-                return new(request with { TargetInstanceId = current.InstanceId, ExpiresAt = now + admissionLifetime });
+
+                // ここへ来る要求は未配送で、対象の復帰を待っていたものです。予定の許容遅延とは別に、
+                // 初回配送からの受付期間を確保します。IDの生成日時も同時に固定し、待機前のIDへ期限だけを継ぎ足しません。
+                RequestAdmission admission = RequestAdmission.Start(clock, admissionLifetime);
+                return new(request with { Id = Guid.CreateVersion7(admission.SourceNow), TargetInstanceId = current.InstanceId,
+                    ExpiresAt = admission.ExpiresAt, Admission = admission });
             }
             try
             {

@@ -90,7 +90,9 @@ public sealed class FileTransactionService : IFileTransactionDispatcher, IDispos
     public async Task<FileTransactionResult> ExecuteAsync(FileTransactionRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        IReadOnlyList<RemoteExecutionRequest> originalTargets = request.Targets;
         request = ContractJson.Copy(request);
+        request = request with { Targets = request.Targets.Select((target, index) => target with { Admission = originalTargets[index].Admission }).ToArray() };
         if (request.Targets.Select(target => target.Operational?.Revision).Distinct(StringComparer.Ordinal).Skip(1).Any())
         {
             return new FileTransactionResult(request.OperationId, EOutcome.NotExecuted, [], "File.OperationalVersionMismatch");

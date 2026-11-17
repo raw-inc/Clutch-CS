@@ -23,6 +23,38 @@ public sealed class ObserverTests : IDisposable
 {
     private readonly MediaTestFiles files = new();
 
+    /// <summary>Coreの時計がずれていても、管理操作の実行・同じ内容での再送・結果照会ができ、内容を変えた再送は拒否されることを確認します。</summary>
+    /// <returns>前後1時間の時計差を、実際のUDP通信で検証するタスクです。</returns>
+    [Theory]
+    [InlineData(-3600)]
+    [InlineData(3600)]
+    public async Task CommandsPreserveTheirIdentityAcrossClockOffsets(int offsetSeconds)
+    {
+        Cluster.RequestTestClock clock = new();
+        clock.AdvanceAndResume(TimeSpan.FromSeconds(offsetSeconds));
+        int port = Port(), effects = 0;
+        Task<ManagementReply> ExecuteAsync(ManagementCommand request, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            Assert.NotNull(request.Admission);
+            Assert.False(request.Admission.IsExpired);
+            Interlocked.Increment(ref effects);
+            return Task.FromResult(new ManagementReply(EOutcome.Succeeded, request.Payload));
+        }
+        await using PeerCluster peer = Peer(Options(Guid.NewGuid().ToString("N"), "one", port, true), Repository(), ExecuteAsync, clock);
+        await peer.StartAsync();
+        await using UdpObserver observer = Observer(port);
+        await observer.StartAsync();
+        await WaitAsync(() => observer.GetClusters().SelectMany(cluster => cluster.Peers).Any(found => found.InstanceId == peer.LocalInstanceId));
+        ManagementCommand original = Command(peer, "write", NodeValue.FromObject(42));
+        Assert.Equal(EOutcome.Succeeded, (await observer.ExecuteAsync(original)).Outcome);
+        Assert.Equal(EOutcome.Succeeded, (await observer.ExecuteAsync(original)).Outcome);
+        Assert.Equal(1, effects);
+        Assert.Equal(EOutcome.Succeeded, (await observer.QueryAsync(original)).Reply!.Outcome);
+        Assert.Equal("Execution.RequestMismatch", (await observer.ExecuteAsync(original with { Payload = NodeValue.FromObject(43) })).Reason);
+        Assert.Equal(1, effects);
+    }
+
     /// <summary>再起動後は秘密ペイロードなしの指紋照会で元の完了結果だけを取得します。</summary>
     /// <returns>別実体で副作用を再実行しない検証完了。</returns>
     [Fact]
@@ -303,9 +335,9 @@ public sealed class ObserverTests : IDisposable
 
     /// <summary>一つの管理handlerを持つCoreを作ります。</summary>
     /// <returns>通常参加条件付きPeerです。</returns>
-    private static PeerCluster Peer(ClusterOptions options, IDurableRepository repository, Func<ManagementCommand, CancellationToken, Task<ManagementReply>> handler)
+    private static PeerCluster Peer(ClusterOptions options, IDurableRepository repository, Func<ManagementCommand, CancellationToken, Task<ManagementReply>> handler, TimeProvider? clock = null)
     {
-        PeerCluster peer = new(options, repository) { ReadinessCheck = token => ValueTask.FromResult(true) };
+        PeerCluster peer = new(options, repository, clock) { ReadinessCheck = token => ValueTask.FromResult(true) };
         string status = "status";
         string presence = "presence";
         _ = new PeerManagementEndpoint(peer, handler, operation => string.Equals(operation, status, StringComparison.Ordinal), operation => string.Equals(operation, presence, StringComparison.Ordinal));

@@ -6,6 +6,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Files.Transfers;
 using ReArtWord.Contents.BackgroundService.Contracts.Management;
 using ReArtWord.Contents.BackgroundService.CoreService.Management;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Files;
+using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 using ReArtWord.Contents.BackgroundService.Runtime.Networking;
 
 namespace ReArtWord.Contents.BackgroundService.CoreService.Files.Transfers;
@@ -16,12 +17,14 @@ internal sealed class FileTransferSession : IAsyncDisposable
     private readonly TcpListener listener;
     private readonly CancellationTokenSource lifetime = new();
     private readonly byte[] secret = RandomNumberGenerator.GetBytes(32);
+    private readonly RequestAdmissionClock? admissionClock;
 
     /// <summary>既存管理経路から許可された接続だけを期限付きで受け付けます。</summary>
     // 抑制理由: 開始taskはCompletionへ所有権を渡し、serviceとDisposeAsyncで回収します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW511", Justification = "開始taskをCompletionで所有し必ずawaitします。")]
-    internal FileTransferSession(LocalNetworkBinding binding, FileTransferPeer target, ManagementRegistry registry)
+    internal FileTransferSession(LocalNetworkBinding binding, FileTransferPeer target, ManagementRegistry registry, RequestAdmissionClock? admissionClock = null)
     {
+        this.admissionClock = admissionClock;
         listener = new(binding.Resolve(), 0);
         bool started = false;
         try
@@ -54,6 +57,9 @@ internal sealed class FileTransferSession : IAsyncDisposable
         get;
     }
 
+    /// <summary>この接続が換算済みの受付期限を扱う形式かどうかです。同じ接続IDで通信形式を切り替えることはできません。</summary>
+    internal bool ClockAware => admissionClock is not null;
+
     /// <summary>ファイル本文の操作を直列に実行し、任意の管理操作や確定の迂回を拒否します。</summary>
     /// <returns>接続の終了です。</returns>
     private async Task RunAsync(LocalNetworkBinding binding, FileTransferPeer target, ManagementRegistry registry, CancellationToken cancellationToken = default)
@@ -77,19 +83,29 @@ internal sealed class FileTransferSession : IAsyncDisposable
             while (!network.Token.IsCancellationRequested)
             {
                 timeout.CancelAfter(TimeSpan.FromMinutes(2));
-                ManagementCommand command = await FileTransferWire.ReadAsync<ManagementCommand>(stream, timeout.Token).ConfigureAwait(false);
-                if (command.RequestId == Guid.Empty || command.TargetInstanceId != target.InstanceId || command.ExpiresAt <= DateTimeOffset.UtcNow
+                ManagementCommand command;
+                if (admissionClock is null)
+                {
+                    command = await FileTransferWire.ReadAsync<ManagementCommand>(stream, timeout.Token).ConfigureAwait(false);
+                }
+                else
+                {
+                    ClockedFileCommand incoming = await FileTransferWire.ReadAsync<ClockedFileCommand>(stream, timeout.Token).ConfigureAwait(false);
+                    command = admissionClock.Accept(incoming.Command, incoming.Timing);
+                }
+                if (command.RequestId == Guid.Empty || command.TargetInstanceId != target.InstanceId || (command.Admission?.IsExpired ?? command.ExpiresAt <= DateTimeOffset.UtcNow)
                     || !string.Equals(command.ClusterId, target.ClusterId, StringComparison.Ordinal)
                     || !string.Equals(command.TargetPeerId, target.PeerId, StringComparison.Ordinal) || !FileTransferWire.Allows(command.Operation))
                 {
                     return;
                 }
-                timeout.CancelAfter(TimeSpan.FromTicks(Math.Min(TimeSpan.FromMinutes(2).Ticks, Math.Max(1, (command.ExpiresAt - DateTimeOffset.UtcNow).Ticks))));
+                TimeSpan remaining = command.Admission?.Remaining ?? command.ExpiresAt - DateTimeOffset.UtcNow;
+                timeout.CancelAfter(TimeSpan.FromTicks(Math.Min(TimeSpan.FromMinutes(2).Ticks, Math.Max(1, remaining.Ticks))));
                 ManagementReply reply = await registry.ExecuteAsync(command, timeout.Token).ConfigureAwait(false);
                 await FileTransferWire.WriteAsync(stream, reply, timeout.Token).ConfigureAwait(false);
             }
         }
-        catch (Exception exception) when (exception is IOException or InvalidDataException or SocketException or OperationCanceledException or System.Text.Json.JsonException or InvalidOperationException or ArgumentException)
+        catch (Exception exception) when (exception is IOException or InvalidDataException or SocketException or OperationCanceledException or System.Text.Json.JsonException or InvalidOperationException or ArgumentException or OverflowException)
         {
             // 切断した部分転送を再実行せず、この接続だけを終了します。確定は別の永続操作です。
         }

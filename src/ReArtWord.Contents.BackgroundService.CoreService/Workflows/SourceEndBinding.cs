@@ -33,8 +33,8 @@ internal sealed class SourceEndBinding(PeerCluster cluster)
     /// <returns>受付終了の要求結果。</returns>
     internal async ValueTask<NodeResult> EndAsync(SourceExecutionInfo source, CancellationToken cancellationToken = default)
     {
-        ClusterRequest request = new(Guid.NewGuid(), "source.end", source.PeerId, source.PeerInstanceId!.Value,
-            DateTimeOffset.UtcNow.AddMinutes(1), NodeValue.FromObject(source));
+        ClusterRequest request = ClusterRequest.Start(Guid.NewGuid(), "source.end", source.PeerId, source.PeerInstanceId!.Value,
+            TimeSpan.FromMinutes(1), NodeValue.FromObject(source));
         ClusterResponse response = await cluster.RequestAsync(request, cancellationToken).ConfigureAwait(false);
         if (response.Outcome == EOutcome.Succeeded && response.Value is not null)
         {

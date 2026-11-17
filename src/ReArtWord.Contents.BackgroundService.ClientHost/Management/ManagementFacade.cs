@@ -16,12 +16,20 @@ internal static class ManagementFacade
     public static void MapRoute(WebApplication app, string method, string route, string operation, bool readOnly = false, bool body = false, bool transient = false, string? id = null)
     {
         app.MapMethods(route, [method], (HttpContext context, ObserverConnection connection, ClientCommandLedger ledger, CancellationToken cancellation) =>
-            ForwardAsync(context, connection, ledger, operation, readOnly, body, transient, id, cancellation));
+            ForwardAsync(context, connection, ledger, operation, readOnly, body, transient, id, null, cancellation));
+    }
+
+    /// <summary>手動ノード操作では、ブラウザーが固定した受付期限をClientHostで検証してからCoreへ渡します。</summary>
+    internal static void MapNodeRoute(WebApplication app, ClientRequestClock clock)
+    {
+        app.MapPost("/api/nodes/execute-clocked", (HttpContext context, ObserverConnection connection, ClientCommandLedger ledger, CancellationToken cancellation) =>
+            ForwardAsync(context, connection, ledger, "nodes.execute", false, true, false, null, clock, cancellation));
     }
 
     /// <summary>元の対象・期限・要求IDを確認し、応答不明を成功へ読み替えません。</summary>
     /// <returns>一回の操作または照会の結果です。</returns>
-    private static async Task ForwardAsync(HttpContext context, ObserverConnection connection, ClientCommandLedger ledger, string operation, bool readOnly, bool body, bool transient, string? id, CancellationToken cancellationToken = default)
+    private static async Task ForwardAsync(HttpContext context, ObserverConnection connection, ClientCommandLedger ledger, string operation, bool readOnly, bool body, bool transient, string? id,
+        ClientRequestClock? nodeClock, CancellationToken cancellationToken = default)
     {
         string clusterId = context.Request.Headers["X-Contents-Cluster"].ToString();
         string peerId = context.Request.Headers["X-Contents-Peer"].ToString();
@@ -40,10 +48,22 @@ internal static class ManagementFacade
             throw new InvalidOperationException("選択したPeerが再起動しました。開始済みの要求を別実体へ送りません。");
         }
         NodeValue? payload = null;
+        ClockedNodeCommand? nodeCommand = null;
         if (body)
         {
             JsonElement document = await JsonSerializer.DeserializeAsync<JsonElement>(context.Request.Body, ContractJson.Options, cancellationToken).ConfigureAwait(false);
             payload = NodeValue.FromJson(document);
+            if (nodeClock is not null)
+            {
+                nodeCommand = document.Deserialize<ClockedNodeCommand>(ContractJson.Options)
+                    ?? throw new InvalidDataException("操作内容を読み取れません。");
+                if (!string.Equals(nodeCommand.Request.TargetPeerId, peerId, StringComparison.Ordinal)
+                    || nodeCommand.Request.TargetInstanceId != peers[0].InstanceId)
+                {
+                    throw new InvalidDataException("操作を準備した接続先が変更されています。");
+                }
+                payload = ContractJson.ToValue(nodeCommand.Request);
+            }
         }
         if (id is not null)
         {
@@ -57,13 +77,19 @@ internal static class ManagementFacade
         }
         else
         {
-            Guid sourceId = Guid.Parse(context.Request.Headers["X-Contents-Request"].ToString());
+            Guid sourceId = nodeCommand?.Request.Id ?? Guid.Parse(context.Request.Headers["X-Contents-Request"].ToString());
             if (sourceId == Guid.Empty)
             {
                 throw new ArgumentException("送信前に固定した要求IDが必要です。", nameof(context));
             }
             Guid requestId = ClientCommandLedger.Identity(sourceId, operation);
-            command = await ledger.PrepareAsync(requestId, clusterId, peerId, operation, payload, peers[0], cancellationToken).ConfigureAwait(false);
+            RequestAdmission? initialAdmission = null;
+            if (nodeCommand is not null && await ledger.ReadAsync(requestId, cancellationToken).ConfigureAwait(false) is null)
+            {
+                initialAdmission = nodeClock!.Accept(nodeCommand);
+            }
+            command = await ledger.PrepareTimedAsync(requestId, clusterId, peerId, operation, payload, peers[0], observer.PrepareClockAsync,
+                initialAdmission, cancellationToken).ConfigureAwait(false);
             context.Response.Headers["X-Contents-Command"] = requestId.ToString("D");
         }
         ManagementReply reply;

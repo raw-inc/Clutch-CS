@@ -6,6 +6,9 @@ internal static class DomainRoutes
     /// <summary>HTTPはローカル画面の境界に限定し、CoreのHTTP待受を使用しません。</summary>
     public static void Map(WebApplication app)
     {
+        ClientRequestClock clock = new();
+        app.MapGet("/api/request-clock", () => Results.Json(clock.Capture(), Contracts.Serialization.ContractJson.Options));
+        ManagementFacade.MapNodeRoute(app, clock);
         ManagementFacade.MapRoute(app, "POST", "/api/archive/export", "archive.export", body: true);
         ManagementFacade.MapRoute(app, "POST", "/api/archive/upload/begin", "archive.upload.begin", body: true);
         ManagementFacade.MapRoute(app, "POST", "/api/archive/upload/chunk", "archive.upload.chunk", body: true);

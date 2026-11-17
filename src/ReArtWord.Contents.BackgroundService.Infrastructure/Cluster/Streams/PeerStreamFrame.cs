@@ -9,7 +9,7 @@ internal static class PeerStreamFrame
     /// <returns>通常要求、保存・参照、元結果照会の区分です。</returns>
     internal static int Lane(string kind) => kind switch
     {
-        "request" => 0,
+        "request" or "request.clocked" => 0,
         "receipt.query" or "query" or "prepare.query" or "replication.recovery" => 2,
         _ => 1,
     };

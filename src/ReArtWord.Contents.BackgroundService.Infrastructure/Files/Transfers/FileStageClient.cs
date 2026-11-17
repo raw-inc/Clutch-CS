@@ -33,7 +33,7 @@ internal sealed class FileStageClient(PeerCluster cluster, IDurableRepository re
         bool created = request is null;
         if (request is null)
         {
-            request = new ClusterRequest(id, kind, target.PeerId, target.InstanceId, DateTimeOffset.UtcNow.AddMinutes(5), payload.Copy());
+            request = ClusterRequest.Start(id, kind, target.PeerId, target.InstanceId, TimeSpan.FromMinutes(5), payload.Copy());
             DurableMutation[] mutation = [new(scope, id.ToString("N"), null, NodeValue.FromObject(request))];
             DurableReceipt saved;
             if (local)

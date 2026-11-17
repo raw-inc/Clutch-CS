@@ -234,7 +234,7 @@ internal sealed class SourceScopeBinding(PeerCluster cluster) : ISourceScopeCont
     {
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(5));
-        ClusterRequest request = new(Guid.CreateVersion7(), operation, peer, instance, DateTimeOffset.UtcNow.AddSeconds(5), payload);
+        ClusterRequest request = ClusterRequest.Start(operation, peer, instance, TimeSpan.FromSeconds(5), payload);
         try
         {
             if (inspection)

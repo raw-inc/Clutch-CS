@@ -113,10 +113,12 @@ internal sealed class WorkflowNodeEvaluation(NodeRegistry registry, IPeerDirecto
                 executions.Add(Task.FromResult(new TargetNodeResult(peer.PeerId, sourceError)));
                 continue;
             }
-            RemoteExecutionRequest request = new(Guid.CreateVersion7(), causationId, workflow.Definition.Id, workflow.Revision, executable, inputs, peer.PeerId, peer.InstanceId,
-                timeProvider.GetUtcNow() + admissionLifetime, trace.Enabled, workflow.ExecutionDefinition.ContainsPersonalData, operational?.Settings.TimeZoneId ?? timeZone.Id, operational, trace.Selection, ownership.Find(causationId)?.Hooks, IsValueRead: valueRead)
+            RequestAdmission admission = RequestAdmission.Start(timeProvider, admissionLifetime);
+            RemoteExecutionRequest request = new(Guid.CreateVersion7(admission.SourceNow), causationId, workflow.Definition.Id, workflow.Revision, executable, inputs, peer.PeerId, peer.InstanceId,
+                admission.ExpiresAt, trace.Enabled, workflow.ExecutionDefinition.ContainsPersonalData, operational?.Settings.TimeZoneId ?? timeZone.Id, operational, trace.Selection, ownership.Find(causationId)?.Hooks, IsValueRead: valueRead)
             {
                 SourceScopes = ownership.Find(causationId)?.SourceScopes,
+                Admission = admission,
             };
             string progress = "control.progress";
             if (string.Equals(node.Type, progress, StringComparison.Ordinal) && ownership.Find(causationId)?.Progress is { } lifetime)

@@ -16,10 +16,13 @@ export function validFolderName(name)
  */
 export async function mutateHostFileAsync(ctx, peer, operation, path)
 {
+    const started = performance.now();
     if (!currentPeer(await ctx.peers(), peer))
     {
         throw new Error(ctx.t('The selected PC changed or is unavailable. Refresh hosts before trying again.', '選択したPCが変更されたか、利用できません。ホスト一覧を更新してください。'));
     }
+    ctx.signal?.throwIfAborted();
+    const admission = await prepareMutationClockAsync(ctx, peer, started);
     ctx.signal?.throwIfAborted();
     const id = crypto.randomUUID(), settings = { path };
     const directoryCreate = 'directory.create', directoryDelete = 'directory.delete';
@@ -33,13 +36,32 @@ export async function mutateHostFileAsync(ctx, peer, operation, path)
     }
     const request = { id, causationId: id, workflowId: '$file-transfer', revision: 'file-transfer-v1',
         node: { id: operation, type: operation, settings }, inputs: {}, targetPeerId: peer.peerId, targetInstanceId: peer.instanceId,
-        expiresAt: new Date(Date.now() + 300000).toISOString() };
-    const result = await ctx.api('/api/nodes/execute', peer, request);
+        expiresAt: admission.expiresAt };
+    const result = await ctx.api('/api/nodes/execute-clocked', peer, { request, timing: admission.timing }, ctx.signal);
     const succeeded = 'succeeded';
     if (result?.outcome !== succeeded)
     {
         throw new Error(result?.message || result?.reasonCode || ctx.t('The file operation was not confirmed. Refresh before repeating it.', 'ファイル操作の結果を確認できません。繰り返す前に一覧を更新してください。'));
     }
+}
+
+/** 操作準備にかかった時間も差し引き、ClientHostの時計へ初回の受付期限を固定します。
+ * @returns 本文に記載する期限と、UTCの補正に影響されない受付情報です。
+ */
+async function prepareMutationClockAsync(ctx, peer, started)
+{
+    const clock = await ctx.api('/api/request-clock', peer, undefined, ctx.signal);
+    const remaining = Math.floor(300000 - (performance.now() - started));
+    const observed = Date.parse(clock?.observedAt);
+    const startByTicks = clock?.elapsedTicks + remaining * 10000;
+    if (!clock?.instanceId || !Number.isSafeInteger(clock.elapsedTicks) || clock.elapsedTicks < 0 || !Number.isSafeInteger(startByTicks) || !Number.isFinite(observed) || remaining <= 0)
+    {
+        throw new Error(ctx.t('The operation could not be prepared. Refresh the connection and try again.', '操作の送信準備ができませんでした。接続を更新してから、もう一度お試しください。'));
+    }
+
+    // 最初に取得したClientHostの時計情報から期限を決めます。UTCの補正や同じ操作の再送で受付期間を延長しません。
+    return { expiresAt: new Date(observed + remaining).toISOString(),
+        timing: { instanceId: clock.instanceId, startByTicks, sourceNow: new Date(observed).toISOString() } };
 }
 
 /** 選択フォルダーの直下へ作成し、同名のファイルやフォルダーを採用しません。

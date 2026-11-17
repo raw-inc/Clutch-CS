@@ -10,7 +10,7 @@ namespace ReArtWord.Contents.BackgroundService.CoreService.Management;
 /// <summary>輸送方式に依存せず、登録した管理操作と参照専用の判定を一か所で管理します。</summary>
 internal sealed class ManagementRegistry
 {
-    private readonly Dictionary<string, Func<NodeValue?, CancellationToken, Task<object?>>> handlers = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Func<ManagementCommand, CancellationToken, Task<object?>>> handlers = new(StringComparer.Ordinal);
     private readonly HashSet<string> inspections = new(StringComparer.Ordinal);
     private readonly HashSet<string> transient = new(StringComparer.Ordinal);
 
@@ -23,7 +23,7 @@ internal sealed class ManagementRegistry
     /// <summary>永続受付を増やさない参照操作を登録します。</summary>
     public void Read(string name, Func<NodeValue?, CancellationToken, Task<object?>> handler)
     {
-        handlers.Add(name, handler);
+        handlers.Add(name, (command, token) => handler(command.Payload, token));
         inspections.Add(name);
     }
 
@@ -31,12 +31,15 @@ internal sealed class ManagementRegistry
     public void ReadValue(string name, Func<NodeValue?, object?> handler) => Read(name, (value, _) => Task.FromResult(handler(value)));
 
     /// <summary>元要求IDの永続受付を経由する管理操作を登録します。</summary>
-    public void Write(string name, Func<NodeValue?, CancellationToken, Task<object?>> handler) => handlers.Add(name, handler);
+    public void Write(string name, Func<NodeValue?, CancellationToken, Task<object?>> handler) => handlers.Add(name, (command, token) => handler(command.Payload, token));
+
+    /// <summary>要求本文だけでなく、換算済みの受付期限を必要とする操作を登録します。nodes.executeは本文中のノード要求にも期限を引き継ぎます。</summary>
+    public void WriteCommand(string name, Func<ManagementCommand, CancellationToken, Task<object?>> handler) => handlers.Add(name, handler);
 
     /// <summary>下書きや編集者情報の短命な状態に限り、永続受付を作らず通知します。</summary>
     public void Transient(string name, Func<NodeValue?, CancellationToken, Task<object?>> handler)
     {
-        handlers.Add(name, handler);
+        handlers.Add(name, (command, token) => handler(command.Payload, token));
         transient.Add(name);
     }
 
@@ -53,7 +56,7 @@ internal sealed class ManagementRegistry
     public async Task<ManagementReply> ExecuteAsync(ManagementCommand command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        if (!handlers.TryGetValue(command.Operation, out Func<NodeValue?, CancellationToken, Task<object?>>? handler))
+        if (!handlers.TryGetValue(command.Operation, out Func<ManagementCommand, CancellationToken, Task<object?>>? handler))
         {
             return new(EOutcome.NotExecuted, Reason: "Management.OperationMissing");
         }
@@ -63,7 +66,7 @@ internal sealed class ManagementRegistry
         }
         try
         {
-            object? result = await handler(command.Payload, cancellationToken).ConfigureAwait(false);
+            object? result = await handler(command, cancellationToken).ConfigureAwait(false);
             return SerializeResult(result);
         }
         catch (ManagementInputException)

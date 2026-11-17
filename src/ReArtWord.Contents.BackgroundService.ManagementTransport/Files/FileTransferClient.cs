@@ -19,15 +19,18 @@ public sealed class FileTransferClient : IDisposable
     private readonly FileTransferPeer target;
     private readonly TcpClient? client;
     private readonly NetworkBindingLease? binding;
+    private readonly Func<ManagementCommand, CancellationToken, Task<RequestClockStamp?>>? prepareClock;
     private bool failed;
 
     /// <summary>開始時だけ選択した通信を所有し、送信後には別経路へ切り替えません。</summary>
-    internal FileTransferClient(PeerManagementClient remote, FileTransferPeer target, TcpClient? client = null, NetworkBindingLease? binding = null)
+    internal FileTransferClient(PeerManagementClient remote, FileTransferPeer target, TcpClient? client = null, NetworkBindingLease? binding = null,
+        Func<ManagementCommand, CancellationToken, Task<RequestClockStamp?>>? prepareClock = null)
     {
         this.remote = remote;
         this.target = target;
         this.client = client;
         this.binding = binding;
+        this.prepareClock = prepareClock;
     }
 
     /// <summary>今回の相手と通信で使用できる分割サイズです。</summary>
@@ -76,12 +79,21 @@ public sealed class FileTransferClient : IDisposable
         }
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, binding!.Token);
         timeout.CancelAfter(TimeSpan.FromMinutes(2));
-        ManagementCommand command = new(Guid.NewGuid(), target.ClusterId, target.PeerId, target.InstanceId, DateTimeOffset.UtcNow.AddMinutes(2), operation,
+        ManagementCommand command = ManagementCommand.Start(Guid.NewGuid(), target.ClusterId, target.PeerId, target.InstanceId, TimeSpan.FromMinutes(2), operation,
             NodeValue.FromJson(JsonSerializer.SerializeToElement(payload, ContractJson.Options)));
         bool received = false;
         try
         {
-            await FileTransferWire.WriteAsync(client.GetStream(), command, timeout.Token).ConfigureAwait(false);
+            if (prepareClock is null)
+            {
+                await FileTransferWire.WriteAsync(client.GetStream(), command, timeout.Token).ConfigureAwait(false);
+            }
+            else
+            {
+                RequestClockStamp timing = await prepareClock(command, timeout.Token).ConfigureAwait(false)
+                    ?? throw new InvalidDataException("The file transfer admission clock is unavailable.");
+                await FileTransferWire.WriteAsync(client.GetStream(), new ClockedFileCommand(command, timing), timeout.Token).ConfigureAwait(false);
+            }
             ManagementReply reply = await FileTransferWire.ReadAsync<ManagementReply>(client.GetStream(), timeout.Token).ConfigureAwait(false);
             received = true;
             if (reply.Outcome != EOutcome.Succeeded || reply.Value is null)

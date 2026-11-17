@@ -73,7 +73,7 @@ public sealed class RuntimeRetainedValues : INodeStateStore
         {
             return WriteCurrent(update);
         }
-        ClusterRequest request = new(Guid.CreateVersion7(), WriteKind, owner.PeerId, owner.InstanceId, DateTimeOffset.UtcNow.AddSeconds(30), NodeValue.FromObject(update));
+        ClusterRequest request = ClusterRequest.Start(WriteKind, owner.PeerId, owner.InstanceId, TimeSpan.FromSeconds(30), NodeValue.FromObject(update));
         ClusterResponse response = await cluster.RequestAsync(request, cancellationToken).ConfigureAwait(false);
         return response.Value?.Json.Deserialize<StateWriteResult>() ?? new(false, null, response.Outcome, response.Reason);
     }

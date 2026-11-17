@@ -101,6 +101,7 @@ internal sealed class RequestExecutor
         if (string.Equals(request.Kind, nodeKind, StringComparison.Ordinal) && RemoteExecutionHandler is not null)
         {
             RemoteExecutionRequest nodeRequest = request.Payload.Json.Deserialize<RemoteExecutionRequest>() ?? throw new InvalidDataException("要求が不正です。");
+            nodeRequest = nodeRequest with { Admission = request.Admission?.ForDeadline(nodeRequest.ExpiresAt) };
             NodeResult result = await RemoteExecutionHandler(nodeRequest, cancellationToken).ConfigureAwait(false);
             return new ClusterResponse(result.Outcome, NodeValue.FromObject(result), result.ReasonCode);
         }
@@ -224,7 +225,7 @@ internal sealed class RequestExecutor
         {
             return new ClusterResponse(EOutcome.NotExecuted, Reason: "Cluster.TargetNotReady");
         }
-        if (request.ExpiresAt <= clock.GetUtcNow())
+        if (request.Admission?.IsExpired ?? request.ExpiresAt <= clock.GetUtcNow())
         {
             return new ClusterResponse(EOutcome.NotExecuted, Reason: "Execution.Expired");
         }

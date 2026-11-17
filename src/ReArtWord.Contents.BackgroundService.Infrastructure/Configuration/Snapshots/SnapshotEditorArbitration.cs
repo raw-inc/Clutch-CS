@@ -8,7 +8,6 @@ using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Cluster;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Workflows;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
-using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Receipts;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Configuration.Snapshots;
@@ -19,7 +18,7 @@ internal sealed class SnapshotEditorArbitration
     private readonly PeerCluster cluster;
     private readonly SnapshotEndpoint endpoint;
     private readonly SnapshotEditProtection protection;
-    private readonly IDurableRepository repository;
+    private readonly SnapshotRequestDelivery delivery;
 
     /// <summary>確認は非永続照会、取消は既存の要求操作記録に登録します。</summary>
     public SnapshotEditorArbitration(PeerCluster cluster, SnapshotEndpoint endpoint, SnapshotEditProtection protection, IDurableRepository repository)
@@ -27,7 +26,7 @@ internal sealed class SnapshotEditorArbitration
         this.cluster = cluster;
         this.endpoint = endpoint;
         this.protection = protection;
-        this.repository = repository;
+        delivery = new(repository, (request, token) => cluster.RequestClocks.PrepareAsync(request, cluster.InspectAsync, token));
         cluster.RegisterInspection("snapshot.editor.inspect", InspectLocalAsync);
         cluster.RegisterHandler("snapshot.editor.resolve", ResolveLocalAsync);
     }
@@ -91,22 +90,14 @@ internal sealed class SnapshotEditorArbitration
             return new ConfigurationPhaseResult(EOutcome.NotExecuted, "Snapshot.EditorPeerUnavailable");
         }
         Guid id = WorkflowStore.PhaseId(request.Request.OperationId, "draft:" + ContractJson.Hash(request));
-        ClusterRequest command = new(id, "snapshot.editor.resolve", peer.PeerId, peer.InstanceId, DateTimeOffset.UtcNow.AddMinutes(5), NodeValue.FromObject(request));
+        ClusterRequest command = ClusterRequest.Start(id, "snapshot.editor.resolve", peer.PeerId, peer.InstanceId, TimeSpan.FromMinutes(5), NodeValue.FromObject(request));
         string scope = "peer:" + cluster.LocalPeerId + ":snapshot-draft-requests";
-        DurableEntry? original = await repository.ReadAsync(scope, id.ToString("N"), cancellationToken).ConfigureAwait(false);
-        if (original is null)
+        ClusterRequest? prepared = await delivery.PrepareAsync(scope, command, cancellationToken).ConfigureAwait(false);
+        if (prepared is null)
         {
-            DurableReceipt saved = await repository.ApplyBatchAsync(WorkflowStore.PhaseId(id, "request"), [new DurableMutation(scope, id.ToString("N"), null, NodeValue.FromObject(command))], cancellationToken).ConfigureAwait(false);
-            if (saved.Outcome != EOutcome.Succeeded)
-            {
-                return new ConfigurationPhaseResult(saved.Outcome, saved.Reason);
-            }
+            return new ConfigurationPhaseResult(EOutcome.Unknown, "Snapshot.RequestUnconfirmed");
         }
-        else
-        {
-            command = original.Value!.Json.Deserialize<ClusterRequest>(ContractJson.Options)!;
-        }
-        ClusterResponse response = await cluster.RequestAsync(command, cancellationToken).ConfigureAwait(false);
+        ClusterResponse response = await cluster.RequestAsync(prepared, cancellationToken).ConfigureAwait(false);
         return new ConfigurationPhaseResult(response.Outcome, response.Reason);
     }
 

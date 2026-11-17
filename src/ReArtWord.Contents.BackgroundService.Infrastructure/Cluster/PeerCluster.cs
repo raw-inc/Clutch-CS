@@ -48,6 +48,9 @@ public sealed class PeerCluster : IPeerDirectory, IRemoteNodeDispatcher, IAsyncD
         clock = timeProvider ?? TimeProvider.System;
         membership = new PeerMembership(options, Guid.NewGuid(), clock);
         executor = new RequestExecutor(repository, options.PeerId, clock);
+        AdmissionClock = new(LocalInstanceId, clock);
+        RequestClocks = new(clock);
+        RegisterInspection(RequestClockSnapshot.Capability, (_, _) => Task.FromResult(new ClusterResponse(EOutcome.Succeeded, NodeValue.FromObject(AdmissionClock.Capture()))));
         runtimeCapabilities = new(this);
         recovery = new PeerRecovery(options, repository, membership);
         transport = new UdpTransport(new DatagramTransportOptions(options.PeerId, options.BindAddress, options.BroadcastAddress, options.Port, options.Id)
@@ -58,7 +61,7 @@ public sealed class PeerCluster : IPeerDirectory, IRemoteNodeDispatcher, IAsyncD
         repositorySync = new(this, repository, options, clock, () => new(transport.InterfaceId, options.BindAddress), stopping.Token);
         participation = new(this, membership, recovery, repositorySync, repository);
         requestStream = new(this, () => new(transport.InterfaceId, options.BindAddress), options,
-            (message, token) => IncomingClusterRequests.ReceiveAsync(message.Kind, message.Body, executor, LocalInstanceId,
+            (message, token) => IncomingClusterRequests.ReceiveAsync(message.Kind, message.Body, executor, LocalInstanceId, AdmissionClock,
                 (request, inner) => ExecuteLocalAsync(request, false, inner), replication, token),
             (message, token) => transport.RequestAsync(message, message.TargetInstanceId!.Value, token));
     }
@@ -86,6 +89,18 @@ public sealed class PeerCluster : IPeerDirectory, IRemoteNodeDispatcher, IAsyncD
 
     /// <summary>今回の起動実体です。</summary>
     public Guid LocalInstanceId => membership.InstanceId;
+
+    /// <summary>このCoreプロセスの経過時間を基準に、受信した要求の受付期限を検証します。</summary>
+    public RequestAdmissionClock AdmissionClock
+    {
+        get;
+    }
+
+    /// <summary>送信先Coreごとに時計の照会結果を保持し、送信する要求の期限を換算します。</summary>
+    internal RequestClockClient RequestClocks
+    {
+        get;
+    }
 
     /// <summary>現在通常参加しているCoordinatorです。</summary>
     public string? CoordinatorId => membership.Coordinator;
@@ -284,7 +299,7 @@ public sealed class PeerCluster : IPeerDirectory, IRemoteNodeDispatcher, IAsyncD
         try
         {
             JsonElement result = message.Kind.StartsWith(syncKind, StringComparison.Ordinal) ? await repositorySync.ReceiveAsync(message, stopping.Token).ConfigureAwait(false)
-                                                                                             : await IncomingClusterRequests.ReceiveAsync(message.Kind, message.Body, executor, LocalInstanceId,
+                                                                                             : await IncomingClusterRequests.ReceiveAsync(message.Kind, message.Body, executor, LocalInstanceId, AdmissionClock,
                                                                                                 (request, token) => ExecuteLocalAsync(request, false, token), replication, stopping.Token).ConfigureAwait(false);
             await transport.SendAsync(WireMessage.Reply(message, LocalPeerId, LocalInstanceId, result), stopping.Token).ConfigureAwait(false);
         }
