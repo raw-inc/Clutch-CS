@@ -13,12 +13,14 @@ internal sealed class ClientCommandLedger : IDisposable
 {
     private readonly string directory;
     private readonly SemaphoreSlim changes = new(1, 1);
+    private readonly CommandAdmissionStore admissions;
 
     /// <summary>要求本文を保存しない専用ディレクトリを作成します。</summary>
     public ClientCommandLedger(string stateDirectory)
     {
         directory = Path.Combine(stateDirectory, "commands");
         Directory.CreateDirectory(directory);
+        admissions = new(directory);
     }
 
     /// <summary>一つのドメイン操作IDを各管理段階の外側IDへ一意に対応させます。</summary>
@@ -27,9 +29,21 @@ internal sealed class ClientCommandLedger : IDisposable
 
     /// <summary>開始する実体を固定してから通信へ渡します。</summary>
     /// <returns>初回の実体と期限を維持する要求です。</returns>
+    public Task<ManagementCommand> PrepareAsync(Guid id, string clusterId, string peerId, string operation, NodeValue? payload, PeerInfo? peer, CancellationToken cancellationToken = default)
+        => PrepareCoreAsync(id, clusterId, peerId, operation, payload, peer, null, cancellationToken);
+
+    /// <summary>元要求を保存した後で受付時計を確認し、配送前にその期限も保存します。</summary>
+    /// <returns>再起動後も延長されない要求です。</returns>
+    public Task<ManagementCommand> PrepareTimedAsync(Guid id, string clusterId, string peerId, string operation, NodeValue? payload, PeerInfo? peer,
+        Func<ManagementCommand, CancellationToken, Task<Contracts.Execution.RequestClockStamp?>> prepare, CancellationToken cancellationToken = default)
+        => PrepareCoreAsync(id, clusterId, peerId, operation, payload, peer, prepare, cancellationToken);
+
+    /// <summary>元の実体・本文の指紋・期限を一回だけ記録します。</summary>
+    /// <returns>初回または同じ操作の配送情報です。</returns>
     // 抑制理由: ファイル名は解析済みGuidのN形式と固定拡張子のみで構成し、入力文字列をパスへ連結しません。
     [SuppressMessage("Security", "CA3003", Justification = "信頼したstate directory配下でGuidの32桁16進表記だけをfile名に使用します。")]
-    public async Task<ManagementCommand> PrepareAsync(Guid id, string clusterId, string peerId, string operation, NodeValue? payload, PeerInfo? peer, CancellationToken cancellationToken = default)
+    private async Task<ManagementCommand> PrepareCoreAsync(Guid id, string clusterId, string peerId, string operation, NodeValue? payload, PeerInfo? peer,
+        Func<ManagementCommand, CancellationToken, Task<Contracts.Execution.RequestClockStamp?>>? prepare, CancellationToken cancellationToken = default)
     {
         await changes.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -43,7 +57,8 @@ internal sealed class ClientCommandLedger : IDisposable
                 {
                     throw new ArgumentException("同じ要求IDの対象や内容が一致しません。", nameof(id));
                 }
-                return new(previous.RequestId, previous.ClusterId, previous.TargetPeerId, previous.TargetInstanceId, previous.ExpiresAt, previous.Operation, payload);
+                ManagementCommand restored = new(previous.RequestId, previous.ClusterId, previous.TargetPeerId, previous.TargetInstanceId, previous.ExpiresAt, previous.Operation, payload);
+                return await admissions.PrepareAsync(restored, prepare, cancellationToken).ConfigureAwait(false);
             }
             if (peer is null)
             {
@@ -51,10 +66,18 @@ internal sealed class ClientCommandLedger : IDisposable
             }
             ManagementCommand command = new(id, clusterId, peerId, peer.InstanceId, DateTimeOffset.UtcNow.AddMinutes(5), operation, payload);
             ClientCommandRecord record = new(id, clusterId, peerId, peer.InstanceId, command.ExpiresAt, operation, hash, ContractJson.Hash(ManagementWire.Request(command, false)));
+            if (prepare is not null)
+            {
+                await admissions.BeginAsync(command, cancellationToken).ConfigureAwait(false);
+            }
             string path = Path.Combine(directory, id.ToString("N") + ".json");
             string pending = path + ".pending";
             await File.WriteAllTextAsync(pending, JsonSerializer.Serialize(record, ContractJson.Options), cancellationToken).ConfigureAwait(false);
             File.Move(pending, path, false);
+            if (prepare is not null)
+            {
+                return await admissions.PrepareAsync(command, prepare, cancellationToken).ConfigureAwait(false);
+            }
             return command;
         }
         finally

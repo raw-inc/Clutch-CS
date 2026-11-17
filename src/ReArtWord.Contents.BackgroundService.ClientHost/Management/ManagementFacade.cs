@@ -63,7 +63,7 @@ internal static class ManagementFacade
                 throw new ArgumentException("送信前に固定した要求IDが必要です。", nameof(context));
             }
             Guid requestId = ClientCommandLedger.Identity(sourceId, operation);
-            command = await ledger.PrepareAsync(requestId, clusterId, peerId, operation, payload, peers[0], cancellationToken).ConfigureAwait(false);
+            command = await ledger.PrepareTimedAsync(requestId, clusterId, peerId, operation, payload, peers[0], observer.PrepareClockAsync, cancellationToken).ConfigureAwait(false);
             context.Response.Headers["X-Contents-Command"] = requestId.ToString("D");
         }
         ManagementReply reply;
