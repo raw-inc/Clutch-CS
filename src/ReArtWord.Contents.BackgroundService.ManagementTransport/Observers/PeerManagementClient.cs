@@ -61,8 +61,10 @@ public sealed class PeerManagementClient(Func<string, string, UdpObserver?> find
             }
             FileTransferTicket ticket = await SendAsync<FileTransferTicket>(target, open, Guid.NewGuid(), false, cancellationToken).ConfigureAwait(false);
 
-            // 受付期限は発行したCoreが15秒のタイマーで制限します。ExpiresAtはCore側の日時のため、
-            // このPCの時計では比較しません。接続先の認証と、以下の接続待ちの期限は維持します。
+            // ExpiresAtはCoreの時計で作られた日時なので、このPCの現在時刻と比較すると、
+            // PC間の時計差だけで有効なチケットを拒否してしまいます。
+            // 受付期限はCore側のFileTransferSession.RunAsyncが管理します。TCP接続待ちからトークン受信までを
+            // 共通の15秒タイマーで打ち切るため、ここではポート番号とトークンの形式だけを検査します。
             if (ticket.Port is < 1 or > 65535 || ticket.Token.Length != 64)
             {
                 throw new InvalidDataException("Invalid file transfer ticket.");

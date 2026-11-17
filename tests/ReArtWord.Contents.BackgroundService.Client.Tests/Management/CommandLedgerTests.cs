@@ -11,8 +11,8 @@ namespace ReArtWord.Contents.BackgroundService.Client.Tests.Management;
 /// <summary>クライアント再起動とPeer再起動を越える固定要求の保存境界を確認します。</summary>
 public sealed class CommandLedgerTests
 {
-    /// <summary>時計換算も最初の配送に固定し、クライアント再起動後に確認し直しません。</summary>
-    /// <returns>期限・対象・元指紋と、秘密を保存しない境界です。</returns>
+    /// <summary>ClientHostを再起動しても、初回に換算した期限で再送されることを確認します。</summary>
+    /// <returns>期限・対象・ハッシュの保持と、操作本文を保存しないことを検証するタスクです。</returns>
     [Fact]
     public async Task RestartRestoresTheOriginalDeliveryClockWithoutRecalibration()
     {
@@ -48,8 +48,8 @@ public sealed class CommandLedgerTests
         }
     }
 
-    /// <summary>時計照会の失敗でも元要求を残し、同じプロセスだけが残りの期間で準備を続けます。</summary>
-    /// <returns>期限を延長せず回復し、準備中に再起動した場合は新規送信しないことです。</returns>
+    /// <summary>時計照会の失敗後も要求が残り、同じClientHostプロセスなら残り時間内で準備を再開できることを確認します。</summary>
+    /// <returns>準備の再開と、再起動後の送信拒否を検証するタスクです。</returns>
     [Fact]
     public async Task InterruptedPreparationCannotIssueANewDeadlineAfterRestart()
     {
@@ -84,8 +84,8 @@ public sealed class CommandLedgerTests
         }
     }
 
-    /// <summary>旧版で保存した要求の配送形式も、後から付け替えません。</summary>
-    /// <returns>旧形式の期限と指紋を保った再送です。</returns>
+    /// <summary>旧版で保存した要求が、同じ期限・同じ通信形式で再送されることを確認します。</summary>
+    /// <returns>旧版の要求記録との互換性を検証するタスクです。</returns>
     [Fact]
     public async Task ExistingRecordsDoNotAcquireNewClockMetadata()
     {

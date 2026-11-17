@@ -3,5 +3,5 @@ using ReArtWord.Contents.BackgroundService.Contracts.Management;
 
 namespace ReArtWord.Contents.BackgroundService.ManagementTransport.Files;
 
-/// <summary>対応を確認したファイル接続にだけ、元の操作と対象実体の受付期限を送ります。</summary>
+/// <summary>ファイル転送の操作と換算済みの受付期限です。新形式で合意したTCP接続にだけ送信します。</summary>
 public sealed record ClockedFileCommand(ManagementCommand Command, RequestClockStamp Timing);

@@ -32,14 +32,14 @@ internal sealed class ClientCommandLedger : IDisposable
     public Task<ManagementCommand> PrepareAsync(Guid id, string clusterId, string peerId, string operation, NodeValue? payload, PeerInfo? peer, CancellationToken cancellationToken = default)
         => PrepareCoreAsync(id, clusterId, peerId, operation, payload, peer, null, cancellationToken);
 
-    /// <summary>元要求を保存した後で受付時計を確認し、配送前にその期限も保存します。</summary>
-    /// <returns>再起動後も延長されない要求です。</returns>
+    /// <summary>送信先と要求内容のハッシュを記録してからCoreの受付時計を照会し、換算した期限も保存してから送信に渡します。</summary>
+    /// <returns>ClientHost再起動後も、初回と同じ送信先・本文・受付期限を使う要求です。</returns>
     public Task<ManagementCommand> PrepareTimedAsync(Guid id, string clusterId, string peerId, string operation, NodeValue? payload, PeerInfo? peer,
         Func<ManagementCommand, CancellationToken, Task<Contracts.Execution.RequestClockStamp?>> prepare, CancellationToken cancellationToken = default)
         => PrepareCoreAsync(id, clusterId, peerId, operation, payload, peer, prepare, cancellationToken);
 
-    /// <summary>元の実体・本文の指紋・期限を一回だけ記録します。</summary>
-    /// <returns>初回または同じ操作の配送情報です。</returns>
+    /// <summary>初回の送信先Coreの実体ID、要求本文のハッシュ、受付期限を記録します。</summary>
+    /// <returns>初回に確定した情報から構成した要求です。同じIDで対象や内容が変わった場合は例外にします。</returns>
     // 抑制理由: ファイル名は解析済みGuidのN形式と固定拡張子のみで構成し、入力文字列をパスへ連結しません。
     [SuppressMessage("Security", "CA3003", Justification = "信頼したstate directory配下でGuidの32桁16進表記だけをfile名に使用します。")]
     private async Task<ManagementCommand> PrepareCoreAsync(Guid id, string clusterId, string peerId, string operation, NodeValue? payload, PeerInfo? peer,

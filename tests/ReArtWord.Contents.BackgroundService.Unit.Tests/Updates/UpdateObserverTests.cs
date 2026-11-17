@@ -103,7 +103,7 @@ public sealed class UpdateObserverTests
             string inspection = "inspect";
             if (string.Equals(message.Kind, inspection, StringComparison.Ordinal))
             {
-                // 旧Coreは未知の照会を明示的に拒否します。実行応答・結果照会の消失だけを再現します。
+                // 時計照会には旧Coreと同じ未対応の応答を返します。このテストでは、操作の実行応答と結果照会だけを失わせます。
                 ClusterResponse unsupported = new(EOutcome.NotExecuted, Reason: "Cluster.InspectionTargetUnavailable");
                 await target.SendAsync(new(Guid.NewGuid(), cluster, "target", instance, "reply", message.SenderId, message.Id,
                     JsonSerializer.SerializeToElement(unsupported), message.InstanceId), token).ConfigureAwait(false);

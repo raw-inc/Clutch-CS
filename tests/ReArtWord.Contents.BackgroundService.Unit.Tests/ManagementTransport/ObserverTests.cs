@@ -23,8 +23,8 @@ public sealed class ObserverTests : IDisposable
 {
     private readonly MediaTestFiles files = new();
 
-    /// <summary>Coreの時計差で管理操作を拒否せず、元本文での再送・照会・異内容拒否を維持します。</summary>
-    /// <returns>前後一時間ずれたCoreとの実UDP管理通信です。</returns>
+    /// <summary>Coreの時計がずれていても、管理操作の実行・同じ内容での再送・結果照会ができ、内容を変えた再送は拒否されることを確認します。</summary>
+    /// <returns>前後1時間の時計差を、実際のUDP通信で検証するタスクです。</returns>
     [Theory]
     [InlineData(-3600)]
     [InlineData(3600)]

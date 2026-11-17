@@ -33,7 +33,7 @@ internal sealed class ManagementRegistry
     /// <summary>元要求IDの永続受付を経由する管理操作を登録します。</summary>
     public void Write(string name, Func<NodeValue?, CancellationToken, Task<object?>> handler) => handlers.Add(name, (command, token) => handler(command.Payload, token));
 
-    /// <summary>内側に実行要求を持つ操作へ、外側で確認した受付期限を引き継ぎます。</summary>
+    /// <summary>要求本文だけでなく、換算済みの受付期限を必要とする操作を登録します。nodes.executeは本文中のノード要求にも期限を引き継ぎます。</summary>
     public void WriteCommand(string name, Func<ManagementCommand, CancellationToken, Task<object?>> handler) => handlers.Add(name, handler);
 
     /// <summary>下書きや編集者情報の短命な状態に限り、永続受付を作らず通知します。</summary>

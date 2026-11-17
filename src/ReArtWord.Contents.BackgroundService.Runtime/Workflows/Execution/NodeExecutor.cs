@@ -126,8 +126,8 @@ public sealed class NodeExecutor
     public ValueTask<bool> RequestCancellationAsync(Guid executionId, DateTimeOffset startBy, CancellationToken cancellationToken = default)
         => RequestCancellationAsync(executionId, startBy, null, cancellationToken);
 
-    /// <summary>遠隔要求の元の開始期限を、確認済みのローカル受付時計へ引き継ぎます。</summary>
-    /// <returns>取消意図または実行中の取消を受け付けたかです。</returns>
+    /// <summary>実行要求より先に届いた取消を、元の実行開始期限まで記憶します。残り時間は受信側の単調時計で判定します。</summary>
+    /// <returns>未開始要求への取消を記憶したか、実行中の処理へ取消を通知したかを返します。停止完了を意味するものではありません。</returns>
     public async ValueTask<bool> RequestCancellationAsync(Guid executionId, DateTimeOffset startBy, RequestAdmission? admission, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

@@ -90,13 +90,13 @@ public sealed class PeerCluster : IPeerDirectory, IRemoteNodeDispatcher, IAsyncD
     /// <summary>今回の起動実体です。</summary>
     public Guid LocalInstanceId => membership.InstanceId;
 
-    /// <summary>この起動実体の単調時計に結び付く要求受付です。</summary>
+    /// <summary>このCoreプロセスの経過時間を基準に、受信した要求の受付期限を検証します。</summary>
     public RequestAdmissionClock AdmissionClock
     {
         get;
     }
 
-    /// <summary>送信先実体ごとに確認した受付時計です。</summary>
+    /// <summary>送信先Coreごとに時計の照会結果を保持し、送信する要求の期限を換算します。</summary>
     internal RequestClockClient RequestClocks
     {
         get;

@@ -1,6 +1,6 @@
 namespace ReArtWord.Contents.BackgroundService.Contracts.Execution;
 
-/// <summary>元の要求本文を変えず、受信したPCの単調時計で開始期限を判定します。</summary>
+/// <summary>要求を受け付けられる残り時間を、受信側PCの単調時計で管理します。</summary>
 public sealed class RequestAdmission
 {
     private readonly TimeProvider clock;
@@ -8,7 +8,7 @@ public sealed class RequestAdmission
     private readonly TimeSpan remaining;
     private readonly DateTimeOffset expiresAt;
 
-    /// <summary>輸送層で確認した残り時間を固定します。開始済み処理の取消には使いません。</summary>
+    /// <summary>通信処理で換算した残り時間を記録します。この期限は実行開始の可否にだけ使い、開始済みの処理は取り消しません。</summary>
     public RequestAdmission(TimeProvider clock, TimeSpan remaining, DateTimeOffset expiresAt, DateTimeOffset sourceNow)
     {
         ArgumentNullException.ThrowIfNull(clock);
@@ -19,19 +19,19 @@ public sealed class RequestAdmission
         SourceNow = sourceNow;
     }
 
-    /// <summary>UUIDの作成時刻と同じ時計で記録した、送信時の日時です。</summary>
+    /// <summary>要求元の時刻系で表した、期限換算時の基準日時です。UUIDv7に含まれる生成日時の検証にも使います。</summary>
     public DateTimeOffset SourceNow
     {
         get;
     }
 
-    /// <summary>新しい開始を受け付けられる時間です。受信後の日時補正には左右されません。</summary>
+    /// <summary>実行開始を受け付けられる残り時間です。受信後の経過時間を単調時計で差し引くため、OSの時刻補正には影響されません。</summary>
     public TimeSpan Remaining => remaining - clock.GetElapsedTime(receivedAt);
 
-    /// <summary>未開始要求の元の受付期間が終わったかです。</summary>
+    /// <summary>実行開始の受付期限を過ぎているかどうかです。</summary>
     public bool IsExpired => Remaining <= TimeSpan.Zero;
 
-    /// <summary>同じ送信元時計の内側要求へ、消費済みの時間を引き継ぎます。</summary>
-    /// <returns>受付期間を取り直さない内側要求の期限です。</returns>
+    /// <summary>要求本文に含まれる別の要求へ、通信中に経過した時間を差し引いた受付期限を引き継ぎます。</summary>
+    /// <returns>元の期限との差を残り時間に加えた受付情報です。deadlineは元の期限と同じPCの時計で表す必要があります。</returns>
     public RequestAdmission ForDeadline(DateTimeOffset deadline) => new(clock, Remaining + (deadline - expiresAt), deadline, SourceNow);
 }

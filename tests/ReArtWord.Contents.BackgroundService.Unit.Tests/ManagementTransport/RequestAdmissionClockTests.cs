@@ -6,11 +6,11 @@ using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.ManagementTransport;
 
-/// <summary>時計換算が元の指紋・残り時間・実体固定を壊さないことを検証します。</summary>
+/// <summary>期限を換算しても、要求内容のハッシュ、残り時間、送信先Coreの実体IDが保たれることを検証します。</summary>
 public sealed class RequestAdmissionClockTests
 {
-    /// <summary>壊れた時計応答を、延長された受付期限や呼出元の実行基盤例外へ変換しません。</summary>
-    /// <returns>配送前に不正データとして拒否することです。</returns>
+    /// <summary>範囲外の時計応答を、算術オーバーフローではなく不正データとして拒否することを確認します。</summary>
+    /// <returns>要求を送信する前に不正データを拒否することを検証するタスクです。</returns>
     [Theory]
     [InlineData(-1)]
     [InlineData(long.MaxValue)]
@@ -24,8 +24,8 @@ public sealed class RequestAdmissionClockTests
             Task.FromResult(new ClusterResponse(EOutcome.Succeeded, NodeValue.FromObject(new RequestClockSnapshot(instance, elapsedTicks))))));
     }
 
-    /// <summary>相手の日時を比較せず、配送待ちも元の受付期間から消費します。</summary>
-    /// <returns>元本文と受信側の単調時計による期限です。</returns>
+    /// <summary>PC間の時計差に影響されず、通信待ちの時間だけ要求の残り時間が減ることを確認します。</summary>
+    /// <returns>要求本文を保った期限換算を検証するタスクです。</returns>
     [Theory]
     [InlineData(-3600)]
     [InlineData(3600)]
@@ -65,8 +65,8 @@ public sealed class RequestAdmissionClockTests
         Assert.Throws<InvalidDataException>(() => restarted.Accept(envelope));
     }
 
-    /// <summary>対応未確認は旧方式への切替理由にせず、未対応の応答と区別します。</summary>
-    /// <returns>照会不能時に副作用要求を準備しないことです。</returns>
+    /// <summary>照会への未応答や不正な応答を、旧形式へ切り替える理由にしないことを確認します。</summary>
+    /// <returns>対応を確認できないCoreへ実行要求を送らないことを検証するタスクです。</returns>
     [Fact]
     public async Task OnlyAnExplicitUnsupportedResponseAllowsLegacyDelivery()
     {
@@ -77,8 +77,8 @@ public sealed class RequestAdmissionClockTests
         Assert.Null(await client.PrepareAsync(request, (_, _) => Task.FromResult(new ClusterResponse(EOutcome.NotExecuted, Reason: "Cluster.InspectionTargetUnavailable"))));
     }
 
-    /// <summary>送信側が時計を戻しても、一度消費した元の開始期間を取り直しません。</summary>
-    /// <returns>再送の期限が延びないことです。</returns>
+    /// <summary>送信側のUTC日時を戻しても、再送時の受付期限が延びないことを確認します。</summary>
+    /// <returns>送信側の時刻補正を検証するタスクです。</returns>
     [Fact]
     public async Task SenderClockRollbackDoesNotReviveAnExpiredRequest()
     {

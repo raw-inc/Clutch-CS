@@ -1,8 +1,8 @@
 namespace ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 
-/// <summary>対象の起動実体で測った経過時間を、日時同期を要しない受付基準として返します。</summary>
+/// <summary>送信側が受付期限を換算するために使う、Coreプロセスの実体IDと経過時間です。</summary>
 public sealed record RequestClockSnapshot(Guid InstanceId, long ElapsedTicks)
 {
-    /// <summary>旧版へ新しい要求形式を送る前に確認する読取り専用操作です。</summary>
+    /// <summary>この形式への対応確認と、Core側の経過時間の取得に使う読取り専用の操作名です。</summary>
     public static string Capability => "request.admission-clock";
 }

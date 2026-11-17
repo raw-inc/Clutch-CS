@@ -11,7 +11,7 @@ namespace ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 /// <param name="Payload">処理固有の入力。</param>
 public sealed record ClusterRequest(Guid Id, string Kind, string TargetPeerId, Guid TargetInstanceId, DateTimeOffset ExpiresAt, NodeValue Payload)
 {
-    /// <summary>受信輸送が確認したローカル期限です。元の通信形式・保存内容・指紋には含めません。</summary>
+    /// <summary>受信側の単調時計で判定する受付期限です。通信処理が設定し、要求のJSONや内容照合用のハッシュには含めません。</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public Contracts.Execution.RequestAdmission? Admission
     {

@@ -57,7 +57,7 @@ internal sealed class FileTransferSession : IAsyncDisposable
         get;
     }
 
-    /// <summary>この接続で合意した要求の形式です。</summary>
+    /// <summary>この接続が換算済みの受付期限を扱う形式かどうかです。同じ接続IDで通信形式を切り替えることはできません。</summary>
     internal bool ClockAware => admissionClock is not null;
 
     /// <summary>ファイル本文の操作を直列に実行し、任意の管理操作や確定の迂回を拒否します。</summary>

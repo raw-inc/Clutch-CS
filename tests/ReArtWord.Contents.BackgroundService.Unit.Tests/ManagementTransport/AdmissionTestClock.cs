@@ -1,12 +1,12 @@
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.ManagementTransport;
 
-/// <summary>受付の試験で、PCの日時と実経過を独立して動かします。</summary>
+/// <summary>UTC日時と単調時計を別々に変更し、PCの時計差と時間の経過を区別して再現します。</summary>
 internal sealed class AdmissionTestClock : TimeProvider
 {
     private DateTimeOffset now = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
     private long elapsed;
 
-    /// <summary>要求を作成するPCの日時です。</summary>
+    /// <summary>試験対象のPCが持つUTC日時です。</summary>
     /// <returns>試験用のUTC日時です。</returns>
     public override DateTimeOffset GetUtcNow() => now;
 
@@ -20,7 +20,7 @@ internal sealed class AdmissionTestClock : TimeProvider
     /// <summary>PCの時計差または日時の補正を再現します。</summary>
     internal void Adjust(TimeSpan offset) => now += offset;
 
-    /// <summary>通信・処理の待ち時間を進めます。</summary>
+    /// <summary>UTC日時と単調時計を同じ時間だけ進め、通信や処理の待ち時間を再現します。</summary>
     internal void Advance(TimeSpan duration)
     {
         now += duration;

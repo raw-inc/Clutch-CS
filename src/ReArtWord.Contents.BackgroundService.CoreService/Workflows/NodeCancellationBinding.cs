@@ -38,8 +38,8 @@ internal static class NodeCancellationBinding
             && response.Value.Json.ValueKind == JsonValueKind.True;
     }
 
-    /// <summary>転送を受けた要求でも、取消の外側と内側の期限を送信するPCの時計へ揃えます。</summary>
-    /// <returns>元の実行要求は変更せずに作った取消要求です。</returns>
+    /// <summary>元の実行要求の残り時間から、取消要求を送るPCの日時でStartByを作ります。</summary>
+    /// <returns>取消要求です。本文のStartByと外側のExpiresAtを同じPCの時刻系に揃え、受信側で残り時間を正しく換算できるようにします。</returns>
     internal static ClusterRequest CreateRequest(RemoteExecutionRequest original, DateTimeOffset now)
     {
         DateTimeOffset startBy = original.ExpiresAt;

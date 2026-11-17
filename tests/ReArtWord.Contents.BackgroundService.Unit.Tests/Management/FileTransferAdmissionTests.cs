@@ -15,11 +15,11 @@ using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
 
-/// <summary>TCP接続後の各操作も、別PCの日時ではなく対象実体の受付時計で判定します。</summary>
+/// <summary>ファイル転送のTCP接続で、各操作の受付期限が送信先Coreの単調時計で判定されることを検証します。</summary>
 public sealed class FileTransferAdmissionTests
 {
-    /// <summary>有効な一回の書込みを受け付け、期限後の同じフレームでは書込みを増やしません。</summary>
-    /// <returns>時計差と期限終了時の接続回収を、実TCPで確認します。</returns>
+    /// <summary>期限内の書込みは成功し、同じデータを期限後に再送しても書込みが実行されないことを確認します。</summary>
+    /// <returns>時計差がある場合の受付と、期限切れ時の切断を検証するタスクです。</returns>
     [Theory]
     [InlineData(-3600)]
     [InlineData(3600)]

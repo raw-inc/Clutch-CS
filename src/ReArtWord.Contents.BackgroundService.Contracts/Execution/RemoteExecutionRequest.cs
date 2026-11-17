@@ -44,7 +44,7 @@ public sealed record RemoteExecutionRequest(
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)] bool BufferedReceipt = false,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)] bool IsValueRead = false)
 {
-    /// <summary>輸送層で確認した開始期限です。保存する元要求の内容は変更しません。</summary>
+    /// <summary>通信処理が受信側の時計へ換算した受付期限です。要求の同一性を保つため、JSONや保存する要求本文には含めません。</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public RequestAdmission? Admission
     {

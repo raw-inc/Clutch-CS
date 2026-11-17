@@ -6,7 +6,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 
 namespace ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 
-/// <summary>確認した相手の時計へ期限を換算し、元の本文・要求ID・結果照会用の指紋を保持します。</summary>
+/// <summary>送信先Coreへ経過時間を照会し、その時計で表した受付期限を作成します。要求本文とIDは変更しません。</summary>
 public sealed class RequestClockClient(TimeProvider clock)
 {
     private readonly ConcurrentDictionary<Guid, Calibration> clocks = [];
@@ -14,8 +14,8 @@ public sealed class RequestClockClient(TimeProvider clock)
     private DateTimeOffset originNow = clock.GetUtcNow();
     private long originTimestamp = clock.GetTimestamp();
 
-    /// <summary>対応未確認を旧版とみなさず、明示的に未対応と返った場合だけ元形式を使います。</summary>
-    /// <returns>時計差を補正した配送本文。未対応の場合はnullです。</returns>
+    /// <summary>時計照会に未対応との応答がある場合だけ旧形式を使います。通信失敗を未対応とみなすと、時計差のある要求を旧形式で送ってしまうためです。</summary>
+    /// <returns>元の要求に換算済みの期限を添えたデータです。送信先が未対応の場合はnullです。</returns>
     public async Task<ClockedClusterRequest?> PrepareAsync(ClusterRequest request,
         Func<ClusterRequest, CancellationToken, Task<ClusterResponse>> inspect, CancellationToken cancellationToken = default)
     {
@@ -62,8 +62,9 @@ public sealed class RequestClockClient(TimeProvider clock)
             sourceNow = request.ExpiresAt - remaining;
         }
 
-        // 応答を受け取った時点に「相手が応答した時点」を対応させます。
-        // 復路の所要時間だけ早い期限となり、遅れて届いた要求の受付期間を延長しません。
+        // Coreが返した経過時間に、応答受信後の経過時間と要求の残り時間を加えます。
+        // Coreが応答してからこちらに届くまでの時間は加えないため、期限はその分だけ早くなります。
+        // 通信の遅れによって、本来は期限切れの要求を新たに受け付けることを防ぎます。
         Int128 startBy = (Int128)target.ElapsedTicks + clock.GetElapsedTime(calibration.ReceivedAt).Ticks + remaining.Ticks;
         if (startBy < long.MinValue || long.MaxValue < startBy)
         {
@@ -72,8 +73,8 @@ public sealed class RequestClockClient(TimeProvider clock)
         return new(request, target.InstanceId, (long)startBy, sourceNow);
     }
 
-    /// <summary>送信元の時計を戻しても、既存要求の開始期限を再び有効にしません。</summary>
-    /// <returns>この送信元で一度消費した時間を戻さない日時です。</returns>
+    /// <summary>OSの時計が戻っても期限切れの要求を再び有効にしないよう、経過時間から求めた日時より前には戻しません。</summary>
+    /// <returns>前回からの経過時間を加えた日時と、現在のUTC日時のうち、遅い方です。</returns>
     private DateTimeOffset CaptureOriginNow()
     {
         using (timeGate.EnterScope())
@@ -91,6 +92,6 @@ public sealed class RequestClockClient(TimeProvider clock)
         }
     }
 
-    /// <summary>未対応の確認結果も相手実体に結び付けて保持します。</summary>
+    /// <summary>照会結果と受信時点の単調時計を保持します。Snapshotがnullの場合は未対応を確認済みです。</summary>
     private sealed record Calibration(RequestClockSnapshot? Snapshot, long ReceivedAt);
 }

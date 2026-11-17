@@ -6,13 +6,13 @@ using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 
 namespace ReArtWord.Contents.BackgroundService.ClientHost.Management;
 
-/// <summary>クライアント再起動で期限を取り直さないよう、初回の配送期限を元要求へ結び付けます。</summary>
+/// <summary>ClientHost再起動後の再送で受付期間が延びないよう、最初に換算した期限を要求IDと内容のハッシュに結び付けて保存します。</summary>
 internal sealed class CommandAdmissionStore(string directory)
 {
     private readonly Dictionary<Guid, RequestAdmission> pending = [];
 
-    /// <summary>元要求を保存する前に準備状態を作り、通信前の待ち時間も受付期間から消費します。</summary>
-    /// <returns>初回だけの準備記録です。呼出元のledger排他内で使用します。</returns>
+    /// <summary>元の要求記録より先に「期限の準備中」という記録を保存し、その後の待ち時間を計測します。</summary>
+    /// <returns>準備中の記録を保存するタスクです。呼出元のClientCommandLedgerで同時書込みを防ぎます。</returns>
     internal async Task BeginAsync(ManagementCommand command, CancellationToken cancellationToken = default)
     {
         string fingerprint = ContractJson.Hash(ManagementWire.Request(command, false));
@@ -21,7 +21,8 @@ internal sealed class CommandAdmissionStore(string directory)
         {
             await JsonSerializer.SerializeAsync(stream, new CommandAdmissionRecord(fingerprint, false, null), ContractJson.Options, cancellationToken).ConfigureAwait(false);
 
-            // 元要求の保存より先に準備記録を確定し、途中終了後に旧形式として送らないようにします。
+            // この記録がない要求は旧版の形式で再送されます。途中でClientHostが終了しても新しい要求を
+            // 旧版の記録と取り違えないよう、元の要求記録より先に「準備中」の状態を書き出します。
             await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
         }
         DateTimeOffset now = DateTimeOffset.UtcNow;
@@ -32,8 +33,8 @@ internal sealed class CommandAdmissionStore(string directory)
         pending.Add(command.RequestId, new(TimeProvider.System, command.ExpiresAt - now, command.ExpiresAt, now));
     }
 
-    /// <summary>保存済みの期限は再照会せず復元し、準備中の再起動では新しい受付期間を発行しません。</summary>
-    /// <returns>元の配送方式と期限を持つ要求です。</returns>
+    /// <summary>保存済みの期限を再利用します。準備中にClientHostが再起動した場合は残り時間を復元できないため、送信を拒否します。</summary>
+    /// <returns>初回と同じ通信形式・受付期限で送信できる要求です。</returns>
     // 抑制理由: 保存先はledgerの固定ディレクトリと、解析済みGuidのN形式だけから構成します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA3003", Justification = "固定保存先内のGuidファイル名を使い、入力文字列をパスへ含めません。")]
     internal async Task<ManagementCommand> PrepareAsync(ManagementCommand command,
@@ -42,7 +43,8 @@ internal sealed class CommandAdmissionStore(string directory)
         string path = PathFor(command.RequestId);
         if (!File.Exists(path))
         {
-            // 既存の要求には新しい時計を割り当てず、元の配送形式で結果を確認します。
+            // この追加記録がない要求は旧版が保存したものとして扱います。
+            // 期限を新たに換算すると有効期間が変わるため、保存された期限のまま旧形式で再送します。
             return command with { DeliveryPrepared = true };
         }
         CommandAdmissionRecord record = JsonSerializer.Deserialize<CommandAdmissionRecord>(await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false), ContractJson.Options)
@@ -67,7 +69,7 @@ internal sealed class CommandAdmissionStore(string directory)
         return command with { DeliveryPrepared = true, DeliveryTiming = record.Timing };
     }
 
-    /// <summary>従来の要求JSONを変更せず、Guidだけから付随記録の場所を求めます。</summary>
-    /// <returns>旧版のJSON読取りと混在しないファイルです。</returns>
+    /// <summary>従来の要求記録とは別の拡張子で、換算した期限の保存先を作ります。</summary>
+    /// <returns>要求IDをファイル名にした.admissionファイルのパスです。旧版の*.json読取りには含まれません。</returns>
     private string PathFor(Guid id) => Path.Combine(directory, id.ToString("N") + ".admission");
 }

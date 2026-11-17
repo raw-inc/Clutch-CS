@@ -11,8 +11,8 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Workflows;
 /// <summary>配送より先の明示取消と、元期限後の進行中取消を検証します。</summary>
 public sealed class NodeCancellationIntentTests
 {
-    /// <summary>別PCから届いた実行の取消を転送しても、二種類の日時を同じ要求に混ぜません。</summary>
-    /// <returns>元要求を保持し、取消の本文だけに残り期間を引き継ぐことです。</returns>
+    /// <summary>別PCから届いた実行要求を取り消す場合も、取消要求内の日時が送信側の時刻系に揃うことを確認します。</summary>
+    /// <returns>元の実行要求を変更せず、残り時間を取消要求へ引き継ぐことを検証するタスクです。</returns>
     [Fact]
     public async Task ForwardedCancellationUsesTheRelaysClock()
     {
@@ -30,8 +30,8 @@ public sealed class NodeCancellationIntentTests
         Assert.Equal(origin.AddSeconds(5), original.ExpiresAt);
     }
 
-    /// <summary>遠隔PCの日時を使わず、取り消し意図を元の開始期間だけ保持します。</summary>
-    /// <returns>時計差と補正があっても、期限内の取消だけが効くことです。</returns>
+    /// <summary>元の実行開始期限まで取消を記憶し、UTC日時の変更では保持期間が変わらないことを確認します。</summary>
+    /// <returns>時計差と時刻補正がある場合の取消を検証するタスクです。</returns>
     [Theory]
     [InlineData(-3600)]
     [InlineData(3600)]
@@ -166,7 +166,7 @@ public sealed class NodeCancellationIntentTests
         /// <summary>TimeSpanのtick単位を使用します。</summary>
         public override long TimestampFrequency => TimeSpan.TicksPerSecond;
 
-        /// <summary>時計の補正ではなく、試験中の実経過を進めます。</summary>
+        /// <summary>UTC日時と単調時計を同じ時間だけ進めます。</summary>
         internal void Advance(TimeSpan duration)
         {
             Now += duration;

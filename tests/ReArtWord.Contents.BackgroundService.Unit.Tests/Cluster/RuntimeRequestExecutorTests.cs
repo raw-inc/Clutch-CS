@@ -16,8 +16,8 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Cluster;
 /// <summary>実行記録を後で保存しても、一度の副作用と結果不明の境界を維持します。</summary>
 public sealed class RuntimeRequestExecutorTests
 {
-    /// <summary>時計差がある実行を非同期記録し、保存失敗や時計補正でも同じIDを実行し直しません。</summary>
-    /// <returns>UUIDの有効期間と単調時計による重複抑止です。</returns>
+    /// <summary>PC間の時計差がある場合も、記録の保存失敗や時刻補正によって同じIDが再実行されないことを確認します。</summary>
+    /// <returns>IDの有効期間と重複実行防止を検証するタスクです。</returns>
     [Theory]
     [InlineData(-3600)]
     [InlineData(3600)]

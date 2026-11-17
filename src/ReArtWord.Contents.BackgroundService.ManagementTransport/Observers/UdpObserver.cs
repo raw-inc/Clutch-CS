@@ -119,13 +119,13 @@ public sealed class UdpObserver : IAsyncDisposable
     /// <returns>管理結果または確認不能です。</returns>
     public Task<ManagementReply> ExecuteAsync(ManagementCommand command, CancellationToken cancellationToken = default) => SendAsync(command, false, false, cancellationToken);
 
-    /// <summary>副作用を送る前に対象の時計を確認し、再送用に保存できる期限を返します。</summary>
-    /// <returns>元の対象実体の開始期限。未対応を確認した場合はnullです。</returns>
+    /// <summary>操作を送信する前にCoreの受付時計を照会し、再送でも同じ期限を使えるよう換算結果を返します。</summary>
+    /// <returns>送信先Coreの時計で表した受付期限です。時計照会に未対応と確認できた場合はnullです。</returns>
     public async Task<RequestClockStamp?> PrepareClockAsync(ManagementCommand command, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        // 時計確認には対象と期限だけを使い、WF定義やファイル断片の本文を二重にシリアライズしません。
+        // 期限の換算に必要なのは送信先と期限だけです。WF定義やファイル断片のような大きな本文を再シリアライズせずに照会します。
         ClusterRequest request = new(command.RequestId, ManagementWire.ExecuteKind, command.TargetPeerId, command.TargetInstanceId,
             command.ExpiresAt, Contracts.Nodes.NodeValue.Null) { Admission = command.Admission };
         ClockedClusterRequest? timed = await requestClocks.PrepareAsync(request, async (probe, token) =>

@@ -22,7 +22,7 @@ internal sealed class RuntimeRequestExecutor(IDurableRepository repository, stri
     private long bytes;
     private bool stopping;
 
-    /// <summary>日時補正で重複抑止の保持期間を短くしない、実体内の経過時刻です。</summary>
+    /// <summary>重複実行を防ぐ記録の保持判定に使う日時です。起動時の日時に単調経過時間を加え、OSの時刻補正で記録が早く消えるのを防ぎます。</summary>
     private DateTimeOffset ReplayNow => replayEpoch + clock.GetElapsedTime(replayStartedAt);
 
     /// <summary>保存状態を管理APIから確認するための小さい統計です。</summary>

@@ -12,21 +12,21 @@ namespace ReArtWord.Contents.BackgroundService.Contracts.Management;
 /// <param name="Payload">ドメイン operationIdを含む元の引数。</param>
 public sealed record ManagementCommand(Guid RequestId, string ClusterId, string TargetPeerId, Guid TargetInstanceId, DateTimeOffset ExpiresAt, string Operation, NodeValue? Payload)
 {
-    /// <summary>輸送層が確認したローカル期限です。元の要求本文には含めません。</summary>
+    /// <summary>受信側の単調時計で判定する受付期限です。要求の同一性を保つため、JSONには含めません。</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public Execution.RequestAdmission? Admission
     {
         get; init;
     }
 
-    /// <summary>保存済みの配送方式を再送時にも維持します。旧形式を使う確認結果も含みます。</summary>
+    /// <summary>初回送信の準備が保存済みかどうかです。trueかつDeliveryTimingがnullの場合は、旧形式での再送を指定します。</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public bool DeliveryPrepared
     {
         get; init;
     }
 
-    /// <summary>再起動後も付け直さない配送期限です。元要求の指紋には含めません。</summary>
+    /// <summary>初回の送信準備で保存した期限です。ClientHost再起動後も同じ値を使い、再送で受付期間が延びるのを防ぎます。</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public Execution.RequestClockStamp? DeliveryTiming
     {

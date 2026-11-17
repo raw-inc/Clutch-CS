@@ -51,7 +51,7 @@ public sealed class InspectionRecoveryTests
             ClusterRequest request = message.Body.Deserialize<ClusterRequest>(ContractJson.Options)!;
             if (string.Equals(request.Kind, RequestClockSnapshot.Capability, StringComparison.Ordinal))
             {
-                // 旧Coreの能力照会への応答は失わせず、検証対象の操作と結果だけを欠落させます。
+                // 時計照会には旧Coreと同じ未対応の応答を返します。このテストでは、その後の操作や結果照会の応答だけを失わせます。
                 ClusterResponse unsupported = new(EOutcome.NotExecuted, Reason: "Cluster.InspectionTargetUnavailable");
                 await target.SendAsync(WireMessage.Reply(message, "target", instance, JsonSerializer.SerializeToElement(unsupported)), token).ConfigureAwait(false);
                 return;

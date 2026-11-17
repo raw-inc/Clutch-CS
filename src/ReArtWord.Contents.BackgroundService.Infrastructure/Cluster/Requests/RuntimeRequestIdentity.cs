@@ -28,8 +28,10 @@ internal static class RuntimeRequestIdentity
             bool valid = sourceNow < deadline && request.ExpiresAt <= deadline && deadline <= sourceNow.AddMinutes(10);
             if (valid && request.Admission is not null)
             {
-                // UUIDの時刻と送信日時は同じPCの時計です。受信後に期限を付け直すのではなく、
-                // 残りのID有効期間を受信側で保持し、通信待ちの分だけ早く重複記録を捨てないようにします。
+                // IDの有効期間はUUIDv7の生成日時から6分で固定し、要求元の時刻系で検証します。
+                // 受信側の時計と直接比較すると、時計差で重複実行防止の記録を早く捨てるおそれがあります。
+                // そこで、送信側の換算時点で残っていた保持時間を受信側の時刻系へ移します。
+                // 通信中の時間も保持に含めるため、必要な期間より早く記録を削除することはありません。
                 deadline = now + (deadline - sourceNow);
             }
             return valid;
