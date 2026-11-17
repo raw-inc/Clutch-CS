@@ -1,4 +1,5 @@
 using ReArtWord.Contents.BackgroundService.Contracts.Management;
+using ReArtWord.Contents.BackgroundService.Contracts.Observability;
 using ReArtWord.Contents.BackgroundService.Contracts.Management.Preview;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 
@@ -11,7 +12,7 @@ public sealed class NodePreviewStore(TimeProvider? time = null)
     private readonly Lock gate = new();
     private readonly Dictionary<(string Workflow, string Node), Entry> entries = [];
     private readonly Dictionary<(string Workflow, string Node, Guid Run, Guid Owner, Guid Scope), NodePreviewSnapshot> progress = [];
-    private readonly Dictionary<(Guid Run, Guid Owner, Guid Scope), DateTimeOffset> closedProgress = [];
+    private readonly Dictionary<(Guid Run, Guid Owner, Guid Scope), ObservationAge> closedProgress = [];
     private long bytes;
 
     /// <summary>一つの画像・音声・映像の取得上限です。</summary>
@@ -36,7 +37,7 @@ public sealed class NodePreviewStore(TimeProvider? time = null)
         using (gate.EnterScope())
         {
             DateTimeOffset now = clock.GetUtcNow();
-            Prune(now);
+            Prune();
             ProgressSession session = context.Progress ?? new(context.CausationId, context.PeerId, Guid.Empty, now);
             if (closedProgress.ContainsKey((session.RunId, session.OwnerInstanceId, Guid.Empty)) || closedProgress.ContainsKey((session.RunId, session.OwnerInstanceId, session.ScopeId)))
             {
@@ -45,12 +46,12 @@ public sealed class NodePreviewStore(TimeProvider? time = null)
             (string Workflow, string Node, Guid Run, Guid Owner, Guid Scope) key = (context.WorkflowId, context.NodeId, session.RunId, session.OwnerInstanceId, session.ScopeId);
             if (MaximumProgressSessions <= progress.Count && !progress.ContainsKey(key))
             {
-                progress.Remove(progress.MinBy(item => item.Value.CapturedAt).Key);
+                progress.Remove(progress.MaxBy(item => item.Value.CaptureAge!.Value.Elapsed).Key);
             }
             int length = value is null ? 0
                                        : System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(value).Length;
             progress[key] = new(Guid.NewGuid(), context.WorkflowId, context.Revision, context.NodeId, context.PeerId, now, "text/plain", length, Problem: problem)
-            { Session = session, Progress = value };
+            { Session = session, Progress = value, CaptureAge = new(clock) };
         }
     }
 
@@ -60,8 +61,7 @@ public sealed class NodePreviewStore(TimeProvider? time = null)
         ArgumentNullException.ThrowIfNull(session);
         using (gate.EnterScope())
         {
-            DateTimeOffset now = clock.GetUtcNow();
-            Prune(now);
+            Prune();
             if (closedProgress.ContainsKey((session.RunId, session.OwnerInstanceId, Guid.Empty)))
             {
                 return;
@@ -80,9 +80,9 @@ public sealed class NodePreviewStore(TimeProvider? time = null)
             }
             if (4096 <= closedProgress.Count)
             {
-                closedProgress.Remove(closedProgress.MinBy(item => item.Value).Key);
+                closedProgress.Remove(closedProgress.MaxBy(item => item.Value.Elapsed).Key);
             }
-            closedProgress[(session.RunId, session.OwnerInstanceId, session.ScopeId)] = now.AddMinutes(5);
+            closedProgress[(session.RunId, session.OwnerInstanceId, session.ScopeId)] = new(clock);
         }
     }
 
@@ -94,15 +94,15 @@ public sealed class NodePreviewStore(TimeProvider? time = null)
         using (gate.EnterScope())
         {
             DateTimeOffset now = clock.GetUtcNow();
-            NodePreviewSnapshot snapshot = new(Guid.NewGuid(), context.WorkflowId, context.Revision, context.NodeId, context.PeerId, now, mediaType, data.Length, truncated, problem);
-            Prune(now);
+            NodePreviewSnapshot snapshot = new(Guid.NewGuid(), context.WorkflowId, context.Revision, context.NodeId, context.PeerId, now, mediaType, data.Length, truncated, problem) { CaptureAge = new(clock) };
+            Prune();
             Entry? previous = entries.GetValueOrDefault((context.WorkflowId, context.NodeId));
             long number = (previous?.History[^1].Number ?? 0) + 1;
-            NodePreviewHistoryEntry[] history = [.. (previous?.History ?? []).Where(item => now - item.Snapshot.CapturedAt < TimeSpan.FromMinutes(5)).TakeLast(MaximumHistoryEntries - 1), History(snapshot, number, data.Span)];
+            NodePreviewHistoryEntry[] history = [.. (previous?.History ?? []).Where(item => item.Snapshot.CaptureAge!.Value.Elapsed < TimeSpan.FromMinutes(5)).TakeLast(MaximumHistoryEntries - 1), History(snapshot, number, data.Span)];
             Remove((context.WorkflowId, context.NodeId));
             while (128 <= entries.Count || 64L * 1024 * 1024 < bytes + data.Length)
             {
-                Remove(entries.MinBy(pair => pair.Value.Snapshot.CapturedAt).Key);
+                Remove(entries.MaxBy(pair => pair.Value.Snapshot.CaptureAge!.Value.Elapsed).Key);
             }
             entries[(context.WorkflowId, context.NodeId)] = new(snapshot, data.ToArray(), history);
             bytes += data.Length;
@@ -118,10 +118,9 @@ public sealed class NodePreviewStore(TimeProvider? time = null)
         ArgumentException.ThrowIfNullOrWhiteSpace(query.NodeId);
         using (gate.EnterScope())
         {
-            DateTimeOffset now = clock.GetUtcNow();
-            Prune(now);
+            Prune();
             return (entries.GetValueOrDefault((query.WorkflowId, query.NodeId))?.History ?? [])
-                .Where(item => now - item.Snapshot.CapturedAt < TimeSpan.FromMinutes(5)).Reverse().ToArray();
+                .Where(item => item.Snapshot.CaptureAge!.Value.Elapsed < TimeSpan.FromMinutes(5)).Reverse().Select(item => item with { Snapshot = Present(item.Snapshot) }).ToArray();
         }
     }
 
@@ -159,10 +158,10 @@ public sealed class NodePreviewStore(TimeProvider? time = null)
         ArgumentOutOfRangeException.ThrowIfGreaterThan(query.NodeIds.Count, 64);
         using (gate.EnterScope())
         {
-            Prune(clock.GetUtcNow());
+            Prune();
             return query.NodeIds.Distinct(StringComparer.Ordinal).Select(id => entries.GetValueOrDefault((query.WorkflowId, id))?.Snapshot).OfType<NodePreviewSnapshot>()
                 .Concat(progress.Values.Where(item => string.Equals(item.WorkflowId, query.WorkflowId, StringComparison.Ordinal) && query.NodeIds.Contains(item.NodeId, StringComparer.Ordinal)))
-                .OrderBy(item => item.Session?.StartedAt ?? item.CapturedAt).ThenBy(item => item.Session?.RunId).ThenBy(item => item.Session?.ScopeId).ToArray();
+                .OrderBy(item => item.Session?.StartedAt ?? item.CapturedAt).ThenBy(item => item.Session?.RunId).ThenBy(item => item.Session?.ScopeId).Select(Present).ToArray();
         }
     }
 
@@ -176,7 +175,7 @@ public sealed class NodePreviewStore(TimeProvider? time = null)
         ArgumentOutOfRangeException.ThrowIfGreaterThan(request.Length, 32768);
         using (gate.EnterScope())
         {
-            Prune(clock.GetUtcNow());
+            Prune();
             Entry? entry = entries.Values.FirstOrDefault(item => item.Snapshot.Id == request.Id);
             if (entry is null)
             {
@@ -191,18 +190,22 @@ public sealed class NodePreviewStore(TimeProvider? time = null)
         }
     }
 
+    /// <summary>応答に古さを添え、別PCの時計で採取日時を比較する必要をなくします。</summary>
+    /// <returns>元の日時と取得IDを維持したメタデータです。</returns>
+    private static NodePreviewSnapshot Present(NodePreviewSnapshot snapshot) => snapshot with { CaptureAgeTicks = snapshot.CaptureAge!.Value.Elapsed.Ticks };
+
     /// <summary>利用時に保持期限を過ぎた本文を解放します。</summary>
-    private void Prune(DateTimeOffset now)
+    private void Prune()
     {
-        foreach ((string Workflow, string Node, Guid Run, Guid Owner, Guid Scope) key in progress.Where(pair => TimeSpan.FromMinutes(5) <= now - pair.Value.CapturedAt).Select(pair => pair.Key).ToArray())
+        foreach ((string Workflow, string Node, Guid Run, Guid Owner, Guid Scope) key in progress.Where(pair => TimeSpan.FromMinutes(5) <= pair.Value.CaptureAge!.Value.Elapsed).Select(pair => pair.Key).ToArray())
         {
             progress.Remove(key);
         }
-        foreach ((Guid Run, Guid Owner, Guid Scope) key in closedProgress.Where(pair => pair.Value <= now).Select(pair => pair.Key).ToArray())
+        foreach ((Guid Run, Guid Owner, Guid Scope) key in closedProgress.Where(pair => TimeSpan.FromMinutes(5) <= pair.Value.Elapsed).Select(pair => pair.Key).ToArray())
         {
             closedProgress.Remove(key);
         }
-        foreach ((string Workflow, string Node) key in entries.Where(pair => TimeSpan.FromMinutes(5) <= now - pair.Value.Snapshot.CapturedAt).Select(pair => pair.Key).ToArray())
+        foreach ((string Workflow, string Node) key in entries.Where(pair => TimeSpan.FromMinutes(5) <= pair.Value.Snapshot.CaptureAge!.Value.Elapsed).Select(pair => pair.Key).ToArray())
         {
             Remove(key);
         }

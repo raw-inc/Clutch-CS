@@ -63,12 +63,24 @@ public sealed class PreviewHistoryProcessTests
                 Assert.NotEmpty(activity.Entries);
                 Assert.Contains(definition.Id, activity.Entries.Select(entry => entry.Summary!.WorkflowId));
             }
+            Contracts.Execution.History.ExecutionHistoryPage observed = await peer.GetAsync<Contracts.Execution.History.ExecutionHistoryPage>("executions.observations",
+                new Contracts.Execution.History.ExecutionHistoryQuery(100, SummariesOnly: true), timeout.Token).ConfigureAwait(true);
+            Assert.NotNull(observed.ObservationInstanceId);
+            Assert.False(observed.AgeUnconfirmed);
+            Assert.All(observed.Entries, entry => Assert.InRange(entry.CompletionAgeTicks!.Value, 0, TimeSpan.FromMinutes(1).Ticks));
+            if (ReferenceEquals(peer, first))
+            {
+                Assert.NotEmpty(observed.Entries);
+                Assert.Contains(definition.Id, observed.Entries.Select(entry => entry.Summary!.WorkflowId));
+            }
             NodePreviewHistoryEntry[] rows = await peer.GetAsync<NodePreviewHistoryEntry[]>("previews.history", new NodePreviewHistoryQuery(definition.Id, "preview"), timeout.Token).ConfigureAwait(true);
             Assert.Equal(50, rows.Length);
             Assert.Equal(Enumerable.Range(6, 50).Reverse().Select(number => (long)number), rows.Select(row => row.Number));
             Assert.Equal(Enumerable.Range(5, 50).Reverse().Select(number => number.ToString(System.Globalization.CultureInfo.InvariantCulture)), rows.Select(row => row.Text));
             NodePreviewSnapshot[] latest = await peer.GetAsync<NodePreviewSnapshot[]>("previews.list", new NodePreviewQuery(definition.Id, ["preview"]), timeout.Token).ConfigureAwait(true);
-            Assert.Equal(rows[0].Snapshot, Assert.Single(latest));
+            NodePreviewSnapshot current = Assert.Single(latest);
+            Assert.Equal(rows[0].Snapshot with { CaptureAgeTicks = current.CaptureAgeTicks }, current);
+            Assert.True(rows[0].Snapshot.CaptureAgeTicks <= current.CaptureAgeTicks);
             Assert.Empty(await peer.GetAsync<NodePreviewHistoryEntry[]>("previews.history", new NodePreviewHistoryQuery("other", "preview"), timeout.Token).ConfigureAwait(true));
         }
     }
