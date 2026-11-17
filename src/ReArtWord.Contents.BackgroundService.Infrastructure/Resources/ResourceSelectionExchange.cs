@@ -26,7 +26,6 @@ public sealed class ResourceSelectionExchange
     private readonly ConcurrentDictionary<string, ResourceSelectionObservation> observations = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<Guid, bool> capabilities = [];
     private readonly TimeProvider clock;
-    private long? lastRefresh;
 
     /// <summary>共通採取の参照元と、既存の一時通知経路を接続します。</summary>
     public ResourceSelectionExchange(PeerCluster cluster, Func<ResourceSample?> latest, TimeProvider? clock = null)
@@ -66,7 +65,7 @@ public sealed class ResourceSelectionExchange
         return snapshot;
     }
 
-    /// <summary>設定反映を通信待ちで止めず、最新観測の交換だけを独立して実行します。</summary>
+    /// <summary>設定反映を通信待ちで止めず、最新観測の交換を3秒周期で独立して実行します。</summary>
     /// <returns>停止要求までの交換処理です。</returns>
     public async Task RunAsync(CancellationToken cancellationToken = default)
     {
@@ -78,15 +77,10 @@ public sealed class ResourceSelectionExchange
         while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false));
     }
 
-    /// <summary>最大3秒に一回、採取済みの比較値を交換します。追加採取や永続化は行いません。</summary>
+    /// <summary>採取済みの比較値を一巡交換します。追加採取や永続化は行いません。</summary>
     /// <returns>有限の照会と、旧版向け通知の送信です。</returns>
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
-        if (lastRefresh is long previous && clock.GetElapsedTime(previous) < TimeSpan.FromSeconds(3))
-        {
-            return;
-        }
-        lastRefresh = clock.GetTimestamp();
         PeerInfo[] peers = cluster.GetPeers().ToArray();
         HashSet<string> known = peers.Select(peer => peer.PeerId).ToHashSet(StringComparer.Ordinal);
         foreach (string peer in samples.Keys.Where(peer => !known.Contains(peer)))
