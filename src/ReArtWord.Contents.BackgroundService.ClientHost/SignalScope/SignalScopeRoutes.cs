@@ -49,7 +49,10 @@ internal static class SignalScopeRoutes
         try
         {
             SignalScopeTicket ticket = await remote.SendAsync<SignalScopeTicket>(target, "signal-scope.open", Guid.NewGuid(), false, cancellationToken).ConfigureAwait(false);
-            if (ticket.Port is < 1 or > 65535 || ticket.Token.Length != 64 || ticket.ExpiresAt <= DateTimeOffset.UtcNow)
+
+            // 受付期限は発行したCoreが15秒のタイマーで制限します。ExpiresAtはCore側の日時のため、
+            // このPCの時計では比較しません。接続先の認証と、以下の接続待ちの期限は維持します。
+            if (ticket.Port is < 1 or > 65535 || ticket.Token.Length != 64)
             {
                 throw new InvalidDataException("Invalid capture ticket.");
             }

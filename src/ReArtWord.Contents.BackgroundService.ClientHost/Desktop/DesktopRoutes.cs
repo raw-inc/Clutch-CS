@@ -155,7 +155,10 @@ internal static class DesktopRoutes
             return;
         }
         DesktopTicket ticket = reply.Value.Json.Deserialize<DesktopTicket>(ContractJson.Options) ?? throw new InvalidDataException("Desktop ticket is missing.");
-        if (ticket.Port is < 1 or > 65535 || ticket.Token.Length != 64 || ticket.ExpiresAt <= DateTimeOffset.UtcNow)
+
+        // 受付期限は発行したCoreが15秒のタイマーで制限します。ExpiresAtはCore側の日時のため、
+        // このPCの時計では比較しません。接続先の認証と、以下の接続待ちの期限は維持します。
+        if (ticket.Port is < 1 or > 65535 || ticket.Token.Length != 64)
         {
             throw new InvalidDataException("Desktop ticket is invalid.");
         }

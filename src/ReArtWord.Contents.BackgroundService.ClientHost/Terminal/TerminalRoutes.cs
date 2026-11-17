@@ -39,7 +39,10 @@ internal static class TerminalRoutes
         UdpObserver observer = connection.FindObserver(target.ClusterId, target.PeerId) ?? throw new IOException("The peer route is unavailable.");
         TerminalAttachRequest request = new(Guid.Parse(query["session"].ToString()), Guid.Parse(query["owner"].ToString()), Guid.NewGuid());
         TerminalTicket ticket = await remote.SendAsync<TerminalTicket>(target, "terminal.attach", request, false, cancellationToken).ConfigureAwait(false);
-        if (ticket.Port is < 1 or > 65535 || ticket.Token.Length != 64 || ticket.ExpiresAt <= DateTimeOffset.UtcNow)
+
+        // 受付期限は発行したCoreが15秒のタイマーで制限します。ExpiresAtはCore側の日時のため、
+        // このPCの時計では比較しません。接続先の認証と、以下の接続待ちの期限は維持します。
+        if (ticket.Port is < 1 or > 65535 || ticket.Token.Length != 64)
         {
             throw new InvalidDataException("Invalid terminal ticket.");
         }
