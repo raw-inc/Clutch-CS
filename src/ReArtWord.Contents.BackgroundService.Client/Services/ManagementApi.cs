@@ -156,8 +156,11 @@ internal sealed class ManagementApi(HttpClient client, ServerClock? clock = null
             request.Content = JsonContent.Create(body, options: ContractJson.Options);
         }
         long started = serverClock.Timestamp;
+        Guid observation = Guid.NewGuid();
+        long observationOrder = serverClock.NextRequestOrder();
+        request.Headers.Add(ObservationHeaders.Request, observation.ToString("D"));
         using HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        serverClock.Observe(response.Headers, started);
+        serverClock.Observe(response.Headers, started, observation, observationOrder);
         if (!response.IsSuccessStatusCode)
         {
             string template = "The management API could not confirm the operation ({0}). Query side-effect requests using the same operation ID.";
