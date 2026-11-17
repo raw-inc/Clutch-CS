@@ -27,7 +27,7 @@ public sealed class TerminalSessionTests
     }
 
     /// <summary>確定した出力を返すPTY境界です。</summary>
-    private sealed class BufferedPty(byte[] output) : IPtyConnection
+    internal sealed class BufferedPty(byte[] output) : IPtyConnection
     {
         /// <summary>完了済みfixtureではイベント購読による資源を保持しません。</summary>
         public event EventHandler<PtyExitedEventArgs>? ProcessExited
