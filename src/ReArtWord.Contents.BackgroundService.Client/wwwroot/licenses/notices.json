@@ -387,7 +387,7 @@
   },
   {
     "name": "Microsoft.AspNetCore.Authorization",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://asp.net/",
@@ -405,7 +405,7 @@
   },
   {
     "name": "Microsoft.AspNetCore.Components",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://asp.net/",
@@ -417,13 +417,13 @@
       },
       {
         "label": "Third-party notices",
-        "href": "/licenses/Microsoft.JSInterop.WebAssembly-10.0.13-third-party.txt"
+        "href": "/licenses/Microsoft.AspNetCore.Components-10.0.15-third-party.txt"
       }
     ]
   },
   {
     "name": "Microsoft.AspNetCore.Components.Forms",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://asp.net/",
@@ -435,13 +435,13 @@
       },
       {
         "label": "Third-party notices",
-        "href": "/licenses/Microsoft.JSInterop.WebAssembly-10.0.13-third-party.txt"
+        "href": "/licenses/Microsoft.AspNetCore.Components-10.0.15-third-party.txt"
       }
     ]
   },
   {
     "name": "Microsoft.AspNetCore.Components.Web",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://asp.net/",
@@ -453,13 +453,13 @@
       },
       {
         "label": "Third-party notices",
-        "href": "/licenses/Microsoft.JSInterop.WebAssembly-10.0.13-third-party.txt"
+        "href": "/licenses/Microsoft.AspNetCore.Components-10.0.15-third-party.txt"
       }
     ]
   },
   {
     "name": "Microsoft.AspNetCore.Components.WebAssembly",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://asp.net/",
@@ -471,13 +471,13 @@
       },
       {
         "label": "Third-party notices",
-        "href": "/licenses/Microsoft.JSInterop.WebAssembly-10.0.13-third-party.txt"
+        "href": "/licenses/Microsoft.AspNetCore.Components-10.0.15-third-party.txt"
       }
     ]
   },
   {
     "name": "Microsoft.AspNetCore.Components.WebAssembly.Server",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://asp.net/",
@@ -489,13 +489,13 @@
       },
       {
         "label": "Third-party notices",
-        "href": "/licenses/Microsoft.JSInterop.WebAssembly-10.0.13-third-party.txt"
+        "href": "/licenses/Microsoft.AspNetCore.Components-10.0.15-third-party.txt"
       }
     ]
   },
   {
     "name": "Microsoft.AspNetCore.Metadata",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://asp.net/",
@@ -581,7 +581,7 @@
   },
   {
     "name": "Microsoft.Extensions.Configuration",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -617,7 +617,7 @@
   },
   {
     "name": "Microsoft.Extensions.Configuration.Abstractions",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -653,7 +653,7 @@
   },
   {
     "name": "Microsoft.Extensions.Configuration.Binder",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -725,7 +725,7 @@
   },
   {
     "name": "Microsoft.Extensions.Configuration.FileExtensions",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -761,7 +761,7 @@
   },
   {
     "name": "Microsoft.Extensions.Configuration.Json",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -815,7 +815,7 @@
   },
   {
     "name": "Microsoft.Extensions.DependencyInjection",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -851,7 +851,7 @@
   },
   {
     "name": "Microsoft.Extensions.DependencyInjection.Abstractions",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -887,7 +887,7 @@
   },
   {
     "name": "Microsoft.Extensions.Diagnostics",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -923,7 +923,7 @@
   },
   {
     "name": "Microsoft.Extensions.Diagnostics.Abstractions",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -959,7 +959,7 @@
   },
   {
     "name": "Microsoft.Extensions.FileProviders.Abstractions",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -995,7 +995,7 @@
   },
   {
     "name": "Microsoft.Extensions.FileProviders.Physical",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -1031,7 +1031,7 @@
   },
   {
     "name": "Microsoft.Extensions.FileSystemGlobbing",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -1139,7 +1139,7 @@
   },
   {
     "name": "Microsoft.Extensions.Logging",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -1175,7 +1175,7 @@
   },
   {
     "name": "Microsoft.Extensions.Logging.Abstractions",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -1301,7 +1301,7 @@
   },
   {
     "name": "Microsoft.Extensions.Options",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -1337,7 +1337,7 @@
   },
   {
     "name": "Microsoft.Extensions.Options.ConfigurationExtensions",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -1373,7 +1373,7 @@
   },
   {
     "name": "Microsoft.Extensions.Primitives",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -1391,7 +1391,7 @@
   },
   {
     "name": "Microsoft.Extensions.Validation",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://asp.net/",
@@ -1409,7 +1409,7 @@
   },
   {
     "name": "Microsoft.JSInterop",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://asp.net/",
@@ -1427,7 +1427,7 @@
   },
   {
     "name": "Microsoft.JSInterop.WebAssembly",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://asp.net/",
@@ -1439,7 +1439,7 @@
       },
       {
         "label": "Third-party notices",
-        "href": "/licenses/Microsoft.JSInterop.WebAssembly-10.0.13-third-party.txt"
+        "href": "/licenses/Microsoft.AspNetCore.Components-10.0.15-third-party.txt"
       }
     ]
   },
