@@ -17,12 +17,12 @@ internal sealed class CommandAdmissionStore(string directory)
     {
         string fingerprint = ContractJson.Hash(ManagementWire.Request(command, false));
         string path = PathFor(command.RequestId);
-        using (FileStream stream = new(path, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+        using (FileStream stream = new(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous | FileOptions.WriteThrough))
         {
             await JsonSerializer.SerializeAsync(stream, new CommandAdmissionRecord(fingerprint, false, null), ContractJson.Options, cancellationToken).ConfigureAwait(false);
 
             // 元要求の保存より先に準備記録を確定し、途中終了後に旧形式として送らないようにします。
-            stream.Flush(true);
+            await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
         }
         DateTimeOffset now = DateTimeOffset.UtcNow;
         foreach (Guid expired in pending.Where(pair => pair.Value.IsExpired).Select(pair => pair.Key).ToArray())
@@ -46,16 +46,16 @@ internal sealed class CommandAdmissionStore(string directory)
             return command with { DeliveryPrepared = true };
         }
         CommandAdmissionRecord record = JsonSerializer.Deserialize<CommandAdmissionRecord>(await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false), ContractJson.Options)
-            ?? throw new InvalidDataException("元要求の受付期限を読めません。");
+            ?? throw new InvalidDataException("操作の受付期限を読み取れません。");
         if (!string.Equals(record.Fingerprint, ContractJson.Hash(ManagementWire.Request(command, false)), StringComparison.Ordinal))
         {
-            throw new InvalidDataException("受付期限の記録が元要求と一致しません。");
+            throw new InvalidDataException("受付期限の記録が操作内容と一致しません。");
         }
         if (!record.Prepared)
         {
             if (prepare is null || !pending.TryGetValue(command.RequestId, out RequestAdmission? admission) || admission.IsExpired)
             {
-                throw new InvalidOperationException("元要求の受付期限を確認できないため送信しません。結果を確認してから、新しく操作してください。");
+                throw new InvalidOperationException("操作の受付期限を確認できないため、送信を中止しました。操作記録で結果を確認してから、あらためて実行してください。");
             }
             RequestClockStamp? timing = await prepare(command with { Admission = admission }, cancellationToken).ConfigureAwait(false);
             record = record with { Prepared = true, Timing = timing };
