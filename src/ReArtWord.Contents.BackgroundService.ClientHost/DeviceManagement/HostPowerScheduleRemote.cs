@@ -95,7 +95,7 @@ internal sealed class HostPowerScheduleRemote(ObserverConnection connection, Cli
                 string.Equals(profile.HostId, request.HostId, StringComparison.Ordinal) && profile.Clusters.Contains(request.ClusterId, StringComparer.Ordinal)) };
             NodeValue payload = ContractJson.ToValue(request);
             (UdpObserver selected, PeerInfo peer) = Resolve(request.ClusterId);
-            ManagementCommand command = await ledger.PrepareAsync(id, request.ClusterId, peer.PeerId, SaveOperation, payload, peer, cancellationToken).ConfigureAwait(false);
+            ManagementCommand command = await ledger.PrepareTimedAsync(id, request.ClusterId, peer.PeerId, SaveOperation, payload, peer, selected.PrepareClockAsync, cancellationToken).ConfigureAwait(false);
             sent = true;
             return Result(await selected.ExecuteAsync(command, cancellationToken).ConfigureAwait(false));
         }

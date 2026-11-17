@@ -23,6 +23,8 @@ internal sealed class SharedTransfers(ObserverConnection connection, PeerManagem
 
     /// <summary>同じ実体・パスの固定要求を転送先Coreの共有キューへ一度送ります。</summary>
     /// <returns>Coreが保存したジョブです。</returns>
+    // 抑制理由: ObserverはObserverConnectionが所有し、別の操作とも共有するため、ここでは破棄しません。
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW141", Justification = "ObserverConnectionが所有する共有Observerを借用します。")]
     internal async Task<FileTransferJob> EnqueueAsync(FileTransferRequest request, CancellationToken cancellationToken = default)
     {
         PeerInfo source = Resolve(request.Source), destination = Resolve(request.Destination);
@@ -38,10 +40,11 @@ internal sealed class SharedTransfers(ObserverConnection connection, PeerManagem
             }
         };
         string operation = "transfer.queue.enqueue";
-        ManagementCommand command = await ledger.PrepareAsync(request.Id, request.Destination.ClusterId, request.Destination.PeerId, operation,
-            NodeValue.FromJson(JsonSerializer.SerializeToElement(request, ContractJson.Options)), destination, cancellationToken).ConfigureAwait(false);
-        ManagementReply reply = await (connection.FindObserver(request.Destination.ClusterId, request.Destination.PeerId)
-            ?? throw new IOException("The original destination route is unavailable.")).ExecuteAsync(command, cancellationToken).ConfigureAwait(false);
+        UdpObserver observer = connection.FindObserver(request.Destination.ClusterId, request.Destination.PeerId)
+            ?? throw new IOException("The original destination route is unavailable.");
+        ManagementCommand command = await ledger.PrepareTimedAsync(request.Id, request.Destination.ClusterId, request.Destination.PeerId, operation,
+            NodeValue.FromJson(JsonSerializer.SerializeToElement(request, ContractJson.Options)), destination, observer.PrepareClockAsync, cancellationToken).ConfigureAwait(false);
+        ManagementReply reply = await observer.ExecuteAsync(command, cancellationToken).ConfigureAwait(false);
         if (reply.Outcome != EOutcome.Succeeded || reply.Value is null)
         {
             throw new IOException("The destination Core did not confirm queue acceptance. Inspect its shared queue before repeating the request.");

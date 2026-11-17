@@ -64,8 +64,8 @@ internal sealed class DeviceRemote(ObserverConnection connection, ClientCommandL
         {
             (UdpObserver observer, PeerInfo peer) = Resolve(target, false);
             string operation = "host-manager.apply";
-            ManagementCommand command = await ledger.PrepareAsync(ClientCommandLedger.Identity(change.Request.OperationId, operation),
-                target.ClusterId, target.PeerId, operation, NodeValue.FromObject(change.Request), peer, cancellationToken).ConfigureAwait(false);
+            ManagementCommand command = await ledger.PrepareTimedAsync(ClientCommandLedger.Identity(change.Request.OperationId, operation),
+                target.ClusterId, target.PeerId, operation, NodeValue.FromObject(change.Request), peer, observer.PrepareClockAsync, cancellationToken).ConfigureAwait(false);
             sent = true;
             ManagementReply reply = await observer.ExecuteAsync(command, cancellationToken).ConfigureAwait(false);
             if (reply.Outcome == EOutcome.Succeeded && reply.Value is not null)
