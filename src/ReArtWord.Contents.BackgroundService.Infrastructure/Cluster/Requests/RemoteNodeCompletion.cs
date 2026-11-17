@@ -15,9 +15,21 @@ internal static class RemoteNodeCompletion
     public static async Task<ClusterResponse> SendAsync(PeerCluster cluster, ClusterRequest request, Func<ClusterRequest, CancellationToken, Task<ClusterResponse>> local, string kind, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        request = ContractJson.Copy(request) with { Admission = request.Admission };
+        request = ContractJson.Copy(request) with { Admission = request.Admission,
+            DeliveryPrepared = request.DeliveryPrepared, DeliveryTiming = request.DeliveryTiming };
         if (string.Equals(request.TargetPeerId, cluster.LocalPeerId, StringComparison.Ordinal))
         {
+            if (request.DeliveryTiming is { } timing)
+            {
+                try
+                {
+                    request = cluster.AdmissionClock.Accept(new(request, timing.InstanceId, timing.StartByTicks, timing.SourceNow));
+                }
+                catch (Exception error) when (error is InvalidDataException or OverflowException or ArgumentException)
+                {
+                    return new ClusterResponse(EOutcome.NotExecuted, Reason: "Execution.AdmissionClockInvalid");
+                }
+            }
             return await local(request, cancellationToken).ConfigureAwait(false);
         }
         Guid instance = cluster.GetPeers().FirstOrDefault(peer => string.Equals(peer.PeerId, request.TargetPeerId, StringComparison.Ordinal))?.InstanceId ?? request.TargetInstanceId;
@@ -32,7 +44,15 @@ internal static class RemoteNodeCompletion
         {
             try
             {
-                ClockedClusterRequest? timed = await cluster.RequestClocks.PrepareAsync(request, cluster.InspectAsync, cancellationToken).ConfigureAwait(false);
+                ClockedClusterRequest? timed = null;
+                if (request.DeliveryTiming is { } timing)
+                {
+                    timed = new(request, timing.InstanceId, timing.StartByTicks, timing.SourceNow);
+                }
+                else if (!request.DeliveryPrepared)
+                {
+                    timed = await cluster.RequestClocks.PrepareAsync(request, cluster.InspectAsync, cancellationToken).ConfigureAwait(false);
+                }
                 if (timed is not null)
                 {
                     kind = ClockedClusterRequest.Kind;

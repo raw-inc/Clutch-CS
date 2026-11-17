@@ -35,4 +35,18 @@ public sealed record ClusterRequest(Guid Id, string Kind, string TargetPeerId, G
     {
         get; init;
     }
+
+    /// <summary>初回の配送準備が保存済みかどうかです。trueかつDeliveryTimingがnullなら、初回と同じ旧形式で送ります。</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool DeliveryPrepared
+    {
+        get; init;
+    }
+
+    /// <summary>最初に換算した対象Coreの期限です。別Coreから復元しても、保存済み要求の期限を換算し直しません。</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public Contracts.Execution.RequestClockStamp? DeliveryTiming
+    {
+        get; init;
+    }
 }
