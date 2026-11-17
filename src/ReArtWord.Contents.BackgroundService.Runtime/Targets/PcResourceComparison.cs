@@ -23,7 +23,8 @@ public static class PcResourceComparison
         {
             return result with { Reason = "selection.observationMissing" };
         }
-        if (MaximumAge < now - sample.ObservedAt || now < sample.ObservedAt)
+        TimeSpan age = sample.Age?.Elapsed ?? now - sample.ObservedAt;
+        if (MaximumAge < age || age < TimeSpan.Zero)
         {
             return result with { Reason = "selection.observationExpired" };
         }

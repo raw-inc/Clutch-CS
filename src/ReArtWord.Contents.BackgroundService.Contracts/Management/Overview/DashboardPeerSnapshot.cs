@@ -9,10 +9,10 @@ using ReArtWord.Contents.BackgroundService.Contracts.Resources;
 
 namespace ReArtWord.Contents.BackgroundService.Contracts.Management.Overview;
 
-/// <summary>ClientHostが実体ごとに保持する有限の観測です。受信時刻は再配信時に更新しません。</summary>
+/// <summary>ClientHostが実体ごとに保持する有限の観測です。再配信では元の確認からの経過時間を引き継ぎます。</summary>
 /// <param name="ClusterId">対象クラスタです。</param>
 /// <param name="Peer">観測した実体です。</param>
-/// <param name="CheckedAt">状態の実確認時刻です。</param>
+/// <param name="CheckedAt">確認からの経過時間をClientHostの現在の時計で表した、表示用の確認日時です。</param>
 /// <param name="Status">管理状態のスナップショットです。</param>
 /// <param name="Health">稼働・版の確認結果です。</param>
 /// <param name="Samples">最大121点のリソース履歴です。</param>
@@ -25,4 +25,12 @@ public sealed record DashboardPeerSnapshot(string ClusterId, PeerInfo Peer, Date
     JsonElement? Status, JsonElement? Health, IReadOnlyList<ResourceSample> Samples,
     ExecutionHistoryPage? Executions = null, LogQueryResult? Logs = null, string? Problem = null,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<NodeExecutionObservation>? NodeExecutions = null,
-    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<DashboardSampleSeries>? SampleSeries = null);
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<DashboardSampleSeries>? SampleSeries = null)
+{
+    /// <summary>ClientHost内で稼働確認の古さを測ります。別プロセスにはこの時計を持ち出しません。</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public ObservationAge? ConfirmationAge
+    {
+        get; init;
+    }
+}

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using ReArtWord.Contents.BackgroundService.Contracts.Observability;
 
 namespace ReArtWord.Contents.BackgroundService.Contracts.Resources;
 
@@ -12,4 +13,12 @@ namespace ReArtWord.Contents.BackgroundService.Contracts.Resources;
 /// <param name="SelectedInterfaceId">起動時の指定IPに対応する一意のNIC。確認できなければnullです。</param>
 /// <param name="HistoryPending">定期保存までメモリに保持中かです。保存失敗とは区別します。</param>
 public sealed record ResourceSample(Guid Id, string PeerId, DateTimeOffset ObservedAt, IReadOnlyList<ResourceMetric> Metrics, bool HistoryStored = false, Guid? InstanceId = null, string? SelectedInterfaceId = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool HistoryPending = false);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool HistoryPending = false)
+{
+    /// <summary>このプロセスで確認した採取経過時間です。保存履歴や従来の通信形式には含めません。</summary>
+    [JsonIgnore]
+    public ObservationAge? Age
+    {
+        get; init;
+    }
+}

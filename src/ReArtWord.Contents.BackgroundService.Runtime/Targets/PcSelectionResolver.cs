@@ -24,7 +24,8 @@ public sealed class PcSelectionResolver
         ArgumentNullException.ThrowIfNull(peers);
         ArgumentNullException.ThrowIfNull(observations);
         this.peers = peers.ToArray();
-        this.observations = observations.ToDictionary(pair => pair.Key, pair => pair.Value with { Metrics = pair.Value.Metrics.ToArray() }, StringComparer.Ordinal);
+        this.observations = observations.ToDictionary(pair => pair.Key,
+            pair => pair.Value with { Metrics = pair.Value.Metrics.ToArray(), Age = pair.Value.Age?.Freeze() }, StringComparer.Ordinal);
         this.now = now;
         this.localInstance = localInstance;
         detached = peers.Any(peer => peer.InstanceId == localInstance && peer.Status == EPeerStatus.Detached);

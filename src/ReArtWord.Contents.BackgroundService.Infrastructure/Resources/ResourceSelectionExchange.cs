@@ -16,6 +16,7 @@ public sealed class ResourceSelectionExchange
 {
     private static string Topic => "resources.selection";
     private static string CurrentKind => "resources.selection.current";
+    private static string AgeKind => "resources.selection.elapsed";
     private static readonly HashSet<string> metricNames = new(StringComparer.Ordinal)
     {
         "cpu.usage", "memory.usage", "memory.used", "gpu.usage", "gpu.memory.usage", "gpu.memory.used", "gpu.memory.total",
@@ -24,7 +25,7 @@ public sealed class ResourceSelectionExchange
     private readonly Func<ResourceSample?> latest;
     private readonly ConcurrentDictionary<string, ResourceSample> samples = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, ResourceSelectionObservation> observations = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<Guid, bool> capabilities = [];
+    private readonly ConcurrentDictionary<Guid, EObservationProtocol> capabilities = [];
     private readonly TimeProvider clock;
 
     /// <summary>共通採取の参照元と、既存の一時通知経路を接続します。</summary>
@@ -36,6 +37,14 @@ public sealed class ResourceSelectionExchange
         this.latest = latest;
         this.clock = clock ?? TimeProvider.System;
         cluster.RegisterTransientHandler(Topic, ReceiveAsync);
+        cluster.RegisterInspection(AgeKind, (_, token) =>
+        {
+            token.ThrowIfCancellationRequested();
+            ResourceSample? sample = latest();
+            ResourceSelectionAgeSnapshot result = new(sample is null ? null
+                                                                     : SelectMetrics(sample), sample?.Age?.Elapsed);
+            return Task.FromResult(new ClusterResponse(EOutcome.Succeeded, NodeValue.FromObject(result)));
+        });
         cluster.RegisterInspection(CurrentKind, (_, token) =>
         {
             token.ThrowIfCancellationRequested();
@@ -117,46 +126,50 @@ public sealed class ResourceSelectionExchange
     /// <returns>指定したPeerの計測値を照会し、検証して保存する処理です。</returns>
     private async ValueTask RefreshPeerAsync(PeerInfo peer, CancellationToken cancellationToken = default)
     {
-        if (capabilities.TryGetValue(peer.InstanceId, out bool supported) && !supported)
+        if (capabilities.TryGetValue(peer.InstanceId, out EObservationProtocol supported) && supported == EObservationProtocol.Legacy)
         {
             return;
         }
         long requestedAt = clock.GetTimestamp();
-        ClusterRequest request = new(Guid.NewGuid(), CurrentKind, peer.PeerId, peer.InstanceId, clock.GetUtcNow().AddSeconds(3), NodeValue.Null);
         try
         {
-            ClusterResponse response = await cluster.InspectAsync(request, cancellationToken).ConfigureAwait(false);
+            (ClusterResponse response, EObservationProtocol protocol) = await ReadPeerAsync(peer, cancellationToken).ConfigureAwait(false);
             if (!cluster.GetPeers().Any(current => string.Equals(current.PeerId, peer.PeerId, StringComparison.Ordinal) && current.InstanceId == peer.InstanceId))
             {
-                return;
-            }
-            string unavailable = "Cluster.InspectionTargetUnavailable";
-            if (response.Outcome == EOutcome.NotExecuted && string.Equals(response.Reason, unavailable, StringComparison.Ordinal))
-            {
-                capabilities[peer.InstanceId] = false;
                 return;
             }
             if (response.Outcome != EOutcome.Succeeded)
             {
                 return;
             }
-            capabilities[peer.InstanceId] = true;
             samples.TryRemove(peer.PeerId, out _);
-            ResourceSelectionSnapshot? snapshot = response.Value?.Json.Deserialize<ResourceSelectionSnapshot>(ContractJson.Options);
-            if (snapshot?.Sample is not { } sample || sample.InstanceId != peer.InstanceId || !string.Equals(sample.PeerId, peer.PeerId, StringComparison.Ordinal)
+            ResourceSample? sample;
+            TimeSpan? sourceAge;
+            if (protocol == EObservationProtocol.Elapsed)
+            {
+                ResourceSelectionAgeSnapshot? snapshot = response.Value?.Json.Deserialize<ResourceSelectionAgeSnapshot>(ContractJson.Options);
+                sample = snapshot?.Sample;
+                sourceAge = snapshot?.Age;
+            }
+            else
+            {
+                ResourceSelectionSnapshot? snapshot = response.Value?.Json.Deserialize<ResourceSelectionSnapshot>(ContractJson.Options);
+                sample = snapshot?.Sample;
+                sourceAge = snapshot?.ObservedAt - sample?.ObservedAt;
+            }
+            if (sample is null || sample.InstanceId != peer.InstanceId || !string.Equals(sample.PeerId, peer.PeerId, StringComparison.Ordinal)
                 || sample.Metrics is null || 128 < sample.Metrics.Count)
             {
                 return;
             }
-            TimeSpan age = snapshot.ObservedAt - sample.ObservedAt;
-            if (age < TimeSpan.Zero || PcResourceComparison.MaximumAge < age)
+            if (sourceAge is not { } age || age < TimeSpan.Zero || PcResourceComparison.MaximumAge < age)
             {
                 return;
             }
 
             // 同じ標本でも、採取元の時刻補正によって採取からの経過時間が小さく計算されることがあります。
             // 再照会で有効期間が延びないよう、同じ標本IDでは最初の観測と計測開始点を残します。
-            ResourceSelectionObservation observation = new(SelectMetrics(sample), requestedAt, age);
+            ResourceSelectionObservation observation = new(SelectMetrics(sample), new(clock, age + clock.GetElapsedTime(requestedAt)));
             observations.AddOrUpdate(peer.PeerId, observation, (_, previous) =>
             {
                 if (previous.Sample.InstanceId == sample.InstanceId && previous.Sample.Id == sample.Id)
@@ -173,6 +186,37 @@ public sealed class ResourceSelectionExchange
         }
     }
 
+    /// <summary>未対応の応答を確認した場合だけ従来の照会方式を使い、通信失敗では降格しません。</summary>
+    /// <returns>応答と、その本文に使われている観測形式です。</returns>
+    private async Task<(ClusterResponse Response, EObservationProtocol Protocol)> ReadPeerAsync(PeerInfo peer, CancellationToken cancellationToken = default)
+    {
+        EObservationProtocol protocol = capabilities.GetValueOrDefault(peer.InstanceId, EObservationProtocol.Elapsed);
+        ClusterResponse response = await ReadAsync(protocol).ConfigureAwait(false);
+        string unsupported = "Cluster.InspectionTargetUnavailable";
+        if (protocol == EObservationProtocol.Elapsed && response.Outcome == EOutcome.NotExecuted && string.Equals(response.Reason, unsupported, StringComparison.Ordinal))
+        {
+            protocol = EObservationProtocol.Timestamp;
+            response = await ReadAsync(protocol).ConfigureAwait(false);
+        }
+        if (response.Outcome == EOutcome.NotExecuted && string.Equals(response.Reason, unsupported, StringComparison.Ordinal))
+        {
+            capabilities[peer.InstanceId] = EObservationProtocol.Legacy;
+        }
+        else if (response.Outcome == EOutcome.Succeeded)
+        {
+            capabilities[peer.InstanceId] = protocol;
+        }
+        return (response, protocol);
+
+        Task<ClusterResponse> ReadAsync(EObservationProtocol version)
+        {
+            string kind = version == EObservationProtocol.Elapsed ? AgeKind
+                                                                  : CurrentKind;
+            ClusterRequest request = new(Guid.NewGuid(), kind, peer.PeerId, peer.InstanceId, clock.GetUtcNow().AddSeconds(3), NodeValue.Null);
+            return cluster.InspectAsync(request, cancellationToken);
+        }
+    }
+
     /// <summary>新しい照会方式に未対応と確認できたPeerからだけ、旧形式の計測値を受け取ります。</summary>
     /// <returns>検証と最新値更新の完了。</returns>
     private Task ReceiveAsync(string peerId, Guid instance, NodeValue value, CancellationToken cancellationToken = default)
@@ -182,7 +226,7 @@ public sealed class ResourceSelectionExchange
         {
             ResourceSample? sample = value.Json.Deserialize<ResourceSample>(ContractJson.Options);
             if (sample is null || sample.InstanceId != instance || !string.Equals(sample.PeerId, peerId, StringComparison.Ordinal)
-                || !capabilities.TryGetValue(instance, out bool supported) || supported
+                || !capabilities.TryGetValue(instance, out EObservationProtocol supported) || supported != EObservationProtocol.Legacy
                 || sample.Metrics is null || 128 < sample.Metrics.Count || !cluster.GetPeers().Any(peer => string.Equals(peer.PeerId, peerId, StringComparison.Ordinal) && peer.InstanceId == instance))
             {
                 return Task.CompletedTask;
@@ -213,5 +257,18 @@ public sealed class ResourceSelectionExchange
             metrics = [];
         }
         return sample with { Metrics = metrics, HistoryStored = false, HistoryPending = false };
+    }
+
+    /// <summary>起動実体ごとに確認した観測形式です。</summary>
+    private enum EObservationProtocol
+    {
+        /// <summary>日時だけを含む従来の一時通知です。</summary>
+        Legacy,
+
+        /// <summary>採取元の応答日時を添える旧照会です。</summary>
+        Timestamp,
+
+        /// <summary>採取元が計測した経過時間を返す照会です。</summary>
+        Elapsed,
     }
 }

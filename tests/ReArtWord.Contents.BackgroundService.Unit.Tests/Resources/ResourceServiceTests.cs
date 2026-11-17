@@ -19,6 +19,26 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Resources;
 /// <summary>実リソース値とワークフロー未設定時の有限診断履歴を検証します。</summary>
 public sealed class ResourceServiceTests
 {
+    /// <summary>実採取で経過時間を記録し、日時補正後も元日時と保存形式を維持します。</summary>
+    /// <returns>採取から保存までの経過時間の引継ぎと、従来形式のJSONです。</returns>
+    [Fact]
+    public async Task SamplingKeepsAMonotonicAgeWithoutChangingStoredTimestampsAsync()
+    {
+        using MediaTestFiles files = new();
+        ResourceSelectionClock clock = new();
+        using ResourceService service = new(new SqliteRepository(Path.Combine(files.Root, "age.db")), "peer", new ResourceOptions(), timeProvider: clock);
+        ResourceSample sample = await service.CaptureAsync().ConfigureAwait(true);
+        Assert.NotNull(sample.Age);
+        DateTimeOffset original = sample.ObservedAt;
+        string originalJson = JsonSerializer.Serialize(sample, ContractJson.Options);
+        clock.Adjust(TimeSpan.FromHours(1));
+        clock.Advance(TimeSpan.FromSeconds(4));
+        Assert.Equal(TimeSpan.FromSeconds(4), service.Latest!.Age!.Value.Elapsed);
+        Assert.Equal(original, service.Latest.ObservedAt);
+        Assert.Equal(originalJson, JsonSerializer.Serialize(service.Latest, ContractJson.Options));
+        Assert.Null(JsonSerializer.Deserialize<ResourceSample>(originalJson, ContractJson.Options)!.Age);
+    }
+
     /// <summary>実CPU・メモリを取得し、GPU取得不能をゼロに丸めません。</summary>
     /// <returns>検証が終了するまでの非同期処理。</returns>
     [Fact]
