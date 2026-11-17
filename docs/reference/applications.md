@@ -72,7 +72,7 @@ CoreServiceが終了しても管理しているアプリケーションを一律
 
 操作中のグループ設定は変更できません。グループ削除は待機中または操作保留中に行えます。削除してもアプリやその登録は残り、個別の監視設定へ戻ります。個別登録を削除する場合は、先にグループから外してください。
 
-管理APIは`GET /api/process-groups`、`POST /api/process-groups/register`、`POST /api/process-groups/remove`、`POST /api/process-groups/command`です。対応する管理操作名は`processes.groups.list`、`processes.groups.register`、`processes.groups.remove`、`processes.groups.command`です。操作要求の`expectedVersion`には確認済みのグループ登録版を指定できます。操作応答の`outcome`は受付結果であり、完了は一覧の同じ`operationId`を持つ`status.outcome`で確認してください。
+管理APIは`GET /api/process-groups`、`POST /api/v2/process-groups/register`、`POST /api/v2/process-groups/remove`、`POST /api/v2/process-groups/command`です。対応する管理操作名は`processes.groups.list`、`processes.groups.register`、`processes.groups.remove`、`processes.groups.command`です。操作要求の`expectedVersion`には確認済みのグループ登録版を指定できます。操作応答の`outcome`は受付結果であり、完了は一覧の同じ`operationId`を持つ`status.outcome`で確認してください。
 
 一覧は最新の操作状態を表示します。別の操作IDへ進んでいる場合は、元の操作IDを使って`ApplicationGroup.OperationCompleted`・`ApplicationGroup.OperationPaused`のログを確認してください。途中でグループの停止へ切り替えた場合は、新しい受付ログの`previousOperationId`から前の操作を確認できます。
 
