@@ -37,6 +37,12 @@ public sealed class PeerManagementClient(Func<string, string, UdpObserver?> find
         {
             throw new IOException("File transfer capabilities could not be confirmed.");
         }
+        ManagementReply clockSupport = await observer.InspectWithRetryAsync(capability with { RequestId = Guid.NewGuid(), Operation = "transfer.stream.clock" }, cancellationToken).ConfigureAwait(false);
+        bool clockAware = clockSupport.Outcome == EOutcome.Succeeded && clockSupport.Value?.Json.ValueKind == JsonValueKind.True;
+        if (!clockAware && !(clockSupport.Outcome == EOutcome.NotExecuted && unavailable.Contains(clockSupport.Reason, StringComparer.Ordinal)))
+        {
+            throw new IOException("File transfer clock support could not be confirmed.");
+        }
         Contracts.Cluster.PeerInfo peer = observer.GetClusters().Where(item => string.Equals(item.ClusterId, target.ClusterId, StringComparison.Ordinal))
             .SelectMany(item => item.Peers).Single(item => item.InstanceId == target.InstanceId && string.Equals(item.PeerId, target.PeerId, StringComparison.Ordinal));
         ClientNetworkBinding selected = observer.CaptureBindingStatus().Binding;
@@ -46,7 +52,14 @@ public sealed class PeerManagementClient(Func<string, string, UdpObserver?> find
         bool connected = false;
         try
         {
-            FileTransferTicket ticket = await SendAsync<FileTransferTicket>(target, "transfer.stream.open", Guid.NewGuid(), false, cancellationToken).ConfigureAwait(false);
+            string open = "transfer.stream.open";
+            Func<ManagementCommand, CancellationToken, Task<RequestClockStamp?>>? prepareClock = null;
+            if (clockAware)
+            {
+                open = "transfer.stream.clock.open";
+                prepareClock = observer.PrepareClockAsync;
+            }
+            FileTransferTicket ticket = await SendAsync<FileTransferTicket>(target, open, Guid.NewGuid(), false, cancellationToken).ConfigureAwait(false);
             if (ticket.Port is < 1 or > 65535 || ticket.Token.Length != 64 || ticket.ExpiresAt <= DateTimeOffset.UtcNow)
             {
                 throw new InvalidDataException("Invalid file transfer ticket.");
@@ -64,7 +77,7 @@ public sealed class PeerManagementClient(Func<string, string, UdpObserver?> find
                 throw new InvalidDataException("File transfer ticket was not accepted.");
             }
             connected = true;
-            return new(this, target, client, lease);
+            return new(this, target, client, lease, prepareClock);
         }
         catch (Exception exception) when (exception is IOException or SocketException or OperationCanceledException)
         {
