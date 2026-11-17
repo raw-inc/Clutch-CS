@@ -94,6 +94,7 @@ internal sealed class RuntimeWorker : Microsoft.Extensions.Hosting.BackgroundSer
         await runtime.Cluster.StartAsync(stoppingToken).ConfigureAwait(false);
         using CancellationTokenSource workers = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         Task resources = runtime.Resources.RunAsync(workers.Token);
+        Task selections = resourceSelections.RunAsync(workers.Token);
         Task updates = runtime.Updater?.Stream.RunAsync(workers.Token) ?? Task.CompletedTask;
         Task schedules = runtime.Updater?.Scheduler.RunAsync(workers.Token) ?? Task.CompletedTask;
         Task events = eventExchange.RunAsync(workers.Token);
@@ -117,7 +118,7 @@ internal sealed class RuntimeWorker : Microsoft.Extensions.Hosting.BackgroundSer
             await workers.CancelAsync().ConfigureAwait(false);
             try
             {
-                await Task.WhenAll(resources, updates, schedules, events, network, history, applications, applicationGroups).ConfigureAwait(false);
+                await Task.WhenAll(resources, selections, updates, schedules, events, network, history, applications, applicationGroups).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (workers.IsCancellationRequested)
             {
@@ -141,7 +142,6 @@ internal sealed class RuntimeWorker : Microsoft.Extensions.Hosting.BackgroundSer
         {
             try
             {
-                await resourceSelections.RefreshAsync(cancellationToken).ConfigureAwait(false);
                 await peerEvents.RefreshAsync(cancellationToken).ConfigureAwait(false);
                 await runtime.Conflicts.ReconcileAsync(cancellationToken).ConfigureAwait(false);
                 await runtime.ManualSafety.RefreshAsync(cancellationToken).ConfigureAwait(false);
