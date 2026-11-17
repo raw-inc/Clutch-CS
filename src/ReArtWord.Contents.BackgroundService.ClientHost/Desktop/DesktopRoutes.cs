@@ -147,7 +147,7 @@ internal static class DesktopRoutes
                 DateTimeOffset.UtcNow.AddSeconds(15), "desktop.timing", null), cancellationToken).ConfigureAwait(false);
             timing = timingCapability.Outcome == EOutcome.Succeeded && timingCapability.Value?.Json.ValueKind == JsonValueKind.True;
         }
-        ManagementCommand command = new(Guid.NewGuid(), cluster, peer.PeerId, peer.InstanceId, DateTimeOffset.UtcNow.AddSeconds(15), "desktop.open", NodeValue.FromObject(Guid.NewGuid()));
+        ManagementCommand command = ManagementCommand.Start(Guid.NewGuid(), cluster, peer.PeerId, peer.InstanceId, TimeSpan.FromSeconds(15), "desktop.open", NodeValue.FromObject(Guid.NewGuid()));
         ManagementReply reply = await observer.NotifyAsync(command, cancellationToken).ConfigureAwait(false);
         if (reply.Outcome != EOutcome.Succeeded || reply.Value is null)
         {

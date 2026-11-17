@@ -12,6 +12,15 @@ namespace ReArtWord.Contents.BackgroundService.Contracts.Management;
 /// <param name="Payload">ドメイン operationIdを含む元の引数。</param>
 public sealed record ManagementCommand(Guid RequestId, string ClusterId, string TargetPeerId, Guid TargetInstanceId, DateTimeOffset ExpiresAt, string Operation, NodeValue? Payload)
 {
+    /// <summary>新規管理要求の受付期間を発行時に固定します。保存済み操作を復元する場合は使用しません。</summary>
+    /// <returns>本文の期限と、時刻補正に依存しない受付予算を持つ要求です。</returns>
+    public static ManagementCommand Start(Guid requestId, string clusterId, string peerId, Guid instanceId,
+        TimeSpan lifetime, string operation, NodeValue? payload, TimeProvider? timeProvider = null)
+    {
+        Execution.RequestAdmission admission = Execution.RequestAdmission.Start(timeProvider ?? TimeProvider.System, lifetime);
+        return new(requestId, clusterId, peerId, instanceId, admission.ExpiresAt, operation, payload) { Admission = admission };
+    }
+
     /// <summary>受信側の単調時計で判定する受付期限です。要求の同一性を保つため、JSONには含めません。</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public Execution.RequestAdmission? Admission

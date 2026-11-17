@@ -19,6 +19,19 @@ public sealed class RequestAdmission
         SourceNow = sourceNow;
     }
 
+    /// <summary>新規要求の受付期間を発行時点から計測します。保存済み要求の復元には使用しません。</summary>
+    /// <returns>表示用の期限と、時刻補正で増減しない残り時間を持つ受付情報です。</returns>
+    public static RequestAdmission Start(TimeProvider clock, TimeSpan lifetime)
+    {
+        ArgumentNullException.ThrowIfNull(clock);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(lifetime, TimeSpan.Zero);
+        DateTimeOffset issuedAt = clock.GetUtcNow();
+        return new(clock, lifetime, issuedAt + lifetime, issuedAt);
+    }
+
+    /// <summary>発行時の時計で表した期限です。本文とIDの時刻を揃えるために使用し、残り時間の計測には使用しません。</summary>
+    public DateTimeOffset ExpiresAt => expiresAt;
+
     /// <summary>要求元の時刻系で表した、期限換算時の基準日時です。UUIDv7に含まれる生成日時の検証にも使います。</summary>
     public DateTimeOffset SourceNow
     {

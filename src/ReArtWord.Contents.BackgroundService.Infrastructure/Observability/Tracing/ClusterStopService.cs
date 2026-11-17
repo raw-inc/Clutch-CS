@@ -70,8 +70,8 @@ public sealed class ClusterStopService
             return Empty(request.OperationId, EOutcome.NotExecuted, "ClusterStop.MembershipUnconfirmed");
         }
         Guid clearId = Identity(request.OperationId, "clear");
-        ClusterRequest[] commands = targets.Select(target => new ClusterRequest(Identity(request.OperationId, target.PeerId), Kind, target.PeerId, target.InstanceId,
-            DateTimeOffset.UtcNow.AddMinutes(2), NodeValue.FromObject(new StopCommand(request.OperationId, clearId)))).ToArray();
+        ClusterRequest[] commands = targets.Select(target => ClusterRequest.Start(Identity(request.OperationId, target.PeerId), Kind, target.PeerId, target.InstanceId,
+            TimeSpan.FromMinutes(2), NodeValue.FromObject(new StopCommand(request.OperationId, clearId)))).ToArray();
         operation = new(request, members, commands);
         DurableReceipt journal = await cluster.ReplicateFixedAsync(Identity(request.OperationId, "journal"), [new DurableMutation(Scope, key, null, NodeValue.FromObject(operation))], members, cancellationToken).ConfigureAwait(false);
         if (journal.Outcome != EOutcome.Succeeded)

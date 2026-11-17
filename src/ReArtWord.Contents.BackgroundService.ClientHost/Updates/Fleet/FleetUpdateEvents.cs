@@ -124,7 +124,7 @@ internal sealed class FleetUpdateEvents : Microsoft.Extensions.Hosting.Backgroun
         {
             using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(TimeSpan.FromSeconds(4));
-            ManagementCommand command = new(notification.Id, cluster, peer.PeerId, peer.InstanceId, DateTimeOffset.UtcNow.AddSeconds(4), "updates.events.enqueue", ContractJson.ToValue(notification));
+            ManagementCommand command = ManagementCommand.Start(notification.Id, cluster, peer.PeerId, peer.InstanceId, TimeSpan.FromSeconds(4), "updates.events.enqueue", ContractJson.ToValue(notification));
             ManagementReply reply = await observer.ExecuteAsync(command, timeout.Token).ConfigureAwait(false);
             string outcome = "outcome", succeeded = "succeeded";
             if (reply.Outcome != EOutcome.Succeeded || reply.Value?.Json.TryGetProperty(outcome, out JsonElement result) != true || !string.Equals(result.GetString(), succeeded, StringComparison.Ordinal))

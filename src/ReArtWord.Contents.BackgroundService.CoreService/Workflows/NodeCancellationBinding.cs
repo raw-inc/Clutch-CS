@@ -48,6 +48,7 @@ internal static class NodeCancellationBinding
             startBy = now + admission.Remaining;
         }
         return new(Guid.NewGuid(), "node.cancel", original.TargetPeerId, original.TargetInstanceId,
-            now.AddMinutes(1), NodeValue.FromObject(new NodeCancellationRequest(original.Id, startBy)));
+            now.AddMinutes(1), NodeValue.FromObject(new NodeCancellationRequest(original.Id, startBy)))
+        { Admission = new(TimeProvider.System, TimeSpan.FromMinutes(1), now.AddMinutes(1), now) };
     }
 }

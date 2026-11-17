@@ -79,7 +79,7 @@ public sealed class FileTransferClient : IDisposable
         }
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, binding!.Token);
         timeout.CancelAfter(TimeSpan.FromMinutes(2));
-        ManagementCommand command = new(Guid.NewGuid(), target.ClusterId, target.PeerId, target.InstanceId, DateTimeOffset.UtcNow.AddMinutes(2), operation,
+        ManagementCommand command = ManagementCommand.Start(Guid.NewGuid(), target.ClusterId, target.PeerId, target.InstanceId, TimeSpan.FromMinutes(2), operation,
             NodeValue.FromJson(JsonSerializer.SerializeToElement(payload, ContractJson.Options)));
         bool received = false;
         try

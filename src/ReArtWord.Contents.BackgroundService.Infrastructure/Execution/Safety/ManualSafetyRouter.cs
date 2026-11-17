@@ -62,7 +62,7 @@ internal sealed class ManualSafetyRouter(PeerCluster cluster, IDurableRepository
             {
                 return Result(change, EOutcome.NotExecuted, "safety.coordinatorUnavailable");
             }
-            command = new ClusterRequest(change.OperationId, "safety.change", owner.PeerId, owner.InstanceId, DateTimeOffset.UtcNow.AddMinutes(5), NodeValue.FromObject(change));
+            command = ClusterRequest.Start(change.OperationId, "safety.change", owner.PeerId, owner.InstanceId, TimeSpan.FromMinutes(5), NodeValue.FromObject(change));
             DurableReceipt saved = await repository.ApplyBatchAsync(Identity(change.OperationId, "route"), [new DurableMutation(scope, key, null, NodeValue.FromObject(command))], cancellationToken).ConfigureAwait(false);
             if (saved.Outcome != EOutcome.Succeeded)
             {
