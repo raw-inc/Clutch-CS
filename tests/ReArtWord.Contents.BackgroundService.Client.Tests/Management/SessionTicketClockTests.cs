@@ -23,13 +23,13 @@ using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Client.Tests.Management;
 
-/// <summary>発行元と中継PCの時計差が、TCP認証までの接続を妨げないことを確認します。</summary>
+/// <summary>CoreとClientHostの時計がずれていても、有効なチケットで接続できることを検証します。</summary>
 public sealed class SessionTicketClockTests : IDisposable
 {
     private readonly string directory = Path.Combine(Path.GetTempPath(), "clutch-ticket-clock-" + Guid.NewGuid().ToString("N"));
 
-    /// <summary>実際のHTTP・管理通信を通し、五つの接続経路から元の認証値が届くことを確認します。</summary>
-    /// <returns>発行側が前後一時間ずれている場合の接続結果です。</returns>
+    /// <summary>5種類の接続経路で、チケットに記載されたトークンが発行元へ届くことを確認します。</summary>
+    /// <returns>発行元の時計を前後1時間ずらした場合の検証を表すタスクです。</returns>
     // 抑制理由: 認証タスクはfinallyで取消し後に完了を待ち、listenerより先に回収します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2025", Justification = "finallyで認証タスクを必ずawaitしてから通信資源を破棄します。")]
     [Theory]
@@ -76,7 +76,7 @@ public sealed class SessionTicketClockTests : IDisposable
             }
             else if (!string.Equals(command.Operation, transferKind, StringComparison.Ordinal))
             {
-                // 実装していない新しい能力を、旧Coreの代役が対応済みと返さないようにします。
+                // この模擬Coreは上記の操作だけに対応します。未知の機能への照会は未対応と返し、実装していない通信方式が選ばれるのを防ぎます。
                 return Task.FromResult(new ManagementReply(EOutcome.NotExecuted, Reason: "Management.OperationMissing"));
             }
             return Task.FromResult(new ManagementReply(EOutcome.Succeeded, value));
@@ -114,8 +114,8 @@ public sealed class SessionTicketClockTests : IDisposable
         }
     }
 
-    /// <summary>期限を管理するCoreの代わりに認証値だけを受け取り、アプリやキャプチャは起動しません。</summary>
-    /// <returns>中継から受け取った32バイトです。</returns>
+    /// <summary>Coreの認証処理を模擬し、ClientHostから送られた32バイトのトークンを記録します。</summary>
+    /// <returns>トークンをreceivedへ渡し、接続終了まで待つタスクです。</returns>
     private static async Task AuthenticateAsync(TcpListener listener, TaskCompletionSource<byte[]> received, bool acknowledge, CancellationToken cancellationToken = default)
     {
         using TcpClient accepted = await listener.AcceptTcpClientAsync(cancellationToken).ConfigureAwait(false);
@@ -133,8 +133,8 @@ public sealed class SessionTicketClockTests : IDisposable
         }
     }
 
-    /// <summary>製品の経路をKestrelへ登録し、同一originのWebSocketから操作します。</summary>
-    /// <returns>ブラウザー側の接続と、Coreへの認証値送信です。</returns>
+    /// <summary>実際のClientHostのルートへWebSocketで接続し、Coreへのトークン送信を待ちます。</summary>
+    /// <returns>接続の検証と後片付けを表すタスクです。</returns>
     private static async Task ConnectBrowserAsync(string kind, PeerCluster peer, ObserverConnection connection, PeerManagementClient remote, Task<byte[]> authenticated, CancellationToken cancellationToken = default)
     {
         WebApplicationBuilder builder = WebApplication.CreateSlimBuilder();
@@ -170,7 +170,7 @@ public sealed class SessionTicketClockTests : IDisposable
         }
     }
 
-    /// <summary>所有した通信が終了してから、試験専用の保存先を回収します。</summary>
+    /// <summary>試験用のデータディレクトリを削除します。</summary>
     public void Dispose()
     {
         if (Directory.Exists(directory))

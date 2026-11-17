@@ -17,11 +17,11 @@ using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Management;
 
-/// <summary>受信側の日時判定がなくても、発行元の十五秒の認証期限を越えて接続できません。</summary>
+/// <summary>ClientHostで日時を比較しなくても、Core側が認証未完了の接続を15秒で打ち切ることを検証します。</summary>
 public sealed class SessionAdmissionDeadlineTests
 {
-    /// <summary>接続済みでもトークン送信が未完了なら、五種類すべてで認証待ちを打ち切ります。</summary>
-    /// <returns>アプリ・PTY・キャプチャを起動せず、実TCPで受付終了を確認します。</returns>
+    /// <summary>5種類の接続経路で、TCP接続後もトークンの受信完了までは認証期限が適用されることを確認します。</summary>
+    /// <returns>実際のTCP接続を使った検証を表すタスクです。</returns>
     [WindowsFact]
     public async Task IssuersCloseUnauthenticatedConnectionsAtTheirOwnDeadline()
     {
@@ -48,8 +48,8 @@ public sealed class SessionAdmissionDeadlineTests
         FileTransferSession transfer = new(new(network.InterfaceId, loopback), new("fixture", "peer", Guid.NewGuid()), new ManagementRegistry());
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable transferLifetime = transfer.ConfigureAwait(true);
 
-        // 製品の認証期限15秒に、CIやローカル負荷による観測待ちの余裕を加えます。
-        // 試験の締切を伸ばして受付を許すのではなく、サーバーが接続を閉じることを待ちます。
+        // Coreの認証タイマーは15秒です。テスト側は、負荷で切断通知の受信が遅れた場合に備えて30秒まで待ちます。
+        // トークンを最後まで送らず、Coreが接続を閉じたことをReadAsyncの戻り値で確認します。
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(30));
         await Task.WhenAll(
             WaitForRejectionAsync(attachment.Ticket.Port, attachment.Ticket.Token, timeout.Token),
@@ -59,8 +59,8 @@ public sealed class SessionAdmissionDeadlineTests
             WaitForRejectionAsync(transfer.Ticket.Port, transfer.Ticket.Token, timeout.Token)).ConfigureAwait(true);
     }
 
-    /// <summary>正しいトークンの最後の一バイトを保留して、期限後には認証応答がないことを確認します。</summary>
-    /// <returns>発行側からの接続終了です。</returns>
+    /// <summary>トークンの最後の1バイトを送らずに待ち、Coreから接続が閉じられることを確認します。</summary>
+    /// <returns>Coreによる切断の確認を表すタスクです。</returns>
     private static async Task WaitForRejectionAsync(int port, string token, CancellationToken cancellationToken = default)
     {
         using TcpClient client = new();
