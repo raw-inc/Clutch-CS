@@ -3,6 +3,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Persistence;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Documents;
+using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.History;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Receipts;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Causality;
@@ -293,7 +294,7 @@ internal sealed class RoutedRepository(string directory, RepositoryRoutes routes
         DurableReceipt? receipt = await state.ReceiptAsync(id, routes, cancellationToken).ConfigureAwait(false);
         if (receipt is not null)
         {
-            if (!string.Equals(receipt.Fingerprint, fingerprint, StringComparison.Ordinal))
+            if (!RepositoryHistoryGuard.HasUnknownContent(receipt) && !string.Equals(receipt.Fingerprint, fingerprint, StringComparison.Ordinal))
             {
                 receipt = new(id, fingerprint, EOutcome.Failed, [], "Persistence.OperationMismatch");
             }

@@ -197,7 +197,7 @@ public abstract class DurableRepository : IDurableRepository, ILocalSnapshotBatc
         }
         if (document.Receipts.TryGetValue(operationId, out DurableReceipt? completed))
         {
-            if (string.Equals(completed.Fingerprint, fingerprint, StringComparison.Ordinal))
+            if (RepositoryHistoryGuard.HasUnknownContent(completed) || string.Equals(completed.Fingerprint, fingerprint, StringComparison.Ordinal))
             {
                 return completed;
             }
@@ -311,7 +311,7 @@ public abstract class DurableRepository : IDurableRepository, ILocalSnapshotBatc
         }
         if (document.Receipts.TryGetValue(operationId, out DurableReceipt? previous))
         {
-            if (string.Equals(previous.Fingerprint, fingerprint, StringComparison.Ordinal))
+            if (RepositoryHistoryGuard.HasUnknownContent(previous) || string.Equals(previous.Fingerprint, fingerprint, StringComparison.Ordinal))
             {
                 return previous;
             }

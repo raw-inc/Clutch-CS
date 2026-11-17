@@ -295,7 +295,7 @@ internal static class RepositoryMerge
         string fingerprint = ContractJson.Hash(new { scope, key, expectedVersions, value });
         if (document.Receipts.TryGetValue(operationId, out DurableReceipt? previous))
         {
-            if (string.Equals(previous.Fingerprint, fingerprint, StringComparison.Ordinal))
+            if (RepositoryHistoryGuard.HasUnknownContent(previous) || string.Equals(previous.Fingerprint, fingerprint, StringComparison.Ordinal))
             {
                 return previous;
             }

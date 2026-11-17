@@ -13,6 +13,12 @@ internal static class RepositoryHistoryGuard
     internal static string Scope => "peer:repository-history";
     internal static string ExpiredReason => "Persistence.HistoryExpired";
 
+    /// <summary>削除境界しか残っていない結果では、要求内容の一致・不一致を判定できません。</summary>
+    /// <returns>内容の不一致へ読み替えず、再実行を禁止する確認不能を返す必要があるかです。</returns>
+    internal static bool HasUnknownContent(DurableReceipt receipt)
+        => receipt.Outcome == EOutcome.Unknown && string.IsNullOrEmpty(receipt.Fingerprint)
+            && string.Equals(receipt.Reason, ExpiredReason, StringComparison.Ordinal);
+
     /// <summary>全操作共通の削除境界を読みます。</summary>
     /// <returns>保持処理前ならnullです。</returns>
     internal static HistoryRetentionBoundary? Read(RepositoryDocument document)
