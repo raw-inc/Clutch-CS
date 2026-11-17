@@ -66,7 +66,7 @@ public sealed class UdpFleetUpdateRemote(Func<string, string, UdpObserver?> find
             PeerInfo[] peers = getClusters().Where(cluster => string.Equals(cluster.ClusterId, target.ClusterId, StringComparison.Ordinal))
                 .SelectMany(cluster => cluster.Peers).Where(peer => string.Equals(peer.PeerId, target.Peer.PeerId, StringComparison.Ordinal)).ToArray();
             if (peers.Length != 1 || !string.Equals(peers[0].HostId, target.Peer.HostId, StringComparison.Ordinal)
-                || TimeSpan.FromSeconds(15) < DateTimeOffset.UtcNow - peers[0].LastSeen)
+                || TimeSpan.FromSeconds(15) < peers[0].AgeAt(DateTimeOffset.UtcNow))
             {
                 return null;
             }

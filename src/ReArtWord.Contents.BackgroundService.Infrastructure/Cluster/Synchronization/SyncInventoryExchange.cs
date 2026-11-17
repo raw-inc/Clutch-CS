@@ -26,7 +26,7 @@ internal sealed class SyncInventoryExchange(PeerCluster cluster, SyncExportStore
             throw new SyncFailureException("Sync.SessionExpired");
         }
         PeerInfo peer = cluster.GetPeers().FirstOrDefault(item => string.Equals(item.PeerId, peerId, StringComparison.Ordinal)
-            && item.InstanceId == instanceId && item.Status != EPeerStatus.Detached && clock.GetUtcNow() - item.LastSeen <= options.PeerTimeout)
+            && item.InstanceId == instanceId && item.Status != EPeerStatus.Detached && item.AgeAt(clock.GetUtcNow()) <= options.PeerTimeout)
             ?? throw new SyncFailureException("Sync.SourceInstanceUnavailable");
         Cleanup();
         Offer offer;

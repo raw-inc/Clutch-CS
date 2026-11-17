@@ -51,7 +51,7 @@ public sealed class UpdateObserver : IAsyncDisposable
         using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(limit.Token, cancellationToken);
         while (!linked.IsCancellationRequested)
         {
-            PeerInfo? peer = observer.GetClusters().Where(item => string.Equals(item.ClusterId, clusterId, StringComparison.Ordinal)).SelectMany(item => item.Peers).Where(item => string.Equals(item.PeerId, peerId, StringComparison.Ordinal) && (!expectedInstance.HasValue || item.InstanceId == expectedInstance.Value)).OrderByDescending(item => item.LastSeen).FirstOrDefault();
+            PeerInfo? peer = observer.GetClusters().Where(item => string.Equals(item.ClusterId, clusterId, StringComparison.Ordinal)).SelectMany(item => item.Peers).Where(item => string.Equals(item.PeerId, peerId, StringComparison.Ordinal) && (!expectedInstance.HasValue || item.InstanceId == expectedInstance.Value)).OrderBy(item => item.AgeAt(DateTimeOffset.UtcNow)).FirstOrDefault();
             if (peer is not null)
             {
                 return peer;
