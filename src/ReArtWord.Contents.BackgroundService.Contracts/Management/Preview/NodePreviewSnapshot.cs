@@ -1,9 +1,26 @@
+using System.Text.Json.Serialization;
+using ReArtWord.Contents.BackgroundService.Contracts.Observability;
+
 namespace ReArtWord.Contents.BackgroundService.Contracts.Management.Preview;
 
 /// <summary>明示したプレビューノードの一時取得結果です。本文は別の分割読取りで取得します。</summary>
 public sealed record NodePreviewSnapshot(Guid Id, string WorkflowId, string Revision, string NodeId, string PeerId,
     DateTimeOffset CapturedAt, string MediaType, int Length, bool Truncated = false, string? Problem = null)
 {
+    /// <summary>取得元で値を採取してからの経過時間です。元の記録日時は変更しません。</summary>
+    [JsonIgnore]
+    public ObservationAge? CaptureAge
+    {
+        get; init;
+    }
+
+    /// <summary>応答時点の経過時間です。受信後は受信側の単調時計で続きを測ります。</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public long? CaptureAgeTicks
+    {
+        get; init;
+    }
+
     /// <summary>実行ごとに独立した進捗の識別です。従来Previewには付与しません。</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public ProgressSession? Session
