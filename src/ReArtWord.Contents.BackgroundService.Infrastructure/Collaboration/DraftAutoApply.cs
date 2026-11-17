@@ -80,10 +80,10 @@ public sealed class DraftAutoApply(WorkflowStore workflows, CollaborationService
             }
             if (!candidates.TryGetValue(draft.WorkflowId, out Candidate? candidate) || !string.Equals(candidate.Fingerprint, fingerprint, StringComparison.Ordinal))
             {
-                candidates[draft.WorkflowId] = new(fingerprint, clock.GetUtcNow());
+                candidates[draft.WorkflowId] = new(fingerprint, clock.GetTimestamp());
                 continue;
             }
-            if (clock.GetUtcNow() - candidate.StableSince < TimeSpan.FromSeconds(2) || candidate.Attempted)
+            if (clock.GetElapsedTime(candidate.StableSince) < TimeSpan.FromSeconds(2) || candidate.Attempted)
             {
                 continue;
             }
@@ -116,6 +116,6 @@ public sealed class DraftAutoApply(WorkflowStore workflows, CollaborationService
         }
     }
 
-    /// <summary>同じ候補への暗黙再送を防ぎ、操作していない時間だけを待機に数えます。</summary>
-    private sealed record Candidate(string Fingerprint, DateTimeOffset StableSince, bool Attempted = false);
+    /// <summary>同じ草稿を観測し続けた時間を測り、日時の前進で安定確認を省きません。試行済みの保存は再送しません。</summary>
+    private sealed record Candidate(string Fingerprint, long StableSince, bool Attempted = false);
 }
