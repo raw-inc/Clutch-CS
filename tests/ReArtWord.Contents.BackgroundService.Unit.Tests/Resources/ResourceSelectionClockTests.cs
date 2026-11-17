@@ -20,6 +20,20 @@ public sealed class ResourceSelectionClockTests : IDisposable
 {
     private readonly MediaTestFiles files = new();
 
+    /// <summary>未確認の相手から届いた日時だけで、時計差のある標本を新鮮と判定しません。</summary>
+    /// <returns>版の照会より先に届く旧形式通知を保留することです。</returns>
+    [Fact]
+    public async Task UnconfirmedCapabilityDoesNotTrustLegacyTimestamps()
+    {
+        await using PeerCluster peer = Peer(Guid.NewGuid().ToString("N"), "peer", Port(), true);
+        ResourceSelectionExchange incoming = new(peer, () => null);
+        await peer.StartAsync();
+
+        // PublishTransientAsyncは自分の購読の完了を待つため、UDP到着順や待ち時間には依存しません。
+        await peer.PublishTransientAsync("resources.selection", NodeValue.FromObject(Sample(peer, DateTimeOffset.UtcNow)));
+        Assert.Empty(incoming.Capture());
+    }
+
     /// <summary>PC間の時計差・再照会・時計補正が、十秒の採取鮮度を変えません。</summary>
     /// <returns>新しい標本だけを選び、収集停止後は選ばないことです。</returns>
     [Theory]

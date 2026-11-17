@@ -186,7 +186,7 @@ public sealed class ResourceSelectionExchange
         {
             ResourceSample? sample = value.Json.Deserialize<ResourceSample>(ContractJson.Options);
             if (sample is null || sample.InstanceId != instance || !string.Equals(sample.PeerId, peerId, StringComparison.Ordinal)
-                || capabilities.TryGetValue(instance, out bool supported) && supported
+                || !capabilities.TryGetValue(instance, out bool supported) || supported
                 || sample.Metrics is null || 128 < sample.Metrics.Count || !cluster.GetPeers().Any(peer => string.Equals(peer.PeerId, peerId, StringComparison.Ordinal) && peer.InstanceId == instance))
             {
                 return Task.CompletedTask;
