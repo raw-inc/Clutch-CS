@@ -8,6 +8,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Cluster.Requests;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Cluster.Synchronization;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Cluster.Streams;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
+using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.History;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Receipts;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 using ReArtWord.Contents.BackgroundService.Runtime.Cluster;
@@ -26,6 +27,7 @@ public sealed class PeerCluster : IPeerDirectory, IRemoteNodeDispatcher, IAsyncD
     private readonly UdpTransport transport;
     private readonly ClusterReplication replication;
     private readonly TransientChannel transient;
+    private readonly HistoryRetentionPeerGate retention;
     private readonly CancellationTokenSource stopping = new();
     private readonly SyncParticipation participation;
     private readonly Lazy<Task> heartbeat;
@@ -57,6 +59,7 @@ public sealed class PeerCluster : IPeerDirectory, IRemoteNodeDispatcher, IAsyncD
         { RequestTimeout = options.RequestTimeout, MaximumMessageBytes = options.MaximumMessageBytes }, LocalInstanceId, clock) { Received = ReceiveAsync };
         replication = ClusterReplication.Create(this, repository, options.MaximumMessageBytes, clock);
         transient = new TransientChannel(LocalPeerId, LocalInstanceId, (body, token) => transport.SendAsync(CreateMessage("transient", null, body), token), () => recovery.Detached);
+        retention = new(this, clock, options.PeerTimeout);
         heartbeat = new Lazy<Task>(() => HeartbeatAsync(stopping.Token));
         repositorySync = new(this, repository, options, clock, () => new(transport.InterfaceId, options.BindAddress), stopping.Token);
         participation = new(this, membership, recovery, repositorySync, repository);
@@ -95,6 +98,9 @@ public sealed class PeerCluster : IPeerDirectory, IRemoteNodeDispatcher, IAsyncD
     {
         get;
     }
+
+    /// <summary>履歴の整理にだけ使う、日時補正やPeerの離脱で急に先へ進まない基準です。</summary>
+    public HistoryRetentionPeerGate Retention => retention;
 
     /// <summary>送信先Coreごとに時計の照会結果を保持し、送信する要求の期限を換算します。</summary>
     internal RequestClockClient RequestClocks
@@ -251,8 +257,7 @@ public sealed class PeerCluster : IPeerDirectory, IRemoteNodeDispatcher, IAsyncD
 
     /// <summary>保存・実行要求をTCPへ送り、未配送または未対応の場合だけ従来UDPへ戻します。</summary>
     /// <returns>対象実体からの応答。</returns>
-    internal Task<WireMessage?> ExchangeAsync(string kind, string peerId, Guid instanceId, JsonElement body, CancellationToken cancellationToken = default)
-        => requestStream.ExchangeAsync(CreateMessage(kind, peerId, body) with { TargetInstanceId = instanceId }, cancellationToken);
+    internal Task<WireMessage?> ExchangeAsync(string kind, string peerId, Guid instanceId, JsonElement body, CancellationToken cancellationToken = default) => requestStream.ExchangeAsync(CreateMessage(kind, peerId, body) with { TargetInstanceId = instanceId }, cancellationToken);
 
     /// <summary>配送封筒を構築します。</summary>
     /// <returns>今回のメッセージ。</returns>
@@ -260,17 +265,14 @@ public sealed class PeerCluster : IPeerDirectory, IRemoteNodeDispatcher, IAsyncD
 
     /// <summary>開始前に対象・期限・通常参加を確認します。</summary>
     /// <returns>操作記録を経由した結果。</returns>
-    private Task<ClusterResponse> ExecuteLocalAsync(ClusterRequest request, bool localCaller, CancellationToken cancellationToken = default)
-        => executor.ExecutePeerAsync(request, GetPeers().Single(peer => peer.InstanceId == LocalInstanceId).Status, LocalInstanceId, localCaller,
+    private Task<ClusterResponse> ExecuteLocalAsync(ClusterRequest request, bool localCaller, CancellationToken cancellationToken = default) => executor.ExecutePeerAsync(request, GetPeers().Single(peer => peer.InstanceId == LocalInstanceId).Status, LocalInstanceId, localCaller,
             LocalDetachedExecutionAllowed, ManagementRequestsEnabled, cancellationToken);
 
     /// <summary>発見と実同期・実要求の配送を処理します。</summary>
     /// <returns>受信処理の完了。</returns>
     private async Task ReceiveAsync(WireMessage message, string address, CancellationToken cancellationToken = default)
     {
-        string helloKind = "hello";
-        string syncKind = "sync.";
-        string transientKind = "transient";
+        string helloKind = "hello", syncKind = "sync.", transientKind = "transient";
         if (string.Equals(message.Kind, transientKind, StringComparison.Ordinal))
         {
             await transient.DispatchAsync(message.SenderId, message.InstanceId, message.Body, cancellationToken).ConfigureAwait(false);
@@ -314,7 +316,7 @@ public sealed class PeerCluster : IPeerDirectory, IRemoteNodeDispatcher, IAsyncD
     private Task HeartbeatAsync(CancellationToken cancellationToken = default)
     {
         DateTimeOffset recoveryAt = clock.GetUtcNow() + options.PeerTimeout;
-        return PeerHeartbeat.RunAsync(options.HeartbeatInterval, clock, token => RefreshHeartbeatAsync(recoveryAt, token),
+        return PeerHeartbeat.RunAsync(options.HeartbeatInterval, clock, token => Task.WhenAll(RefreshHeartbeatAsync(recoveryAt, token), Retention.PublishAsync(token)),
             token => DiscoveryProtocol.AnnounceAsync(transport, CreateMessage("hello", null, JsonSerializer.SerializeToElement(membership.CreateAnnouncement(participation.Digest))), options.Port, token),
             () => membership.SetLocal(EPeerStatus.Unavailable), cancellationToken);
     }
