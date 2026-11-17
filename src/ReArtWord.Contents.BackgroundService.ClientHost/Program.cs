@@ -7,6 +7,7 @@ using ReArtWord.Contents.BackgroundService.ClientHost.Management;
 using ReArtWord.Contents.BackgroundService.ClientHost.Management.Overview;
 using ReArtWord.Contents.BackgroundService.ClientHost.Networking;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Observers;
+using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 
 namespace ReArtWord.Contents.BackgroundService.ClientHost;
 
@@ -43,6 +44,7 @@ internal static class Program
                 json.SerializerOptions.RespectNullableAnnotations = true;
                 json.SerializerOptions.RespectRequiredConstructorParameters = true;
                 json.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+                json.SerializerOptions.Converters.Add(new PeerObservationJsonConverter());
             });
             builder.Services.AddSingleton(_ => new ObserverConnection(options.StateDirectory));
             builder.Services.AddSingleton<DashboardCache>();

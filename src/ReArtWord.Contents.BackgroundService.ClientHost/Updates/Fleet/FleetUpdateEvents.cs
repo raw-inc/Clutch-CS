@@ -93,7 +93,7 @@ internal sealed class FleetUpdateEvents : Microsoft.Extensions.Hosting.Backgroun
             foreach (string cluster in status.Peers.Select(target => target.Target.ClusterId).Distinct(StringComparer.Ordinal))
             {
                 PeerInfo? peer = connection.GetClusters().Where(item => string.Equals(item.ClusterId, cluster, StringComparison.Ordinal)).SelectMany(item => item.Peers)
-                    .Where(item => item.Status == EPeerStatus.Ready && DateTimeOffset.UtcNow - item.LastSeen < TimeSpan.FromSeconds(15)).OrderBy(item => item.PeerId, StringComparer.Ordinal).FirstOrDefault();
+                    .Where(item => item.Status == EPeerStatus.Ready && item.AgeAt(DateTimeOffset.UtcNow) < TimeSpan.FromSeconds(15)).OrderBy(item => item.PeerId, StringComparer.Ordinal).FirstOrDefault();
                 if (peer is null || connection.FindObserver(cluster, peer.PeerId) is not { } observer)
                 {
                     continue;

@@ -97,7 +97,7 @@ public sealed partial class OverviewHosts
     /// <summary>現在の系列を優先し、消えたPCには最後の一標本だけを表示します。</summary>
     private void Merge()
     {
-        Dictionary<(string, string?, string), OverviewPeer> merged = LivePeers.Where(peer => peer.Peer.Status != Contracts.Cluster.EPeerStatus.Unavailable && Api.UtcNow - peer.Peer.LastSeen <= TimeSpan.FromSeconds(15)).ToDictionary(peer => (peer.Peer.HostId, peer.ClusterId, peer.Peer.PeerId));
+        Dictionary<(string, string?, string), OverviewPeer> merged = LivePeers.Where(peer => peer.Peer.Status != Contracts.Cluster.EPeerStatus.Unavailable && peer.Peer.AgeAt(Api.UtcNow) <= TimeSpan.FromSeconds(15)).ToDictionary(peer => (peer.Peer.HostId, peer.ClusterId, peer.Peer.PeerId));
         foreach (DashboardHostPeer entry in records.Where(entry => ClusterId is null || string.Equals(entry.ClusterId, ClusterId, StringComparison.Ordinal)))
         {
             (string, string?, string) key = (entry.Peer.HostId, entry.ClusterId, entry.Peer.PeerId);

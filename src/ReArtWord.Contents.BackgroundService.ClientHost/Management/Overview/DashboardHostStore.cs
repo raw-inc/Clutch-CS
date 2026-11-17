@@ -4,6 +4,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Management;
 using ReArtWord.Contents.BackgroundService.Contracts.Management.Discovery;
 using ReArtWord.Contents.BackgroundService.Contracts.Management.Overview;
+using ReArtWord.Contents.BackgroundService.Contracts.Observability;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 
 namespace ReArtWord.Contents.BackgroundService.ClientHost.Management.Overview;
@@ -16,9 +17,11 @@ internal sealed class DashboardHostStore : IDisposable
     private readonly SemaphoreSlim gate = new(1, 1);
     private readonly Dictionary<(string Host, string Cluster, string Peer), DashboardHostPeer> saved = [];
     private readonly Dictionary<string, DateTimeOffset> removed = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, ObservationAge> removalAges = new(StringComparer.Ordinal);
+    private readonly TimeProvider clock;
     private bool loaded;
     private bool persistenceFailed;
-    private DateTimeOffset lastWrite;
+    private ObservationAge? lastWrite;
 
     /// <summary>専用の表示保存先と、現在発見している実体の照合元を指定します。</summary>
     public DashboardHostStore(ClientHostOptions options, ObserverConnection connection) : this(options.StateDirectory, connection.GetClusters)
@@ -26,11 +29,12 @@ internal sealed class DashboardHostStore : IDisposable
     }
 
     /// <summary>同じ保存規則を独立したディレクトリで検証します。</summary>
-    internal DashboardHostStore(string stateDirectory, Func<IReadOnlyList<DiscoveredCluster>> discover)
+    internal DashboardHostStore(string stateDirectory, Func<IReadOnlyList<DiscoveredCluster>> discover, TimeProvider? timeProvider = null)
     {
         Directory.CreateDirectory(stateDirectory);
         path = Path.Combine(stateDirectory, "dashboard-hosts.json");
         this.discover = discover;
+        clock = timeProvider ?? TimeProvider.System;
     }
 
     /// <summary>毎回の実測はメモリーで更新し、実体変更・オフライン移行と最長一分間隔で保存します。</summary>
@@ -41,21 +45,22 @@ internal sealed class DashboardHostStore : IDisposable
         try
         {
             await LoadAsync(cancellationToken).ConfigureAwait(false);
-            DateTimeOffset now = DateTimeOffset.UtcNow;
+            DateTimeOffset now = clock.GetUtcNow();
             Dictionary<(string, string), PeerInfo> current = Current(now);
             bool changed = false;
-            foreach (DashboardPeerSnapshot snapshot in snapshots.OrderBy(item => item.Peer.LastSeen))
+            foreach (DashboardPeerSnapshot snapshot in snapshots.OrderByDescending(item => item.Peer.AgeAt(now)))
             {
                 (string Host, string Cluster, string Peer) key = (snapshot.Peer.HostId, snapshot.ClusterId, snapshot.Peer.PeerId);
                 bool online = current.TryGetValue((key.Cluster, key.Peer), out PeerInfo? peer) && peer.InstanceId == snapshot.Peer.InstanceId && string.Equals(peer.HostId, key.Host, StringComparison.Ordinal);
                 if (removed.TryGetValue(snapshot.Peer.HostId, out DateTimeOffset deleted)
-                    && (!online || snapshot.Peer.LastSeen <= deleted))
+                    && (!online || !ObservedAfterRemoval(peer!, deleted)))
                 {
                     continue;
                 }
                 if (online)
                 {
                     removed.Remove(snapshot.Peer.HostId);
+                    removalAges.Remove(snapshot.Peer.HostId);
                 }
                 saved.TryGetValue(key, out DashboardHostPeer? previous);
                 changed |= previous is null || previous.Peer.InstanceId != snapshot.Peer.InstanceId || previous.Online != online;
@@ -67,10 +72,10 @@ internal sealed class DashboardHostStore : IDisposable
                 changed |= online != value.Online;
                 saved[key] = value with { Online = online };
             }
-            if (changed || TimeSpan.FromMinutes(1) <= now - lastWrite || persistenceFailed)
+            if (changed || lastWrite is null || TimeSpan.FromMinutes(1) <= lastWrite.Value.Elapsed || persistenceFailed)
             {
                 await SaveAsync(cancellationToken).ConfigureAwait(false);
-                lastWrite = now;
+                lastWrite = new(clock);
             }
         }
         finally
@@ -87,7 +92,7 @@ internal sealed class DashboardHostStore : IDisposable
         try
         {
             await LoadAsync(cancellationToken).ConfigureAwait(false);
-            Dictionary<(string, string), PeerInfo> current = Current(DateTimeOffset.UtcNow);
+            Dictionary<(string, string), PeerInfo> current = Current(clock.GetUtcNow());
             if (persistenceFailed)
             {
                 throw new IOException("Dashboard host history could not be saved.");
@@ -111,7 +116,7 @@ internal sealed class DashboardHostStore : IDisposable
         try
         {
             await LoadAsync(cancellationToken).ConfigureAwait(false);
-            DateTimeOffset now = DateTimeOffset.UtcNow;
+            DateTimeOffset now = clock.GetUtcNow();
             if (Current(now).Values.Any(peer => string.Equals(peer.HostId, hostId, StringComparison.Ordinal)))
             {
                 return false;
@@ -126,6 +131,7 @@ internal sealed class DashboardHostStore : IDisposable
                 saved.Remove((hostId, value.ClusterId, value.Peer.PeerId));
             }
             removed[hostId] = now;
+            removalAges[hostId] = new(clock);
             bool committed = false;
             try
             {
@@ -137,6 +143,7 @@ internal sealed class DashboardHostStore : IDisposable
                 if (!committed)
                 {
                     removed.Remove(hostId);
+                    removalAges.Remove(hostId);
                     foreach (DashboardHostPeer value in matches)
                     {
                         saved[(hostId, value.ClusterId, value.Peer.PeerId)] = value;
@@ -151,11 +158,22 @@ internal sealed class DashboardHostStore : IDisposable
         }
     }
 
-    /// <summary>時刻とUnavailableを確認し、PC単位の操作可否だけへ利用します。</summary>
+    /// <summary>削除後の新しい受信だけで表示を復元します。保存値には最終受信からの経過時間を残さず、再起動後は再受信を必要とします。</summary>
+    /// <returns>削除より新しい生存確認があるかです。</returns>
+    private bool ObservedAfterRemoval(PeerInfo peer, DateTimeOffset deleted)
+    {
+        if (peer.ObservationAge is { } age)
+        {
+            return !removalAges.TryGetValue(peer.HostId, out ObservationAge removal) || age.Elapsed < removal.Elapsed;
+        }
+        return deleted < peer.LastSeen;
+    }
+
+    /// <summary>最後の受信からの経過時間とUnavailableを確認し、PC単位の操作可否だけへ利用します。</summary>
     /// <returns>確認済みの状態、または所有する処理の完了です。</returns>
     private Dictionary<(string, string), PeerInfo> Current(DateTimeOffset now) => discover().SelectMany(cluster => cluster.Peers.Select(peer => (cluster.ClusterId, Peer: peer)))
-        .Where(item => item.Peer.Status != EPeerStatus.Unavailable && item.Peer.LastSeen <= now && now - item.Peer.LastSeen <= TimeSpan.FromSeconds(15))
-        .GroupBy(item => (item.ClusterId, item.Peer.PeerId)).ToDictionary(group => group.Key, group => group.OrderByDescending(item => item.Peer.LastSeen).First().Peer);
+        .Where(item => item.Peer.Status != EPeerStatus.Unavailable && TimeSpan.Zero <= item.Peer.AgeAt(now) && item.Peer.AgeAt(now) <= TimeSpan.FromSeconds(15))
+        .GroupBy(item => (item.ClusterId, item.Peer.PeerId)).ToDictionary(group => group.Key, group => group.OrderBy(item => item.Peer.AgeAt(now)).First().Peer);
 
     /// <summary>保存済みの表示情報を一度だけ読みます。</summary>
     /// <returns>確認済みの状態、または所有する処理の完了です。</returns>

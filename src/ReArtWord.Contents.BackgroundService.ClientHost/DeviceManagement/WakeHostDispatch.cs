@@ -37,7 +37,7 @@ internal sealed class WakeHostDispatch(ObserverConnection connection, WakeHostCa
                 submitted = true;
                 return await ReadResultAsync(request.OperationId, prior, cancellationToken).ConfigureAwait(false);
             }
-            (string Cluster, PeerInfo Peer)[] live = connection.GetClusters().SelectMany(cluster => cluster.Peers.Where(peer => DateTimeOffset.UtcNow - peer.LastSeen < TimeSpan.FromSeconds(15)
+            (string Cluster, PeerInfo Peer)[] live = connection.GetClusters().SelectMany(cluster => cluster.Peers.Where(peer => peer.AgeAt(DateTimeOffset.UtcNow) < TimeSpan.FromSeconds(15)
                 && peer.Status is EPeerStatus.Ready or EPeerStatus.Syncing).Select(peer => (Cluster: cluster.ClusterId, Peer: peer))).ToArray();
             if (live.Any(item => string.Equals(item.Peer.HostId, request.HostId, StringComparison.Ordinal)))
             {

@@ -18,7 +18,7 @@
             {
                 var now=Api.UtcNow;
                 var health=telemetry.Health(cluster,now);
-                var stale=now-cluster.LastSeen>TimeSpan.FromSeconds(15)||telemetry.Problem is not null;
+                var stale=cluster.AgeAt(now)>TimeSpan.FromSeconds(15)||telemetry.Problem is not null;
                 <article class="health-card cluster-health-card" @key="cluster.ClusterId" aria-label="@cluster.ClusterId">
                     <header><h3>@cluster.ClusterId</h3><span tabindex="0" class="health-indicator @(health.State=="Ready"?"good":"warn") @(health.State=="Ready" && health.History is {Pending: > 0}?"history-sync":null)"><ActivityRing Identity="@cluster.ClusterId" Active="@(!stale && cluster.Peers.Any(peer=>peer.Status is EPeerStatus.Ready or EPeerStatus.Syncing or EPeerStatus.Joining or EPeerStatus.Degraded))" /><span class="health-label"><PeerStateLabel State="@health.State" History="health.History" /></span></span></header>
                     <dl><div><dt>@Ui["Ready peers"]</dt><dd>@health.Ready / @cluster.Peers.Count</dd></div><div><dt>@Ui["Verified peers"]</dt><dd>@health.Verified / @cluster.Peers.Count</dd></div><div><dt>@Ui["Coordinator"]</dt><dd>@(stale||cluster.CoordinatorCandidates.Count==0?Ui["Unconfirmed"]:cluster.CoordinatorCandidates.Count==1?cluster.CoordinatorCandidates[0]:Ui["Coordinator disagreement"])</dd></div><div><dt>@Ui["Last check"]</dt><dd>@(FormatTime(health.CheckedAt,"HH:mm:ss")??Ui["Unconfirmed"])</dd></div></dl>
