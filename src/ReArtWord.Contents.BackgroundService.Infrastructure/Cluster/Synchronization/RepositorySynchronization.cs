@@ -130,9 +130,9 @@ internal sealed class RepositorySynchronization : IAsyncDisposable
         bool pending = repository is IPreparedOperations preparations && (await preparations.ReadPreparedIdsAsync(Guid.Empty, 1, cancellationToken).ConfigureAwait(false)).Count != 0;
         if (options.MaximumMessageBytes < SyncInventory.MinimumMessageBytes)
         {
-            return new(HistoryRetention: true, StagedRecovery: RecoveryRepository.Create(repository) is not null, Pending: pending);
+            return new(HistoryRetention: true, StagedRecovery: RecoveryRepository.Create(repository) is not null, Pending: pending, Clock: cluster.AdmissionClock.Capture());
         }
-        return new(Version: SyncInventoryExchange.Protocol, HistoryRetention: true, StagedRecovery: RecoveryRepository.Create(repository) is not null, Pending: pending);
+        return new(Version: SyncInventoryExchange.Protocol, HistoryRetention: true, StagedRecovery: RecoveryRepository.Create(repository) is not null, Pending: pending, Clock: cluster.AdmissionClock.Capture());
     }
 
     /// <summary>対応する先行状態だけを受け付け、旧同期や背景本文と混同しません。</summary>
@@ -168,7 +168,8 @@ internal sealed class RepositorySynchronization : IAsyncDisposable
      SuppressMessage("SourceQuality", "RAW141", Justification = "session所有権をincomingへ渡し、期限掃除と終了時に解放します。")]
     private async Task<SyncResponse> OpenAsync(SyncManifest manifest, string peerId, Guid instanceId, Guid reverseId, bool historyAware, CancellationToken cancellationToken = default)
     {
-        download.Validate(manifest, peerId, instanceId);
+        incoming.TryGetValue((peerId, instanceId, manifest.Id), out SyncIncoming? existing);
+        SyncLifetime lifetime = download.Validate(manifest, peerId, instanceId, lifetime: existing?.Deadline);
         if (!historyAware && manifest.Phase is not null)
         {
             throw new SyncFailureException("Sync.ProtocolMissing");
@@ -187,7 +188,7 @@ internal sealed class RepositorySynchronization : IAsyncDisposable
                 {
                     return new(Reason: "Sync.ImportCapacity");
                 }
-                session = new(manifest, recovery.Revision, clock, token => ReceiveAndExportAsync(manifest, peerId, instanceId, reverseId, token), stopping, reverseId);
+                session = new(manifest, recovery.Revision, clock, token => ReceiveAndExportAsync(manifest, peerId, instanceId, reverseId, lifetime, token), stopping, reverseId, lifetime);
                 incoming[(peerId, instanceId, manifest.Id)] = session;
             }
             else
@@ -205,12 +206,12 @@ internal sealed class RepositorySynchronization : IAsyncDisposable
 
     /// <summary>一回の全検証・Importの後だけ逆方向書出しを作ります。</summary>
     /// <returns>相手が取得する固定マニフェストです。</returns>
-    private async Task<SyncResponse> ReceiveAndExportAsync(SyncManifest manifest, string peerId, Guid instanceId, Guid reverseId, CancellationToken cancellationToken = default)
+    private async Task<SyncResponse> ReceiveAndExportAsync(SyncManifest manifest, string peerId, Guid instanceId, Guid reverseId, SyncLifetime lifetime, CancellationToken cancellationToken = default)
     {
         bool conflict = false;
         try
         {
-            conflict = !await download.ImportAsync(manifest, peerId, instanceId, cancellationToken: cancellationToken).ConfigureAwait(false);
+            conflict = !await download.ImportAsync(manifest, peerId, instanceId, deadline: lifetime, cancellationToken: cancellationToken).ConfigureAwait(false);
             if (repository is IPreparedOperations preparations && (await preparations.ReadPreparedIdsAsync(Guid.Empty, 1, cancellationToken).ConfigureAwait(false)).Count != 0)
             {
                 throw new SyncFailureException("Sync.PendingOperations");
@@ -228,9 +229,9 @@ internal sealed class RepositorySynchronization : IAsyncDisposable
                 {
                     throw new SyncFailureException("Sync.PendingOperations");
                 }
-                return new(await exports.CreatePayloadAsync(peer, current, SyncManifest.CurrentPhase, cancellationToken).ConfigureAwait(false), Conflict: conflict);
+                return new(await exports.CreateReplyAsync(peer, current, SyncManifest.CurrentPhase, manifest.Timing, lifetime, cancellationToken).ConfigureAwait(false), Conflict: conflict);
             }
-            return new(await exports.CreateAsync(peer, false, cancellationToken).ConfigureAwait(false), Conflict: conflict);
+            return new(await exports.CreateReplyAsync(peer, null, null, manifest.Timing, lifetime, cancellationToken).ConfigureAwait(false), Conflict: conflict);
         }
         catch (Exception exception) when (SyncFailureException.IsExpected(exception))
         {
@@ -251,9 +252,9 @@ internal sealed class RepositorySynchronization : IAsyncDisposable
 
     /// <summary>明示解放後の遅延パケットでImportを再実行しません。</summary>
     /// <returns>固定期限内の現在結果です。</returns>
-    private async Task<SyncResponse> ReadResultAsync(SyncIncoming session, CancellationToken cancellationToken = default)
+    private static async Task<SyncResponse> ReadResultAsync(SyncIncoming session, CancellationToken cancellationToken = default)
     {
-        if (session.Closed || session.Manifest.ExpiresAt <= clock.GetUtcNow())
+        if (session.Closed || session.Deadline.Expired)
         {
             return new(Reason: "Sync.SessionUnavailable");
         }
@@ -268,30 +269,36 @@ internal sealed class RepositorySynchronization : IAsyncDisposable
     /// <returns>解放の受付です。</returns>
     private async Task<SyncResponse> CloseAsync(SyncCloseRequest request, string peerId, Guid instanceId, CancellationToken cancellationToken = default)
     {
-        await inventory.CloseAsync(request.ImportId, peerId, instanceId, cancellationToken).ConfigureAwait(false);
+        SyncLifetime? exportDeadline = null;
         if (request.ExportId != Guid.Empty)
         {
             try
             {
-                await exports.CloseAsync(request.ExportId, peerId, instanceId, cancellationToken).ConfigureAwait(false);
+                exportDeadline = exports.Lifetime(exports.Manifest(request.ExportId, peerId, instanceId));
             }
             catch (SyncFailureException)
             {
                 // 書出しが先に期限切れでも、同じ送信実体の受入セッションは解放します。
             }
         }
+        await inventory.CloseAsync(request.ImportId, peerId, instanceId, cancellationToken).ConfigureAwait(false);
+        if (exportDeadline is not null)
+        {
+            await exports.ReleaseAsync(request.ExportId, cancellationToken).ConfigureAwait(false);
+        }
         if (incoming.TryGetValue((peerId, instanceId, request.ImportId), out SyncIncoming? session))
         {
-            bool confirm = request.Completed && !session.Closed && session.Completed && clock.GetUtcNow() < session.Manifest.ExpiresAt;
+            bool confirm = request.Completed && !session.Closed && session.Completed && !session.Deadline.Expired;
             session.Closed = true;
             session.Cancel();
             SyncResponse result = await session.Completion.ConfigureAwait(false);
             if (result.Manifest is not null)
             {
+                confirm &= exportDeadline is not null && !exportDeadline.Expired;
                 await exports.ReleaseAsync(result.Manifest.Id, CancellationToken.None).ConfigureAwait(false);
-                if (confirm && result.Reason is null && !result.Conflict && result.Manifest.Id == request.ExportId && clock.GetUtcNow() < result.Manifest.ExpiresAt)
+                if (confirm && result.Reason is null && !result.Conflict && result.Manifest.Id == request.ExportId)
                 {
-                    download.Validate(session.Manifest, peerId, instanceId);
+                    download.Validate(session.Manifest, peerId, instanceId, lifetime: session.Deadline);
                     recovery.Confirmed(peerId, instanceId, session.RecoveryRevision);
                     history?.Confirmed(peerId);
                 }
@@ -310,7 +317,7 @@ internal sealed class RepositorySynchronization : IAsyncDisposable
         {
             foreach (KeyValuePair<(string Peer, Guid Instance, Guid Id), SyncIncoming> entry in incoming)
             {
-                if (entry.Value.Manifest.ExpiresAt <= clock.GetUtcNow() && entry.Value.Completed && incoming.TryRemove(entry.Key, out SyncIncoming? removed))
+                if (entry.Value.Deadline.Expired && entry.Value.Completed && incoming.TryRemove(entry.Key, out SyncIncoming? removed))
                 {
                     using SyncIncoming expired = removed;
                 }

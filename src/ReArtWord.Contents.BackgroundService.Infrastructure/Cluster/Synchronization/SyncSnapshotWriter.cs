@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Documents;
@@ -8,6 +9,20 @@ namespace ReArtWord.Contents.BackgroundService.Infrastructure.Cluster.Synchroniz
 /// <summary>固定版を一件ずつ書き、差分再作成では選ばれた元バイト列だけをコピーします。</summary>
 internal static class SyncSnapshotWriter
 {
+    /// <summary>元ファイルから不足区分だけを書き出し、新しい本文と索引を一緒に返します。</summary>
+    /// <returns>元の実体・期限を維持した差分マニフェストと索引です。</returns>
+    internal static async Task<(SyncManifest Manifest, SyncSnapshotIndex Index)> NarrowAsync(SyncExport source, string path, IReadOnlyList<string> knownHashes,
+        long maximumBytes, CancellationToken cancellationToken = default)
+    {
+        using SyncSnapshotStream stream = new(path, maximumBytes);
+        using FileStream input = new(source.Path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, 65536);
+        SyncSnapshotIndex index = Copy(input, stream, source.Index, source.Hashes, knownHashes, cancellationToken);
+        await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+        stream.Position = 0;
+        string hash = Convert.ToHexString(await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false));
+        return (source.Manifest with { Length = stream.Length, Hash = hash }, index);
+    }
+
     /// <summary>先行状態と従来の固定書出しを同じwriterへ接続します。</summary>
     /// <returns>実際に転送する本文と索引です。</returns>
     internal static Task<(string[] Hashes, SyncSnapshotIndex Index)> WriteSourceAsync(Stream stream, IDurableRepository repository, SyncPreparedExport? prepared,
