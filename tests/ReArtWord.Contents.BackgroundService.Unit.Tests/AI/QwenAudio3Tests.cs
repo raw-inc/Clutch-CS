@@ -5,6 +5,7 @@ using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Data;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Observability;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.AI;
@@ -14,7 +15,7 @@ public sealed class QwenAudio3Tests
 {
     /// <summary>HTTPエラーは結果へ変換し、診断記録の障害でもノード外へ例外を漏らしません。</summary>
     /// <returns>拒否と結果不明の区別、再送防止、秘密情報の保護です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData(401, EOutcome.Failed, false)]
     [InlineData(429, EOutcome.Failed, false)]
     [InlineData(408, EOutcome.Unknown, false)]
@@ -49,7 +50,7 @@ public sealed class QwenAudio3Tests
 
     /// <summary>HTTP失敗後も、利用者が開始した次の実行で音声を正常に保存できます。</summary>
     /// <returns>自動再生成せず、次の実行へ障害状態を持ち越さないことです。</returns>
-    [Fact]
+    [MediaFact]
     public async Task NewExecutionCanSucceedAfterProviderFailureAsync()
     {
         using MediaTestFiles files = new();
@@ -90,7 +91,7 @@ public sealed class QwenAudio3Tests
 
     /// <summary>新APIへ設定を送り、認証を付けず生成URLからWAVまたはMP3を取得します。</summary>
     /// <returns>旧APIの本文と混ざらない生成経路の確認です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task GeneratesAndVerifiesCompleteAudioAsync(bool mp3)
@@ -141,7 +142,7 @@ public sealed class QwenAudio3Tests
 
     /// <summary>未完了と確定エラーを区別し、自動再生成や生成URLの推測をしません。</summary>
     /// <returns>API呼出しが一回で終わる確認です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData("{\"output\":{\"finish_reason\":null}}", EOutcome.Unknown)]
     [InlineData("{\"code\":\"InvalidVoice\"}", EOutcome.Failed)]
     [InlineData("{\"output\":{\"finish_reason\":\"stop\",\"audio\":{\"url\":\"https://unrelated.example/audio\"}}}", EOutcome.Failed)]
@@ -186,7 +187,7 @@ public sealed class QwenAudio3Tests
 
     /// <summary>存在しないNICや割り当てのないIPv4ではAPIを送信せず、接続設定の問題を明示します。</summary>
     /// <returns>再生成不要な未実行結果と、ファイルに触れていないことの確認です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData("interfaceId", "fixture-missing-interface")]
     [InlineData("localAddress", "192.0.2.1")]
     public async Task UnavailableBindingDoesNotDispatchAsync(string key, string value)

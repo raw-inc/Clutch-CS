@@ -6,6 +6,7 @@ using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Data;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Workflows;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.AI;
@@ -52,7 +53,7 @@ public sealed class AiGeneratorTests
 
     /// <summary>音声と画像の最終本文を実ファイルへ確定します。</summary>
     /// <returns>検証が終了するまでの非同期処理。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData("audio", "/v1/audio/speech")]
     [InlineData("picture", "/v1/images/generations")]
     public async Task GeneratedMediaIsActualProbedFile(string kind, string endpoint)
@@ -75,7 +76,7 @@ public sealed class AiGeneratorTests
         {
             extra["voice"] = "coral";
         }
-        NodeResult result = await Node(server, files, "ai." + kind + ".generate").ExecuteAsync(NodeTestContext.Create(Settings(server, extra), NodeValue.FromObject("prompt")));
+        NodeResult result = await Node(server, files, "ai." + kind + ".generate").ExecuteAsync(NodeTestContext.Create(Settings(server, extra), NodeValue.FromObject("prompt"))).ConfigureAwait(true);
         Assert.Equal(EOutcome.Succeeded, result.Outcome);
         Assert.Equal(bytes, await File.ReadAllBytesAsync(output).ConfigureAwait(true));
         Assert.Equal("peer", result.Outputs["value"].Json.GetProperty("peerId").GetString());
@@ -84,7 +85,7 @@ public sealed class AiGeneratorTests
 
     /// <summary>受理後に複数回定期照会し、生成物のdownload完了だけを成功とします。</summary>
     /// <returns>検証が終了するまでの非同期処理。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task WanPollsAndCanResumeWithoutRegenerating(bool resume)
@@ -123,7 +124,7 @@ public sealed class AiGeneratorTests
             extra.Remove("size");
         }
         NodeResult result = await Node(server, files, "ai.video.generate").ExecuteAsync(NodeTestContext.Create(Settings(server, extra), resume ? null
-                                                                                                                                               : NodeValue.FromObject("prompt")));
+                                                                                                                                               : NodeValue.FromObject("prompt"))).ConfigureAwait(true);
         Assert.Equal(EOutcome.Succeeded, result.Outcome);
         Assert.Equal(3, queries);
         Assert.Equal(video, await File.ReadAllBytesAsync(output).ConfigureAwait(true));
@@ -138,7 +139,7 @@ public sealed class AiGeneratorTests
 
     /// <summary>受理済みジョブの取消はremote停止を偽装しません。</summary>
     /// <returns>検証が終了するまでの非同期処理。</returns>
-    [Fact]
+    [MediaFact]
     public async Task CancellationAfterJobAcceptanceIsUnknownAndKeepsJob()
     {
         using MediaTestFiles files = new();
@@ -191,7 +192,7 @@ public sealed class AiGeneratorTests
 
     /// <summary>動画サービス提供元の終端失敗をdownload成功として扱いません。</summary>
     /// <returns>検証が終了するまでの非同期処理。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData("FAILED", EOutcome.Failed)]
     [InlineData("CANCELED", EOutcome.Cancelled)]
     [InlineData("UNKNOWN", EOutcome.Unknown)]
@@ -201,7 +202,7 @@ public sealed class AiGeneratorTests
         AiWireFixture server;
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable serverLifetime = (server = new((_, _) => Task.FromResult(AiWireResponse.Json(JsonSerializer.Serialize(new { output = new { task_status = status, message = "fixture-secret-not-valid" } }))))).ConfigureAwait(true);
         Dictionary<string, object> extra = new(StringComparer.Ordinal) { ["model"] = "wan2.6-t2v", ["outputPath"] = Path.Combine(files.Root, "failed.mp4"), ["duration"] = 2, ["size"] = "1280*720", ["jobId"] = "existing-job" };
-        NodeResult result = await Node(server, files, "ai.video.generate").ExecuteAsync(NodeTestContext.Create(Settings(server, extra), NodeValue.FromObject("prompt")));
+        NodeResult result = await Node(server, files, "ai.video.generate").ExecuteAsync(NodeTestContext.Create(Settings(server, extra), NodeValue.FromObject("prompt"))).ConfigureAwait(true);
         Assert.Equal(outcome, result.Outcome);
         Assert.Single(server.Requests);
         Assert.DoesNotContain("fixture-secret-not-valid", JsonSerializer.Serialize(result), StringComparison.Ordinal);

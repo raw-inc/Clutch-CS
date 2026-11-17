@@ -15,6 +15,7 @@ using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Compilation;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.State;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Workflows;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.AI;
@@ -24,7 +25,7 @@ public sealed class QwenVoiceSelectionTests
 {
     /// <summary>開始Signalでも0始まりの添字でも各要素を抽選し、別の反復やWF実行の声を再利用しません。</summary>
     /// <returns>実ランタイムとローカルHTTPを通した、逐次・並列反復の検証です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData(false, "start", false, false)]
     [InlineData(false, "index", false, false)]
     [InlineData(true, "start", false, false)]

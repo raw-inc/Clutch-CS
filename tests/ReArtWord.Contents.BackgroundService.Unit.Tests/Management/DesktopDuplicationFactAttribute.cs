@@ -15,7 +15,7 @@ internal sealed class DesktopDuplicationFactAttribute : FactAttribute
     /// <summary>対象画面を選び、ホステッドCIでは最小のddagrabによる取得も確認します。</summary>
     public DesktopDuplicationFactAttribute()
     {
-        Skip = WindowsFactAttribute.GetSkipReason();
+        Skip = MediaFactAttribute.UnavailableReason ?? WindowsFactAttribute.GetSkipReason();
         if (Skip is not null || !OperatingSystem.IsWindows())
         {
             return;

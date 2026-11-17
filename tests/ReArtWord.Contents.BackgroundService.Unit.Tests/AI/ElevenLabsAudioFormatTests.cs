@@ -5,6 +5,7 @@ using ReArtWord.Contents.BackgroundService.Nodes.Media;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Data;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ public sealed class ElevenLabsAudioFormatTests(ITestOutputHelper testOutput)
 {
     /// <summary>両TTSモデルの各WAV形式を要求し、受信した媒体を変更せず保存します。</summary>
     /// <returns>要求形式、保存内容、MIME種別とprobeの確認です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData(false, 8000)]
     [InlineData(false, 16000)]
     [InlineData(false, 22050)]
@@ -56,7 +57,7 @@ public sealed class ElevenLabsAudioFormatTests(ITestOutputHelper testOutput)
 
     /// <summary>WAVを要求してMP3が届いた場合は生成物として確定しません。</summary>
     /// <returns>偽装されたMIMEを信頼せず、部分ファイルも取り除く確認です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task WaveRequestRejectsMp3PayloadAsync(bool v3)

@@ -18,7 +18,9 @@ const stages = {
 // continue-on-errorで成功へ変換される前の成否を集計し、前のジョブの失敗も引き継ぎます。
 export function validationReport(steps, previous = {}) {
     const results = Object.entries(stages).map(([id, name]) => {
-        const outcomes = [steps[id]?.outcome ?? 'skipped', previous[id] ?? 'skipped'];
+        let current = steps[id]?.outcome ?? 'skipped';
+        if (id === 'media_tools' && current === 'success' && steps[id]?.outputs?.available === 'false') current = 'skipped';
+        const outcomes = [current, previous[id] ?? 'skipped'];
         const precedence = ['failure', 'cancelled', 'success', 'skipped'];
         for (const outcome of outcomes) {
             if (!precedence.includes(outcome)) {

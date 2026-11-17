@@ -27,7 +27,7 @@ public sealed class DesktopProcessTests(Xunit.Abstractions.ITestOutputHelper out
     /// <param name="bFrames">-1は通常設定、それ以外は詳細設定の連続B上限です。</param>
     /// <param name="variableBitrate">VBRを固定長入力で指定するかです。</param>
     /// <returns>実プロセスと実WebSocketによる確認です。</returns>
-    [HostedDesktopTheory, InlineData(EDesktopVideoCodec.H264, false, -1, false), InlineData(EDesktopVideoCodec.H264, true, -1, false), InlineData(EDesktopVideoCodec.H265, false, -1, false),
+    [MediaTheory(requiresDesktop: true), InlineData(EDesktopVideoCodec.H264, false, -1, false), InlineData(EDesktopVideoCodec.H264, true, -1, false), InlineData(EDesktopVideoCodec.H265, false, -1, false),
      InlineData(EDesktopVideoCodec.H264, false, 0, false), InlineData(EDesktopVideoCodec.H264, false, 2, false), InlineData(EDesktopVideoCodec.H265, false, 2, false),
      InlineData(EDesktopVideoCodec.H264, false, -1, true), InlineData(EDesktopVideoCodec.H265, false, -1, true),
      InlineData(EDesktopVideoCodec.Vp9, false, -1, false), InlineData(EDesktopVideoCodec.Vp9, false, -1, true)]

@@ -7,6 +7,7 @@ using ReArtWord.Contents.BackgroundService.Runtime.Files.Transactions;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Data;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.AI;
@@ -53,7 +54,7 @@ public sealed class AiOutputPolicyTests
 
     /// <summary>生成成功時だけ旧ファイルを置き換え、失敗した生成では旧内容を保持します。</summary>
     /// <returns>既定の上書きが検証後に一度だけ行われる確認です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData(true)]
     [InlineData(false)]
     public async Task DefaultOverwritePreservesOldFileUntilValidatedAsync(bool valid)
@@ -91,7 +92,7 @@ public sealed class AiOutputPolicyTests
 
     /// <summary>生成中に作られた同名ファイルにも存在時モードを適用します。</summary>
     /// <returns>保存直前の競合が設定どおり解決される確認です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData("skip")]
     [InlineData("overwrite")]
     public async Task LateExistingFileUsesTheSamePolicyAsync(string mode)

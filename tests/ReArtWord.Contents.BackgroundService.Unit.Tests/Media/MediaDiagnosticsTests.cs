@@ -4,6 +4,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Nodes.Media;
 using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Data;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ public sealed class MediaDiagnosticsTests(ITestOutputHelper testOutput)
 {
     /// <summary>入力解析と変換の異常終了を区別し、終了コード・標準エラー・元の例外を残します。</summary>
     /// <returns>実ffmpeg・ffprobeで起こした失敗の診断です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task ProcessFailureReportsStageAndErrorAsync(bool conversion)
@@ -47,7 +48,7 @@ public sealed class MediaDiagnosticsTests(ITestOutputHelper testOutput)
 
     /// <summary>外部コマンドが成功しても、要求と異なる形式の生成物は元の検証例外を残して拒否します。</summary>
     /// <returns>終了コード0と、出力形式の不一致を区別した診断です。</returns>
-    [Fact]
+    [MediaFact]
     public async Task OutputValidationReportsOriginalExceptionAsync()
     {
         using MediaTestFiles files = new(testOutput);
@@ -62,7 +63,7 @@ public sealed class MediaDiagnosticsTests(ITestOutputHelper testOutput)
 
     /// <summary>生成物の検証後に保存先を失った場合は、検証失敗と区別して記録します。</summary>
     /// <returns>確定時のファイル例外と、未確定の生成物を保持する確認です。</returns>
-    [Fact]
+    [MediaFact]
     public async Task OutputCommitReportsFileFailureAsync()
     {
         using MediaTestFiles files = new(testOutput);
@@ -79,7 +80,7 @@ public sealed class MediaDiagnosticsTests(ITestOutputHelper testOutput)
 
     /// <summary>診断先が失敗しても、生成物の検証と確定を完了します。</summary>
     /// <returns>診断を任意に追加しても正常な変換が失敗しないことです。</returns>
-    [Fact]
+    [MediaFact]
     public async Task DiagnosticSinkFailureDoesNotPreventConversionAsync()
     {
         using MediaTestFiles files = new(testOutput);

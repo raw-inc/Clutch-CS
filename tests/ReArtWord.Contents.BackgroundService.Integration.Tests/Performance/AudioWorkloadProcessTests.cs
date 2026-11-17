@@ -6,6 +6,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Workflow;
 using ReArtWord.Contents.BackgroundService.Testing.Performance;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ public sealed class AudioWorkloadProcessTests(ITestOutputHelper output)
 {
     /// <summary>7並列のWFを2本ずつ反復し、失敗・期限後も同じ保存先で再開できます。</summary>
     /// <returns>実出力、要求数、資源推移、予約と一時ファイルの解放確認です。</returns>
-    [Fact]
+    [MediaFact]
     public async Task ParallelSpeechReleasesReservationsAfterSuccessFailureAndTimeoutAsync()
     {
         PerformanceCluster cluster = new();
