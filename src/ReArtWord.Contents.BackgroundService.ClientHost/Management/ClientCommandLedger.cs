@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
+using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Management;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
@@ -14,13 +15,15 @@ internal sealed class ClientCommandLedger : IDisposable
     private readonly string directory;
     private readonly SemaphoreSlim changes = new(1, 1);
     private readonly CommandAdmissionStore admissions;
+    private readonly TimeProvider clock;
 
     /// <summary>要求本文を保存しない専用ディレクトリを作成します。</summary>
-    public ClientCommandLedger(string stateDirectory)
+    public ClientCommandLedger(string stateDirectory, TimeProvider? timeProvider = null)
     {
+        clock = timeProvider ?? TimeProvider.System;
         directory = Path.Combine(stateDirectory, "commands");
         Directory.CreateDirectory(directory);
-        admissions = new(directory);
+        admissions = new(directory, clock);
     }
 
     /// <summary>一つのドメイン操作IDを各管理段階の外側IDへ一意に対応させます。</summary>
@@ -30,20 +33,26 @@ internal sealed class ClientCommandLedger : IDisposable
     /// <summary>開始する実体を固定してから通信へ渡します。</summary>
     /// <returns>初回の実体と期限を維持する要求です。</returns>
     public Task<ManagementCommand> PrepareAsync(Guid id, string clusterId, string peerId, string operation, NodeValue? payload, PeerInfo? peer, CancellationToken cancellationToken = default)
-        => PrepareCoreAsync(id, clusterId, peerId, operation, payload, peer, null, cancellationToken);
+        => PrepareCoreAsync(id, clusterId, peerId, operation, payload, peer, null, null, cancellationToken);
 
     /// <summary>送信先と要求内容のハッシュを記録してからCoreの受付時計を照会し、換算した期限も保存してから送信に渡します。</summary>
     /// <returns>ClientHost再起動後も、初回と同じ送信先・本文・受付期限を使う要求です。</returns>
     public Task<ManagementCommand> PrepareTimedAsync(Guid id, string clusterId, string peerId, string operation, NodeValue? payload, PeerInfo? peer,
-        Func<ManagementCommand, CancellationToken, Task<Contracts.Execution.RequestClockStamp?>> prepare, CancellationToken cancellationToken = default)
-        => PrepareCoreAsync(id, clusterId, peerId, operation, payload, peer, prepare, cancellationToken);
+        Func<ManagementCommand, CancellationToken, Task<RequestClockStamp?>> prepare, CancellationToken cancellationToken = default)
+        => PrepareCoreAsync(id, clusterId, peerId, operation, payload, peer, prepare, null, cancellationToken);
+
+    /// <summary>ブラウザー等で先に確定した受付期間を引き継ぎ、時計照会と保存にかかる時間も差し引きます。</summary>
+    /// <returns>再送時は新たに受付期間を設けず、初回に保存した要求を復元します。</returns>
+    public Task<ManagementCommand> PrepareTimedAsync(Guid id, string clusterId, string peerId, string operation, NodeValue? payload, PeerInfo? peer,
+        Func<ManagementCommand, CancellationToken, Task<RequestClockStamp?>> prepare, RequestAdmission? initialAdmission, CancellationToken cancellationToken = default)
+        => PrepareCoreAsync(id, clusterId, peerId, operation, payload, peer, prepare, initialAdmission, cancellationToken);
 
     /// <summary>初回の送信先Coreの実体ID、要求本文のハッシュ、受付期限を記録します。</summary>
     /// <returns>初回に確定した情報から構成した要求です。同じIDで対象や内容が変わった場合は例外にします。</returns>
     // 抑制理由: ファイル名は解析済みGuidのN形式と固定拡張子のみで構成し、入力文字列をパスへ連結しません。
     [SuppressMessage("Security", "CA3003", Justification = "信頼したstate directory配下でGuidの32桁16進表記だけをfile名に使用します。")]
     private async Task<ManagementCommand> PrepareCoreAsync(Guid id, string clusterId, string peerId, string operation, NodeValue? payload, PeerInfo? peer,
-        Func<ManagementCommand, CancellationToken, Task<Contracts.Execution.RequestClockStamp?>>? prepare, CancellationToken cancellationToken = default)
+        Func<ManagementCommand, CancellationToken, Task<RequestClockStamp?>>? prepare, RequestAdmission? initialAdmission, CancellationToken cancellationToken = default)
     {
         await changes.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -64,7 +73,8 @@ internal sealed class ClientCommandLedger : IDisposable
             {
                 throw new InvalidOperationException("元の実行先を発見できないため送信しません。");
             }
-            ManagementCommand command = new(id, clusterId, peerId, peer.InstanceId, DateTimeOffset.UtcNow.AddMinutes(5), operation, payload);
+            RequestAdmission admission = initialAdmission ?? RequestAdmission.Start(clock, TimeSpan.FromMinutes(5));
+            ManagementCommand command = new(id, clusterId, peerId, peer.InstanceId, admission.ExpiresAt, operation, payload) { Admission = admission };
             ClientCommandRecord record = new(id, clusterId, peerId, peer.InstanceId, command.ExpiresAt, operation, hash, ContractJson.Hash(ManagementWire.Request(command, false)));
             if (prepare is not null)
             {

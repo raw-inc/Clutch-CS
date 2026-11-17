@@ -7,14 +7,16 @@ using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 namespace ReArtWord.Contents.BackgroundService.ClientHost.Management;
 
 /// <summary>ClientHost再起動後の再送で受付期間が延びないよう、最初に換算した期限を要求IDと内容のハッシュに結び付けて保存します。</summary>
-internal sealed class CommandAdmissionStore(string directory)
+internal sealed class CommandAdmissionStore(string directory, TimeProvider clock)
 {
     private readonly Dictionary<Guid, RequestAdmission> pending = [];
 
-    /// <summary>元の要求記録より先に「期限の準備中」という記録を保存し、その後の待ち時間を計測します。</summary>
+    /// <summary>初回の受付期間を引き継ぎ、準備途中の終了を識別できる記録を元の要求より先に保存します。</summary>
     /// <returns>準備中の記録を保存するタスクです。呼出元のClientCommandLedgerで同時書込みを防ぎます。</returns>
     internal async Task BeginAsync(ManagementCommand command, CancellationToken cancellationToken = default)
     {
+        DateTimeOffset now = clock.GetUtcNow();
+        RequestAdmission admission = command.Admission ?? new(clock, command.ExpiresAt - now, command.ExpiresAt, now);
         string fingerprint = ContractJson.Hash(ManagementWire.Request(command, false));
         string path = PathFor(command.RequestId);
         using (FileStream stream = new(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.Asynchronous | FileOptions.WriteThrough))
@@ -25,12 +27,11 @@ internal sealed class CommandAdmissionStore(string directory)
             // 旧版の記録と取り違えないよう、元の要求記録より先に「準備中」の状態を書き出します。
             await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
         }
-        DateTimeOffset now = DateTimeOffset.UtcNow;
         foreach (Guid expired in pending.Where(pair => pair.Value.IsExpired).Select(pair => pair.Key).ToArray())
         {
             pending.Remove(expired);
         }
-        pending.Add(command.RequestId, new(TimeProvider.System, command.ExpiresAt - now, command.ExpiresAt, now));
+        pending.Add(command.RequestId, admission);
     }
 
     /// <summary>保存済みの期限を再利用します。準備中にClientHostが再起動した場合は残り時間を復元できないため、送信を拒否します。</summary>

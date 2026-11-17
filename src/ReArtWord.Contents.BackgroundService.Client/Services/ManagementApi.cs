@@ -3,6 +3,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using ReArtWord.Contents.BackgroundService.Client.Localization;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
+using ReArtWord.Contents.BackgroundService.Contracts.Execution;
+using ReArtWord.Contents.BackgroundService.Contracts.Management;
 
 namespace ReArtWord.Contents.BackgroundService.Client.Services;
 
@@ -14,6 +16,27 @@ internal sealed class ManagementApi(HttpClient client, ServerClock? clock = null
     /// <summary>観測元と同じ時刻軸で鮮度を判断します。</summary>
     internal DateTimeOffset UtcNow => serverClock.UtcNow;
     private static readonly JsonSerializerOptions responseOptions = new(ContractJson.Options) { UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip };
+
+    /// <summary>手動ノード要求を初回送信前に作成し、準備中の待ち時間も5分の受付期間から差し引きます。</summary>
+    /// <returns>ClientHostの時計へ固定した期限と元の要求です。同じ操作を再送するときは、この戻り値をそのまま使用します。</returns>
+    internal async Task<ClockedNodeCommand> PrepareNodeCommandAsync(Func<DateTimeOffset, RemoteExecutionRequest> create, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(create);
+        long started = serverClock.Timestamp;
+        ClientRequestClockSnapshot sample = await GetAsync<ClientRequestClockSnapshot>("/api/request-clock", cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidDataException("The operation admission clock could not be confirmed.");
+        TimeSpan remaining = TimeSpan.FromMinutes(5) - serverClock.ElapsedSince(started);
+        if (sample.InstanceId == Guid.Empty || sample.ElapsedTicks < 0 || remaining <= TimeSpan.Zero)
+        {
+            throw new InvalidDataException("The operation admission clock could not be confirmed.");
+        }
+
+        // 応答の日時は本文の表記にだけ使います。期限はClientHostの経過時間に固定するため、
+        // ブラウザーやClientHostのUTCが補正されても、POST時に「今から5分」へ作り直しません。
+        RemoteExecutionRequest request = create(sample.ObservedAt + remaining);
+        RequestClockStamp stamp = new(sample.InstanceId, checked(sample.ElapsedTicks + remaining.Ticks), sample.ObservedAt);
+        return new(request, stamp);
+    }
 
     /// <summary>キャッシュ内の応答もHTTP応答と同じ部分DTOの読み取り規則を使用します。</summary>
     /// <returns>既知の項目を読み取った応答です。</returns>

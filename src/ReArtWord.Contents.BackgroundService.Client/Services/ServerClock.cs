@@ -16,6 +16,10 @@ internal sealed class ServerClock(TimeProvider? provider = null)
     /// <summary>要求開始時の単調時刻です。</summary>
     internal long Timestamp => clock.GetTimestamp();
 
+    /// <summary>ブラウザー側の時刻補正と切り離して、操作の準備にかかった時間を返します。</summary>
+    /// <returns>指定した起点からの経過時間です。</returns>
+    internal TimeSpan ElapsedSince(long started) => clock.GetElapsedTime(started);
+
     /// <summary>ClientHostの時刻軸で現在の観測年齢を判定します。</summary>
     internal DateTimeOffset UtcNow
     {

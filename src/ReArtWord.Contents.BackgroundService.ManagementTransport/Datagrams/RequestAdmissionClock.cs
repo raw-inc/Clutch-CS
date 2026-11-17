@@ -12,6 +12,14 @@ public sealed class RequestAdmissionClock(Guid instanceId, TimeProvider clock)
     /// <returns>Coreプロセスの実体IDと、受付時計の起点からの経過時間です。</returns>
     public RequestClockSnapshot Capture() => new(instanceId, clock.GetElapsedTime(startedAt).Ticks);
 
+    /// <summary>このプロセスの時計で発行された期限を復元します。別の起動実体の値は使用できません。</summary>
+    /// <returns>要求本文の日時を変えず、単調時間で判定する受付情報です。</returns>
+    public RequestAdmission Accept(RequestClockStamp timing, DateTimeOffset expiresAt)
+    {
+        ArgumentNullException.ThrowIfNull(timing);
+        return Create(timing.InstanceId, timing.StartByTicks, timing.SourceNow, instanceId, expiresAt);
+    }
+
     /// <summary>再起動前のCore向けの要求や、元の残り時間を超える期限を拒否し、受信後の期限管理へ引き継ぎます。</summary>
     /// <returns>元の本文とIDを保ち、受信側での受付情報を付けた要求です。</returns>
     public ClusterRequest Accept(ClockedClusterRequest envelope)
