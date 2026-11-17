@@ -44,6 +44,13 @@ public sealed record RemoteExecutionRequest(
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)] bool BufferedReceipt = false,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)] bool IsValueRead = false)
 {
+    /// <summary>輸送層で確認した開始期限です。保存する元要求の内容は変更しません。</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public RequestAdmission? Admission
+    {
+        get; init;
+    }
+
     /// <summary>進捗表示の所有実行です。他ノードの要求・過去の保存形式へは追加しません。</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public Management.Preview.ProgressSession? Progress

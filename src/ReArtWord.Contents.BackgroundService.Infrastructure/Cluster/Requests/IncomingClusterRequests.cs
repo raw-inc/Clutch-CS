@@ -9,11 +9,11 @@ internal static class IncomingClusterRequests
 {
     /// <summary>保存複製や一時通知とは異なる要求メッセージかを判定します。</summary>
     /// <returns>この境界で処理する種類かです。</returns>
-    internal static bool Handles(string kind) => kind is "request" or "inspect" or "receipt.query";
+    internal static bool Handles(string kind) => kind is "request" or "request.clocked" or "inspect" or "receipt.query";
 
     /// <summary>通常受付、読み取り専用参照、元結果の照会へ振り分けます。</summary>
     /// <returns>要求種類に対応する応答です。</returns>
-    internal static async Task<JsonElement> ReceiveAsync(string kind, JsonElement body, RequestExecutor executor, Guid instance,
+    internal static async Task<JsonElement> ReceiveAsync(string kind, JsonElement body, RequestExecutor executor, Guid instance, RequestAdmissionClock clock,
         Func<ClusterRequest, CancellationToken, Task<ClusterResponse>> execute, ClusterReplication replication, CancellationToken cancellationToken = default)
     {
         if (!Handles(kind))
@@ -28,6 +28,18 @@ internal static class IncomingClusterRequests
             case "inspect":
                 ClusterRequest inspection = body.Deserialize<ClusterRequest>() ?? throw new InvalidDataException("要求が不正です。");
                 return JsonSerializer.SerializeToElement(await executor.InspectAsync(inspection, instance, cancellationToken).ConfigureAwait(false));
+            case "request.clocked":
+                ClusterRequest admitted;
+                try
+                {
+                    ClockedClusterRequest envelope = body.Deserialize<ClockedClusterRequest>() ?? throw new InvalidDataException("要求が不正です。");
+                    admitted = clock.Accept(envelope);
+                }
+                catch (Exception error) when (error is InvalidDataException or OverflowException or ArgumentException or JsonException)
+                {
+                    return JsonSerializer.SerializeToElement(new ClusterResponse(Contracts.Execution.EOutcome.NotExecuted, Reason: "Execution.AdmissionClockInvalid"));
+                }
+                return JsonSerializer.SerializeToElement(await execute(admitted, cancellationToken).ConfigureAwait(false));
             default:
                 ClusterRequest request = body.Deserialize<ClusterRequest>() ?? throw new InvalidDataException("要求が不正です。");
                 return JsonSerializer.SerializeToElement(await execute(request, cancellationToken).ConfigureAwait(false));

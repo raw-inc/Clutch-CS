@@ -16,6 +16,56 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Cluster;
 /// <summary>実行記録を後で保存しても、一度の副作用と結果不明の境界を維持します。</summary>
 public sealed class RuntimeRequestExecutorTests
 {
+    /// <summary>時計差がある実行を非同期記録し、保存失敗や時計補正でも同じIDを実行し直しません。</summary>
+    /// <returns>UUIDの有効期間と単調時計による重複抑止です。</returns>
+    [Theory]
+    [InlineData(-3600)]
+    [InlineData(3600)]
+    public async Task ClockedRuntimeRequestsKeepTheirReplayWindow(int offsetSeconds)
+    {
+        ManagementTransport.AdmissionTestClock source = new(), target = new();
+        target.Adjust(TimeSpan.FromSeconds(offsetSeconds));
+        Guid instance = Guid.NewGuid();
+        RequestAdmissionClock server = new(instance, target);
+        RequestClockClient client = new(source);
+        BlockedRepository repository = new() { Fail = true };
+        RuntimeRequestExecutor executor = new(repository, "receipts:p", target);
+        ClusterRequest original = new(Guid.CreateVersion7(source.GetUtcNow()), "fixture", "p", instance, source.GetUtcNow().AddMinutes(5), NodeValue.FromObject(42));
+        Task<ClusterResponse> ProbeAsync(ClusterRequest _, CancellationToken token)
+            => Task.FromResult(new ClusterResponse(EOutcome.Succeeded, NodeValue.FromObject(server.Capture())));
+        int effects = 0;
+        Task<ClusterResponse> ExecuteAsync(ClusterRequest request, CancellationToken token)
+        {
+            Assert.NotNull(request.Admission);
+            Assert.False(request.Admission.IsExpired);
+            Interlocked.Increment(ref effects);
+            return Task.FromResult(new ClusterResponse(EOutcome.Succeeded));
+        }
+        ClockedClusterRequest envelope = (await client.PrepareAsync(original, ProbeAsync))!;
+        ClusterRequest accepted = server.Accept(envelope);
+        try
+        {
+            Assert.Equal(EOutcome.Succeeded, (await executor.ExecuteAsync(accepted, ExecuteAsync, true, true)).Outcome);
+            await repository.Entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            Assert.Equal("Execution.RequestMismatch", (await executor.ExecuteAsync(accepted with { Payload = NodeValue.FromObject(43) }, ExecuteAsync, true, true)).Reason);
+        }
+        finally
+        {
+            repository.Release.TrySetResult();
+            await executor.DrainAsync().ConfigureAwait(true);
+        }
+        target.Adjust(TimeSpan.FromHours(3));
+        Assert.Equal(EOutcome.Unknown, (await executor.ExecuteAsync(server.Accept(envelope), ExecuteAsync, true, true)).Outcome);
+        source.Advance(TimeSpan.FromMinutes(7));
+        target.Advance(TimeSpan.FromMinutes(7));
+        ClockedClusterRequest expired = (await client.PrepareAsync(original, ProbeAsync))!;
+        Assert.True(server.Accept(expired).Admission!.IsExpired);
+        Assert.Equal(EOutcome.Unknown, (await executor.ExecuteAsync(server.Accept(expired), ExecuteAsync, true, true)).Outcome);
+        ClockedClusterRequest extended = (await client.PrepareAsync(original with { ExpiresAt = source.GetUtcNow().AddMinutes(5) }, ProbeAsync))!;
+        Assert.Equal("Execution.RuntimeDeadlineInvalid", (await executor.ExecuteAsync(server.Accept(extended), ExecuteAsync, true, true)).Reason);
+        Assert.Equal(1, effects);
+    }
+
     /// <summary>同じIDの記録方式だけを変えても、既に受け付けた処理を別経路で実行しません。</summary>
     /// <returns>同期・非同期双方を入口にした内容不一致の拒否です。</returns>
     [Theory]

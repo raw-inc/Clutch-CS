@@ -100,6 +100,15 @@ public sealed class UpdateObserverTests
         Guid firstQuery = Guid.Empty;
         target.Received = async (message, _, token) =>
         {
+            string inspection = "inspect";
+            if (string.Equals(message.Kind, inspection, StringComparison.Ordinal))
+            {
+                // 旧Coreは未知の照会を明示的に拒否します。実行応答・結果照会の消失だけを再現します。
+                ClusterResponse unsupported = new(EOutcome.NotExecuted, Reason: "Cluster.InspectionTargetUnavailable");
+                await target.SendAsync(new(Guid.NewGuid(), cluster, "target", instance, "reply", message.SenderId, message.Id,
+                    JsonSerializer.SerializeToElement(unsupported), message.InstanceId), token).ConfigureAwait(false);
+                return;
+            }
             string execute = "request";
             if (string.Equals(message.Kind, execute, StringComparison.Ordinal))
             {

@@ -33,7 +33,7 @@ public sealed class NodeExecutor
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> running = new();
     private readonly NodeOverlapController overlap = new();
     private readonly Lock cancellationGate = new();
-    private readonly Dictionary<Guid, DateTimeOffset> cancellationIntents = [];
+    private readonly Dictionary<Guid, RequestAdmission> cancellationIntents = [];
 
     /// <summary>実行Peerの境界と、継続入力の管理先を指定します。</summary>
     public NodeExecutor(NodeRegistry registry, IPeerDirectory peers, SourceSupervisor sources, NodeSafetyGate safety, IWorkflowLog? log = null, TimeProvider? timeProvider = null)
@@ -123,24 +123,30 @@ public sealed class NodeExecutor
 
     /// <summary>到着前の明示Source取消を元の開始期限まで有限保持します。</summary>
     /// <returns>取消要求を受け付けたか。実停止保証ではありません。</returns>
-    public async ValueTask<bool> RequestCancellationAsync(Guid executionId, DateTimeOffset startBy, CancellationToken cancellationToken = default)
+    public ValueTask<bool> RequestCancellationAsync(Guid executionId, DateTimeOffset startBy, CancellationToken cancellationToken = default)
+        => RequestCancellationAsync(executionId, startBy, null, cancellationToken);
+
+    /// <summary>遠隔要求の元の開始期限を、確認済みのローカル受付時計へ引き継ぎます。</summary>
+    /// <returns>取消意図または実行中の取消を受け付けたかです。</returns>
+    public async ValueTask<bool> RequestCancellationAsync(Guid executionId, DateTimeOffset startBy, RequestAdmission? admission, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         CancellationTokenSource? active;
         using (cancellationGate.EnterScope())
         {
             DateTimeOffset now = clock.GetUtcNow();
-            foreach (Guid expired in cancellationIntents.Where(item => item.Value <= now).Select(static item => item.Key).ToArray())
+            foreach (Guid expired in cancellationIntents.Where(item => item.Value.IsExpired).Select(static item => item.Key).ToArray())
             {
                 cancellationIntents.Remove(expired);
             }
             if (!running.TryGetValue(executionId, out active))
             {
-                if (startBy <= now || executionId == Guid.Empty || 1024 <= cancellationIntents.Count && !cancellationIntents.ContainsKey(executionId))
+                RequestAdmission intent = admission?.ForDeadline(startBy) ?? new(clock, startBy - now, startBy, now);
+                if (intent.IsExpired || executionId == Guid.Empty || 1024 <= cancellationIntents.Count && !cancellationIntents.ContainsKey(executionId))
                 {
                     return false;
                 }
-                cancellationIntents.TryAdd(executionId, startBy);
+                cancellationIntents.TryAdd(executionId, intent);
                 return true;
             }
         }
@@ -164,7 +170,7 @@ public sealed class NodeExecutor
         ArgumentNullException.ThrowIfNull(request);
         try
         {
-            if (request.ExpiresAt <= clock.GetUtcNow() && !running.ContainsKey(request.Id))
+            if ((request.Admission?.IsExpired ?? request.ExpiresAt <= clock.GetUtcNow()) && !running.ContainsKey(request.Id))
             {
                 return NodeResult.Failure("execution.expired", "未開始の要求は元の受付期限を過ぎています。", EOutcome.NotExecuted);
             }
@@ -238,7 +244,7 @@ public sealed class NodeExecutor
             {
                 return NodeResult.Failure("execution.running", "同じ要求の実行は進行中です。耐久操作の結果を照会してください。", EOutcome.Unknown);
             }
-            cancellationRequested = cancellationIntents.Remove(request.Id, out _);
+            cancellationRequested = cancellationIntents.Remove(request.Id, out RequestAdmission? intent) && !intent.IsExpired;
         }
         bool started = false;
         NodeResult result;

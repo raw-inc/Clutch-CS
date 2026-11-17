@@ -16,6 +16,7 @@ public sealed class UdpObserver : IAsyncDisposable
     private readonly UdpTransport transport;
     private readonly ObserverCatalog catalog;
     private readonly TimeProvider clock;
+    private readonly RequestClockClient requestClocks;
     private readonly string senderId;
     private readonly Guid instanceId = Guid.NewGuid();
     private bool started;
@@ -34,6 +35,7 @@ public sealed class UdpObserver : IAsyncDisposable
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(options.RequestTimeout, TimeSpan.Zero);
         this.options = options;
         clock = timeProvider ?? TimeProvider.System;
+        requestClocks = new(clock);
         senderId = "observer:" + options.ObserverId;
         catalog = new(clock, options.DiscoveryLifetime);
         transport = new UdpTransport(new DatagramTransportOptions(senderId, options.Binding.BindAddress, options.Binding.BroadcastAddress, options.Binding.Port)
@@ -117,6 +119,27 @@ public sealed class UdpObserver : IAsyncDisposable
     /// <returns>管理結果または確認不能です。</returns>
     public Task<ManagementReply> ExecuteAsync(ManagementCommand command, CancellationToken cancellationToken = default) => SendAsync(command, false, false, cancellationToken);
 
+    /// <summary>副作用を送る前に対象の時計を確認し、再送用に保存できる期限を返します。</summary>
+    /// <returns>元の対象実体の開始期限。未対応を確認した場合はnullです。</returns>
+    public async Task<RequestClockStamp?> PrepareClockAsync(ManagementCommand command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        // 時計確認には対象と期限だけを使い、WF定義やファイル断片の本文を二重にシリアライズしません。
+        ClusterRequest request = new(command.RequestId, ManagementWire.ExecuteKind, command.TargetPeerId, command.TargetInstanceId,
+            command.ExpiresAt, Contracts.Nodes.NodeValue.Null) { Admission = command.Admission };
+        ClockedClusterRequest? timed = await requestClocks.PrepareAsync(request, async (probe, token) =>
+        {
+            WireMessage? result = await ExchangeAsync(command.ClusterId, command.TargetPeerId, command.TargetInstanceId, "inspect", probe, token).ConfigureAwait(false);
+            return result?.Body.Deserialize<ClusterResponse>() ?? new(EOutcome.Unknown, Reason: "Observer.ResponseUnconfirmed");
+        }, cancellationToken).ConfigureAwait(false);
+        if (timed is null)
+        {
+            return null;
+        }
+        return new(timed.ClockInstanceId, timed.StartByTicks, timed.SourceNow);
+    }
+
     /// <summary>登録された短命UI状態だけを非永続通知し、処理結果を受け取ります。</summary>
     /// <returns>通知先の受付結果です。</returns>
     public Task<ManagementReply> NotifyAsync(ManagementCommand command, CancellationToken cancellationToken = default) => SendAsync(command, false, true, cancellationToken);
@@ -149,7 +172,7 @@ public sealed class UdpObserver : IAsyncDisposable
     private async Task<ManagementReply> SendAsync(ManagementCommand command, bool readOnly, bool transient, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        if (command.RequestId == Guid.Empty || command.ExpiresAt <= clock.GetUtcNow() || string.IsNullOrWhiteSpace(command.Operation)
+        if (command.RequestId == Guid.Empty || command.DeliveryTiming is null && (command.Admission?.IsExpired ?? command.ExpiresAt <= clock.GetUtcNow()) || string.IsNullOrWhiteSpace(command.Operation)
             || !started || !transport.BindingAvailable || !FindPeers(command.ClusterId, command.TargetPeerId).Any(peer => peer.InstanceId == command.TargetInstanceId))
         {
             return new(EOutcome.NotExecuted, Reason: "Observer.OriginalTargetOrRequestUnavailable");
@@ -159,6 +182,26 @@ public sealed class UdpObserver : IAsyncDisposable
         if (readOnly || transient)
         {
             kind = "inspect";
+        }
+        if (!readOnly && !transient)
+        {
+            try
+            {
+                RequestClockStamp? timing = command.DeliveryTiming;
+                if (!command.DeliveryPrepared)
+                {
+                    timing = await PrepareClockAsync(command, cancellationToken).ConfigureAwait(false);
+                }
+                if (timing is not null)
+                {
+                    ClockedClusterRequest timed = new(request, timing.InstanceId, timing.StartByTicks, timing.SourceNow);
+                    return ManagementWire.Response(await ExchangeAsync(command.ClusterId, command.TargetPeerId, command.TargetInstanceId, ClockedClusterRequest.Kind, timed, cancellationToken).ConfigureAwait(false));
+                }
+            }
+            catch (Exception error) when (error is IOException or InvalidDataException or JsonException)
+            {
+                return new(EOutcome.Unknown, Reason: "Observer.AdmissionClockUnconfirmed");
+            }
         }
         WireMessage? response = await ExchangeAsync(command.ClusterId, command.TargetPeerId, command.TargetInstanceId, kind, request, cancellationToken).ConfigureAwait(false);
         return ManagementWire.Response(response);

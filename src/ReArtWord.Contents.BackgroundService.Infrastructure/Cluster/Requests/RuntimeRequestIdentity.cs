@@ -24,7 +24,15 @@ internal static class RuntimeRequestIdentity
         try
         {
             deadline = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds).AddMinutes(6);
-            return now < deadline && request.ExpiresAt <= deadline && deadline <= now.AddMinutes(10);
+            DateTimeOffset sourceNow = request.Admission?.SourceNow ?? now;
+            bool valid = sourceNow < deadline && request.ExpiresAt <= deadline && deadline <= sourceNow.AddMinutes(10);
+            if (valid && request.Admission is not null)
+            {
+                // UUIDの時刻と送信日時は同じPCの時計です。受信後に期限を付け直すのではなく、
+                // 残りのID有効期間を受信側で保持し、通信待ちの分だけ早く重複記録を捨てないようにします。
+                deadline = now + (deadline - sourceNow);
+            }
+            return valid;
         }
         catch (ArgumentOutOfRangeException)
         {

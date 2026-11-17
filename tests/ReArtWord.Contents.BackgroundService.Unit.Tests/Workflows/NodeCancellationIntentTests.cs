@@ -1,5 +1,7 @@
+using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
+using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Execution;
 using Xunit;
@@ -9,6 +11,57 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Workflows;
 /// <summary>配送より先の明示取消と、元期限後の進行中取消を検証します。</summary>
 public sealed class NodeCancellationIntentTests
 {
+    /// <summary>別PCから届いた実行の取消を転送しても、二種類の日時を同じ要求に混ぜません。</summary>
+    /// <returns>元要求を保持し、取消の本文だけに残り期間を引き継ぐことです。</returns>
+    [Fact]
+    public async Task ForwardedCancellationUsesTheRelaysClock()
+    {
+        WorkflowFixture fixture = new(new WorkflowFixture.ActionNode((_, _) => ValueTask.FromResult(NodeResult.Success())));
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = fixture.ConfigureAwait(true);
+        ManagementTransport.AdmissionTestClock clock = new();
+        DateTimeOffset origin = clock.GetUtcNow().AddHours(-1);
+        RemoteExecutionRequest original = Request(fixture, origin.AddSeconds(5)) with { Admission = new(clock, TimeSpan.FromSeconds(5), origin.AddSeconds(5), origin) };
+        clock.Advance(TimeSpan.FromSeconds(1));
+        ClusterRequest cancellation = CoreService.Workflows.NodeCancellationBinding.CreateRequest(original, clock.GetUtcNow());
+        NodeCancellationRequest body = cancellation.Payload.Json.Deserialize<NodeCancellationRequest>()!;
+        Assert.Equal(TimeSpan.FromSeconds(4), body.StartBy - clock.GetUtcNow());
+        Assert.Equal(original.Id, body.ExecutionId);
+        Assert.Equal(original.TargetInstanceId, cancellation.TargetInstanceId);
+        Assert.Equal(origin.AddSeconds(5), original.ExpiresAt);
+    }
+
+    /// <summary>遠隔PCの日時を使わず、取り消し意図を元の開始期間だけ保持します。</summary>
+    /// <returns>時計差と補正があっても、期限内の取消だけが効くことです。</returns>
+    [Theory]
+    [InlineData(-3600)]
+    [InlineData(3600)]
+    public async Task RemoteStartAndCancellationUseTheSameLocalAdmission(int offsetSeconds)
+    {
+        int calls = 0;
+        WorkflowFixture fixture = new(new WorkflowFixture.ActionNode((_, _) =>
+        {
+            calls++;
+            return ValueTask.FromResult(NodeResult.Success());
+        }));
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = fixture.ConfigureAwait(true);
+        ManagementTransport.AdmissionTestClock clock = new();
+        DateTimeOffset sourceNow = clock.GetUtcNow();
+        clock.Adjust(TimeSpan.FromSeconds(offsetSeconds));
+        NodeExecutor executor = new(fixture.Registry, fixture.Peers, fixture.Sources, fixture.Safety, timeProvider: clock);
+        RemoteExecutionRequest request = Request(fixture, sourceNow.AddSeconds(5)) with { Admission = new(clock, TimeSpan.FromSeconds(5), sourceNow.AddSeconds(5), sourceNow) };
+        Assert.Equal(EOutcome.Succeeded, (await executor.ExecuteAsync(request)).Outcome);
+        RemoteExecutionRequest cancelled = request with { Id = Guid.NewGuid() };
+        Assert.True(await executor.RequestCancellationAsync(cancelled.Id, cancelled.ExpiresAt, cancelled.Admission));
+        clock.Adjust(TimeSpan.FromHours(2));
+        NodeResult result = await executor.ExecuteAsync(cancelled);
+        Assert.Equal("execution.cancelledBeforeStart", result.ReasonCode);
+        clock.Advance(TimeSpan.FromSeconds(5));
+        RemoteExecutionRequest expired = request with { Id = Guid.NewGuid() };
+        Assert.Equal("execution.expired", (await executor.ExecuteAsync(expired)).ReasonCode);
+        Assert.False(await executor.RequestCancellationAsync(expired.Id, expired.ExpiresAt, expired.Admission));
+        Assert.Equal(1, calls);
+    }
+
     /// <summary>先に届いた取消でノードを開始せず、古い未開始要求も拒否します。</summary>
     /// <returns>試験が終了するまでの非同期処理。</returns>
     [Fact]
@@ -58,7 +111,7 @@ public sealed class NodeCancellationIntentTests
         try
         {
             await entered.Task.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
-            clock.Now = clock.Now.AddHours(1);
+            clock.Advance(TimeSpan.FromHours(1));
             Assert.True(await executor.RequestCancellationAsync(request.Id, request.ExpiresAt));
             Assert.Equal(EOutcome.Cancelled, (await execution.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true)).Outcome);
         }
@@ -84,7 +137,7 @@ public sealed class NodeCancellationIntentTests
             Assert.True(await executor.RequestCancellationAsync(Guid.NewGuid(), clock.Now.AddMinutes(1)));
         }
         Assert.False(await executor.RequestCancellationAsync(Guid.NewGuid(), clock.Now.AddMinutes(1)));
-        clock.Now = clock.Now.AddHours(1);
+        clock.Advance(TimeSpan.FromHours(1));
         Assert.True(await executor.RequestCancellationAsync(Guid.NewGuid(), clock.Now.AddMinutes(1)));
     }
 
@@ -95,13 +148,29 @@ public sealed class NodeCancellationIntentTests
     /// <summary>受付期限だけを確実に進めます。</summary>
     private sealed class TestClock : TimeProvider
     {
+        private long elapsed;
+
         internal DateTimeOffset Now
         {
-            get; set;
+            get; private set;
         } = DateTimeOffset.UtcNow;
 
         /// <summary>試験の現在時刻です。</summary>
         /// <returns>制御されたUTC時刻です。</returns>
         public override DateTimeOffset GetUtcNow() => Now;
+
+        /// <summary>受付期間の経過を日時と独立して計測します。</summary>
+        /// <returns>試験開始からの経過tick数です。</returns>
+        public override long GetTimestamp() => elapsed;
+
+        /// <summary>TimeSpanのtick単位を使用します。</summary>
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        /// <summary>時計の補正ではなく、試験中の実経過を進めます。</summary>
+        internal void Advance(TimeSpan duration)
+        {
+            Now += duration;
+            elapsed += duration.Ticks;
+        }
     }
 }

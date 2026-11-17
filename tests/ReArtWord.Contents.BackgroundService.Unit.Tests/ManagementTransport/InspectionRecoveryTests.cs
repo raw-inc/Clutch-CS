@@ -49,6 +49,13 @@ public sealed class InspectionRecoveryTests
                 return;
             }
             ClusterRequest request = message.Body.Deserialize<ClusterRequest>(ContractJson.Options)!;
+            if (string.Equals(request.Kind, RequestClockSnapshot.Capability, StringComparison.Ordinal))
+            {
+                // 旧Coreの能力照会への応答は失わせず、検証対象の操作と結果だけを欠落させます。
+                ClusterResponse unsupported = new(EOutcome.NotExecuted, Reason: "Cluster.InspectionTargetUnavailable");
+                await target.SendAsync(WireMessage.Reply(message, "target", instance, JsonSerializer.SerializeToElement(unsupported)), token).ConfigureAwait(false);
+                return;
+            }
             deliveries.TryAdd(message.Id, request);
             bool drop;
             using (gate.EnterScope())

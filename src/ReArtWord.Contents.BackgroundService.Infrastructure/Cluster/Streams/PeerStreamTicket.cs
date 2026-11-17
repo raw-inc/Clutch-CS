@@ -13,6 +13,6 @@ internal sealed record PeerStreamTicket(int Port, Guid Token, Guid InstanceId, i
 
     /// <summary>参加通知と大容量同期はそれぞれ既存の専用経路に維持します。</summary>
     /// <returns>同じ実行・保存受付へ渡せる要求かです。</returns>
-    internal static bool Handles(string kind) => kind is "request" or "inspect" or "receipt.query"
+    internal static bool Handles(string kind) => kind is "request" or "request.clocked" or "inspect" or "receipt.query"
         or "prepare" or "prepare.brotli" or "prepare.query" or "commit" or "abort" or "query" or "replication.recovery";
 }
