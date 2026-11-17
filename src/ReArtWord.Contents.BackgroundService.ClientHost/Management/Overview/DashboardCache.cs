@@ -57,15 +57,21 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
             return null;
         }
         DateTimeOffset now = clock.GetUtcNow();
-        if (snapshot.CheckedAt is null || now < snapshot.CheckedAt || TimeSpan.FromSeconds(15) < now - snapshot.CheckedAt)
+        TimeSpan? confirmationAge = snapshot.ConfirmationAge?.Elapsed ?? now - snapshot.CheckedAt;
+        if (confirmationAge is null || confirmationAge < TimeSpan.Zero || TimeSpan.FromSeconds(15) < confirmationAge)
         {
             snapshot = snapshot with { Status = null, Health = null, Problem = "The latest read is unconfirmed" };
+        }
+        else
+        {
+            snapshot = snapshot with { CheckedAt = now - confirmationAge };
         }
         if (healthOnly)
         {
             return snapshot with { Peer = current[0], Status = null, Samples = [], Executions = null, Logs = null, NodeExecutions = null };
         }
-        ResourceSample[] samples = snapshot.Samples.Where(sample => now.AddMinutes(-6) <= sample.ObservedAt).ToArray();
+        ResourceSample[] samples = snapshot.Samples.Select(sample => DashboardSampleHistory.Present(sample, now))
+            .Where(sample => now.AddMinutes(-6) <= sample.ObservedAt).ToArray();
         int index = Array.FindIndex(samples, sample => sample.Id == after);
         ResourceSample[] pending = samples.Skip(index + 1).ToArray();
         if (compact && 1 < pending.Length)
@@ -173,11 +179,16 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
             return;
         }
         DateTimeOffset requestStartedAt = clock.GetUtcNow();
-        (JsonElement? health, JsonElement? status, JsonElement? resource, DateTimeOffset? sourceNow) = await ReadCurrentAsync(cluster, peer, cancellationToken).ConfigureAwait(false);
+        long requested = clock.GetTimestamp();
+        (JsonElement? health, JsonElement? status, JsonElement? resource, DateTimeOffset? sourceNow, TimeSpan? sourceAge) = await ReadCurrentAsync(cluster, peer, cancellationToken).ConfigureAwait(false);
         JsonElement? confirmedHealth = Validate(health, cluster, peer);
         JsonElement? confirmedStatus = Validate(status, cluster, peer);
         ResourceSample? sample = Deserialize<ResourceSample>(resource);
-        if (sample is not null && sourceNow is { } observedAt)
+        if (sample is not null && sourceAge is { } elapsed)
+        {
+            sample = DashboardSampleHistory.Present(sample with { Age = new ObservationAge(clock, elapsed + clock.GetElapsedTime(requested)) }, clock.GetUtcNow());
+        }
+        else if (sample is not null && sourceNow is { } observedAt)
         {
             sample = DashboardSampleHistory.Rebase(sample, observedAt, requestStartedAt);
         }
@@ -194,6 +205,8 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
             Peer = peer,
             CheckedAt = confirmedHealth is null ? null
                                                 : now,
+            ConfirmationAge = confirmedHealth is null ? null
+                                                      : new ObservationAge(clock),
             Health = confirmedHealth,
             Status = confirmedStatus,
             Samples = DashboardSampleHistory.Merge(previous.Samples, incoming, peer.InstanceId, now),
@@ -242,7 +255,7 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
     /// <returns>確認した応答だけです。失敗した応答を成功へ置き換えません。</returns>
     // 抑制理由: 開始した照会TaskはWhenAllで完了を確認し、待機ハンドルを作成しません。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW141", Justification = "所有する全照会TaskをWhenAllでawaitします。")]
-    private async Task<(JsonElement? Health, JsonElement? Status, JsonElement? Resource, DateTimeOffset? SourceNow)> ReadCurrentAsync(string cluster, PeerInfo peer, CancellationToken cancellationToken = default)
+    private async Task<(JsonElement? Health, JsonElement? Status, JsonElement? Resource, DateTimeOffset? SourceNow, TimeSpan? SourceAge)> ReadCurrentAsync(string cluster, PeerInfo peer, CancellationToken cancellationToken = default)
     {
         (string, string, Guid) key = (cluster, peer.PeerId, peer.InstanceId);
         if (!legacyUntil.TryGetValue(key, out DateTimeOffset next) || next <= clock.GetUtcNow())
@@ -254,16 +267,26 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
             {
                 legacyUntil.TryRemove(key, out _);
                 DateTimeOffset? sourceNow = null;
+                TimeSpan? sourceAge = null;
+                string ageKey = "resourceAgeTicks";
+                if (current.TryGetProperty(ageKey, out JsonElement age))
+                {
+                    if (age.ValueKind != JsonValueKind.Number || !age.TryGetInt64(out long ticks) || ticks < 0 || TimeSpan.FromMinutes(6).Ticks < ticks)
+                    {
+                        return (health, status, null, null, null);
+                    }
+                    sourceAge = TimeSpan.FromTicks(ticks);
+                }
                 string observedAtKey = "observedAt";
                 if (current.TryGetProperty(observedAtKey, out JsonElement timestamp))
                 {
                     if (timestamp.ValueKind != JsonValueKind.String || !timestamp.TryGetDateTimeOffset(out DateTimeOffset observedAt))
                     {
-                        return (health, status, null, null);
+                        return (health, status, null, null, null);
                     }
                     sourceNow = observedAt;
                 }
-                return (health, status, resource, sourceNow);
+                return (health, status, resource, sourceNow, sourceAge);
             }
             legacyUntil[key] = clock.GetUtcNow().AddMinutes(1);
         }
@@ -271,7 +294,7 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
         Task<JsonElement?> statusRead = InspectAsync(cluster, peer, "status", null, cancellationToken);
         Task<JsonElement?> resourceRead = InspectAsync(cluster, peer, "resources.latest", new ResourceSampleQuery(Summary: true), cancellationToken);
         await Task.WhenAll(healthRead, statusRead, resourceRead).ConfigureAwait(false);
-        return (await healthRead.ConfigureAwait(false), await statusRead.ConfigureAwait(false), await resourceRead.ConfigureAwait(false), null);
+        return (await healthRead.ConfigureAwait(false), await statusRead.ConfigureAwait(false), await resourceRead.ConfigureAwait(false), null, null);
     }
 
     /// <summary>照会ごとの期限と障害境界を設け、他の成功した照会を破棄しません。</summary>

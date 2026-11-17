@@ -6,10 +6,8 @@ namespace ReArtWord.Contents.BackgroundService.ClientHost.Networking;
 /// <summary>loopback proxyの外部originと、管理応答のキャッシュ境界を統一します。</summary>
 internal static class ClientHttpPolicy
 {
-    private static readonly string instance = Guid.NewGuid().ToString("D");
-
     /// <summary>ローカルTunnelだけを信頼し、外部HTTPSを接続元検証へ引き継ぎます。</summary>
-    internal static void Configure(WebApplication app)
+    internal static void Configure(WebApplication app, TimeProvider? timeProvider = null)
     {
         ForwardedHeadersOptions options = new() { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost, ForwardLimit = 1 };
         options.KnownIPNetworks.Clear();
@@ -17,7 +15,8 @@ internal static class ClientHttpPolicy
         options.KnownProxies.Add(IPAddress.Loopback);
         options.KnownProxies.Add(IPAddress.IPv6Loopback);
         app.UseForwardedHeaders(options);
-        app.Use((HttpContext context, RequestDelegate next) => ApplyAsync(context, next, context.RequestAborted));
+        ClientResponseClock clock = new(timeProvider ?? TimeProvider.System);
+        app.Use((HttpContext context, RequestDelegate next) => ApplyAsync(context, next, clock, context.RequestAborted));
     }
 
     /// <summary>信頼済みproxyで復元した閲覧端末を返し、接続元不明の中継をloopback端末と誤認しません。</summary>
@@ -45,7 +44,7 @@ internal static class ClientHttpPolicy
 
     /// <summary>同じURLでも対象ヘッダーで異なる管理応答を、ブラウザ・中継で再利用させません。</summary>
     /// <returns>管理要求の処理です。</returns>
-    private static Task ApplyAsync(HttpContext context, RequestDelegate next, CancellationToken cancellationToken = default)
+    private static Task ApplyAsync(HttpContext context, RequestDelegate next, ClientResponseClock clock, CancellationToken cancellationToken = default)
     {
         string health = "/health", client = "/client", api = "/api";
         string updater = "/ui-update.html", entry = "/", startup = "/ui-start.html";
@@ -70,8 +69,7 @@ internal static class ClientHttpPolicy
             {
                 context.Response.Headers.CacheControl = "no-store";
                 context.Response.Headers.Append("Vary", "X-Contents-Cluster, X-Contents-Peer");
-                context.Response.Headers["X-Contents-Observed-At"] = DateTimeOffset.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture);
-                context.Response.Headers["X-Contents-Host-Instance"] = instance;
+                clock.Write(context);
                 return Task.CompletedTask;
             });
         }

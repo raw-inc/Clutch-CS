@@ -89,8 +89,10 @@ internal static class CoreManagement
             resource = DashboardSampleHistory.Project(resource);
         }
 
-        // 採取時刻と同じ時計を添え、別PCの時計差を計測の停止と取り違えないようにします。
-        return new { health = Health(service), status = Status(service), resource, observedAt = DateTimeOffset.UtcNow };
+        // 採取後にOS時刻が補正されても古さを誤らないよう、単調時計で測った経過時間を添えます。
+        // observedAtは旧ClientHostが使うため従来どおり残します。
+        return new { health = Health(service), status = Status(service), resource, observedAt = DateTimeOffset.UtcNow,
+            resourceAgeTicks = resource?.Age?.Elapsed.Ticks };
     }
 
     /// <summary>秘密の本文を応答・監査記録へ戻さず、保存結果だけを記録します。</summary>

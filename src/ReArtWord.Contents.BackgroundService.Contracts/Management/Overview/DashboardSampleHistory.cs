@@ -24,8 +24,20 @@ public static class DashboardSampleHistory
     /// <summary>初回履歴と差分を統合し、同じ実体の6分・121点だけを残します。</summary>
     /// <returns>重複せず時刻順に並んだ履歴です。</returns>
     public static ResourceSample[] Merge(IEnumerable<ResourceSample> previous, IEnumerable<ResourceSample> incoming, Guid instance, DateTimeOffset now)
-        => previous.Concat(incoming).Where(sample => sample.InstanceId == instance && now.AddMinutes(-6) <= sample.ObservedAt)
+        => previous.Concat(incoming).Select(sample => Present(sample, now)).Where(sample => sample.InstanceId == instance && now.AddMinutes(-6) <= sample.ObservedAt)
             .DistinctBy(sample => sample.Id).OrderBy(sample => sample.ObservedAt).TakeLast(121).ToArray();
+
+    /// <summary>保存した経過時間を表示先の日時へ換算します。同じ標本の起点は更新しません。</summary>
+    /// <returns>表示用の日時を持つコピー、または経過時間がない旧標本です。</returns>
+    public static ResourceSample Present(ResourceSample sample, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(sample);
+        if (sample.Age is { } age)
+        {
+            return sample with { ObservedAt = now - age.Elapsed };
+        }
+        return sample;
+    }
 
     /// <summary>概要カード・グラフが使う計測値だけを保持し、プロセスやGPUエンジン別の診断を複製しません。</summary>
     /// <returns>詳細表示を含むDashboardに必要なサンプルです。</returns>

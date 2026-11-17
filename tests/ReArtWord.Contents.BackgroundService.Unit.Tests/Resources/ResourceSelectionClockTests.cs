@@ -20,6 +20,43 @@ public sealed class ResourceSelectionClockTests : IDisposable
 {
     private readonly MediaTestFiles files = new();
 
+    /// <summary>採取と応答の間、および取得と選択の間の日時補正を鮮度へ持ち込みません。</summary>
+    /// <returns>実通信で取得した経過時間と、同じ標本の再取得時の期限です。</returns>
+    [Theory]
+    [InlineData(-3600)]
+    [InlineData(3600)]
+    public async Task SourceAndReceiverClockStepsDoNotChangeTheSameSamplesAgeAsync(int correction)
+    {
+        ResourceSelectionClock receiverClock = new(), sourceClock = new();
+        string cluster = Guid.NewGuid().ToString("N");
+        int port = Port();
+        PeerCluster receiver = Peer(cluster, "receiver", port, true), source = Peer(cluster, "source", port, false);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable receiverLifetime = receiver.ConfigureAwait(true);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable sourceLifetime = source.ConfigureAwait(true);
+        ResourceSample sample = Sample(source, sourceClock.GetUtcNow()) with { Age = new Contracts.Observability.ObservationAge(sourceClock) };
+        sourceClock.Advance(TimeSpan.FromSeconds(3));
+        sourceClock.Adjust(TimeSpan.FromSeconds(correction));
+        ResourceSelectionExchange incoming = new(receiver, () => null, receiverClock), outgoing = new(source, () => sample, sourceClock);
+        Assert.NotNull(outgoing);
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(30));
+        await receiver.StartAsync(timeout.Token).ConfigureAwait(true);
+        await source.StartAsync(timeout.Token).ConfigureAwait(true);
+        await ReadyAsync(receiver, source, timeout.Token).ConfigureAwait(true);
+        await incoming.RefreshAsync(timeout.Token).ConfigureAwait(true);
+        ResourceSample captured = incoming.Capture()[source.LocalPeerId];
+        Assert.Equal(TimeSpan.FromSeconds(3), captured.Age!.Value.Elapsed);
+        receiverClock.Adjust(TimeSpan.FromSeconds(-correction));
+        Assert.Null(Compare(source, captured, receiverClock).Reason);
+        ResourceSample fixedPlan = captured with { Age = captured.Age.Value.Freeze() };
+        receiverClock.Advance(TimeSpan.FromSeconds(8));
+        sourceClock.Advance(TimeSpan.FromSeconds(8));
+        Assert.Equal("selection.observationExpired", Compare(source, captured, receiverClock).Reason);
+        Assert.Null(Compare(source, fixedPlan, receiverClock).Reason);
+        await incoming.RefreshAsync(timeout.Token).ConfigureAwait(true);
+        Assert.Equal("selection.observationExpired", Compare(source, incoming.Capture()[source.LocalPeerId], receiverClock).Reason);
+        Assert.Equal(TimeSpan.FromSeconds(11), sample.Age!.Value.Elapsed);
+    }
+
     /// <summary>新しい照会方式への対応を確認するまでは、先に届いた旧形式の通知を比較に使わないことを確認します。</summary>
     /// <returns>対応確認前の通知が採用されないことを検証するタスクです。</returns>
     [Fact]
@@ -47,7 +84,8 @@ public sealed class ResourceSelectionClockTests : IDisposable
         int port = Port();
         await using PeerCluster receiver = Peer(cluster, "receiver", port, true);
         await using PeerCluster source = Peer(cluster, "source", port, false);
-        ResourceSample sample = Sample(source, sourceClock.GetUtcNow().AddSeconds(-3));
+        ResourceSample sample = Sample(source, sourceClock.GetUtcNow().AddSeconds(-3)) with
+        { Age = new Contracts.Observability.ObservationAge(sourceClock, TimeSpan.FromSeconds(3)) };
         ResourceSelectionExchange incoming = new(receiver, () => null, receiverClock);
         ResourceSelectionExchange outgoing = new(source, () => sample, sourceClock);
         Assert.NotNull(outgoing);
@@ -74,7 +112,7 @@ public sealed class ResourceSelectionClockTests : IDisposable
         // 採取元の時計が戻っても、新しい標本IDなら古い日時順で捨てません。
         receiverClock.Advance(TimeSpan.FromSeconds(3));
         sourceClock.Adjust(TimeSpan.FromHours(-3));
-        sample = Sample(source, sourceClock.GetUtcNow());
+        sample = Sample(source, sourceClock.GetUtcNow()) with { Age = new Contracts.Observability.ObservationAge(sourceClock) };
         await incoming.RefreshAsync(timeout.Token);
         Assert.Equal(sample.Id, incoming.Capture()[source.LocalPeerId].Id);
         Assert.Null(Compare(source, incoming.Capture()[source.LocalPeerId], receiverClock).Reason);

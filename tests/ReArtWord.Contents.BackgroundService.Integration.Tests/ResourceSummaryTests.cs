@@ -15,7 +15,7 @@ public sealed class ResourceSummaryTests
 {
     /// <summary>CoreとClientHostの実プロセスを通し、計測・稼働確認・差分取得を照合します。</summary>
     /// <returns>隔離したUDP観測とHTTP配信の確認です。</returns>
-    [Fact]
+    [Fact(Skip = "旧仕様: 再配信した標本の換算日時が完全一致する前提です。現在は元の経過時間を表示先の時計へ換算します。現行の実配信はClientHostRelaysSampleIdentityAcrossObservationClockMappingAsync、期限維持はDashboardObservationAgeTestsで検証します。")]
     public async Task ClientHostRelaysTheSameSampleAndRetainsItsFirstObservation()
     {
         string cluster = Guid.NewGuid().ToString("N");
@@ -50,6 +50,53 @@ public sealed class ResourceSummaryTests
         repeated.EnsureSuccessStatusCode();
         DashboardPeerSnapshot second = (await repeated.Content.ReadFromJsonAsync<DashboardPeerSnapshot>(ContractJson.Options).ConfigureAwait(true))!;
         Assert.Equal(sample.ObservedAt, second.Samples.Single(item => item.Id == sample.Id).ObservedAt);
+        using HttpResponseMessage delta = await client.SendAsync(HttpMethod.Get, "client/dashboard?after=" + sample.Id, clusterId: cluster, peerId: "sample-peer").ConfigureAwait(true);
+        delta.EnsureSuccessStatusCode();
+        DashboardPeerSnapshot difference = (await delta.Content.ReadFromJsonAsync<DashboardPeerSnapshot>(ContractJson.Options).ConfigureAwait(true))!;
+        Assert.DoesNotContain(difference.Samples, item => item.Id == sample.Id);
+        Assert.NotNull(difference.Health);
+    }
+
+    /// <summary>表示日時の換算後も、実Coreの同じ採取結果と差分位置を維持します。</summary>
+    /// <returns>隔離したUDP観測とHTTP配信の確認です。</returns>
+    [Fact]
+    public async Task ClientHostRelaysSampleIdentityAcrossObservationClockMappingAsync()
+    {
+        string cluster = Guid.NewGuid().ToString("N");
+        int port = CorePeer.AvailablePort();
+        CorePeer peer = new(cluster, "sample-peer", port, true);
+        await using ConfiguredAsyncDisposable coreLifetime = peer.ConfigureAwait(true);
+        ClientHostProcess client = new(Path.Combine(peer.DirectoryPath, "client"));
+        await using ConfiguredAsyncDisposable clientLifetime = client.ConfigureAwait(true);
+        await peer.StartAsync().ConfigureAwait(true);
+        await client.StartAsync().ConfigureAwait(true);
+        using HttpResponseMessage binding = await client.SendAsync(HttpMethod.Post, "client/network",
+            new ClientNetworkBinding(peer.InterfaceId, "127.0.0.1", "127.255.255.255", port)).ConfigureAwait(true);
+        binding.EnsureSuccessStatusCode();
+        DashboardPeerSnapshot? observed = null;
+        await CorePeer.WaitAsync(async token =>
+        {
+            using HttpResponseMessage response = await client.SendAsync(HttpMethod.Get, "client/dashboard", clusterId: cluster, peerId: "sample-peer", cancellationToken: token).ConfigureAwait(true);
+            response.EnsureSuccessStatusCode();
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+            {
+                return false;
+            }
+            observed = await response.Content.ReadFromJsonAsync<DashboardPeerSnapshot>(ContractJson.Options, token).ConfigureAwait(true);
+            return observed?.Health is not null && observed.Samples.Count != 0;
+        }).ConfigureAwait(true);
+        DashboardPeerSnapshot first = Assert.IsType<DashboardPeerSnapshot>(observed);
+        ResourceSample sample = first.Samples[^1];
+        Assert.Equal(first.Peer.InstanceId, sample.InstanceId);
+        Assert.Equal("sample-peer", sample.PeerId);
+        Assert.True(sample.ObservedAt <= first.CheckedAt);
+        using HttpResponseMessage repeated = await client.SendAsync(HttpMethod.Get, "client/dashboard", clusterId: cluster, peerId: "sample-peer").ConfigureAwait(true);
+        repeated.EnsureSuccessStatusCode();
+        DashboardPeerSnapshot second = (await repeated.Content.ReadFromJsonAsync<DashboardPeerSnapshot>(ContractJson.Options).ConfigureAwait(true))!;
+        ResourceSample same = second.Samples.Single(item => item.Id == sample.Id);
+        Assert.Equal(sample.InstanceId, same.InstanceId);
+        Assert.Equal(sample.Metrics, same.Metrics);
+        Assert.True(same.ObservedAt <= second.CheckedAt);
         using HttpResponseMessage delta = await client.SendAsync(HttpMethod.Get, "client/dashboard?after=" + sample.Id, clusterId: cluster, peerId: "sample-peer").ConfigureAwait(true);
         delta.EnsureSuccessStatusCode();
         DashboardPeerSnapshot difference = (await delta.Content.ReadFromJsonAsync<DashboardPeerSnapshot>(ContractJson.Options).ConfigureAwait(true))!;
