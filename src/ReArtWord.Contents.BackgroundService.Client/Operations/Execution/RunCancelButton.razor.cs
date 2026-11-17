@@ -71,7 +71,7 @@ public sealed partial class RunCancelButton
         try
         {
             submitted = true;
-            JsonElement response = await Journal.StartAsync(request.OperationId, "Cancel execution", "/api/runs/cancel", "/api/runs/cancellations/" + request.OperationId,
+            JsonElement response = await Journal.StartAsync(request.OperationId, "Cancel execution", "/api/v2/runs/cancel", "/api/runs/cancellations/" + request.OperationId,
                 request, targetPeer: peer, targetCluster: cluster, cancellationToken: cancellationToken).ConfigureAwait(true);
             WorkflowCancelResult? receipt = response.Deserialize<WorkflowCancelResult>(ContractJson.Options);
             message = Ui.Deferred("Cancellation request: {0}. {1}", receipt?.Outcome, Ui[receipt?.Reason ?? "run.cancelUnconfirmed"]);

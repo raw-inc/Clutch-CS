@@ -48,7 +48,7 @@ public sealed partial class ClusterArchivePanel
                 throw new InvalidOperationException("archive.targetUnavailable");
             }
             operation = Guid.NewGuid();
-            ArchiveOperationResult result = await Api.PostForPeerAsync<ArchiveOperationResult>("/api/archive/export", new ArchiveExportRequest(operation, includeLogs), peer, cluster,
+            ArchiveOperationResult result = await Api.PostForPeerAsync<ArchiveOperationResult>("/api/v2/archive/export", new ArchiveExportRequest(operation, includeLogs), peer, cluster,
                 cancellationToken: UiCancellation).ConfigureAwait(true) ?? throw new InvalidOperationException("archive.exportUnconfirmed");
             while (!result.Completed)
             {

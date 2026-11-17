@@ -45,7 +45,7 @@ public sealed class ApplicationRemovalTests
             {
                 case "/api/status": value = status; break;
                 case "/api/processes": value = registrations; break;
-                case "/api/processes/remove":
+                case "/api/v2/processes/remove":
                     Assert.Equal(HttpMethod.Post, request.Method);
                     removals.Add((await request.Content!.ReadFromJsonAsync<ProcessRemovalRequest>(ContractJson.Options, token).ConfigureAwait(false))!);
                     if (outcome == EOutcome.Succeeded)

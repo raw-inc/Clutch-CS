@@ -188,7 +188,7 @@ public sealed partial class DetachedWorkflowPanel
         saved = null;
         try
         {
-            JsonElement response = await Journal.StartAsync(request.OperationId, "Integrate detached changes", "/api/workflows/detached/resolve", "/api/workflows/detached/operations/" + request.OperationId, request, cancellationToken: UiCancellation).ConfigureAwait(true);
+            JsonElement response = await Journal.StartAsync(request.OperationId, "Integrate detached changes", "/api/v2/workflows/detached/resolve", "/api/workflows/detached/operations/" + request.OperationId, request, cancellationToken: UiCancellation).ConfigureAwait(true);
             WorkflowMergeResult? result = response.Deserialize<WorkflowMergeResult>(ContractJson.Options) ?? throw UiError.InvalidOperation("The result is unconfirmed.");
             saved = result.Save;
             if (saved?.OperationId != request.OperationId)

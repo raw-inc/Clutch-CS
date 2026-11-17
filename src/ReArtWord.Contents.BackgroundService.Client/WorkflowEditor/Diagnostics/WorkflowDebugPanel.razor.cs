@@ -60,7 +60,7 @@ public sealed partial class WorkflowDebugPanel
         busy = true;
         try
         {
-            state = await Api.PostForPeerAsync<WorkflowDebugView>("/api/workflow-debug/arm", new WorkflowDebugRequest(Guid.NewGuid(), WorkflowId), peer, cluster, cancellationToken: cancellationToken).ConfigureAwait(true);
+            state = await Api.PostForPeerAsync<WorkflowDebugView>("/api/v2/workflow-debug/arm", new WorkflowDebugRequest(Guid.NewGuid(), WorkflowId), peer, cluster, cancellationToken: cancellationToken).ConfigureAwait(true);
             if (state is not null)
             {
                 state = await ReadAsync(state.Arm.Id, 0, cancellationToken).ConfigureAwait(true);
@@ -90,7 +90,7 @@ public sealed partial class WorkflowDebugPanel
         busy = true;
         try
         {
-            state = await Api.PostForPeerAsync<WorkflowDebugView>("/api/workflow-debug/" + state.Arm.Id.ToString("D") + "/cancel", new { }, peer, cluster, cancellationToken: cancellationToken).ConfigureAwait(true);
+            state = await Api.PostForPeerAsync<WorkflowDebugView>("/api/v2/workflow-debug/" + state.Arm.Id.ToString("D") + "/cancel", new { }, peer, cluster, cancellationToken: cancellationToken).ConfigureAwait(true);
             if (state is not null)
             {
                 state = await ReadAsync(state.Arm.Id, 0, cancellationToken).ConfigureAwait(true);
@@ -221,7 +221,7 @@ public sealed partial class WorkflowDebugPanel
     /// <summary>予約を変更しない読取り専用操作です。</summary>
     /// <returns>一ページの記録です。</returns>
     private Task<WorkflowDebugView?> ReadAsync(Guid id, int page, CancellationToken cancellationToken = default)
-        => Api.PostForPeerAsync<WorkflowDebugView>("/api/workflow-debug/read", new WorkflowDebugQuery(id, page), peer, cluster, cancellationToken: cancellationToken);
+        => Api.PostForPeerAsync<WorkflowDebugView>("/api/v2/workflow-debug/read", new WorkflowDebugQuery(id, page), peer, cluster, cancellationToken: cancellationToken);
 
     /// <summary>画面側の参照だけを終了し、実行中の記録を取り消しません。</summary>
     /// <returns>定期参照の終了です。</returns>

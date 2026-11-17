@@ -61,8 +61,7 @@ internal sealed class ObserverInternalDataRemote(ObserverConnection connection, 
         {
             return new(request.OperationId, new(EOutcome.NotExecuted, false, null, "InternalData.InstanceUnavailable"));
         }
-        Guid id = ClientCommandLedger.Identity(request.OperationId, operation);
-        ManagementCommand command = await ledger.PrepareTimedAsync(id, clusterId, peer.PeerId, operation, NodeValue.FromObject(request), peer, observer.PrepareClockAsync, cancellationToken).ConfigureAwait(false);
+        ManagementCommand command = await ledger.PrepareDerivedTimedAsync(request.OperationId, request.IdentityFormat, clusterId, peer.PeerId, operation, NodeValue.FromObject(request), peer, observer.PrepareClockAsync, cancellationToken: cancellationToken).ConfigureAwait(false);
         ManagementReply reply = await observer.ExecuteAsync(command, cancellationToken).ConfigureAwait(false);
         if (reply.Outcome != EOutcome.Succeeded)
         {

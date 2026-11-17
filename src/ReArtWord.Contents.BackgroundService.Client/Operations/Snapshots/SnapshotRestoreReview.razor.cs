@@ -144,7 +144,7 @@ public sealed partial class SnapshotRestoreReview
             Collaboration.EnsureConfirmed();
             EditorDraft? draft = Model.Draft;
             WorkflowSaveRequest? save = new WorkflowSaveRequest(Guid.NewGuid(), draft.Document, draft.BaseRevision, EActivationPolicy.Explicit);
-            JsonElement value = await Journal.StartAsync(save.OperationId, "Save draft before restore", "/api/workflows/save", "/api/workflows/operations/" + save.OperationId, save, cancellationToken: UiCancellation).ConfigureAwait(true);
+            JsonElement value = await Journal.StartAsync(save.OperationId, "Save draft before restore", "/api/v2/workflows/save", "/api/workflows/operations/" + save.OperationId, save, cancellationToken: UiCancellation).ConfigureAwait(true);
             WorkflowSaveResult? result = value.Deserialize<WorkflowSaveResult>(ContractJson.Options);
             if (result?.Saved.Outcome != EOutcome.Succeeded || result.Shared.Outcome != EOutcome.Succeeded)
             {
@@ -187,7 +187,7 @@ public sealed partial class SnapshotRestoreReview
         try
         {
             SnapshotDraftResolution? resolution = new SnapshotDraftResolution(Request, editor.PeerId, editor.WorkflowId, Collaboration.UiInstanceId, editor.SessionVersion, action);
-            ConfigurationPhaseResult? result = await Api.PostAsync<ConfigurationPhaseResult>("/api/snapshots/resolve", resolution, cancellationToken: UiCancellation).ConfigureAwait(true);
+            ConfigurationPhaseResult? result = await Api.PostAsync<ConfigurationPhaseResult>("/api/v2/snapshots/resolve", resolution, cancellationToken: UiCancellation).ConfigureAwait(true);
             if (result?.Outcome != EOutcome.Succeeded)
             {
                 throw new InvalidOperationException(result?.Reason ?? "Edit confirmation is unconfirmed.");
@@ -234,7 +234,7 @@ public sealed partial class SnapshotRestoreReview
         busy = true;
         try
         {
-            await Journal.StartAsync(Request.OperationId, "Restore snapshot", "/api/snapshots/restore", "/api/snapshots/restores/" + Request.OperationId, Request, "/api/snapshots/recover", cancellationToken: UiCancellation).ConfigureAwait(true);
+            await Journal.StartAsync(Request.OperationId, "Restore snapshot", "/api/v2/snapshots/restore", "/api/snapshots/restores/" + Request.OperationId, Request, "/api/v2/snapshots/recover", cancellationToken: UiCancellation).ConfigureAwait(true);
             await Closed.InvokeAsync().ConfigureAwait(true);
         }
         catch (Exception exception) when (exception is HttpRequestException or JsonException or JSException or OperationCanceledException)

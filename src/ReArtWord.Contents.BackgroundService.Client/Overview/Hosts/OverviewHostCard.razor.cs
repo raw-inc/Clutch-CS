@@ -74,7 +74,7 @@ public sealed partial class OverviewHostCard
                 {
                     return;
                 }
-                HostWakeResult? wakeResult = await Api.PostAsync<HostWakeResult>("/client/host-manager/wake", new HostWakeStart(Guid.NewGuid(), item.Peer.HostId), UiCancellation).ConfigureAwait(true);
+                HostWakeResult? wakeResult = await Api.PostAsync<HostWakeResult>("/client/host-manager/wake", new HostWakeStart(Guid.NewGuid(), item.Peer.HostId) { IdentityFormat = Contracts.Execution.EDerivedIdFormat.Uuid8 }, UiCancellation).ConfigureAwait(true);
                 powerProblem = wakeResult?.Reason ?? "wake.unconfirmed";
                 return;
             }
@@ -106,8 +106,8 @@ public sealed partial class OverviewHostCard
             EHostPowerAction kind = action switch { "restart" => EHostPowerAction.Restart, _ => EHostPowerAction.Shutdown };
             Guid id = Guid.NewGuid();
             HostPowerRequest request = new(id, item.Peer.HostId, target.Peer.InstanceId, kind);
-            Guid command = ManagementCommandIdentity.Create(id, "host.power");
-            System.Text.Json.JsonElement response = await Journal.StartAsync(id, Ui.Format("Power action for {0}", item.Peer.HostId), "/api/host/power",
+            Guid command = ManagementCommandIdentity.Create(id, "host.power", Contracts.Execution.EDerivedIdFormat.Uuid8);
+            System.Text.Json.JsonElement response = await Journal.StartAsync(id, Ui.Format("Power action for {0}", item.Peer.HostId), "/api/v2/host/power",
                 "/client/commands/" + command + "/result", request, targetPeer: target.Peer.PeerId, targetCluster: target.ClusterId, cancellationToken: UiCancellation).ConfigureAwait(true);
             NodeResult? result = ManagementApi.ReadResponse<NodeResult>(response);
             powerProblem = result?.Outcome == Contracts.Execution.EOutcome.Succeeded ? "The OS accepted the power request. The PC may disconnect before a reply arrives."

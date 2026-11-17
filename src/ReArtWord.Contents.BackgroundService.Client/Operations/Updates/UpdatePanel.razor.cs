@@ -187,7 +187,7 @@ public sealed partial class UpdatePanel
                 }
                 UpdateScheduleRequest reservation = new(Guid.NewGuid(), new(when, delay, request), editing?.Version);
                 operation = reservation.OperationId;
-                await Journal.StartAsync(reservation.OperationId, "Update schedule", "/api/updates/schedules/save", "/api/updates/schedules/operations/" + reservation.OperationId,
+                await Journal.StartAsync(reservation.OperationId, "Update schedule", "/api/v2/updates/schedules/save", "/api/updates/schedules/operations/" + reservation.OperationId,
                     reservation, targetPeer: ownerPeer, targetCluster: ownerCluster, cancellationToken: UiCancellation).ConfigureAwait(true);
                 open = false;
                 message = Ui.Deferred("Operation {0}: {1}", reservation.OperationId, OperationJournal.Outcome(Journal.LastResult));
@@ -195,7 +195,7 @@ public sealed partial class UpdatePanel
             }
             operation = request.OperationId;
             open = false;
-            await Journal.StartAsync(request.OperationId, "Release update", "/api/updates/start", "/api/updates/" + request.OperationId, request, targetPeer: ownerPeer, targetCluster: ownerCluster, cancellationToken: UiCancellation).ConfigureAwait(true);
+            await Journal.StartAsync(request.OperationId, "Release update", "/api/v2/updates/start", "/api/updates/" + request.OperationId, request, targetPeer: ownerPeer, targetCluster: ownerCluster, cancellationToken: UiCancellation).ConfigureAwait(true);
             message = Ui.Deferred("Operation {0}: {1}", request.OperationId, OperationJournal.Outcome(Journal.LastResult));
         }
         catch (Exception exception) when (exception is HttpRequestException or InvalidOperationException or JSException or OverflowException)

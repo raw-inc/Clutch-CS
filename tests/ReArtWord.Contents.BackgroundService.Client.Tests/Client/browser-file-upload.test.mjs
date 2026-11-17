@@ -61,7 +61,7 @@ for (const length of [0, 80000, 2 * 1024 * 1024 + 17])
 
         await uploadBrowserFile(file, target, 'C:/target', apiAsync, new AbortController().signal);
         assert.equal(Buffer.concat(received).length, length);
-        assert.deepEqual(calls.slice(-2), ['/api/browser-files/commit', '/api/browser-files/discard']);
+        assert.deepEqual(calls.slice(-2), ['/api/v2/browser-files/commit', '/api/browser-files/discard']);
     });
 }
 test('cancellation discards a partial stage and does not commit', async() =>
@@ -80,7 +80,7 @@ test('cancellation discards a partial stage and does not commit', async() =>
         }
     }, controller.signal), { name: 'AbortError' });
     assert.equal(calls.at(-1), '/api/browser-files/discard');
-    assert.ok(!calls.includes('/api/browser-files/commit'));
+    assert.ok(!calls.includes('/api/v2/browser-files/commit'));
 });
 test('a lost commit reply remains unknown and is never implicitly retried or discarded', async() =>
 {
@@ -98,5 +98,5 @@ test('a lost commit reply remains unknown and is never implicitly retried or dis
         }
     }, new AbortController().signal), /Commit unconfirmed/);
     assert.equal(calls.filter(x => x.endsWith('/commit')).length, 1);
-    assert.equal(calls.at(-1), '/api/browser-files/commit');
+    assert.equal(calls.at(-1), '/api/v2/browser-files/commit');
 });

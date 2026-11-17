@@ -115,7 +115,7 @@ public sealed partial class ConfigurationPanel
         try
         {
             ClusterOperationalSaveRequest request = new(operation, settings, state?.Saved?.Revision, policy);
-            JsonElement response = await Journal.StartAsync(operation, "Save operational settings", "/api/configuration/save", "/api/configuration/operations/" + operation, request, cancellationToken: UiCancellation).ConfigureAwait(true);
+            JsonElement response = await Journal.StartAsync(operation, "Save operational settings", "/api/v2/configuration/save", "/api/configuration/operations/" + operation, request, cancellationToken: UiCancellation).ConfigureAwait(true);
             ClusterOperationalSaveResult? saved = response.Deserialize<ClusterOperationalSaveResult>(ContractJson.Options);
             message = Ui.Deferred("Saved {0} / shared {1} / snapshot {2} / applied {3}", saved?.Saved.Outcome, saved?.Shared.Outcome, saved?.Snapshot.Outcome, saved?.Activation.Outcome);
             state = await Api.GetAsync<ClusterOperationalState>("/api/configuration", cancellationToken: UiCancellation).ConfigureAwait(true);
@@ -146,7 +146,7 @@ public sealed partial class ConfigurationPanel
         try
         {
             ClusterOperationalActivateRequest? request = new ClusterOperationalActivateRequest(operation, state.Saved.Revision, true, activationImpact.Token);
-            await Journal.StartAsync(request.OperationId, "Apply operational settings", "/api/configuration/activate", "/api/configuration/operations/" + request.OperationId, request, cancellationToken: UiCancellation).ConfigureAwait(true);
+            await Journal.StartAsync(request.OperationId, "Apply operational settings", "/api/v2/configuration/activate", "/api/configuration/operations/" + request.OperationId, request, cancellationToken: UiCancellation).ConfigureAwait(true);
             message = Ui.Deferred("Applied result: {0}", OperationJournal.Outcome(Journal.LastResult));
             state = await Api.GetAsync<ClusterOperationalState>("/api/configuration", cancellationToken: UiCancellation).ConfigureAwait(true);
         }

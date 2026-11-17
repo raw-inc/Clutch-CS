@@ -157,7 +157,7 @@ public sealed partial class ProcessPanel
         Contracts.Management.ClockedNodeCommand command = await Api.PrepareNodeCommandAsync(expires =>
             new RemoteExecutionRequest(id, id, "manual", "manual", new NodeDefinition(type, type, JsonSerializer.SerializeToElement(settings, ContractJson.Options),
                 Target: new(EExecutionScope.One, Peers: [owner.PeerId])), new Dictionary<string, NodeValue>(), owner.PeerId, owner.InstanceId, expires), token).ConfigureAwait(true);
-        NodeResult? response = await Api.PostForPeerAsync<NodeResult>("/api/nodes/execute-clocked", command, owner.PeerId, cluster, requestId: id, cancellationToken: token).ConfigureAwait(true);
+        NodeResult? response = await Api.PostForPeerAsync<NodeResult>("/api/v2/nodes/execute-clocked", command, owner.PeerId, cluster, requestId: id, cancellationToken: token).ConfigureAwait(true);
         message = Ui.Deferred("Operation {0}: {1} {2}", id, response?.Outcome, response?.ReasonCode);
         result = JsonSerializer.SerializeToElement(response, ContractJson.Options);
         stopOpen = false;
@@ -194,7 +194,7 @@ public sealed partial class ProcessPanel
     /// <returns>登録の比較保存結果です。</returns>
     private Task RegisterAsync(ProcessDefinition definition, CancellationToken cancellationToken = default) => GuardAsync(async token =>
     {
-        RegistrationResult response = await Api.PostForPeerAsync<RegistrationResult>("/api/processes/register", new ProcessRegistrationRequest(definition, editVersion), peer, cluster, cancellationToken: token).ConfigureAwait(true);
+        RegistrationResult response = await Api.PostForPeerAsync<RegistrationResult>("/api/v2/processes/register", new ProcessRegistrationRequest(definition, editVersion), peer, cluster, cancellationToken: token).ConfigureAwait(true);
         if (response.Outcome == EOutcome.Succeeded)
         {
             registrationOpen = false;
@@ -231,7 +231,7 @@ public sealed partial class ProcessPanel
         {
             return;
         }
-        RegistrationResult response = await Api.PostForPeerAsync<RegistrationResult>("/api/processes/remove", new ProcessRemovalRequest(item.Definition.Id, item.Version), peer, cluster, cancellationToken: token).ConfigureAwait(true);
+        RegistrationResult response = await Api.PostForPeerAsync<RegistrationResult>("/api/v2/processes/remove", new ProcessRemovalRequest(item.Definition.Id, item.Version), peer, cluster, cancellationToken: token).ConfigureAwait(true);
         if (response.Outcome != EOutcome.Succeeded)
         {
             message = Ui.Deferred("Registration was not removed. Refresh the list and check the current registration.");
@@ -267,7 +267,7 @@ public sealed partial class ProcessPanel
             }
             identity = new(FormInput.Integer(pid, "PID", 1), at);
         }
-        ProcessOperationResult? response = await Api.PostForPeerAsync<ProcessOperationResult>("/api/processes/resolve-launch", new ResolveProcessLaunchRequest(selected!.Definition.Id, identity), peer, cluster, cancellationToken: token).ConfigureAwait(true);
+        ProcessOperationResult? response = await Api.PostForPeerAsync<ProcessOperationResult>("/api/v2/processes/resolve-launch", new ResolveProcessLaunchRequest(selected!.Definition.Id, identity), peer, cluster, cancellationToken: token).ConfigureAwait(true);
         message = Ui.Deferred("Observed result: {0}", response?.Outcome);
         if (response?.Outcome == EOutcome.Succeeded)
         {

@@ -60,7 +60,7 @@ test('prepared host mutations keep the pinned instance and reject changed discov
                 return { instanceId: crypto.randomUUID(), elapsedTicks: 0, observedAt: '2026-01-01T00:00:00Z' };
             }
             requests.push(body.request);
-            assert.equal(path, '/api/nodes/execute-clocked');
+            assert.equal(path, '/api/v2/nodes/execute-clocked');
             return { outcome: 'succeeded' };
         } };
     await mutateHostFileAsync(ctx, peer, 'directory.delete', 'C:/chosen/folder');

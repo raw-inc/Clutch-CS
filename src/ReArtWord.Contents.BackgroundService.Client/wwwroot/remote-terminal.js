@@ -143,7 +143,7 @@ export async function terminalView(root, ctx)
                     {
                         disconnect();
                     }
-                    await ctx.api('/api/terminal/close', selected, { sessionId: value.sessionId });
+                    await ctx.api('/api/v2/terminal/close', selected, { sessionId: value.sessionId });
                     await list();
                 });
                 claim.disabled = terminate.disabled = item.failed;
@@ -231,7 +231,7 @@ export async function terminalView(root, ctx)
         await selectPeer();
         const run = generation;
         owner = created ? value.owner : crypto.randomUUID();
-        const claimed = created ? value : await ctx.api('/api/terminal/claim', peer, { sessionId: value.sessionId, owner });
+        const claimed = created ? value : await ctx.api('/api/v2/terminal/claim', peer, { sessionId: value.sessionId, owner });
         if (run !== generation || disposed)
         {
             return;
@@ -607,7 +607,7 @@ export async function terminalView(root, ctx)
         {
             return;
         }
-        const value = await ctx.api('/api/terminal/create', selected, { sessionId: crypto.randomUUID(), owner: crypto.randomUUID(), elevated, shell });
+        const value = await ctx.api('/api/v2/terminal/create', selected, { sessionId: crypto.randomUUID(), owner: crypto.randomUUID(), elevated, shell });
         if (selected === peer && run === generation && !disposed)
         {
             await connectAsync(value, true);
@@ -641,7 +641,7 @@ export async function terminalView(root, ctx)
         updateControls();
         try
         {
-            await ctx.api('/api/terminal/settings/save', selected, { strictUserToken: !current.strictUserToken, version: current.version });
+            await ctx.api('/api/v2/terminal/settings/save', selected, { strictUserToken: !current.strictUserToken, version: current.version });
             if (samePeer(selected, peer))
             {
                 ctx.say(ctx.t('Saved on this Core. Applies to new user sessions from every client.', 'このCoreに保存しました。全クライアントからの新規ユーザーセッションに適用します。'));

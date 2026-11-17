@@ -206,7 +206,7 @@ public sealed partial class ConflictPanel
         message = null;
         try
         {
-            JsonElement response = await Journal.StartAsync(request.OperationId, "conflict", "/api/conflicts/resolve", "/api/conflicts/operations/" + request.OperationId, request, cancellationToken: UiCancellation).ConfigureAwait(true);
+            JsonElement response = await Journal.StartAsync(request.OperationId, "conflict", "/api/v2/conflicts/resolve", "/api/conflicts/operations/" + request.OperationId, request, cancellationToken: UiCancellation).ConfigureAwait(true);
             result = response.Deserialize<ConflictResolveResult>(ContractJson.Options);
             selected = null;
             message = Ui.Deferred("Check saved, shared and locally applied results separately. You can refresh the list.");

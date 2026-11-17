@@ -60,7 +60,7 @@ test('directory upload preserves empty folders, Unicode paths and one atomic com
     assert.deepEqual(manifest.map(item => item.relativePath), ['', '日本語', '日本語/a.txt', 'empty']);
     assert.deepEqual(written, ['日本語/a.txt']);
     assert.equal(calls.filter(path => path.endsWith('/directory')).length, 3);
-    assert.deepEqual(calls.slice(-2), ['/api/browser-files/commit', '/api/browser-files/discard']);
+    assert.deepEqual(calls.slice(-2), ['/api/v2/browser-files/commit', '/api/browser-files/discard']);
 });
 
 test('directory upload cancellation does not commit and releases only the staged data', async() =>
@@ -84,7 +84,7 @@ test('directory upload cancellation does not commit and releases only the staged
         return true;
     }, controller.signal), { name: 'AbortError' });
     assert.equal(calls.at(-1), '/api/browser-files/discard');
-    assert.ok(!calls.includes('/api/browser-files/commit'));
+    assert.ok(!calls.includes('/api/v2/browser-files/commit'));
 });
 
 test('download streams into a new permitted file and closes it exactly once', async() =>

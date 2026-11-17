@@ -134,7 +134,7 @@ public sealed partial class ScriptPackagePanel
         }
         try
         {
-            await Journal.StartAsync(id, "script-package", "/api/scripts/packages/change", "/api/scripts/packages/operations/" + id, request,
+            await Journal.StartAsync(id, "script-package", "/api/v2/scripts/packages/change", "/api/scripts/packages/operations/" + id, request,
                 targetPeer: peer, targetCluster: cluster, cancellationToken: cancellationToken).ConfigureAwait(true);
             message = Ui.Deferred("Package operation {0} was received. Check its completion below.", id);
         }
