@@ -83,6 +83,12 @@ internal sealed class SyncRecoveryPeer : IAsyncDisposable
         get; set;
     }
 
+    /// <summary>指定した試験だけが対応照会へ応答し、それ以外は旧版の無応答を維持します。</summary>
+    internal Func<SyncResponse>? ReadCapabilities
+    {
+        get; set;
+    }
+
     /// <summary>全スナップショットの開始回数です。</summary>
     internal int Opens => Volatile.Read(ref opens);
 
@@ -174,6 +180,9 @@ internal sealed class SyncRecoveryPeer : IAsyncDisposable
             case "hello":
                 Volatile.Write(ref announcedVersion, message.Body.Deserialize<PeerAnnouncement>()?.Digest);
                 return;
+            case "sync.capabilities" when ReadCapabilities is { } capabilities:
+                response = capabilities();
+                break;
             case "sync.version" when ReadVersion is not null:
                 Interlocked.Increment(ref versionProbes);
                 response = new(Version: await ReadVersion(cancellationToken).ConfigureAwait(false));

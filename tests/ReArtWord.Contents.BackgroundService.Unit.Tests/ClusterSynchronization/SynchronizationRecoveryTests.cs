@@ -15,6 +15,24 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.ClusterSynchronization
 /// <summary>版一致だけで未転送historyを見逃さず、完全同期の確認後に警告を解除します。</summary>
 public sealed class SynchronizationRecoveryTests
 {
+    /// <summary>別実体の時計応答を未対応とみなして旧形式へ切り替えず、当該同期の確認不能として保持します。</summary>
+    /// <returns>実UDPでの時計照合失敗と、書出し未開始の確認です。</returns>
+    [Fact]
+    public async Task InvalidClockResponseDoesNotFallBackToLegacyAdmissionAsync()
+    {
+        SyncRecoveryPeer peer = new(Snapshot()) { ReadCapabilities = () => new(Clock: new(Guid.NewGuid(), 0)) };
+        await using ConfiguredAsyncDisposable lifetime = peer.ConfigureAwait(true);
+        await peer.StartAsync();
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
+        while (!string.Equals(peer.Target.SynchronizationProblem, SyncSessionClocks.Unconfirmed, StringComparison.Ordinal))
+        {
+            await peer.AnnounceAsync("different", cancellationToken: timeout.Token);
+            await Task.Delay(20, timeout.Token);
+        }
+        Assert.Equal(0, peer.Opens);
+        Assert.Equal(0, peer.Completed);
+    }
+
     /// <summary>新しい相手とは現在値が一致していても、過去の操作結果を一度照合します。</summary>
     /// <returns>値を再適用せず、同じ操作の確定結果だけを補完したことです。</returns>
     [Fact]
