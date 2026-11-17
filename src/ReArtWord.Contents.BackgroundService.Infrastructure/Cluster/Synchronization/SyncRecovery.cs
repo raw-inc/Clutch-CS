@@ -9,7 +9,7 @@ internal sealed class SyncRecovery(TimeProvider clock)
     private readonly Dictionary<string, Failure> failures = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Guid> confirmed = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (Guid Instance, long Started)> changing = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, (Guid Instance, DateTimeOffset RetryAt)> preparing = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (Guid Instance, long Started)> preparing = new(StringComparer.Ordinal);
     private long revision;
 
     /// <summary>全相手のうち最後に確認できなかった理由です。</summary>
@@ -58,17 +58,17 @@ internal sealed class SyncRecovery(TimeProvider clock)
         }
     }
 
-    /// <summary>失敗直後の全書出し連打を避け、相手の新実体は直ちに確認します。</summary>
+    /// <summary>同じ相手への再試行間隔は経過時間で測り、日時補正で短縮・延長しません。新実体は直ちに確認します。</summary>
     /// <returns>次の有限同期を開始できるかです。</returns>
     internal bool CanSynchronize(PeerInfo peer)
     {
         using (gate.EnterScope())
         {
-            if (preparing.TryGetValue(peer.PeerId, out (Guid Instance, DateTimeOffset RetryAt) pending) && pending.Instance == peer.InstanceId && clock.GetUtcNow() < pending.RetryAt)
+            if (preparing.TryGetValue(peer.PeerId, out (Guid Instance, long Started) pending) && pending.Instance == peer.InstanceId && clock.GetElapsedTime(pending.Started) < TimeSpan.FromSeconds(1))
             {
                 return false;
             }
-            return !failures.TryGetValue(peer.PeerId, out Failure? failure) || failure.Instance != peer.InstanceId || failure.RetryAt <= clock.GetUtcNow();
+            return !failures.TryGetValue(peer.PeerId, out Failure? failure) || failure.Instance != peer.InstanceId || TimeSpan.FromSeconds(failure.DelaySeconds) <= clock.GetElapsedTime(failure.Started);
         }
     }
 
@@ -102,7 +102,7 @@ internal sealed class SyncRecovery(TimeProvider clock)
             // 元の未確認障害は消さず、本文の再書出し前に短い再照合間隔を置きます。
             using (gate.EnterScope())
             {
-                preparing[peer.PeerId] = (peer.InstanceId, clock.GetUtcNow().AddSeconds(1));
+                preparing[peer.PeerId] = (peer.InstanceId, clock.GetTimestamp());
             }
             return;
         }
@@ -113,7 +113,7 @@ internal sealed class SyncRecovery(TimeProvider clock)
             {
                 delay = Math.Min(30, previous.DelaySeconds * 2);
             }
-            failures[peer.PeerId] = new(peer.InstanceId, reason, checked(++revision), clock.GetUtcNow().AddSeconds(delay), delay);
+            failures[peer.PeerId] = new(peer.InstanceId, reason, checked(++revision), clock.GetTimestamp(), delay);
         }
     }
 
@@ -127,7 +127,7 @@ internal sealed class SyncRecovery(TimeProvider clock)
             {
                 changing.Remove(peerId);
             }
-            if (preparing.TryGetValue(peerId, out (Guid Instance, DateTimeOffset RetryAt) pending) && pending.Instance == instanceId)
+            if (preparing.TryGetValue(peerId, out (Guid Instance, long Started) pending) && pending.Instance == instanceId)
             {
                 preparing.Remove(peerId);
             }
@@ -139,5 +139,5 @@ internal sealed class SyncRecovery(TimeProvider clock)
     }
 
     /// <summary>相手の最新の未確認結果と有限の再試行間隔です。</summary>
-    private sealed record Failure(Guid Instance, string Reason, long Revision, DateTimeOffset RetryAt, int DelaySeconds);
+    private sealed record Failure(Guid Instance, string Reason, long Revision, long Started, int DelaySeconds);
 }

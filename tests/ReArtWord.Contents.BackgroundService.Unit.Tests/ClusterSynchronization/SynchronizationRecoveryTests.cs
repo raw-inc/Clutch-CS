@@ -73,8 +73,7 @@ public sealed class SynchronizationRecoveryTests
     public async Task MatchingDigestRetriesFailedTransferAndRecoversMissingHistory()
     {
         RepositorySnapshot snapshot = Snapshot();
-        RequestTestClock clock = new();
-        clock.Freeze();
+        Collaboration.CollaborationClock clock = new();
         SyncRecoveryPeer peer = new(snapshot, clock: clock) { DropReads = true };
         await using ConfiguredAsyncDisposable lifetime = peer.ConfigureAwait(true);
         await peer.StartAsync().ConfigureAwait(true);
@@ -94,7 +93,7 @@ public sealed class SynchronizationRecoveryTests
         peer.DropReads = false;
 
         // 失敗後の最初の再試行間隔だけ進めます。UDPの配送期限と観測待ちは実時間のままです。
-        clock.AdvanceAndResume(TimeSpan.FromSeconds(1));
+        clock.Advance(TimeSpan.FromSeconds(1));
         while (peer.Target.SynchronizationProblem is not null)
         {
             await peer.AnnounceAsync(digest, cancellationToken: timeout.Token).ConfigureAwait(true);
