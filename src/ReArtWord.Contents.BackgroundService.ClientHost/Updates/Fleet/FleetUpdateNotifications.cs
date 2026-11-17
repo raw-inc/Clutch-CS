@@ -18,7 +18,7 @@ internal static class FleetUpdateNotifications
         Guid operation = status.OperationId;
         string release = status.ReleaseId;
         UpdateEventData summary = new(operation, EOutcome.Unknown, false, ReleaseId: release, ClusterId: clusterId, Stage: "fleet");
-        List<UpdateNotification> notifications = [UpdateNotification.Create("update.started", summary, status.UpdatedAt)];
+        List<UpdateNotification> notifications = [UpdateNotification.Create("update.started", summary, status.UpdatedAt, status.IdentityFormat)];
         foreach (FleetUpdatePeerProgress peer in status.Peers.Where(item => string.Equals(item.Target.ClusterId, clusterId, StringComparison.Ordinal)))
         {
             foreach (FleetUpdateAttempt attempt in peer.Attempts)
@@ -28,25 +28,25 @@ internal static class FleetUpdateNotifications
                 UpdateEventData data = new(operation, result?.Outcome ?? EOutcome.Unknown, completed, peer.Target.Peer.PeerId,
                     result?.Phase, result?.PreparedInstanceId ?? attempt.PreviousInstanceId, result?.InstanceId, result?.ReleaseId, result?.Reason,
                     attempt.OperationId, clusterId, "peer." + (result?.Phase.ToString() ?? "unconfirmed"));
-                notifications.Add(UpdateNotification.Create("update.peerChanged", data, status.UpdatedAt));
+                notifications.Add(UpdateNotification.Create("update.peerChanged", data, status.UpdatedAt, status.IdentityFormat));
             }
         }
         if (status.Client is { } client)
         {
             UpdateEventData data = new(operation, client.Outcome, client.Completed, ReleaseId: release, ClusterId: clusterId, Stage: "clienthost." + client.State);
-            notifications.Add(UpdateNotification.Create("update.peerChanged", data, client.UpdatedAt));
+            notifications.Add(UpdateNotification.Create("update.peerChanged", data, client.UpdatedAt, status.IdentityFormat));
         }
         if (status.Completed)
         {
             summary = summary with { Outcome = status.Outcome, Completed = true };
-            notifications.Add(UpdateNotification.Create("update.completed", summary, status.UpdatedAt));
+            notifications.Add(UpdateNotification.Create("update.completed", summary, status.UpdatedAt, status.IdentityFormat));
             if (status.Outcome == EOutcome.Unknown)
             {
-                notifications.Add(UpdateNotification.Create("update.interrupted", summary, status.UpdatedAt));
+                notifications.Add(UpdateNotification.Create("update.interrupted", summary, status.UpdatedAt, status.IdentityFormat));
             }
             if (status.Outcome is EOutcome.Failed or EOutcome.NotExecuted)
             {
-                notifications.Add(UpdateNotification.Create("update.failed", summary, status.UpdatedAt));
+                notifications.Add(UpdateNotification.Create("update.failed", summary, status.UpdatedAt, status.IdentityFormat));
             }
         }
         return notifications;

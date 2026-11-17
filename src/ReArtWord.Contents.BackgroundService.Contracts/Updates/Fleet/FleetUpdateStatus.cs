@@ -12,4 +12,12 @@ namespace ReArtWord.Contents.BackgroundService.Contracts.Updates.Fleet;
 /// <param name="Reason">全体の停止理由です。</param>
 /// <param name="Client">ClientHost自身の更新状態です。未指定の従来配布ではnullです。</param>
 public sealed record FleetUpdateStatus(FleetUpdateRequest Request, bool Completed, EOutcome Outcome,
-    IReadOnlyList<FleetUpdatePeerProgress> Peers, DateTimeOffset UpdatedAt, string? Reason = null, ClientUpdateProgress? Client = null);
+    IReadOnlyList<FleetUpdatePeerProgress> Peers, DateTimeOffset UpdatedAt, string? Reason = null, ClientUpdateProgress? Client = null)
+{
+    /// <summary>元操作と同じ方式で通知・配送IDを作ります。方式のない既存記録は旧IDを維持します。</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public EDerivedIdFormat IdentityFormat
+    {
+        get; init;
+    }
+}

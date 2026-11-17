@@ -86,6 +86,7 @@ internal sealed class DraftSession
             return Problem("draft.conflictCapacity", "未解消候補が上限に達しました。候補を解消してください。");
         }
         DraftView candidate = new(View.WorkflowId, View.BaseRevision, ContractJson.Hash(merged.Candidate), merged.Candidate, conflicts, merged.Validation, now);
+        candidate = candidate with { AutoApplyOperationId = DraftAutoApplyIdentity.Change(View, candidate.SessionVersion, request.OperationId) };
         if (maximumBytes < JsonSerializer.SerializeToUtf8Bytes(candidate, ContractJson.Options).Length)
         {
             return Problem("draft.capacity", "統合後の下書きが保持上限を超えます。");
@@ -164,7 +165,8 @@ internal sealed class DraftSession
             {
                 lineage.Remember(before);
             }
-            View = View with { Definition = merged.Candidate, SessionVersion = ContractJson.Hash(merged.Candidate), Conflicts = conflicts, UpdatedAt = now };
+            View = View with { Definition = merged.Candidate, SessionVersion = ContractJson.Hash(merged.Candidate), Conflicts = conflicts, UpdatedAt = now,
+                AutoApplyOperationId = DraftAutoApplyIdentity.Merge(View, announcement.Draft, ContractJson.Hash(merged.Candidate)) };
         }
         lineage.Join(announcement);
         foreach ((Guid id, string fingerprint) in announcement.Operations ?? new Dictionary<Guid, string>())
@@ -182,7 +184,9 @@ internal sealed class DraftSession
     private void MergeLegacy(DraftAnnouncement announcement, DateTimeOffset now, int capacity, int maximumBytes)
     {
         DraftChangeRequest request = new(Guid.NewGuid(), View.WorkflowId, Guid.Empty, announcement.Draft.BaseRevision, null, announcement.Original, announcement.Draft.Definition, new Dictionary<string, EEditResolution>(StringComparer.Ordinal));
+        DraftView previous = View;
         Apply(request, now, capacity, maximumBytes);
+        View = View with { AutoApplyOperationId = DraftAutoApplyIdentity.Merge(previous, announcement.Draft, View.SessionVersion) };
         EditConflict[] conflicts = View.Conflicts.Concat(announcement.Draft.Conflicts).DistinctBy(ContractJson.Hash).ToArray();
         if (conflicts.Length <= capacity && JsonSerializer.SerializeToUtf8Bytes(View with { Conflicts = conflicts }, ContractJson.Options).Length <= maximumBytes)
         {

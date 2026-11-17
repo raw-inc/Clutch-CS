@@ -127,7 +127,7 @@ public sealed class ClusterConflictService : IDisposable
             }
             string[] versions = candidates.Select(entry => entry.Version).Order(StringComparer.Ordinal).ToArray();
             string identity = ContractJson.Hash(new { conflict.Id, versions, value });
-            Guid operation = new(Convert.FromHexString(identity).AsSpan(0, 16));
+            Guid operation = await Persistence.Causality.DerivedRootIdentity.CreateAsync(repository, candidates, identity, cancellationToken).ConfigureAwait(false);
             DurableEntry? selected = candidates.FirstOrDefault(entry => string.Equals(ContractJson.Hash(entry.Value), ContractJson.Hash(value), StringComparison.Ordinal));
             await ResolveAsync(new(operation, conflict.Id, versions, selected?.Version, value, selected is null), cancellationToken).ConfigureAwait(false);
         }
@@ -197,6 +197,7 @@ public sealed class ClusterConflictService : IDisposable
     /// <returns>元要求に固定した解消結果です。</returns>
     public async Task<ConflictResolveResult> ResolveAsync(ConflictResolveRequest request, CancellationToken cancellationToken = default)
     {
+        using DerivedIdentityScope identities = new(EDerivedIdFormat.Uuid8);
         ArgumentNullException.ThrowIfNull(request);
         request = ContractJson.Copy(request);
         await changes.WaitAsync(cancellationToken).ConfigureAwait(false);
