@@ -7,7 +7,8 @@ namespace ReArtWord.Contents.BackgroundService.Infrastructure.Processes.Groups;
 internal sealed record ProcessGroupRun(Guid? OperationId = null, ProcessGroupDefinition? Plan = null, IReadOnlyList<ProcessGroupTarget>? Targets = null,
     EProcessGroupCommand Command = EProcessGroupCommand.Start, bool Automatic = false, bool RecoverOnly = false,
     EProcessGroupPhase Phase = EProcessGroupPhase.Idle, int Index = 0, DateTimeOffset? NextAt = null, DateTimeOffset? StartNotBefore = null,
-    bool Claimed = false, EOutcome? Outcome = null, string? Reason = null, bool Suppressed = false)
+    bool Claimed = false, EOutcome? Outcome = null, string? Reason = null, bool Suppressed = false,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] ProcessWaitOrigin? WaitOrigin = null)
 {
     /// <summary>確認待ちを含め、個別操作と重ねない操作が残っているかです。</summary>
     internal bool Active => Phase != EProcessGroupPhase.Idle;

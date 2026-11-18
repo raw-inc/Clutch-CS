@@ -8,7 +8,7 @@ using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Processes;
 
 /// <summary>現在の起動回のOSハンドルを保持し、終了後も終了コードを取得します。</summary>
-internal sealed class ProcessHandleMonitor(IProcessPlatform platform) : IDisposable
+internal sealed class ProcessHandleMonitor(IProcessPlatform platform, ProcessWaitClock? waits = null) : IDisposable
 {
     private readonly ConcurrentDictionary<string, TrackedProcess> handles = new(StringComparer.Ordinal);
 
@@ -39,7 +39,13 @@ internal sealed class ProcessHandleMonitor(IProcessPlatform platform) : IDisposa
         {
             process = platform.Start(definition);
             ProcessIdentity identity = ProcessOs.Identity(process);
-            Replace(definition.Id, new(identity, process));
+            ProcessWaitOrigin seen = ProcessWaitClock.OperatingSystemClock.Capture();
+            TrackedProcess tracked = new(identity, process);
+            if (!process.HasExited)
+            {
+                tracked.AliveOrigin = seen;
+            }
+            Replace(definition.Id, tracked);
             process = null;
             return identity;
         }
@@ -85,7 +91,7 @@ internal sealed class ProcessHandleMonitor(IProcessPlatform platform) : IDisposa
                 exited = true;
                 return (false, tracked.Process.ExitCode, true);
             }
-            tracked.LastAlive = DateTimeOffset.UtcNow;
+            tracked.AliveOrigin = ProcessWaitClock.OperatingSystemClock.Capture();
             return (true, null, false);
         }
         catch (ArgumentException)
@@ -103,8 +109,24 @@ internal sealed class ProcessHandleMonitor(IProcessPlatform platform) : IDisposa
         }
     }
 
-    /// <summary>既に併存していた別プロセスを後継と誤認しないための実OS観測時刻です。</summary>
-    /// <returns>この所有者が最後に生存を確認した時刻です。</returns>
+    /// <summary>このPCの起動回に結び付けた復旧時計です。</summary>
+    internal ProcessWaitClock Waits
+    {
+        get;
+    } = waits ?? new(TimeProvider.System, SystemBootObservation.Read);
+
+    /// <summary>監視中のアプリと同じ経過時計で後継候補を確認します。</summary>
+    internal ProcessReplacementProbe Replacements
+    {
+        get;
+    } = new(waits: waits);
+
+    /// <summary>起動日時と比較する際の、最後に生存を確認したOS稼働位置です。</summary>
+    /// <returns>このハンドルでの生存観測です。</returns>
+    internal ProcessWaitOrigin? LastAliveOrigin(string id) => handles.GetValueOrDefault(id)?.AliveOrigin;
+
+    /// <summary>最後に生存を確認した日時です。</summary>
+    /// <returns>OS開始時刻との照合に使う日時です。</returns>
     internal DateTimeOffset? LastObservedAlive(string id) => handles.GetValueOrDefault(id)?.LastAlive;
 
     /// <summary>起動時または監視再開時のセッションを、自律再起動の照合区間へ引き継ぎます。</summary>
@@ -127,7 +149,7 @@ internal sealed class ProcessHandleMonitor(IProcessPlatform platform) : IDisposa
                 return false;
             }
             _ = process.SafeHandle;
-            Replace(id, new(identity, process) { LastAlive = DateTimeOffset.UtcNow });
+            Replace(id, new(identity, process) { AliveOrigin = ProcessWaitClock.OperatingSystemClock.Capture() });
             process = null;
             return true;
         }
@@ -175,11 +197,12 @@ internal sealed class ProcessHandleMonitor(IProcessPlatform platform) : IDisposa
             get;
         } = ReadSession(Process);
 
-        internal DateTimeOffset LastAlive
+        internal DateTimeOffset LastAlive => AliveOrigin?.Wall ?? Identity.StartedAt;
+
+        internal ProcessWaitOrigin? AliveOrigin
         {
-            get;
-            set;
-        } = Identity.StartedAt;
+            get; set;
+        }
 
         /// <summary>短命な実体で追加情報を取得できなくても、確保した終了コードの監視を維持します。</summary>
         /// <returns>観測できたWindowsのセッションです。</returns>

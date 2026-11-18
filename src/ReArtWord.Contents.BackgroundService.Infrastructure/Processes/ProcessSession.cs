@@ -113,7 +113,7 @@ internal sealed class ProcessSession
         ProcessStateRecord pending = state with { InstanceId = Guid.NewGuid(), Identity = null, LaunchPending = true, PlannedStop = false, ExitCounted = false,
             RecoveryAttempts = recovering ? checked(state.RecoveryAttempts + 1)
                                           : state.RecoveryAttempts,
-            Ready = null, Healthy = null, ExitCode = null, ExitedAt = null, NextRecoveryAt = null, RestartRequested = restarting, ExitUnobserved = false, Replacement = null, ReplacementProblem = null, RecoveryReplacement = null };
+            Ready = null, Healthy = null, ExitCode = null, ExitedAt = null, NextRecoveryAt = null, RecoveryOrigin = null, RestartRequested = restarting, ExitUnobserved = false, Replacement = null, ReplacementProblem = null, RecoveryReplacement = null };
         if (!await SaveAsync(pending, cancellationToken).ConfigureAwait(false))
         {
             return Result(EOutcome.Unknown, "process.launchIntentUnconfirmed");
@@ -173,7 +173,7 @@ internal sealed class ProcessSession
         {
             int? exitCode = monitor.Observe(definition.Id, state.Identity).ExitCode;
             if (!await SaveAsync(state with { Ready = false, Healthy = false, ExitCounted = true, ExitCode = exitCode,
-                ExitedAt = clock.GetUtcNow(), NextRecoveryAt = null }, CancellationToken.None).ConfigureAwait(false))
+                ExitedAt = clock.GetUtcNow(), NextRecoveryAt = null, RecoveryOrigin = null }, CancellationToken.None).ConfigureAwait(false))
             {
                 return Result(EOutcome.Unknown, "process.stoppedStateUnconfirmed", false);
             }
@@ -201,7 +201,7 @@ internal sealed class ProcessSession
         }
         if (signal.Stable)
         {
-            next = next with { FailureCount = 0, RecoveryAttempts = 0, RecoveryExhausted = false, NextRecoveryAt = null, ExitCounted = false };
+            next = next with { FailureCount = 0, RecoveryAttempts = 0, RecoveryExhausted = false, NextRecoveryAt = null, RecoveryOrigin = null, ExitCounted = false };
         }
         if (!await SaveAsync(next, cancellationToken).ConfigureAwait(false))
         {
@@ -225,7 +225,7 @@ internal sealed class ProcessSession
         }
         if (confirmRecovery)
         {
-            next = next with { FailureCount = 0, RecoveryAttempts = 0, RecoveryExhausted = false, NextRecoveryAt = null, ExitCounted = ProcessOs.IsRunning(state.Identity) != true };
+            next = next.ConfirmRecovery(monitor.Waits, ProcessOs.IsRunning(state.Identity) == true);
         }
         if (!await SaveAsync(next, cancellationToken).ConfigureAwait(false))
         {
@@ -261,10 +261,9 @@ internal sealed class ProcessSession
         {
             return Result(EOutcome.NotExecuted, "process.exitUnobserved", false);
         }
-        DateTimeOffset now = clock.GetUtcNow();
-        if (state.NextRecoveryAt.HasValue && now < state.NextRecoveryAt.Value)
+        if (state.WaitProblem(monitor.Waits) is { } waiting)
         {
-            return Result(EOutcome.NotExecuted, "process.recoveryDelay", observed.Status.Running);
+            return Result(waiting.Outcome, waiting.Reason, observed.Status.Running);
         }
         int? maximum = policy.MaximumAttempts ?? options.DefaultRecoveryAttempts;
         if (policy.Unlimited)
@@ -273,7 +272,7 @@ internal sealed class ProcessSession
         }
         if (maximum.HasValue && maximum.Value <= state.RecoveryAttempts)
         {
-            bool saved = await SaveAsync(state with { RecoveryExhausted = true, NextRecoveryAt = null }, cancellationToken).ConfigureAwait(false);
+            bool saved = await SaveAsync(state with { RecoveryExhausted = true, NextRecoveryAt = null, RecoveryOrigin = null }, cancellationToken).ConfigureAwait(false);
             if (!saved)
             {
                 return Result(EOutcome.Unknown, "process.stateSaveUnconfirmed");
@@ -296,7 +295,7 @@ internal sealed class ProcessSession
                 return stopped;
             }
         }
-        ProcessStateRecord next = ProcessObservation.RecoveryIntent(definition, state, options, monitor, now);
+        ProcessStateRecord next = ProcessObservation.RecoveryIntent(definition, state, options, monitor, monitor.Waits.Capture());
         if (!await SaveAsync(next, cancellationToken).ConfigureAwait(false))
         {
             return Result(EOutcome.Unknown, "process.recoveryIntentUnconfirmed");
@@ -319,7 +318,7 @@ internal sealed class ProcessSession
         if (!await SaveAsync(state with { Identity = identity, LaunchPending = false, PlannedStop = identity is null, Ready = null, Healthy = null,
             RecoveryAttempts = identity is null ? state.RecoveryAttempts
                                                 : 0, RecoveryExhausted = identity is null && state.RecoveryExhausted,
-            ExitCode = null, ExitedAt = null, NextRecoveryAt = null, Replacement = null, ReplacementProblem = null, RecoveryReplacement = null }, cancellationToken).ConfigureAwait(false))
+            ExitCode = null, ExitedAt = null, NextRecoveryAt = null, RecoveryOrigin = null, Replacement = null, ReplacementProblem = null, RecoveryReplacement = null }, cancellationToken).ConfigureAwait(false))
         {
             return Result(EOutcome.Unknown, "process.resolutionSaveUnconfirmed");
         }
@@ -353,5 +352,5 @@ internal sealed class ProcessSession
     /// <returns>生の例外や引数をそのまま出力しない操作結果です。</returns>
     private ProcessOperationResult Result(EOutcome outcome, string? reason = null, bool? running = null)
         => new(outcome, new ProcessStatus(definition.Id, definition.Mode, state.InstanceId, state.Identity, running, state.Ready, state.Healthy, state.RecoverySuppressed, state.PlannedStop, state.FailureCount, state.RecoveryAttempts, state.RecoveryExhausted, reason,
-            state.ExitCode, state.ExitedAt, state.NextRecoveryAt, state.ExitUnobserved, state.Replacement?.Deadline, state.ReplacementProblem), reason);
+            state.ExitCode, state.ExitedAt, state.NextRecoveryAt, state.ExitUnobserved, state.Replacement?.Deadline, state.ReplacementProblem) { RecoveryRemaining = monitor.Waits.Remaining(state.RecoveryOrigin, state.NextRecoveryAt) }, reason);
 }

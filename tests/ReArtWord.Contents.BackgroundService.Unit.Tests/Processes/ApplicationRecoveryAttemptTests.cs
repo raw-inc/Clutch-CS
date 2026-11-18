@@ -270,6 +270,9 @@ public sealed class ApplicationRecoveryAttemptTests
             Assert.Equal(attempt, rejected.Status!.RecoveryAttempts);
             Assert.False(rejected.Status.RecoveryExhausted);
         }
+
+        // Coreを作り直す間も、同じOSの稼働時間は試験時計と同じだけ進んでいます。
+        fixture.Boot = fixture.Boot!.Value with { Uptime = fixture.Boot.Value.Uptime + fixture.Clock.GetElapsedTime(0) };
         fixture.RestartCore();
         fixture.Clock.Advance(TimeSpan.FromSeconds(1));
         ProcessOperationResult exhausted = await fixture.Service.RecoverAsync(definition.Id);

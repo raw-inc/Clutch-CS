@@ -22,5 +22,30 @@ namespace ReArtWord.Contents.BackgroundService.Infrastructure.Processes;
 /// <param name="Replacement">自律再起動の確認区間または照合を保留している理由です。</param>
 /// <param name="ReplacementProblem">自律再起動の確認区間または照合を保留している理由です。</param>
 /// <param name="RecoveryReplacement">終了確定後、復旧を待つ間の後継照合条件です。</param>
+/// <param name="RecoveryOrigin">表示用の次回日時を経過時間へ対応付ける起点です。</param>
 internal sealed record ProcessStateRecord(Guid InstanceId, ProcessIdentity? Identity = null, bool LaunchPending = false, bool? Ready = null, bool? Healthy = null, bool RecoverySuppressed = false, bool PlannedStop = false, int FailureCount = 0, int RecoveryAttempts = 0, bool ExitCounted = false, bool RecoveryExhausted = false, DateTimeOffset? NextRecoveryAt = null, int? ExitCode = null, DateTimeOffset? ExitedAt = null, bool RestartRequested = false, bool ExitUnobserved = false, ProcessReplacementWindow? Replacement = null, string? ReplacementProblem = null,
-    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] ProcessReplacementWindow? RecoveryReplacement = null);
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] ProcessReplacementWindow? RecoveryReplacement = null,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] ProcessWaitOrigin? RecoveryOrigin = null)
+{
+    /// <summary>明示確認された故障区切りを解除し、次の起動前に照合する後継候補の条件を残します。</summary>
+    /// <returns>実行回数と不明な待機を解除した状態です。</returns>
+    internal ProcessStateRecord ConfirmRecovery(ProcessWaitClock clock, bool running)
+        => this with { FailureCount = 0, RecoveryAttempts = 0, RecoveryExhausted = false, NextRecoveryAt = null, RecoveryOrigin = null,
+            Replacement = Replacement?.ConfirmUnknownWait(clock), RecoveryReplacement = RecoveryReplacement?.ConfirmUnknownWait(clock), ExitCounted = !running };
+
+    /// <summary>元の復旧待ちが不明なときは、新しい起動を許可しません。</summary>
+    /// <returns>待機中・確認不能の理由です。待機がないか満了していればnullです。</returns>
+    internal (Contracts.Execution.EOutcome Outcome, string Reason)? WaitProblem(ProcessWaitClock clock)
+    {
+        TimeSpan? remaining = clock.Remaining(RecoveryOrigin, NextRecoveryAt);
+        if (remaining is null)
+        {
+            return (Contracts.Execution.EOutcome.Unknown, "process.recoveryClockUnconfirmed");
+        }
+        if (TimeSpan.Zero < remaining)
+        {
+            return (Contracts.Execution.EOutcome.NotExecuted, "process.recoveryDelay");
+        }
+        return null;
+    }
+}

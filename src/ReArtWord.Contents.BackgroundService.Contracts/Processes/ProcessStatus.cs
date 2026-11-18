@@ -22,4 +22,12 @@ namespace ReArtWord.Contents.BackgroundService.Contracts.Processes;
 /// <param name="ReplacementProblem">終了確認または復旧待機で、後継の照合を保留している理由です。</param>
 public sealed record ProcessStatus(string Id, EProcessMode Mode, Guid InstanceId, ProcessIdentity? Identity, bool? Running, bool? Ready, bool? Healthy,
     bool RecoverySuppressed, bool PlannedStop, int FailureCount, int RecoveryAttempts, bool RecoveryExhausted, string? Reason = null,
-    int? ExitCode = null, DateTimeOffset? ExitedAt = null, DateTimeOffset? NextRecoveryAt = null, bool ExitUnobserved = false, DateTimeOffset? ReplacementDeadline = null, string? ReplacementProblem = null);
+    int? ExitCode = null, DateTimeOffset? ExitedAt = null, DateTimeOffset? NextRecoveryAt = null, bool ExitUnobserved = false, DateTimeOffset? ReplacementDeadline = null, string? ReplacementProblem = null)
+{
+    /// <summary>同じPCのグループ起動が個別復旧の残り時間を引き継ぐための値です。</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public TimeSpan? RecoveryRemaining
+    {
+        get; init;
+    }
+}
