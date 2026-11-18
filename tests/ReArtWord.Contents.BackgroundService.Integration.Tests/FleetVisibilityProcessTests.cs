@@ -4,7 +4,6 @@ using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Management.Discovery;
-using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Contracts.Updates.Fleet;
 using ReArtWord.Contents.BackgroundService.Contracts.Updates.Releases;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates;
@@ -39,12 +38,10 @@ public sealed class FleetVisibilityProcessTests
             configured.EnsureSuccessStatusCode();
         }
         PeerInfo? peer = null;
-        System.Text.Json.JsonSerializerOptions observationOptions = new(ContractJson.Options);
-        observationOptions.Converters.Add(new PeerObservationJsonConverter(age => new(TimeProvider.System, age)));
         await CorePeer.WaitAsync(async token =>
         {
             using HttpResponseMessage response = await owner.SendAsync(HttpMethod.Get, "client/clusters", cancellationToken: token).ConfigureAwait(true);
-            DiscoveredCluster[] discovered = (await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(observationOptions, token).ConfigureAwait(true))!;
+            DiscoveredCluster[] discovered = (await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ClientObservationJson.Options, token).ConfigureAwait(true))!;
             peer = discovered.SelectMany(item => item.Peers).FirstOrDefault(item => item.Status == EPeerStatus.Ready);
             return peer is not null;
         }, timeout.Token).ConfigureAwait(true);
@@ -80,7 +77,7 @@ public sealed class FleetVisibilityProcessTests
         Assert.True(health.GetProperty("ready").GetBoolean());
         Assert.Equal(JsonValueKind.Null, health.GetProperty("maintenance").ValueKind);
         using HttpResponseMessage localHistory = await viewer.SendAsync(HttpMethod.Get, "client/updates", cancellationToken: timeout.Token).ConfigureAwait(true);
-        Assert.Empty((await localHistory.Content.ReadFromJsonAsync<FleetUpdateView[]>(ContractJson.Options, timeout.Token).ConfigureAwait(true))!);
+        Assert.Empty((await localHistory.Content.ReadFromJsonAsync<FleetUpdateView[]>(ClientObservationJson.Options, timeout.Token).ConfigureAwait(true))!);
     }
 
     /// <summary>所有する要求と外部の表示だけを分離したAPIを読みます。</summary>
@@ -89,6 +86,6 @@ public sealed class FleetVisibilityProcessTests
     {
         using HttpResponseMessage response = await client.SendAsync(HttpMethod.Get, "client/updates/visible", cancellationToken: cancellationToken).ConfigureAwait(true);
         response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<FleetUpdateOverview>(ContractJson.Options, cancellationToken).ConfigureAwait(true))!;
+        return (await response.Content.ReadFromJsonAsync<FleetUpdateOverview>(ClientObservationJson.Options, cancellationToken).ConfigureAwait(true))!;
     }
 }
