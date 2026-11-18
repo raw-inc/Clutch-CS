@@ -78,6 +78,10 @@ splitは比較不能をrejectedへ隠さずindeterminateへ出します。
 | `state.get/set/compareExchange/delete/dedupe` | `scope: workflow/peer` 必須。`key` は設定または入力。ワークフローはクラスター共有範囲、ピアはピア固有範囲。set/deleteは読取時の版でCASし競合なら `conflict`。明示CASは `expectedVersion`。dedupeは原子的に確保し `success`/`duplicate`。明示 `ttlMilliseconds` なしでは期限失効しない |
 | `scheduling.timer` | `mode: interval/once/daily/weekdays`。intervalは `intervalMilliseconds`、onceは `at`、daily/weekdaysは `time`、weekdaysは日曜0〜土曜6。`start/end`、`includeDates/excludeDates`（yyyy-MM-dd）、`count` を指定可能 |
 
+共有キーの有限TTLは、確保した側の経過時間で判定します。分断後も各側が通常実行できる場合は、それぞれで新しいキーを確保できます。再接続時に別々の確保が見つかれば、両方を競合候補として保持します。明示離脱中の確保は `localOnly` に反映されます。
+
+担当交代後は元の実体の経過時計を確認します。元実体や旧版マーカーの残り時間を確定できない間は `state.dedupe.unconfirmed` を返します。同じ保存版を確認してから元のTTL全体が経てば、発行元が不在でも再取得できます。新形式の有限TTLは旧版Coreには無期限のキーとして見えます。
+
 時間指定とtimeWindowはクラスター共通タイムゾーンを使用し、ノード固有timezoneは受け付けません。夏時間の曖昧・欠落時刻は失敗として示します。曜日の追加日は指定曜日外にも実行し、除外日は追加日より優先します。未実行回が複数あれば最新の対象回だけを残し、既定は遅延実行です。`missed: skip/within` と `toleranceMilliseconds` で遅延超過時に見送りへ変更できます（skip未指定許容値は1000ms）。
 
 通常の予定終了と緊急取消は結果を分けます。

@@ -7,18 +7,23 @@ using ReArtWord.Contents.BackgroundService.Runtime.State;
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.State;
 
 /// <summary>Peerローカル状態とワークフロー共有状態の保存経路を分けます。</summary>
-public sealed class NodeStateStore : INodeStateStore, IObservableNodeStateStore
+public sealed class NodeStateStore : INodeStateStore, IObservableNodeStateStore, ISharedDedupeStore
 {
     private readonly IDurableRepository repository;
     private readonly string localPeerId;
-    private DetachedNodeStateStore? detached;
+
+    /// <summary>明示離脱中に受け付けた操作の保存先です。再参加で通常の書込み経路へ付け替えません。</summary>
+    internal DetachedNodeStateStore? Detached
+    {
+        get; private set;
+    }
 
     /// <summary>共有状態にも明示離脱のローカル枝を使用する境界を接続します。</summary>
-    internal void BindDetached(Cluster.PeerCluster cluster) => detached = new(repository, cluster);
+    internal void BindDetached(Cluster.PeerCluster cluster) => Detached = new(repository, cluster);
 
     /// <summary>再参加後のローカル枝を元共有版と照合します。</summary>
     /// <returns>非競合統合または競合候補保持の確認です。</returns>
-    public Task ReconcileDetachedAsync(CancellationToken cancellationToken = default) => detached?.ReconcileAsync(cancellationToken) ?? Task.CompletedTask;
+    public Task ReconcileDetachedAsync(CancellationToken cancellationToken = default) => Detached?.ReconcileAsync(cancellationToken) ?? Task.CompletedTask;
 
     /// <summary>保存先とローカルPeer識別子を指定します。</summary>
     public NodeStateStore(IDurableRepository repository, string localPeerId)
@@ -27,6 +32,21 @@ public sealed class NodeStateStore : INodeStateStore, IObservableNodeStateStore
         ArgumentException.ThrowIfNullOrWhiteSpace(localPeerId);
         this.repository = repository;
         this.localPeerId = localPeerId;
+    }
+
+    /// <summary>通常参加では担当へ配送し、明示離脱ではローカルの比較保存へ限定します。</summary>
+    internal Func<string, string, TimeSpan?, CancellationToken, ValueTask<StateWriteResult>>? ReserveShared
+    {
+        get; set;
+    }
+
+    /// <summary>共有キーの有効期限を確保元で確認します。</summary>
+    /// <returns>確保の成否と確認済みの状態です。</returns>
+    public ValueTask<StateWriteResult> ReserveAsync(string scope, string key, TimeSpan? lifetime, CancellationToken cancellationToken = default)
+    {
+        ValidateScope(scope);
+        return ReserveShared is null ? ValueTask.FromResult(new StateWriteResult(false, null, EOutcome.NotExecuted, "State.SharedStoreUnavailable"))
+                                     : ReserveShared(scope, key, lifetime, cancellationToken);
     }
 
     /// <summary>共有状態をCoordinatorで比較更新する配送境界です。</summary>
@@ -49,9 +69,9 @@ public sealed class NodeStateStore : INodeStateStore, IObservableNodeStateStore
     public async ValueTask<VersionedState?> ReadAsync(string scope, string key, CancellationToken cancellationToken = default)
     {
         ValidateScope(scope);
-        if (detached?.IsDetached == true && NodeStateScope.IsShared(scope))
+        if (Detached?.IsDetached == true && NodeStateScope.IsShared(scope))
         {
-            return await detached.ReadAsync(scope, key, cancellationToken).ConfigureAwait(false);
+            return await Detached.ReadAsync(scope, key, cancellationToken).ConfigureAwait(false);
         }
         DurableEntry? entry = await repository.ReadAsync(scope, key, cancellationToken).ConfigureAwait(false);
         if (entry?.Value is null)
@@ -66,9 +86,9 @@ public sealed class NodeStateStore : INodeStateStore, IObservableNodeStateStore
     public async ValueTask<StateWriteResult> CompareExchangeAsync(string scope, string key, string? expectedVersion, NodeValue? value, CancellationToken cancellationToken = default)
     {
         ValidateScope(scope);
-        if (detached?.IsDetached == true && NodeStateScope.IsShared(scope))
+        if (Detached?.IsDetached == true && NodeStateScope.IsShared(scope))
         {
-            return await detached.CompareAsync(scope, key, expectedVersion, value, cancellationToken).ConfigureAwait(false);
+            return await Detached.CompareAsync(scope, key, expectedVersion, value, cancellationToken).ConfigureAwait(false);
         }
         if (NodeStateScope.IsShared(scope))
         {
