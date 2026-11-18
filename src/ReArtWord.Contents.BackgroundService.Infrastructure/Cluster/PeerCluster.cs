@@ -54,9 +54,9 @@ public sealed class PeerCluster : IPeerDirectory, IRemoteNodeDispatcher, IAsyncD
         RequestClocks = new(clock);
         RegisterInspection(RequestClockSnapshot.Capability, (_, _) => Task.FromResult(new ClusterResponse(EOutcome.Succeeded, NodeValue.FromObject(AdmissionClock.Capture()))));
         runtimeCapabilities = new(this);
-        recovery = new PeerRecovery(options, repository, membership);
         transport = new UdpTransport(new DatagramTransportOptions(options.PeerId, options.BindAddress, options.BroadcastAddress, options.Port, options.Id)
-        { RequestTimeout = options.RequestTimeout, MaximumMessageBytes = options.MaximumMessageBytes }, LocalInstanceId, clock) { Received = ReceiveAsync };
+        { RequestTimeout = options.RequestTimeout, MaximumMessageBytes = options.MaximumMessageBytes }, LocalInstanceId, clock);
+        recovery = new PeerRecovery(options, repository, membership, token => PeerStartupDiscovery.ListenAsync(options, membership, transport, token));
         replication = ClusterReplication.Create(this, repository, options.MaximumMessageBytes, clock);
         transient = new TransientChannel(LocalPeerId, LocalInstanceId, (body, token) => transport.SendAsync(CreateMessage("transient", null, body), token), () => recovery.Detached);
         retention = new(this, clock, options.PeerTimeout);
@@ -196,6 +196,7 @@ public sealed class PeerCluster : IPeerDirectory, IRemoteNodeDispatcher, IAsyncD
         await PeerStorageIdentity.InitializeAsync(repository, options, transport, cancellationToken).ConfigureAwait(false);
         await recovery.InitializeAsync(cancellationToken).ConfigureAwait(false);
         participation.Digest = await repository.GetSharedVersionAsync(cancellationToken).ConfigureAwait(false);
+        transport.Received = ReceiveAsync;
         transport.Start();
         requestStream.Start();
         repositorySync.Start();
@@ -287,14 +288,7 @@ public sealed class PeerCluster : IPeerDirectory, IRemoteNodeDispatcher, IAsyncD
             {
                 return;
             }
-            EPeerStatus localStatus = GetPeers().Single(peer => peer.InstanceId == LocalInstanceId).Status;
-            bool participating = PeerStatusRules.CanParticipate(localStatus);
-            bool conflictsResolved = localStatus == EPeerStatus.Ready && announcement.Peer.Status == EPeerStatus.Ready;
-            if (!recovery.Detached && PeerStatusRules.CanParticipate(announcement.Peer.Status) && (!string.Equals(announcement.Digest, participation.Digest, StringComparison.Ordinal) || repositorySync.NeedsSynchronization(announcement.Peer, conflictsResolved) || !participating))
-            {
-                bool mustGate = previous?.Status == EPeerStatus.Unavailable || !participating;
-                await participation.SynchronizeAsync(announcement.Peer, mustGate, conflictsResolved && previous?.InstanceId == announcement.Peer.InstanceId, stopping.Token).ConfigureAwait(false);
-            }
+            await participation.ObserveReadyAsync(announcement, previous, stopping.Token).ConfigureAwait(false);
             return;
         }
         requestAddress.Value = address;
