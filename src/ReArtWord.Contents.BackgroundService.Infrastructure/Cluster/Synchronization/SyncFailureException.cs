@@ -11,7 +11,7 @@ internal sealed class SyncFailureException : IOException
         "Sync.ChunkUnconfirmed", "Sync.ChunkMismatch", "Sync.HashMismatch", "Sync.InvalidSnapshot", "Sync.ManifestMismatch", "Sync.SessionExpired",
         "Sync.SourceInstanceUnavailable", "Sync.RemoteImportUnconfirmed", "Sync.ResponseUnconfirmed", "Sync.ProtocolMissing", "Sync.ManifestMissing",
         "Sync.Conflict", "Sync.Interrupted", "Sync.RemoteRejected", "Sync.InventoryMismatch", "Sync.HistoryUpgradeRequired", "Sync.SnapshotChanged",
-        "Sync.PendingOperations", "Sync.HistoryUnavailable", "Sync.HistoryConflict", "Sync.HistoryRecordCapacity"], StringComparer.Ordinal);
+        "Sync.ClockUnconfirmed", "Sync.PendingOperations", "Sync.HistoryUnavailable", "Sync.HistoryConflict", "Sync.HistoryRecordCapacity"], StringComparer.Ordinal);
 
     /// <summary>固定された理由コードだけを保持します。</summary>
     public SyncFailureException(string code) : base(Normalize(code))

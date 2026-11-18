@@ -4,6 +4,7 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Observability;
 internal sealed class LogTestClock : TimeProvider
 {
     private readonly Lock gate = new();
+    private long elapsed;
     private DateTimeOffset now = new(2026, 9, 10, 10, 0, 0, TimeSpan.Zero);
 
     /// <summary>現在の試験時刻を返します。</summary>
@@ -16,12 +17,26 @@ internal sealed class LogTestClock : TimeProvider
         }
     }
 
+    /// <summary>保持期限に使う経過時間を、日時と同じ速度で進めます。</summary>
+    /// <returns>試験開始からのtick数です。</returns>
+    public override long GetTimestamp()
+    {
+        using (gate.EnterScope())
+        {
+            return elapsed;
+        }
+    }
+
+    /// <summary>TimeSpanと同じ単位で計測します。</summary>
+    public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
     /// <summary>次に開始する保持処理の時刻を進めます。</summary>
     internal void Advance(TimeSpan duration)
     {
         using (gate.EnterScope())
         {
             now += duration;
+            elapsed += duration.Ticks;
         }
     }
 }

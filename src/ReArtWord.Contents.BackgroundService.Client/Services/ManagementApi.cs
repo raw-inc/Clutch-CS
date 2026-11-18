@@ -29,6 +29,13 @@ internal sealed class ManagementApi
 
     /// <summary>観測元と同じ時刻軸で鮮度を判断します。</summary>
     internal DateTimeOffset UtcNow => serverClock.UtcNow;
+
+    /// <summary>ブラウザー内の更新間隔を、日時補正に影響されず測ります。</summary>
+    internal long Timestamp => serverClock.Timestamp;
+
+    /// <summary>同じブラウザー内で開始した計測の経過時間を返します。</summary>
+    /// <returns>ポーリング間隔の判定に使う経過時間です。</returns>
+    internal TimeSpan ElapsedSince(long started) => serverClock.ElapsedSince(started);
     private static readonly JsonSerializerOptions responseOptions = new(ContractJson.Options) { UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip };
 
     /// <summary>手動ノード要求を初回送信前に作成し、準備中の待ち時間も5分の受付期間から差し引きます。</summary>
@@ -187,12 +194,15 @@ internal sealed class ManagementApi
             return default;
         }
 
+        T? result;
+
         // JSONの復元は同期処理です。この間だけ要求開始位置を固定することで、型情報のキャッシュを
         // 再利用しつつ、同時に届いた別応答の通信時間を混ぜないようにします。
         using (reading.EnterScope())
         {
             responseStarted = started;
-            return JsonSerializer.Deserialize<T>(content, observationOptions);
+            result = JsonSerializer.Deserialize<T>(content, observationOptions);
         }
+        return ObservationResponses.Receive(result, age => serverClock.ObserveAge(age, started));
     }
 }

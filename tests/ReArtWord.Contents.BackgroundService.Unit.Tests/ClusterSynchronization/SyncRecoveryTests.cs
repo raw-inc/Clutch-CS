@@ -144,6 +144,29 @@ public sealed class SyncRecoveryTests
         Assert.True(recovery.DeferChangingVersion(second, true));
     }
 
+    /// <summary>日時補正は転送失敗・準備待ちの再照合間隔を変えず、相手の新実体はすぐ照合できます。</summary>
+    [Theory]
+    [InlineData(-3600)]
+    [InlineData(3600)]
+    public void ClockCorrectionsDoNotChangeFailureOrPreparationBackoff(int correction)
+    {
+        ProbeClock clock = new();
+        SyncRecovery recovery = new(clock);
+        PeerInfo peer = Peer("backoff");
+        foreach (string reason in new[] { "Sync.HashMismatch", "Sync.PendingOperations" })
+        {
+            recovery.Failed(peer, reason);
+            clock.MoveUtc(TimeSpan.FromSeconds(correction));
+            Assert.False(recovery.CanSynchronize(peer));
+            Assert.True(recovery.CanSynchronize(peer with { InstanceId = Guid.NewGuid() }));
+            clock.Advance(TimeSpan.FromSeconds(1) - TimeSpan.FromTicks(1));
+            Assert.False(recovery.CanSynchronize(peer));
+            clock.Advance(TimeSpan.FromTicks(1));
+            Assert.True(recovery.CanSynchronize(peer));
+            recovery.Confirmed(peer.PeerId, peer.InstanceId, recovery.Revision);
+        }
+    }
+
     /// <summary>到達実体だけが異なる参加者を作ります。</summary>
     /// <returns>比較対象のPeerです。</returns>
     private static PeerInfo Peer(string id) => new(id, Guid.NewGuid(), id, "127.0.0.1", 47740, EPeerStatus.Ready, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);

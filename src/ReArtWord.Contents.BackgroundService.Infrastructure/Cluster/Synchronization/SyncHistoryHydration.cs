@@ -12,6 +12,7 @@ internal sealed class SyncHistoryHydration : IAsyncDisposable
     private readonly PeerCluster cluster;
     private readonly RecoveryRepository store;
     private readonly SyncDownload download;
+    private readonly SyncSessionClocks sessionClocks;
     private readonly TimeProvider clock;
     private readonly SyncHistoryOffers offers;
     private readonly Lazy<Task> work;
@@ -24,6 +25,7 @@ internal sealed class SyncHistoryHydration : IAsyncDisposable
         this.cluster = cluster;
         this.store = store;
         this.download = download;
+        sessionClocks = exports.Clocks;
         this.clock = clock;
         offers = new(cluster, store, exports, clock, stopping);
         work = new(() => RunAsync(stopping));
@@ -133,8 +135,10 @@ internal sealed class SyncHistoryHydration : IAsyncDisposable
     /// <returns>存在証明のバッチに対応する確認です。</returns>
     private async Task ReceiveBatchAsync(PeerInfo peer, IReadOnlyList<RecoveryRecord> receipts, CancellationToken cancellationToken = default)
     {
-        SyncHistoryRequest request = new(Guid.NewGuid(), receipts, clock.GetUtcNow().AddSeconds(30));
-        using CancellationTokenSource expiry = new(TimeSpan.FromSeconds(30), clock);
+        await sessionClocks.EnsureAsync(peer, cancellationToken).ConfigureAwait(false);
+        SyncLifetime lifetime = new(clock, TimeSpan.FromSeconds(30));
+        SyncHistoryRequest request = new(Guid.NewGuid(), receipts, clock.GetUtcNow().AddSeconds(30), sessionClocks.Create(peer.InstanceId, lifetime));
+        using CancellationTokenSource expiry = new(lifetime.Remaining, clock);
         using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(expiry.Token, cancellationToken);
         SyncManifest? manifest = null;
         try

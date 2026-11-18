@@ -8,14 +8,21 @@ internal sealed class SyncIncoming : IDisposable
     private readonly Lazy<Task<SyncResponse>> work;
 
     /// <summary>最初の固定期限を使い、再送で延長しません。</summary>
-    internal SyncIncoming(SyncManifest manifest, long recoveryRevision, TimeProvider clock, Func<CancellationToken, Task<SyncResponse>> action, CancellationToken stopping, Guid reverseId = default)
+    internal SyncIncoming(SyncManifest manifest, long recoveryRevision, TimeProvider clock, Func<CancellationToken, Task<SyncResponse>> action, CancellationToken stopping, Guid reverseId = default, SyncLifetime? deadline = null)
     {
         Manifest = manifest;
         RecoveryRevision = recoveryRevision;
         ReverseId = reverseId;
-        expiry = new(manifest.ExpiresAt - clock.GetUtcNow(), clock);
+        Deadline = deadline ?? new(clock, manifest.ExpiresAt - clock.GetUtcNow());
+        expiry = new(Deadline.Remaining, clock);
         lifetime = CancellationTokenSource.CreateLinkedTokenSource(expiry.Token, stopping);
         work = new(() => action(lifetime.Token));
+    }
+
+    /// <summary>最初の受入から消費する期限です。</summary>
+    internal SyncLifetime Deadline
+    {
+        get;
     }
 
     /// <summary>同一内容を照合する元マニフェストです。</summary>

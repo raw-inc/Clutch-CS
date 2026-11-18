@@ -28,7 +28,7 @@ internal sealed class ConcurrencyPermitStore(PeerCluster cluster, IDurableReposi
         queue.Active.Clear();
         queue.Active.AddRange(queue.Entry?.Value?.Json.Deserialize<ConcurrencyPermit[]>() ?? []);
         queue.Epoch = epoch;
-        queue.NextRecovery = DateTimeOffset.MinValue;
+        queue.RecoveryChecked = null;
     }
 
     /// <summary>一つの制限ノードの現役記録をCASで変更し、履歴全体を読みません。</summary>
