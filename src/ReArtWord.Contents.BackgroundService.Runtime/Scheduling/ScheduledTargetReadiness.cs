@@ -74,6 +74,11 @@ internal sealed class ScheduledTargetReadiness(IPeerDirectory peers, TimeProvide
                     target.Latest = schedule.ScheduledAt;
                 }
             }
+            if (schedule.MissedPolicy == EScheduleMissedPolicy.Within && schedule.Allowance is null)
+            {
+                TimeSpan remaining = schedule.ScheduledAt + schedule.Tolerance - clock.GetUtcNow();
+                schedule = schedule with { Allowance = new ScheduleAllowance(clock, remaining, remaining) };
+            }
             inputs.Add(emission.Context.CausationId, new(schedule, captured, keys));
             return true;
         }
@@ -125,15 +130,22 @@ internal sealed class ScheduledTargetReadiness(IPeerDirectory peers, TimeProvide
                     return Reject(request, "schedule.superseded", "同じ実行先の新しい予定回を保持し、未開始の古い回を見送りました。");
                 }
             }
-            DateTimeOffset now = clock.GetUtcNow();
+            if (schedule.MissedPolicy == EScheduleMissedPolicy.Within && schedule.Allowance?.Latest is null)
+            {
+                return Reject(request, "schedule.targetTimingUnconfirmed", "元の予定回の許容期限をこのCoreで確認できません。");
+            }
             if (schedule.MissedPolicy == EScheduleMissedPolicy.Skip
-                || schedule.MissedPolicy == EScheduleMissedPolicy.Within && schedule.ScheduledAt + schedule.Tolerance < now)
+                || schedule.MissedPolicy == EScheduleMissedPolicy.Within && schedule.Allowance?.Latest < TimeSpan.Zero)
             {
                 return Reject(request, "schedule.targetMissed", "予定時刻の不在、または許容遅延超過により、この実行先の回を見送りました。");
             }
             PeerInfo? current = peers.GetPeers().FirstOrDefault(peer => string.Equals(peer.PeerId, original.PeerId, StringComparison.Ordinal) && Available(peer));
             if (current is not null)
             {
+                if (schedule.MissedPolicy == EScheduleMissedPolicy.Within && schedule.Allowance?.Earliest is not { Ticks: >= 0 })
+                {
+                    return Reject(request, "schedule.targetTimingUnconfirmed", "元の予定回の許容時間内に開始できることを確認できません。");
+                }
                 if (!string.IsNullOrEmpty(original.HostId) && !string.Equals(original.HostId, current.HostId, StringComparison.Ordinal))
                 {
                     return Reject(request, "schedule.hostChanged", "予定の実行先とは異なるPCになったため、別PCでは開始しません。");

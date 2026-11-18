@@ -10,4 +10,12 @@ namespace ReArtWord.Contents.BackgroundService.Runtime.Scheduling;
 /// <param name="MissedPolicy">予定時刻に開始できない回の扱い。</param>
 /// <param name="Tolerance">許容する遅延時間。</param>
 public sealed record ScheduledOccurrence(string TimelineKey, string SourceNodeId, Guid SourceId, DateTimeOffset ScheduledAt,
-    EScheduleMissedPolicy MissedPolicy, TimeSpan Tolerance);
+    EScheduleMissedPolicy MissedPolicy, TimeSpan Tolerance)
+{
+    /// <summary>元の予定回の許容時間です。別のCoreへ渡すときは、その実体で確認した時計から復元します。</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public ScheduleAllowance? Allowance
+    {
+        get; init;
+    }
+}
