@@ -24,7 +24,7 @@ public sealed class RetentionCyclePerformanceTests(ITestOutputHelper output)
 {
     /// <summary>現在Stateを維持し、確定済みの要求・ファイル・実行本文と時刻付き削除索引を循環させます。</summary>
     /// <returns>期間中の容量、資源、固定回数の読取り費用と、期限切れ要求の拒否です。</returns>
-    [Fact]
+    [Fact(Skip = "旧仕様: UUIDv7の日時境界へ未使用IDも含めて畳み込んでいた保持方式。ExactRetirementCycleTestsで実際に退役したIDと欠番・未完了の保護を検証します。")]
     public async Task ThreeYearsOfDailyRetentionKeepBodiesAndTimeBasedMarkersBoundedAsync()
     {
         string root = Path.GetFullPath("../../../../../.work/performance/retention-" + Guid.NewGuid().ToString("N"), AppContext.BaseDirectory);
