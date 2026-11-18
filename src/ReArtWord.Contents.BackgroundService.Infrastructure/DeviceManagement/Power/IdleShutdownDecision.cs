@@ -8,22 +8,21 @@ internal static class IdleShutdownDecision
 {
     /// <summary>未確認の入力や将来時刻ではシャットダウンを開始しません。</summary>
     /// <returns>開始対象期間の識別子。条件未達ならnullです。</returns>
-    internal static string? Episode(DeviceIdleShutdownPolicy policy, bool? ac, DeviceUserActivity? activity, DateTimeOffset now)
+    internal static string? Episode(DeviceIdleShutdownPolicy policy, bool? ac, DeviceUserActivity? activity, TimeSpan enabled, TimeSpan idle)
     {
-        if (ac is null || activity is null || policy.Version == Guid.Empty || now < activity.LastActivity || now < policy.EnabledAt)
+        if (ac is null || activity is null || policy.Version == Guid.Empty)
         {
             return null;
         }
         uint seconds = ac.Value ? policy.AcSeconds
                                 : policy.DcSeconds;
-        DateTimeOffset since = activity.LastActivity < policy.EnabledAt ? policy.EnabledAt
-                                                                        : activity.LastActivity;
-        if (seconds == 0 || now - since < TimeSpan.FromSeconds(seconds))
+        TimeSpan wait = TimeSpan.FromSeconds(seconds);
+        if (seconds == 0 || enabled < wait || idle < wait)
         {
             return null;
         }
 
-        // The supply does not create a new attempt during the same idle episode.
+        // 電源供給が変わっても、同じ無操作期間の停止要求は再送しません。
         return ContractJson.Hash(new { policy.Version, activity.Identity });
     }
 }
