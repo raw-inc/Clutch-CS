@@ -18,7 +18,7 @@ using Xunit.Abstractions;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Persistence;
 
-/// <summary>日次件数を縮小し、実経過3年分の本文保持と削除済みIDの圧縮を分けて測ります。</summary>
+/// <summary>日次件数を縮小し、1,095回の保守で履歴本文と削除済みIDの保存量を測ります。</summary>
 [Collection("Performance"), Trait("Category", "Performance")]
 public sealed class ExactRetirementCycleTests(ITestOutputHelper output)
 {
@@ -35,7 +35,7 @@ public sealed class ExactRetirementCycleTests(ITestOutputHelper output)
         DataRetentionSettings policy = new(7, 30, TimeZoneId: "UTC");
         DateTimeOffset now = DateTimeOffset.UtcNow;
         DateTimeOffset firstDay = new DateTimeOffset(now.Year, now.Month, now.Day, 12, 0, 0, TimeSpan.Zero).AddDays(-1095);
-        OperationIdSequence shared = new(), executions = new();
+        OperationIdSequence shared = new(), executions = new(), workflows = new();
         Guid firstOperation = shared.Next(), missing = Guid.Empty, pending = Guid.Empty;
         string? version = null;
         List<object> measurements = [];
@@ -59,7 +59,7 @@ public sealed class ExactRetirementCycleTests(ITestOutputHelper output)
             IReadOnlyList<DurableMutation> changes = await repository.StampAsync([new(NodeStateScope.Cluster, "cue", version, NodeValue.FromObject(day))]).ConfigureAwait(true);
             Assert.Equal(EOutcome.Succeeded, (await repository.ApplyBatchAsync(operation, changes).ConfigureAwait(true)).Outcome);
             version = operation.ToString("N");
-            await WriteDayAsync(repository, executions, at).ConfigureAwait(true);
+            await WriteDayAsync(repository, executions, workflows, at).ConfigureAwait(true);
             ObserveAt(path, at);
             for (int pass = 0; pass < 3; pass++)
             {
@@ -75,12 +75,20 @@ public sealed class ExactRetirementCycleTests(ITestOutputHelper output)
                 {
                     retainedCounts.Add(retained);
                     usedBytes.Add(used);
-                    Assert.InRange(retained, 1, 33 * 45);
+                    Assert.InRange(retained, 1, 45 * 45);
                     Assert.InRange(ranges, 1, 8);
                     Assert.InRange(markers, 0, 100);
                 }
+                ProcessResourceSample beforeReads = ProcessResourceSample.Capture(Environment.ProcessId);
+                Stopwatch reads = Stopwatch.StartNew();
+                for (int index = 0; index < 1000; index++)
+                {
+                    Assert.Equal(day, (await repository.ReadAsync(NodeStateScope.Cluster, "cue").ConfigureAwait(true))!.Value!.Json.GetInt32());
+                }
+                reads.Stop();
                 ProcessResourceSample current = ProcessResourceSample.Capture(Environment.ProcessId);
-                measurements.Add(new { day, retained, ranges, markers, usedBytes = used, elapsedMilliseconds = watch.Elapsed.TotalMilliseconds,
+                Assert.Equal(beforeReads.WriteBytes, current.WriteBytes);
+                measurements.Add(new { day, retained, ranges, markers, usedBytes = used, currentRead1000Milliseconds = reads.Elapsed.TotalMilliseconds, elapsedMilliseconds = watch.Elapsed.TotalMilliseconds,
                     allocatedBytes = GC.GetTotalAllocatedBytes(true) - allocated, cpuMilliseconds = current.CpuMilliseconds - initial.CpuMilliseconds,
                     processWriteBytes = current.WriteBytes - initial.WriteBytes, initial, current });
                 await File.WriteAllTextAsync(Path.Combine(root, "retention-cycles.json"), JsonSerializer.Serialize(new { simulatedDays = 1095, measurements })).ConfigureAwait(true);
@@ -100,9 +108,9 @@ public sealed class ExactRetirementCycleTests(ITestOutputHelper output)
         output.WriteLine(root);
     }
 
-    /// <summary>現在の記録形式で、期限付き応答24件と完了したファイル復旧記録8件を作ります。</summary>
+    /// <summary>期限付き応答、終了したファイル操作とワークフローの診断を、一日分ずつ保存します。</summary>
     /// <returns>実保存APIによる一日分の確定です。</returns>
-    private static async Task WriteDayAsync(SqliteRepository repository, OperationIdSequence executions, DateTimeOffset at, CancellationToken cancellationToken = default)
+    private static async Task WriteDayAsync(SqliteRepository repository, OperationIdSequence executions, OperationIdSequence workflows, DateTimeOffset at, CancellationToken cancellationToken = default)
     {
         string scope = BoundedRequestReceipts.Prefix + "receipts:fixture";
         Task<DurableEntry?>[] writes = Enumerable.Range(0, 24).Select(item =>
@@ -113,8 +121,17 @@ public sealed class ExactRetirementCycleTests(ITestOutputHelper output)
             return RequestReceiptPersistence.WriteAsync(repository, scope, Guid.CreateVersion7(source).ToString("N"), null, NodeValue.FromObject(receipt), cancellationToken).AsTask();
         }).ToArray();
         Assert.All(await Task.WhenAll(writes).ConfigureAwait(false), Assert.NotNull);
-        LocalSnapshotWrite[] records = Enumerable.Range(0, 8).Select(_ => new LocalSnapshotWrite("peer:fixture:file-recovery", executions.Next().ToString("N"),
-            NodeValue.FromObject(new { execution = new { Outcome = EOutcome.Succeeded }, release = new { Outcome = EOutcome.Succeeded }, CompletedAt = at }))).ToArray();
+        List<LocalSnapshotWrite> records = [];
+        for (int item = 0; item < 8; item++)
+        {
+            string key = executions.Next().ToString("N");
+            records.Add(new("peer:fixture:file-gate-requests", key, NodeValue.FromObject(new { Outcome = EOutcome.Succeeded, CompletedAt = at })));
+            records.Add(new("peer:fixture:file-recovery", key, NodeValue.FromObject(new { execution = new { Outcome = EOutcome.Succeeded }, release = new { Outcome = EOutcome.Succeeded }, CompletedAt = at })));
+        }
+        for (int item = 0; item < 4; item++)
+        {
+            records.Add(new("peer:fixture:workflow-results", workflows.Next().ToString("N"), NodeValue.FromObject(new { CompletedAt = at, detail = new string('x', 2048) })));
+        }
         Assert.Equal(EOutcome.Succeeded, await repository.WriteSnapshotsAsync(records, cancellationToken).ConfigureAwait(false));
     }
 
