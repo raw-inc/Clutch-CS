@@ -33,7 +33,7 @@ public sealed class UpdateEventPump(IDurableRepository repository, IWorkflowEven
             return EOutcome.Succeeded;
         }
         WorkflowEvent observed = new(notification.Id, notification.Name, notification.ObservedAt, peerId, ContractJson.ToValue(notification.Data), CausationId: notification.Data.OperationId) { IdentityFormat = notification.IdentityFormat };
-        DurableReceipt receipt = await repository.ApplyBatchAsync(Guid.CreateVersion7(), [new(scope, key, null, ContractJson.ToValue(observed))], cancellationToken).ConfigureAwait(false);
+        DurableReceipt receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(), [new(scope, key, null, ContractJson.ToValue(observed))], cancellationToken).ConfigureAwait(false);
         return receipt.Outcome;
     }
 
@@ -106,7 +106,7 @@ public sealed class UpdateEventPump(IDurableRepository repository, IWorkflowEven
             IReadOnlyList<DurableMutation> notifications = await UpdateEventJournal.CreateAsync(repository, peerId, null, status, cancellationToken).ConfigureAwait(false);
             if (notifications.Count != 0)
             {
-                DurableReceipt receipt = await repository.ApplyBatchAsync(Guid.CreateVersion7(), notifications, cancellationToken).ConfigureAwait(false);
+                DurableReceipt receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(), notifications, cancellationToken).ConfigureAwait(false);
                 if (receipt.Outcome != EOutcome.Succeeded)
                 {
                     continue;

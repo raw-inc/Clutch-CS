@@ -39,7 +39,7 @@ internal sealed class FileReservationCoordinator(PeerCluster cluster, IDurableRe
                 FileReservationLedger ledger = await ReadAsync(local, cancellationToken).ConfigureAwait(false);
                 if (ledger.Slotted)
                 {
-                    Guid operation = Guid.CreateVersion7();
+                    Guid operation = OperationIdentity.Create();
                     PeerInfo[] members = cluster.GetPeers().Where(peer => PeerStatusRules.CanParticipate(peer.Status)).ToArray();
                     DurableReceipt saved = await SaveAsync(operation, ledger.Changes(operation, null, null, false), members, local, cancellationToken).ConfigureAwait(false);
                     if (saved.Outcome != EOutcome.Succeeded)
@@ -148,7 +148,7 @@ internal sealed class FileReservationCoordinator(PeerCluster cluster, IDurableRe
                         continue;
                     }
                     Guid operation = accepted.Count == 1 ? requests[accepted[0]].Id
-                                                         : Guid.CreateVersion7();
+                                                         : OperationIdentity.Create();
                     bool slots = await UseSlotsAsync(ledger, local, cancellationToken).ConfigureAwait(false);
                     HashSet<Guid> removed = accepted.Select(index => requests[index].Release.Lease.Id).ToHashSet();
                     DurableReceipt saved = await SaveAsync(operation, ledger.ReleaseChanges(operation, removed, slots), release.Members, local, cancellationToken).ConfigureAwait(false);
@@ -200,7 +200,7 @@ internal sealed class FileReservationCoordinator(PeerCluster cluster, IDurableRe
             FileReservationLedger ledger = await ReadAsync(false, cancellationToken).ConfigureAwait(false);
             if (ledger.Slotted && string.Equals(cluster.CoordinatorId, coordinator.PeerId, StringComparison.Ordinal))
             {
-                Guid operation = Guid.CreateVersion7();
+                Guid operation = OperationIdentity.Create();
                 await SaveAsync(operation, ledger.Changes(operation, null, null, false), members, false, cancellationToken).ConfigureAwait(false);
             }
         }
@@ -230,7 +230,7 @@ internal sealed class FileReservationCoordinator(PeerCluster cluster, IDurableRe
             {
                 return;
             }
-            Guid operation = Guid.CreateVersion7();
+            Guid operation = OperationIdentity.Create();
             PeerInfo[] members = cluster.GetPeers().Where(peer => PeerStatusRules.CanParticipate(peer.Status)).ToArray();
             DurableReceipt saved = await SaveAsync(operation, ledger.Changes(operation, null, null, true), members, local, cancellationToken).ConfigureAwait(false);
             FileReservationLedger? migrated = ledger.Updated(saved);

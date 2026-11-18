@@ -27,11 +27,11 @@ internal sealed class ReplicationStart
         get;
     }
 
-    /// <summary>開始記録自体の従来形式の操作IDです。</summary>
+    /// <summary>開始記録自体に使う、元操作とは別のIDです。</summary>
     internal Guid InitializationId
     {
         get;
-    } = Guid.CreateVersion7();
+    } = OperationIdentity.Create();
 
     /// <summary>非同期境界の前に所有した変更候補です。</summary>
     internal DurableMutation[] Mutations

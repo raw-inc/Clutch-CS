@@ -73,7 +73,7 @@ internal sealed class ReplicationJournal(IDurableRepository repository)
     {
         string key = receipt.OperationId.ToString("N"), scope = "cluster:operations";
         DurableEntry? current = await repository.ReadAsync(scope, key, cancellationToken).ConfigureAwait(false);
-        DurableReceipt saved = await repository.ApplyBatchAsync(Guid.CreateVersion7(), [new DurableMutation(scope, key, current?.Version, NodeValue.FromObject(receipt))], cancellationToken).ConfigureAwait(false);
+        DurableReceipt saved = await repository.ApplyBatchAsync(OperationIdentity.Create(), [new DurableMutation(scope, key, current?.Version, NodeValue.FromObject(receipt))], cancellationToken).ConfigureAwait(false);
         if (saved.Outcome == EOutcome.Succeeded)
         {
             return;

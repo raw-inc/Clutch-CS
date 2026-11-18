@@ -171,7 +171,7 @@ public sealed class TraceService : ITracePolicyProvider, IDisposable
                     mutations.Add(new DurableMutation(Scope, "closing", closing.Version, NodeValue.FromObject(stopId)));
                 }
                 operation = new(fingerprint, mutations);
-                DurableReceipt saved = await repository.ApplyBatchAsync(Guid.CreateVersion7(), [new DurableMutation(journalScope, operationId.ToString("N"), null, NodeValue.FromObject(operation))], cancellationToken).ConfigureAwait(false);
+                DurableReceipt saved = await repository.ApplyBatchAsync(OperationIdentity.Create(), [new DurableMutation(journalScope, operationId.ToString("N"), null, NodeValue.FromObject(operation))], cancellationToken).ConfigureAwait(false);
                 if (saved.Outcome != EOutcome.Succeeded)
                 {
                     return Rejected(operationId, "Trace.OperationNotRecorded");

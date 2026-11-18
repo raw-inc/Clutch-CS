@@ -238,7 +238,7 @@ public sealed class ClusterUpdateCoordinator
             throw new IOException("更新operationは既に存在します。");
         }
         NodeValue value = NodeValue.FromJson(JsonSerializer.SerializeToElement(status, ContractJson.Options));
-        DurableReceipt receipt = await repository.ApplyBatchAsync(Guid.CreateVersion7(), [new("updates", key, previous?.Version, value)], cancellationToken).ConfigureAwait(false);
+        DurableReceipt receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(), [new("updates", key, previous?.Version, value)], cancellationToken).ConfigureAwait(false);
         if (receipt.Outcome != EOutcome.Succeeded)
         {
             throw new IOException("更新operationの保存を確認できません。");
@@ -251,7 +251,7 @@ public sealed class ClusterUpdateCoordinator
                     previous?.Value?.Json.Deserialize<ClusterUpdateStatus>(ContractJson.Options), status, cancellationToken).ConfigureAwait(false);
                 if (notifications.Count != 0)
                 {
-                    await repository.ApplyBatchAsync(Guid.CreateVersion7(), notifications, cancellationToken).ConfigureAwait(false);
+                    await repository.ApplyBatchAsync(OperationIdentity.Create(), notifications, cancellationToken).ConfigureAwait(false);
                 }
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or System.Data.Common.DbException or OperationCanceledException)
