@@ -50,11 +50,11 @@ internal sealed class HostPowerScheduleOperations(PeerCluster cluster, IDurableR
 
     /// <summary>起動対象の生存を送信直前にも確認し、同じクラスタのCoreだけへ配送します。</summary>
     /// <returns>パケットまたはOS要求の受付結果です。</returns>
-    internal async Task<NodeResult> DispatchAsync(string hostId, HostPowerSchedule schedule, HostPowerScheduleOccurrence occurrence, CancellationToken cancellationToken = default)
+    internal async Task<NodeResult> DispatchAsync(string hostId, HostPowerSchedule schedule, HostPowerScheduleOccurrence occurrence, RequestAdmission admission, CancellationToken cancellationToken = default)
     {
         DateTimeOffset expires = occurrence.DueAt.AddMinutes(1);
         DateTimeOffset now = clock.GetUtcNow();
-        if (expires <= now)
+        if (admission.IsExpired || admission.SourceNow < occurrence.DueAt)
         {
             return NodeResult.Failure("powerSchedule.missed", "The scheduled time is no longer current.", EOutcome.NotExecuted);
         }
@@ -100,7 +100,7 @@ internal sealed class HostPowerScheduleOperations(PeerCluster cluster, IDurableR
             return NodeResult.Failure("powerSchedule.noTarget", "No eligible Core is available in this cluster.", EOutcome.NotExecuted);
         }
         ManagementCommand command = new(occurrence.OperationId, cluster.LocalClusterId, target.PeerId, target.InstanceId, expires, operation, ContractJson.ToValue(payload));
-        ClusterRequest request = new(command.RequestId, ManagementWire.ExecuteKind, command.TargetPeerId, command.TargetInstanceId, command.ExpiresAt, ContractJson.ToValue(command));
+        ClusterRequest request = new(command.RequestId, ManagementWire.ExecuteKind, command.TargetPeerId, command.TargetInstanceId, command.ExpiresAt, ContractJson.ToValue(command)) { Admission = admission };
         ClusterResponse response = await cluster.RequestAsync(request, cancellationToken).ConfigureAwait(false);
         ManagementReply? reply = response.Value?.Json.Deserialize<ManagementReply>(ContractJson.Options);
         if (response.Outcome != EOutcome.Succeeded || reply?.Outcome != EOutcome.Succeeded || reply.Value is null)

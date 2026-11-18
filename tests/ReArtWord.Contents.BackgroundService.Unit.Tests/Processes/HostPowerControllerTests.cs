@@ -38,6 +38,35 @@ public sealed class HostPowerControllerTests
         Assert.Equal(Convert.ToInt32(allowed), calls);
     }
 
+    /// <summary>予定担当と停止対象の時計がずれていても、元の一分以内に同じ予定回を一度だけ受け付けます。</summary>
+    /// <returns>OSの代わりに注入した停止処理の呼出し回数です。</returns>
+    [Theory]
+    [InlineData(-3600)]
+    [InlineData(3600)]
+    public async Task ScheduledShutdownKeepsIssuerWindowAcrossClockCorrections(int offset)
+    {
+        ManagementTransport.AdmissionTestClock clock = new();
+        DateTimeOffset due = clock.GetUtcNow(), expiry = due.AddMinutes(1);
+        clock.Adjust(TimeSpan.FromSeconds(offset));
+        RequestAdmission admission = new(clock, TimeSpan.FromSeconds(2), expiry, expiry.AddSeconds(-2));
+        Guid instance = Guid.NewGuid();
+        HashSet<DateTimeOffset> claimed = [];
+        int calls = 0;
+        HostPowerController controller = new("host", instance, () => EPeerStatus.Ready, (_, _) =>
+        {
+            calls++;
+            return Task.FromResult(NodeResult.Success());
+        }, claimed.Add, clock);
+        HostPowerRequest request = new(Guid.NewGuid(), "host", instance, EHostPowerAction.Shutdown, expiry, due);
+        Assert.Equal(EOutcome.NotExecuted, (await controller.ExecuteAsync(request with { InstanceId = Guid.NewGuid() }, admission)).Outcome);
+        Assert.Equal(EOutcome.Succeeded, (await controller.ExecuteAsync(request, admission)).Outcome);
+        Assert.Equal(EOutcome.NotExecuted, (await controller.ExecuteAsync(request, admission)).Outcome);
+        clock.Adjust(TimeSpan.FromSeconds(-2 * offset));
+        clock.Advance(TimeSpan.FromSeconds(2));
+        Assert.Equal("host.power.scheduleExpired", (await controller.ExecuteAsync(request, admission)).ReasonCode);
+        Assert.Equal(1, calls);
+    }
+
     /// <summary>固定引数だけを使用し、Windowsの強制終了を暗黙に有効にしません。</summary>
     [Theory]
     [InlineData("windows", EHostPowerAction.Restart, "/r /t 0")]
