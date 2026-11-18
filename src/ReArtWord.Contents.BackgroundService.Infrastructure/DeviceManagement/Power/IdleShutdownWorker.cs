@@ -15,6 +15,9 @@ public sealed class IdleShutdownWorker(ILogger<IdleShutdownWorker> logger, Func<
     private static readonly Action<ILogger, Exception?> reportFailure = LoggerMessage.Define(LogLevel.Warning, new EventId(7801, "IdleShutdownUnconfirmed"), "Idle shutdown could not be verified; the same shutdown request will not be retried.");
     private static readonly Action<ILogger, Contracts.Execution.EOutcome, Exception?> reportOutcome = LoggerMessage.Define<Contracts.Execution.EOutcome>(LogLevel.Information, new EventId(7802, "IdleShutdownRequested"), "Idle shutdown request completed with {Outcome}; the same idle episode will not be retried.");
 
+    private readonly IdleShutdownController controller = new(WindowsIdleShutdownStore.Read, WindowsIdleInput.OnAcPower, readActivity,
+            WindowsIdleShutdownStore.Claim, token => HostPowerController.ExecuteOperatingSystemAsync(EHostPowerAction.Shutdown, token), TimeProvider.System, WindowsIdleShutdownStore.EnableAge);
+
     /// <summary>停止中は既定で何もせず、設定時だけ確認します。</summary>
     /// <returns>サービス終了までの監視です。</returns>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -54,8 +57,6 @@ public sealed class IdleShutdownWorker(ILogger<IdleShutdownWorker> logger, Func<
         {
             return;
         }
-        IdleShutdownController controller = new(WindowsIdleShutdownStore.Read, WindowsIdleInput.OnAcPower, readActivity,
-            WindowsIdleShutdownStore.Claim, token => HostPowerController.ExecuteOperatingSystemAsync(EHostPowerAction.Shutdown, token), TimeProvider.System);
         Contracts.Nodes.NodeResult? result = await controller.CheckAsync(cancellationToken).ConfigureAwait(false);
         if (result is not null)
         {
