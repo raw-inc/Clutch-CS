@@ -165,7 +165,7 @@ internal sealed class DashboardTelemetry(ManagementApi api)
             activity.Add(snapshot?.Executions?.Entries ?? [], now);
         }
         int covered = results.Count(result => result.Snapshot?.Executions is not null);
-        bool limited = results.Any(result => result.Snapshot?.Executions?.Cursor is not null) || activity.CapacityLimited;
+        bool limited = results.Any(result => result.Snapshot?.Executions is { } page && (page.Cursor is not null || page.AgeUnconfirmed)) || activity.CapacityLimited;
         ActivityPeers = covered;
         ActivityLimited = limited || covered < KnownPeers;
         DashboardPeerSnapshot? selectedSnapshot = results.FirstOrDefault(result => result.Peer.Peer.InstanceId == selectedInstance

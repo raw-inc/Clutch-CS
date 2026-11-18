@@ -31,7 +31,8 @@ public sealed class PreviewHistoryTests
         Assert.Equal("37", history[0].Text);
         Assert.Equal("36", history[1].Text);
         Assert.Equal(history[1].Text, history[2].Text);
-        Assert.Equal(history[0].Snapshot, Assert.Single(store.Read(new("workflow", ["node"]))));
+        NodePreviewSnapshot latest = Assert.Single(store.Read(new("workflow", ["node"])));
+        Assert.Equal(history[0].Snapshot with { CaptureAgeTicks = latest.CaptureAgeTicks }, latest);
     }
 
     /// <summary>履歴だけに媒体を複製せず、失敗・空文字・nullと長いUnicodeを区別します。</summary>

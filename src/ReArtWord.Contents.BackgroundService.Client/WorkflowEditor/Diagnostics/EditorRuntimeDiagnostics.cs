@@ -10,17 +10,17 @@ namespace ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Diagnostics
 /// <summary>既存のDashboard観測キャッシュから待受・自動実行の問題を編集画面へ渡します。</summary>
 internal sealed class EditorRuntimeDiagnostics(ManagementApi api, EditorDiagnostics diagnostics)
 {
-    private DateTimeOffset nextRead;
+    private long? lastRead;
 
     /// <summary>Coreへの追加ポーリングを行わず、既存の最大256実体のキャッシュを照会します。</summary>
     /// <returns>観測済みの成否の反映です。未確認は成功として上書きしません。</returns>
     internal async Task RefreshAsync(string cluster, IReadOnlyList<PeerInfo> peers, CancellationToken cancellationToken = default)
     {
-        if (api.UtcNow < nextRead)
+        if (lastRead is { } previousRead && api.ElapsedSince(previousRead) < TimeSpan.FromSeconds(3))
         {
             return;
         }
-        nextRead = api.UtcNow.AddSeconds(3);
+        lastRead = api.Timestamp;
         List<DashboardPeerSnapshot> snapshots = [];
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(5));

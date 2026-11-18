@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using ReArtWord.Contents.BackgroundService.Contracts.Observability;
 using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Documents;
 using ReArtWord.Contents.BackgroundService.Client.Management;
 using ReArtWord.Contents.BackgroundService.Contracts.Configuration;
@@ -112,16 +113,29 @@ internal sealed class EditorDiagnostics
     {
         foreach (IGrouping<string, NodeExecutionObservation> group in history.GroupBy(item => item.WorkflowId, StringComparer.Ordinal))
         {
-            NodeExecutionObservation[] ordered = group.OrderByDescending(item => item.CompletedAt).ToArray();
+            NodeExecutionObservation latest = LatestHistory(group);
             DiagnosticState state = State(cluster, group.Key);
-            if (ordered[0].CompletedAt < state.HistoryTime)
+            bool older = latest.CompletionAge is null && latest.CompletedAt < state.HistoryTime;
+            if (latest.CompletionAge is { } incoming && state.HistoryAge is { } stored)
+            {
+                older = stored.Elapsed < incoming.Elapsed;
+            }
+            if (latest.SourceInstanceId is { } instance && instance == state.HistoryInstance && latest.CompletionSequence is { } sequence)
+            {
+                older = sequence < state.HistorySequence;
+            }
+            if (older)
             {
                 continue;
             }
-            state.HistoryTime = ordered[0].CompletedAt;
-            state.HistoryRevision = ordered[0].Revision;
+            state.HistoryTime = latest.CompletedAt;
+            state.HistoryAge = latest.CompletionAge;
+            state.HistoryInstance = latest.SourceInstanceId;
+            state.HistorySequence = latest.CompletionSequence;
+            state.HistoryRevision = latest.Revision;
             state.History.Clear();
-            foreach (NodeExecutionObservation target in ordered.Where(item => string.Equals(item.Revision, state.HistoryRevision, StringComparison.Ordinal)).DistinctBy(item => (item.NodeId, item.PeerId)))
+            foreach (NodeExecutionObservation target in group.Where(item => string.Equals(item.Revision, state.HistoryRevision, StringComparison.Ordinal))
+                .GroupBy(item => (item.NodeId, item.PeerId)).Select(LatestHistory))
             {
                 if (IsProblem(target.Outcome, target.ReasonCode))
                 {
@@ -130,6 +144,13 @@ internal sealed class EditorDiagnostics
             }
         }
     }
+
+    /// <summary>同じCoreの完了順は連番を優先し、別Coreの連番同士は比較しません。</summary>
+    /// <returns>各実体の最新結果のうち、確認した経過時間が最も短い結果です。</returns>
+    private static NodeExecutionObservation LatestHistory(IEnumerable<NodeExecutionObservation> history)
+        => history.GroupBy(item => item.SourceInstanceId)
+            .Select(group => group.OrderByDescending(item => item.CompletionSequence).ThenBy(item => item.CompletionAge?.Elapsed ?? DateTimeOffset.UtcNow - item.CompletedAt).First())
+            .MinBy(item => item.CompletionAge?.Elapsed ?? DateTimeOffset.UtcNow - item.CompletedAt)!;
 
     /// <summary>設定へ反映済みの値、対象外の入口・分岐・反復、指定どおりの間引き、明示取消をノード不具合として強調しません。</summary>
     /// <returns>確認済み失敗、結果不明、または意図した未実行以外の拒否です。</returns>
@@ -185,6 +206,21 @@ internal sealed class EditorDiagnostics
     /// <summary>それぞれの確認結果を独立して置き換えます。</summary>
     private sealed record DiagnosticState
     {
+        internal Guid? HistoryInstance
+        {
+            get; set;
+        }
+
+        internal long? HistorySequence
+        {
+            get; set;
+        }
+
+        internal ObservationAge? HistoryAge
+        {
+            get; set;
+        }
+
         internal DateTimeOffset HistoryTime
         {
             get; set;

@@ -21,7 +21,7 @@ public static class ExecutionReportPresentation
         ArgumentOutOfRangeException.ThrowIfLessThan(maximumBytes, 8192);
         if (view.Report is not null)
         {
-            return Bound(view.Report, maximumBytes);
+            return Bound(view.Report, maximumBytes) with { CompletionAge = view.CompletionAge, CompletionOrder = view.CompletionOrder, CompletionAgeIsLowerBound = view.CompletionAgeIsLowerBound, CompletionAgeTicks = view.CompletionAgeTicks, ObservationSequence = view.ObservationSequence };
         }
         ExecutionReportSummary summary = view.Summary ?? throw new ArgumentException("結果も要約もありません。", nameof(view));
         List<ExecutionTargetSummary> targets = summary.Targets.ToList();
