@@ -64,8 +64,16 @@ internal sealed class RetiredRangeIndex
     /// <summary>未対応の内容を黙って捨てず、保存した索引の区間と用途を検証します。</summary>
     internal void Validate()
     {
+        if (Groups is null)
+        {
+            throw new InvalidDataException("退役済みIDの索引がありません。");
+        }
         foreach ((string bucket, List<RetiredIdRange> rows) in Groups)
         {
+            if (rows is null || rows.Any(row => row is null))
+            {
+                throw new InvalidDataException("退役済みIDの区間が欠けています。");
+            }
             ulong? previous = null;
             foreach (RetiredIdRange row in rows)
             {

@@ -17,7 +17,7 @@ public sealed class HistoryRangeCompatibilityTests
         OperationIdSequence sequence = new();
         Guid first = sequence.Next(), second = sequence.Next(), gap = sequence.Next(), last = sequence.Next();
         RetiredIdRange start = RetiredIdRange.Operation(first, true), end = RetiredIdRange.Operation(second, true);
-        string scope = "cluster:configuration-operations:fixture", key = last.ToString("D").ToUpperInvariant();
+        string scope = "snapshots", key = last.ToString("D").ToUpperInvariant();
         RetiredOperation detailed = new(first, "original-fingerprint", true, EOutcome.Failed, "Persistence.Aborted");
         RepositorySnapshot snapshot = new([], [], RetiredOperations: [detailed],
             RetiredRanges: [start with { Last = end.Last }, RetiredIdRange.Operation(last, true), RetiredIdRange.Key(scope, key)!]);
@@ -34,6 +34,15 @@ public sealed class HistoryRangeCompatibilityTests
             Assert.Empty(item.Fingerprint);
         });
         Assert.Equal(new RetiredHistoryKey(scope, key), Assert.Single(expanded.RetiredKeys!));
+        RepositoryDocument restored = new();
+        Assert.True(RepositoryMerge.Merge(restored, expanded));
+        Assert.Equal(detailed, Assert.Single(restored.History!.RetiredOperations.Values));
+        Assert.True(restored.History.RetiredRanges!.ContainsOperation(second));
+        Assert.True(restored.History.RetiredRanges.ContainsOperation(last));
+        Assert.False(restored.History.RetiredRanges.ContainsOperation(gap));
+        Assert.True(restored.History.RetiredRanges.ContainsKey(scope, key));
+        Assert.Empty(restored.History.RetiredKeys);
+        Assert.Equal(1, RepositoryHistoryGuard.Read(restored)!.RetirementFormat);
     }
 
     /// <summary>展開上限を超えた場合は証拠を切り捨てず、同期相手の更新を要求します。</summary>

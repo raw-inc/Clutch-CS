@@ -8,6 +8,18 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Persistence;
 /// <summary>日時ではなく、実際に退役したIDの集合を保存できることを確認します。</summary>
 public sealed class RetiredRangeIndexTests
 {
+    /// <summary>JSONとして読めても区間が欠ける記録は、空の退役情報として扱いません。</summary>
+    [Theory]
+    [InlineData("{\"Groups\":null}")]
+    [InlineData("{\"Groups\":{\"bucket\":null}}")]
+    [InlineData("{\"Groups\":{\"bucket\":[null]}}")]
+    public void MissingPersistedGroupsOrRowsAreRejected(string json)
+    {
+        ArgumentNullException.ThrowIfNull(json);
+        RetiredRangeIndex index = JsonSerializer.Deserialize<RetiredRangeIndex>(json)!;
+        Assert.Throws<InvalidDataException>(index.Validate);
+    }
+
     /// <summary>先に大きい番号を退役しても、欠番の遅延要求は拒否しません。</summary>
     [Fact]
     public void OutOfOrderRetirementPreservesEveryUnretiredGap()

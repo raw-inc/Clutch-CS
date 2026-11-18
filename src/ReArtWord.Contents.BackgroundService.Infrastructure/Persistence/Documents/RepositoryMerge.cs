@@ -46,41 +46,7 @@ internal static class RepositoryMerge
         string previousState = RepositoryStateVersion.HashEntries(document.Entries.Values.Concat(document.Conflicts));
         RepositoryCausality.Import(document, snapshot);
         RepositoryLegacyAncestry.Remember(document, snapshot.LegacyEntries ?? []);
-        foreach (RetiredIdRange range in snapshot.RetiredRanges ?? [])
-        {
-            range.Validate();
-            if (range.Shared)
-            {
-                ((document.History ??= new()).RetiredRanges ??= new()).Add(range);
-            }
-        }
-        foreach (RetiredHistoryKey key in snapshot.RetiredKeys ?? [])
-        {
-            if (string.IsNullOrWhiteSpace(key.Scope) || string.IsNullOrWhiteSpace(key.Key) || !RepositoryHistoryGuard.IsSingleUse(key.Scope))
-            {
-                throw new InvalidDataException("失効した履歴の種類またはキーが不正です。");
-            }
-            if (DurableRepository.IsShared(key.Scope))
-            {
-                (document.History ??= new()).RetiredKeys.Add(DurableRepository.GetAddress(key.Scope, key.Key));
-            }
-        }
-        if (snapshot.HistoryBoundary is { } boundary)
-        {
-            RepositoryHistoryGuard.Merge(document, boundary);
-        }
-        if (snapshot.RetiredRanges?.Count != 0 && snapshot.RetiredRanges is not null)
-        {
-            RepositoryHistoryGuard.Merge(document, new(new Dictionary<Contracts.Retention.ERetentionCategory, DateTimeOffset>(),
-                new Dictionary<Contracts.Retention.ERetentionCategory, DateTimeOffset>(), default, default, RetirementFormat: 1));
-        }
-        foreach (RetiredOperation retired in snapshot.RetiredOperations ?? [])
-        {
-            if (retired.Shared)
-            {
-                (document.History ??= new()).RetiredOperations[retired.Id] = retired;
-            }
-        }
+        RepositoryHistoryGuard.Import(document, snapshot);
         foreach (DurableReceipt receipt in snapshot.Receipts)
         {
             if (receipt.Entries.All(entry => DurableRepository.IsShared(entry.Scope))
