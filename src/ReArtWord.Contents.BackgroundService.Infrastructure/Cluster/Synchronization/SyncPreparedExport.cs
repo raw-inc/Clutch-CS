@@ -47,7 +47,7 @@ internal sealed class SyncPreparedExport(SyncExportStore owner, PeerInfo target,
             FrozenSnapshotExport frozen = await SnapshotExport.FreezeAsync(repository, cancellationToken).ConfigureAwait(false)
                 ?? throw new InvalidOperationException("Deferred snapshot support changed.");
             SyncInventoryRequest request = new(Guid.NewGuid(), SyncInventory.Describe(frozen.Description), clock.GetUtcNow() + options.SyncSessionLifetime,
-                SyncInventory.Metadata(frozen.Description.Snapshot).HistoryBoundary);
+                SyncInventory.Metadata(frozen.Description.Snapshot).HistoryBoundary, RetirementRanges: true);
             SyncPreparedExport result = new(owner, target, frozen, request, reservation);
             retained = true;
             return result;

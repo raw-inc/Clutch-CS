@@ -11,9 +11,16 @@ internal static class SyncSnapshotWriter
     /// <summary>先行状態と従来の固定書出しを同じwriterへ接続します。</summary>
     /// <returns>実際に転送する本文と索引です。</returns>
     internal static Task<(string[] Hashes, SyncSnapshotIndex Index)> WriteSourceAsync(Stream stream, IDurableRepository repository, SyncPreparedExport? prepared,
-        RepositorySnapshot? supplied, bool inventory, SyncInventoryRequest? known, CancellationToken cancellationToken = default)
+        RepositorySnapshot? supplied, bool inventory, SyncInventoryRequest? known, bool retirementRanges, CancellationToken cancellationToken = default)
     {
-        Task<(string[] Hashes, SyncSnapshotIndex Index)> Write(SnapshotExport source) => Task.FromResult(WriteSelected(stream, source, inventory, known, prepared?.Original.Hashes, cancellationToken));
+        Task<(string[] Hashes, SyncSnapshotIndex Index)> Write(SnapshotExport source)
+        {
+            if (!retirementRanges)
+            {
+                source = new(HistoryRangeCompatibility.Expand(source.Snapshot), source.Receipts, source.ReadHistoricalReceipt);
+            }
+            return Task.FromResult(WriteSelected(stream, source, inventory, known, prepared?.Original.Hashes, cancellationToken));
+        }
         if (supplied is not null)
         {
             return Write(new(supplied, supplied.Receipts.Select(SnapshotReceipt.FromValue).ToArray()));
@@ -84,11 +91,11 @@ internal static class SyncSnapshotWriter
         WriteArray(nameof(snapshot.RetiredOperations), snapshot.RetiredOperations, operation => SyncInventory.ReceiptBucket(operation.Id), (output, value) => JsonSerializer.Serialize(output, value));
         WriteProperty(writer, nameof(snapshot.ProtectedHistory), snapshot.ProtectedHistory);
         WriteArray(nameof(snapshot.RetiredKeys), snapshot.RetiredKeys, key => SyncInventory.KeyBucket(key.Scope, key.Key), (output, value) => JsonSerializer.Serialize(output, value));
-        WriteArray(nameof(snapshot.RetiredRanges), snapshot.RetiredRanges, SyncInventory.RetiredRangeBucket, (output, value) => JsonSerializer.Serialize(output, value));
         WriteProperty(writer, nameof(snapshot.PendingOperations), snapshot.PendingOperations);
         WriteProperty(writer, nameof(snapshot.DeferredHistory), snapshot.DeferredHistory);
         WriteProperty(writer, nameof(snapshot.DeferredSourcePeer), snapshot.DeferredSourcePeer);
         WriteProperty(writer, nameof(snapshot.RecoveredHistory), snapshot.RecoveredHistory);
+        WriteArray(nameof(snapshot.RetiredRanges), snapshot.RetiredRanges, SyncInventory.RetiredRangeBucket, (output, value) => JsonSerializer.Serialize(output, value));
         writer.WriteEndObject();
         writer.Flush();
         return new(SyncInventory.Metadata(snapshot), sections);

@@ -50,7 +50,7 @@ internal sealed class SyncExportStore : IAsyncDisposable
         {
             boundary = ContractJson.Copy(boundary);
         }
-        return new(manifest.Id, export.Hashes.ToArray(), manifest.ExpiresAt, boundary);
+        return new(manifest.Id, export.Hashes.ToArray(), manifest.ExpiresAt, boundary, RetirementRanges: true);
     }
 
     /// <summary>全本文を読み直さず、保持境界を理解する相手が必要かを確認します。</summary>
@@ -125,20 +125,20 @@ internal sealed class SyncExportStore : IAsyncDisposable
     internal async Task<SyncInventoryOffer> CreateOfferAsync(PeerInfo target, SyncInventoryRequest known, CancellationToken cancellationToken = default)
     {
         SyncInventory.Validate(known.Hashes);
-        SyncManifest manifest = await CreateCoreAsync(target, true, known, null, cancellationToken: cancellationToken).ConfigureAwait(false);
+        SyncManifest manifest = await CreateCoreAsync(target, true, known, null, known.RetirementRanges, cancellationToken: cancellationToken).ConfigureAwait(false);
         Export source = Find(manifest);
         return new(source.Hashes.ToArray(), manifest, Full: !SyncInventory.Overlaps(source.Metadata.HistoryBoundary, known.Boundary));
     }
 
     /// <summary>相手の指紋が未取得の場合は、従来と同じ完全な固定書出しを用意します。</summary>
     /// <returns>同じバイト列を参照する元マニフェストです。</returns>
-    internal Task<SyncManifest> CreateAsync(PeerInfo target, bool inventory, CancellationToken cancellationToken = default)
-        => CreateCoreAsync(target, inventory, null, null, cancellationToken: cancellationToken);
+    internal Task<SyncManifest> CreateAsync(PeerInfo target, bool inventory, bool retirementRanges = true, CancellationToken cancellationToken = default)
+        => CreateCoreAsync(target, inventory, null, null, retirementRanges, cancellationToken: cancellationToken);
 
     /// <summary>先行状態または一バッチの履歴を、既存TCPと断片フォールバックの同じ固定転送へ載せます。</summary>
     /// <returns>元の取引で固定された本文のマニフェストです。</returns>
-    internal Task<SyncManifest> CreatePayloadAsync(PeerInfo target, RepositorySnapshot snapshot, string phase, CancellationToken cancellationToken = default)
-        => CreateCoreAsync(target, false, null, null, snapshot, phase, cancellationToken);
+    internal Task<SyncManifest> CreatePayloadAsync(PeerInfo target, RepositorySnapshot snapshot, string phase, bool retirementRanges = true, CancellationToken cancellationToken = default)
+        => CreateCoreAsync(target, false, null, null, retirementRanges, snapshot, phase, cancellationToken);
 
     /// <summary>対応媒体は本文をファイルへ書く前に指紋を固定し、相手との照合に備えます。</summary>
     /// <returns>一回だけ本文作成へ使用する準備、または従来経路を使うnullです。</returns>
@@ -152,14 +152,14 @@ internal sealed class SyncExportStore : IAsyncDisposable
     /// <returns>元の照合ID・期限を保った固定ファイルです。</returns>
     internal Task<SyncManifest> MaterializeAsync(SyncPreparedExport prepared, IReadOnlyList<string>? known, CancellationToken cancellationToken = default)
         => CreateCoreAsync(prepared.Target, true, known is null ? null
-                                                                : prepared.Original with { Hashes = known }, prepared, cancellationToken: cancellationToken);
+                                                                : prepared.Original with { Hashes = known }, prepared, true, cancellationToken: cancellationToken);
 
     /// <summary>相手へ提示する前に、完全な書出しの長さとハッシュを確定します。</summary>
     /// <returns>同じバイト列を参照する固定マニフェストです。</returns>
     // 抑制理由: 接続の所有権をexportsへ移し、期限・明示終了・Store終了のすべてで非同期回収します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW141", Justification = "作成した接続をExportで所有します。"),
      System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000", Justification = "作成した接続の所有権をExportへ渡します。")]
-    private async Task<SyncManifest> CreateCoreAsync(PeerInfo target, bool inventory, SyncInventoryRequest? known, SyncPreparedExport? prepared,
+    private async Task<SyncManifest> CreateCoreAsync(PeerInfo target, bool inventory, SyncInventoryRequest? known, SyncPreparedExport? prepared, bool retirementRanges,
         RepositorySnapshot? supplied = null, string? phase = null, CancellationToken cancellationToken = default)
     {
         await CleanupAsync(cancellationToken).ConfigureAwait(false);
@@ -181,7 +181,7 @@ internal sealed class SyncExportStore : IAsyncDisposable
             materializing = true;
             path = TemporaryPath();
             using SyncSnapshotStream stream = new(path, options.MaximumSyncSnapshotBytes);
-            (string[] hashes, SyncSnapshotIndex index) = await SyncSnapshotWriter.WriteSourceAsync(stream, repository, prepared, supplied, inventory, known, cancellationToken).ConfigureAwait(false);
+            (string[] hashes, SyncSnapshotIndex index) = await SyncSnapshotWriter.WriteSourceAsync(stream, repository, prepared, supplied, inventory, known, retirementRanges, cancellationToken).ConfigureAwait(false);
             await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
             if (options.MaximumSyncSnapshotBytes < stream.Length)
             {
@@ -199,7 +199,7 @@ internal sealed class SyncExportStore : IAsyncDisposable
             {
                 Guid id = prepared?.Original.Id ?? Guid.NewGuid();
                 SyncExportStream transfer = new(binding(), target, id, path, expires - clock.GetUtcNow(), clock);
-                SyncManifest manifest = new(id, cluster.LocalPeerId, cluster.LocalInstanceId, target.PeerId, target.InstanceId, stream.Length, hash, expires, transfer.Ticket, phase);
+                SyncManifest manifest = new(id, cluster.LocalPeerId, cluster.LocalInstanceId, target.PeerId, target.InstanceId, stream.Length, hash, expires, transfer.Ticket, phase, RetirementRanges: true);
                 exports[manifest.Id] = new(path, manifest, transfer, hashes, index);
                 return manifest;
             }

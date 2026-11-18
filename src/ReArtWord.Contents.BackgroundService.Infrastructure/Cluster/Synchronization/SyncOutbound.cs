@@ -82,8 +82,8 @@ internal sealed class SyncOutbound(PeerCluster cluster, IDurableRepository repos
             bool staged = capabilities.StagedRecovery && recoveryStore is not null;
             bool inventory = !staged && SyncInventory.MinimumMessageBytes <= options.MaximumMessageBytes
                 && string.Equals(capabilities.Version, SyncInventoryExchange.Protocol, StringComparison.Ordinal);
-            using SyncPreparedExport? prepared = inventory ? await exports.PrepareAsync(peer, cancellationToken).ConfigureAwait(false)
-                                                           : null;
+            using SyncPreparedExport? prepared = inventory && capabilities.RetirementRanges ? await exports.PrepareAsync(peer, cancellationToken).ConfigureAwait(false)
+                                                                                            : null;
             if (staged)
             {
                 Persistence.Documents.RepositorySnapshot current = await recoveryStore!.ReadAsync(cluster.LocalPeerId, clock.GetUtcNow(), cancellationToken).ConfigureAwait(false);
@@ -91,13 +91,13 @@ internal sealed class SyncOutbound(PeerCluster cluster, IDurableRepository repos
                 {
                     throw new SyncFailureException("Sync.PendingOperations");
                 }
-                offered = await exports.CreatePayloadAsync(peer, current, SyncManifest.CurrentPhase, cancellationToken).ConfigureAwait(false);
+                offered = await exports.CreatePayloadAsync(peer, current, SyncManifest.CurrentPhase, capabilities.RetirementRanges, cancellationToken).ConfigureAwait(false);
             }
             else
             {
                 if (prepared is null)
                 {
-                    offered = await exports.CreateAsync(peer, inventory, cancellationToken).ConfigureAwait(false);
+                    offered = await exports.CreateAsync(peer, inventory, capabilities.RetirementRanges, cancellationToken).ConfigureAwait(false);
                 }
             }
             negotiation = prepared?.Original.Id ?? offered!.Id;
