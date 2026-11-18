@@ -13,27 +13,40 @@ namespace ReArtWord.Contents.BackgroundService.ClientHost.Updates.Fleet;
 /// <summary>更新所有者の最小進捗をCore経由で観測し、通常ClientHostでも同じ更新を表示します。</summary>
 internal sealed class FleetUpdateVisibility(FleetUpdateStore store, ObserverConnection connection) : IDisposable
 {
-    private readonly Guid publisher = Guid.NewGuid();
-    private readonly Dictionary<Guid, (DateTimeOffset Version, DateTimeOffset Next)> published = [];
+    private Guid publisher;
+    private long lastReserved;
+    private readonly Dictionary<Guid, Publication> published = [];
     private readonly FleetUpdateObservationStore observed = new();
     private readonly SemaphoreSlim reading = new(1, 1);
     private FleetUpdateOverview? cached;
-    private DateTimeOffset nextRead;
+    private long lastRead;
     private long sequence;
 
     /// <summary>自身が所有する進捗だけを通知し、別ClientHostの観測を再発行しません。</summary>
     /// <returns>更新本体を変更しない有限の通知です。</returns>
     internal async Task PublishAsync(IReadOnlyList<FleetUpdateView> views, CancellationToken cancellationToken = default)
     {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
-        foreach (FleetUpdateView view in views.Where(view => !view.Completed || now - view.UpdatedAt < TimeSpan.FromMinutes(1)))
+        long now = TimeProvider.System.GetTimestamp();
+        foreach (FleetUpdateView view in views)
         {
-            if (published.TryGetValue(view.OperationId, out (DateTimeOffset Version, DateTimeOffset Next) sent) && sent.Version == view.UpdatedAt && now < sent.Next)
+            published.TryGetValue(view.OperationId, out Publication? sent);
+            long changed = now;
+            if (sent is not null && sent.Version == view.UpdatedAt && sent.Completed == view.Completed)
             {
-                continue;
+                changed = sent.Changed;
+                if (TimeProvider.System.GetElapsedTime(sent.Sent, now) < TimeSpan.FromSeconds(5)
+                    || view.Completed && TimeSpan.FromMinutes(1) <= TimeProvider.System.GetElapsedTime(changed, now))
+                {
+                    continue;
+                }
             }
-            published[view.OperationId] = (view.UpdatedAt, now.AddSeconds(5));
-            FleetUpdateObservation notification = new(publisher, Interlocked.Increment(ref sequence), FleetUpdateActivity.From(view));
+            if (sequence == lastReserved)
+            {
+                (publisher, long first, lastReserved) = await store.ReservePublicationAsync(cancellationToken).ConfigureAwait(false);
+                sequence = first - 1;
+            }
+            published[view.OperationId] = new(view.UpdatedAt, view.Completed, changed, now);
+            FleetUpdateObservation notification = new(publisher, ++sequence, FleetUpdateActivity.From(view));
             string[] clusters = view.Peers.Select(peer => peer.Target.ClusterId).Distinct(StringComparer.Ordinal).ToArray();
             using CancellationTokenSource budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             budget.CancelAfter(TimeSpan.FromSeconds(3));
@@ -70,7 +83,7 @@ internal sealed class FleetUpdateVisibility(FleetUpdateStore store, ObserverConn
         await reading.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            if (cached is not null && DateTimeOffset.UtcNow < nextRead)
+            if (cached is not null && TimeProvider.System.GetElapsedTime(lastRead) < TimeSpan.FromSeconds(2))
             {
                 return cached;
             }
@@ -115,7 +128,7 @@ internal sealed class FleetUpdateVisibility(FleetUpdateStore store, ObserverConn
             cancellationToken.ThrowIfCancellationRequested();
             cached = new(owned, observed.Read().Where(item => !owned.Any(view => view.OperationId == item.Activity.OperationId)).ToArray(),
                 targets.Select(target => target.Cluster).Distinct(StringComparer.Ordinal).Any(cluster => !reached.ContainsKey(cluster)));
-            nextRead = DateTimeOffset.UtcNow.AddSeconds(2);
+            lastRead = TimeProvider.System.GetTimestamp();
             return cached;
         }
         finally
@@ -147,6 +160,9 @@ internal sealed class FleetUpdateVisibility(FleetUpdateStore store, ObserverConn
 
     /// <summary>進捗の読取りが終了した後に排他を解放します。</summary>
     public void Dispose() => reading.Dispose();
+
+    /// <summary>同じ保存済み進捗の再通知期間を、発行側の経過時間で測ります。</summary>
+    private sealed record Publication(DateTimeOffset Version, bool Completed, long Changed, long Sent);
 
     /// <summary>同じ観測の対象と通信経路を固定します。</summary>
     private sealed record Target(string Cluster, PeerInfo Peer, UdpObserver Observer);
