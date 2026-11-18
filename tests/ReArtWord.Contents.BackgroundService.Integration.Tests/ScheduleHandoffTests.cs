@@ -21,7 +21,8 @@ public sealed class ScheduleHandoffTests
     [InlineData(true, false, false)]
     [InlineData(false, true, false)]
     [InlineData(false, false, true)]
-    public async Task QueuedOccurrenceHandoffDoesNotReplayStartedWorkAsync(bool originReturns, bool startedWork, bool cancel)
+    [InlineData(false, false, false, true)]
+    public async Task QueuedOccurrenceHandoffDoesNotReplayStartedWorkAsync(bool originReturns, bool startedWork, bool cancel, bool within = false)
     {
         string cluster = Guid.NewGuid().ToString("N");
         int port = CorePeer.AvailablePort();
@@ -48,8 +49,10 @@ public sealed class ScheduleHandoffTests
         await CorePeer.WaitAsync(async token => (await first.GetAsync<JsonElement>("status", token).ConfigureAwait(true)).GetProperty("peers").EnumerateArray()
             .Any(peer => string.Equals(peer.GetProperty("peerId").GetString(), "b", StringComparison.Ordinal)
                 && string.Equals(peer.GetProperty("status").GetString(), "unavailable", StringComparison.Ordinal))).ConfigureAwait(true);
+        string missed = within ? "within"
+                               : "delay";
         List<NodeDefinition> nodes = [
-            new("timer", "scheduling.timer", JsonSerializer.SerializeToElement(new { mode = "once", at = DateTimeOffset.UtcNow.AddSeconds(1) }), StartOnLoad: true),
+            new("timer", "scheduling.timer", JsonSerializer.SerializeToElement(new { mode = "once", at = DateTimeOffset.UtcNow.AddSeconds(1), missed, toleranceMilliseconds = 120000 }), StartOnLoad: true),
             Append("write", output, "b"),
         ];
         List<WireDefinition> wires = [new("timer", "value", "write", "trigger")];

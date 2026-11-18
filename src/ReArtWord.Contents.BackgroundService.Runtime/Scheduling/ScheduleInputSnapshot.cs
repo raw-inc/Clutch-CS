@@ -50,7 +50,7 @@ public sealed record ScheduleInputSnapshot(Guid Id, Guid ExecutionId, WorkflowDe
 
     /// <summary>取得時と同じ版を確認して文脈を再構成します。Sourceから値を再取得しません。</summary>
     /// <returns>元の因果IDと固定対象を持つ入力。</returns>
-    public NodeEmission Restore(CompiledWorkflow plan, TimeProvider clock)
+    public NodeEmission Restore(CompiledWorkflow plan, TimeProvider clock, ScheduleAllowance allowance = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(clock);
@@ -67,7 +67,7 @@ public sealed record ScheduleInputSnapshot(Guid Id, Guid ExecutionId, WorkflowDe
             Operational = Operational,
             TracePolicy = Trace,
             Hooks = Hooks,
-            Schedule = Schedule,
+            Schedule = Schedule with { Allowance = allowance },
         };
         return new(context, Result);
     }

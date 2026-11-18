@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Runtime.Scheduling;
 using System.Collections.Concurrent;
 using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
@@ -225,7 +226,12 @@ public sealed class ScheduledInputCoordinator : IDisposable
             results[id] = new(local, EOutcome.NotExecuted, null, "schedule.definitionUnavailable");
             return;
         }
-        NodeEmission emission = record.Input.Restore(plan, TimeProvider.System);
+        ScheduleAllowance allowance = default;
+        if (record.Input.Schedule.MissedPolicy == EScheduleMissedPolicy.Within)
+        {
+            allowance = await store.ReadAllowanceAsync(id, local, cancellationToken).ConfigureAwait(false);
+        }
+        NodeEmission emission = record.Input.Restore(plan, TimeProvider.System, allowance);
         if (offered.TryAdd(id, 0))
         {
             await sources.ResumeScheduledAsync(record.Source.Id, emission, cancellationToken).ConfigureAwait(false);

@@ -47,17 +47,29 @@ public sealed class ScheduledInputStore : IDisposable
             for (int attempt = 0; attempt < 8; attempt++)
             {
                 (ScheduledInputIndex Index, DurableEntry? Entry) current = await IndexAsync(local, cancellationToken).ConfigureAwait(false);
-                if (512 <= current.Index.Entries.Count || 128L * 1024 * 1024 < current.Index.Entries.Sum(entry => entry.Bytes) + bytes)
+                Guid id = Guid.NewGuid();
+                PeerInfo[] members = Members(local);
+                NodeValue? timing = null;
+                long retained = bytes;
+                if (input.Schedule.MissedPolicy == EScheduleMissedPolicy.Within && input.Targets.Values.Any(target => target.Peers.Any(peer => !PeerStatusRules.CanParticipate(peer.Status))))
+                {
+                    ScheduleClockBound[] bounds = await ScheduleClockBound.CaptureAsync(cluster, local, members, input.Schedule, cancellationToken).ConfigureAwait(false);
+                    timing = NodeValue.FromObject(bounds);
+                    retained += JsonSize.Measure(timing);
+                }
+                if (512 <= current.Index.Entries.Count || 128L * 1024 * 1024 < current.Index.Entries.Sum(entry => entry.Bytes) + retained)
                 {
                     return await RejectAsync(progress, local, "schedule.retentionCapacity", cancellationToken).ConfigureAwait(false);
                 }
-                Guid id = Guid.NewGuid();
-                PeerInfo[] members = Members(local);
                 ScheduledInputRecord record = new(input.Id, input.Definition.Id, input.Revision, input.Source, cluster.LocalPeerId, cluster.LocalInstanceId,
                     false, id, members, input);
-                ScheduledInputIndex next = new(id, members, [.. current.Index.Entries, new(input.Id, input.Definition.Id, bytes, cluster.LocalPeerId, cluster.LocalInstanceId, false)]);
-                DurableMutation[] mutations = [progress(id, members, null), new(Scope(InputScope, local), input.Id.ToString("N"), null, NodeValue.FromObject(record)),
+                ScheduledInputIndex next = new(id, members, [.. current.Index.Entries, new(input.Id, input.Definition.Id, retained, cluster.LocalPeerId, cluster.LocalInstanceId, false)]);
+                List<DurableMutation> mutations = [progress(id, members, null), new(Scope(InputScope, local), input.Id.ToString("N"), null, NodeValue.FromObject(record)),
                     new(Scope(IndexScope, local), IndexKey, current.Entry?.Version, NodeValue.FromObject(next))];
+                if (timing is not null)
+                {
+                    mutations.Add(new(Scope(ScheduleClockBound.Scope, local), input.Id.ToString("N"), null, timing));
+                }
                 DurableReceipt saved = await SaveAsync(id, mutations, members, local, cancellationToken).ConfigureAwait(false);
                 if (saved.Outcome == EOutcome.Succeeded)
                 {
@@ -188,8 +200,17 @@ public sealed class ScheduledInputStore : IDisposable
                     next = next with { Input = null };
                 }
                 ScheduledInputIndex nextIndex = new(operation, members, entries);
-                DurableMutation[] mutations = [new(Scope(InputScope, local), inputId.ToString("N"), current.Value.Entry.Version, NodeValue.FromObject(next)),
+                List<DurableMutation> mutations = [new(Scope(InputScope, local), inputId.ToString("N"), current.Value.Entry.Version, NodeValue.FromObject(next)),
                     new(Scope(IndexScope, local), IndexKey, index.Entry?.Version, NodeValue.FromObject(nextIndex))];
+                if (next.Outcome is not null && current.Value.Record.Input?.Schedule.MissedPolicy == EScheduleMissedPolicy.Within)
+                {
+                    string scope = Scope(ScheduleClockBound.Scope, local);
+                    DurableEntry? evidence = await repository.ReadAsync(scope, inputId.ToString("N"), cancellationToken).ConfigureAwait(false);
+                    if (evidence?.Value is not null)
+                    {
+                        mutations.Add(new(scope, evidence.Key, evidence.Version, null));
+                    }
+                }
                 DurableReceipt saved = await SaveAsync(operation, mutations, members, local, cancellationToken).ConfigureAwait(false);
                 if (saved.Outcome == EOutcome.Succeeded)
                 {
@@ -207,6 +228,19 @@ public sealed class ScheduledInputStore : IDisposable
         {
             changes.Release();
         }
+    }
+
+    /// <summary>現在の起動実体向けに確定した許容期限だけを引き継ぎます。</summary>
+    /// <returns>旧形式・別実体・競合した証拠は確認不能です。</returns>
+    internal async Task<ScheduleAllowance> ReadAllowanceAsync(Guid id, bool local, CancellationToken cancellationToken = default)
+    {
+        (DurableEntry? entry, IReadOnlyList<DurableEntry> conflicts) = await repository.ReadWithConflictsAsync(Scope(ScheduleClockBound.Scope, local), id.ToString("N"), cancellationToken).ConfigureAwait(false);
+        if (conflicts.Count != 0 || entry?.Value is null)
+        {
+            return default;
+        }
+        ScheduleClockBound? bound = entry.Value.Json.Deserialize<ScheduleClockBound[]>(ContractJson.Options)?.SingleOrDefault(item => item.Instance == cluster.LocalInstanceId);
+        return bound?.Restore(cluster.AdmissionClock.Capture(), TimeProvider.System) ?? default;
     }
 
     /// <summary>ローカル実行の記録を共有索引へ混ぜません。</summary>
