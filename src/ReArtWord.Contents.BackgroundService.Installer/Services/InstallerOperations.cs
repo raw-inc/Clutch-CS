@@ -153,8 +153,8 @@ internal static class InstallerOperations
         {
             return accepted;
         }
-        DateTimeOffset deadline = DateTimeOffset.UtcNow.Add(InstallationDefaults.RemoteTimeout);
-        while (DateTimeOffset.UtcNow < deadline)
+        long started = Stopwatch.GetTimestamp();
+        while (Stopwatch.GetElapsedTime(started) < InstallationDefaults.RemoteTimeout)
         {
             SetupResult? result = await results.ReadAsync(cancellationToken).ConfigureAwait(false);
             if (result is not null && result.OperationId == request.OperationId)

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using ReArtWord.Contents.BackgroundService.Contracts.Cluster.Conflicts;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Health;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Installation;
@@ -60,7 +61,7 @@ internal static class AutomaticRepair
         {
             _ = await observer.SendAsync(peer.PeerId, peer.InstanceId, "cluster.rejoin", null, false, cancellationToken).ConfigureAwait(false);
         }
-        DateTimeOffset deadline = DateTimeOffset.UtcNow.Add(InstallationDefaults.StopTimeout);
+        long started = Stopwatch.GetTimestamp();
         string detail = "";
         do
         {
@@ -77,7 +78,7 @@ internal static class AutomaticRepair
             }
             await Task.Delay(InstallationDefaults.PollInterval, cancellationToken).ConfigureAwait(false);
         }
-        while (DateTimeOffset.UtcNow < deadline);
+        while (Stopwatch.GetElapsedTime(started) < InstallationDefaults.StopTimeout);
         return new(operation, EOutcome.Failed, "needs-attention", $"Ready was not confirmed. Unresolved conflicts: {unresolved}. Open the client to compare conflicting values, or choose Reinstall. {detail}", target.Label);
     }
 
