@@ -19,7 +19,7 @@ public sealed class ClusterArchiveFileTests
 
     /// <summary>選択した場合だけ、ログの全ページがZIPへ保存されることを確認します。</summary>
     /// <returns>ZIPファイルの内容の検証。</returns>
-    [Theory]
+    [Theory(Skip = "旧仕様では設定取得日時を全ピアのログ上限としていました。")]
     [InlineData(false)]
     [InlineData(true)]
     public async Task RoundTripRetainsSavedAndEffectiveDefinitionsAndOptionalLogs(bool includeLogs)
@@ -36,6 +36,63 @@ public sealed class ClusterArchiveFileTests
                 long count = await ClusterArchiveFile.WriteAsync(output, configuration, (query, _) =>
                 {
                     Assert.Equal(configuration.CapturedAt, query.Until);
+                    reads++;
+                    if (reads == 1)
+                    {
+                        return Task.FromResult(new LogQueryResult([first], "next", true));
+                    }
+                    Assert.Equal("next", query.Cursor);
+                    return Task.FromResult(new LogQueryResult([second], null, true));
+                });
+                Assert.Equal(reads, count);
+            }
+            (ClusterArchiveConfiguration actual, long logs) = await ClusterArchiveFile.InspectAsync(path);
+            Assert.Equal(ContractJson.Hash(configuration), ContractJson.Hash(actual));
+            Assert.Equal(reads, logs);
+            if (includeLogs)
+            {
+                Assert.Equal(2, reads);
+                List<WorkflowLogEntry> entries = [];
+                await foreach (IReadOnlyList<WorkflowLogEntry> page in ClusterArchiveFile.ReadLogsAsync(path))
+                {
+                    entries.AddRange(page);
+                }
+                Assert.Equal(new[] { first.Id, second.Id }, entries.Select(entry => entry.Id));
+            }
+            else
+            {
+                Assert.Equal(0, reads);
+            }
+            ArchivedWorkflow workflow = Assert.Single(actual.Workflows);
+            Assert.False(workflow.Saved.Definition.Enabled);
+            Assert.True(workflow.Effective!.Enabled);
+            Assert.Equal(EValueKind.Binary, workflow.Saved.Definition.Nodes[0].Inputs!["value"].Kind);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    /// <summary>設定の取得日時で他のピアのログ範囲を制限せず、元のログと設定を保存します。</summary>
+    /// <returns>作成したZIPの読取り確認です。</returns>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RoundTripRetainsSavedAndEffectiveDefinitionsAndOptionalLogsUsingPeerLogBounds(bool includeLogs)
+    {
+        string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".zip");
+        ClusterArchiveConfiguration configuration = Configuration(includeLogs);
+        WorkflowLogEntry first = new(Guid.NewGuid(), configuration.CapturedAt.AddMinutes(-1), "INFO", "screen-a", "first");
+        WorkflowLogEntry second = first with { Id = Guid.NewGuid(), Message = "second" };
+        int reads = 0;
+        try
+        {
+            using (FileStream output = File.Create(path))
+            {
+                long count = await ClusterArchiveFile.WriteAsync(output, configuration, (query, _) =>
+                {
+                    Assert.Null(query.Until);
                     reads++;
                     if (reads == 1)
                     {

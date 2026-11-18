@@ -15,4 +15,12 @@ namespace ReArtWord.Contents.BackgroundService.Infrastructure.Observability.Logg
 /// <param name="FirstTime">ファイル内の最小時刻。旧索引では未確認。</param>
 /// <param name="LastTime">ファイル内の最大時刻。追記順ではなく実際のログ時刻。</param>
 internal sealed record LogSegment(Guid Id, string Level, DateOnly Date, IReadOnlyList<Guid> EntryIds, long Bytes, bool Compressed, bool LocalOrigin, IReadOnlyList<string> ForwardedTo,
-    bool ProtectTotalDays = false, int? MinimumTotalDays = null, bool ExpandOnRecovery = false, DateTimeOffset? FirstTime = null, DateTimeOffset? LastTime = null);
+    bool ProtectTotalDays = false, int? MinimumTotalDays = null, bool ExpandOnRecovery = false, DateTimeOffset? FirstTime = null, DateTimeOffset? LastTime = null)
+{
+    /// <summary>このCoreが保存索引へ追加した順番です。アーカイブ取得中の追記を除くために使います。</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    internal long IndexSequence
+    {
+        get; init;
+    }
+}

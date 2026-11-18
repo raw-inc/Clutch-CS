@@ -18,7 +18,7 @@ public static class ClusterArchiveFile
     private static int MaximumParts => 4096;
     private static string ConfigurationName => "configuration.json";
 
-    /// <summary>設定と、取得時刻までのログをZIPへ書き出します。ログに欠落や省略があれば中止します。</summary>
+    /// <summary>設定と、各ピアで取得できたログをZIPへ書き出します。ログに欠落や省略があれば中止します。</summary>
     /// <returns>書き出したログ件数。</returns>
     // 抑制理由: ZIPと各entryはawait usingで所有し、呼出元のstreamだけを開いたまま返します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW141", Justification = "ZIPとentryをawait usingで非同期解放します。")]
@@ -40,7 +40,7 @@ public static class ClusterArchiveFile
         int part = 0;
         do
         {
-            LogQueryResult page = await readLogs(new(Until: configuration.CapturedAt, Limit: 1000, Cursor: cursor, MaximumBytes: LogPartBytes / 2), cancellationToken).ConfigureAwait(false);
+            LogQueryResult page = await readLogs(new(Limit: 1000, Cursor: cursor, MaximumBytes: LogPartBytes / 2), cancellationToken).ConfigureAwait(false);
             if (!page.Complete || 0 < page.Omissions?.Count || 0 < page.UnavailablePeers?.Count || MaximumParts <= part)
             {
                 throw new InvalidDataException("Archive log export is incomplete.");

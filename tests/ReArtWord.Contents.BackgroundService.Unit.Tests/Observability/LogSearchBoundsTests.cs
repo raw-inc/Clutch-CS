@@ -105,6 +105,31 @@ public sealed class LogSearchBoundsTests
         Assert.Equal(now.AddSeconds(1), Assert.Single(reader.Segments).LastTime);
     }
 
+    /// <summary>時計が進んだピアの保存済みログを含め、ページ間に到着した過去日時のログを除きます。</summary>
+    /// <returns>アーカイブの全ページと、日時範囲を指定した通常検索との比較です。</returns>
+    [Fact]
+    public async Task ArchivePagesKeepStoredLogsAcrossClockOffsetsAndConcurrentAppends()
+    {
+        using LogTestEnvironment fixture = new();
+        LogOptions options = new("peer", fixture.Logs);
+        using LogStore store = new(options, fixture.Repository);
+        DateTimeOffset captured = DateTimeOffset.UtcNow;
+        WorkflowLogEntry fast = new(Guid.NewGuid(), captured.AddHours(1), "INFO", "fast", "before export");
+        WorkflowLogEntry slow = fast with { Id = Guid.NewGuid(), PeerId = "slow", Time = captured.AddHours(-1) };
+        await PersistAsync(store, options, [fast, slow]);
+        LogQueryResult first = await LogSearch.QueryAsync(store, new(Limit: 1, Cursor: ArchiveLogPage.Prefix), []);
+        Assert.Equal(fast.Time, Assert.Single(first.Entries).Time);
+        Assert.NotNull(first.Cursor);
+        WorkflowLogEntry backdated = slow with { Id = Guid.NewGuid(), Time = captured.AddMinutes(-30) };
+        await PersistAsync(store, options, [backdated]);
+        LogQueryResult second = await LogSearch.QueryAsync(store, new(Limit: 1, Cursor: first.Cursor), []);
+        Assert.True(second.Complete);
+        Assert.Equal(slow.Id, Assert.Single(second.Entries).Id);
+        Assert.Null(second.Cursor);
+        LogQueryResult ordinary = await LogSearch.QueryAsync(store, new(Until: captured), []);
+        Assert.Equal(new[] { backdated.Id, slow.Id }, ordinary.Entries.Select(entry => entry.Id));
+    }
+
     /// <summary>ワーカーの時刻に依存せず、一つの不変ログファイルを作ります。</summary>
     /// <returns>実ファイルと索引の保存完了です。</returns>
     private static Task PersistAsync(LogStore store, LogOptions options, IReadOnlyList<WorkflowLogEntry> entries)
