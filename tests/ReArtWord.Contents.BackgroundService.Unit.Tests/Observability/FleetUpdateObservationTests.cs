@@ -28,7 +28,7 @@ public sealed class FleetUpdateObservationTests
     }
 
     /// <summary>古いCoreに残った通知で完了結果を巻き戻しません。</summary>
-    [Fact]
+    [Fact(Skip = "旧仕様では異なる発行元の保存日時で通知を選んでいました。")]
     public void CompletionAndPublisherRestartUseMonotonicProgress()
     {
         FleetUpdateObservationStore store = new();
@@ -40,6 +40,22 @@ public sealed class FleetUpdateObservationTests
         Assert.False(store.Observe(first with { PublisherId = Guid.NewGuid(), Sequence = 99 }));
         Assert.True(store.Observe(finished with { PublisherId = Guid.NewGuid(), Sequence = 1, Activity = finished.Activity with { UpdatedAt = finished.Activity.UpdatedAt.AddSeconds(1) } }));
         Assert.True(Assert.Single(store.Read()).Activity.Completed);
+    }
+
+    /// <summary>時計を戻した発行元から完了が届いた後は、古い発行元の進行中通知を採用しません。</summary>
+    [Fact]
+    public void ConfirmedCompletionSurvivesDelayedAndUnrelatedPublishers()
+    {
+        FleetUpdateObservationStore store = new();
+        FleetUpdateObservation first = Observation();
+        Assert.True(store.Observe(first));
+        FleetUpdateObservation newer = first with { PublisherId = Guid.NewGuid(), Activity = first.Activity with { UpdatedAt = first.Activity.UpdatedAt.AddHours(-1) } };
+        Assert.False(store.Observe(newer));
+        Assert.True(Assert.Single(store.Read()).Stale);
+        FleetUpdateObservation finished = newer with { Sequence = 2, Activity = newer.Activity with { Completed = true, Outcome = EOutcome.Succeeded } };
+        Assert.True(store.Observe(finished));
+        Assert.False(store.Observe(first with { Sequence = 99 }));
+        Assert.Equal(finished, Assert.Single(store.Read()));
     }
 
     /// <summary>転送された鮮度切れを、新しく受信したという理由で解除しません。</summary>

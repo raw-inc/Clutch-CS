@@ -39,10 +39,12 @@ public sealed class FleetVisibilityProcessTests
             configured.EnsureSuccessStatusCode();
         }
         PeerInfo? peer = null;
+        System.Text.Json.JsonSerializerOptions observationOptions = new(ContractJson.Options);
+        observationOptions.Converters.Add(new PeerObservationJsonConverter(age => new(TimeProvider.System, age)));
         await CorePeer.WaitAsync(async token =>
         {
             using HttpResponseMessage response = await owner.SendAsync(HttpMethod.Get, "client/clusters", cancellationToken: token).ConfigureAwait(true);
-            DiscoveredCluster[] discovered = (await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ContractJson.Options, token).ConfigureAwait(true))!;
+            DiscoveredCluster[] discovered = (await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(observationOptions, token).ConfigureAwait(true))!;
             peer = discovered.SelectMany(item => item.Peers).FirstOrDefault(item => item.Status == EPeerStatus.Ready);
             return peer is not null;
         }, timeout.Token).ConfigureAwait(true);

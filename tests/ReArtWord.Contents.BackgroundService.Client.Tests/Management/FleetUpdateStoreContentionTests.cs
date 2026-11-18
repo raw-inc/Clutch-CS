@@ -13,6 +13,27 @@ namespace ReArtWord.Contents.BackgroundService.Client.Tests.Management;
 /// <summary>進捗ファイルの実アクセス拒否と、更新命令の一回性を併せて検証します。</summary>
 public sealed class FleetUpdateStoreContentionTests
 {
+    /// <summary>途中までしか使わなかった通知番号は、次のClientHostが再利用しません。</summary>
+    /// <returns>保存先を開き直した後の発行元と連番の確認です。</returns>
+    [Fact]
+    public async Task RestartReservesNewerNumbersForTheSamePublisher()
+    {
+        string directory = Directory.CreateTempSubdirectory("fleet-publication-").FullName;
+        try
+        {
+            FleetUpdateStore first = new(directory);
+            (Guid publisher, long start, long end) = await first.ReservePublicationAsync();
+            FleetUpdateStore restarted = new(directory);
+            (Guid nextPublisher, long nextStart, long nextEnd) = await restarted.ReservePublicationAsync();
+            Assert.Equal(publisher, nextPublisher);
+            Assert.True(0 < start && start <= end && end < nextStart && nextStart <= nextEnd);
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
     /// <summary>準備後の進捗保存が競合しても、保存完了を待って同じ操作を一度だけ配送します。</summary>
     /// <returns>今回の更新ワーカー停止条件と副作用境界の回帰確認です。</returns>
     [WindowsFact]

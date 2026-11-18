@@ -20,10 +20,16 @@ public sealed class FleetUpdateObservationStore(TimeProvider? time = null)
         Validate(observation);
         using (gate.EnterScope())
         {
-            DateTimeOffset now = clock.GetUtcNow();
+            long now = clock.GetTimestamp();
             Prune(now);
             if (entries.TryGetValue(observation.Activity.OperationId, out Entry? current) && !observation.IsNewerThan(current.Observation))
             {
+                if (observation.PublisherId != current.Observation.PublisherId && (!current.Observation.Activity.Completed
+                    || observation.Activity.Completed && observation.Activity.Outcome != current.Observation.Activity.Outcome))
+                {
+                    // 別の保存先や旧版の通知番号とは比較できないため、最後の進捗を残して未確認とします。
+                    entries[observation.Activity.OperationId] = current with { Observation = current.Observation with { Stale = true } };
+                }
                 return false;
             }
             if (32 <= entries.Count && !entries.ContainsKey(observation.Activity.OperationId))
@@ -42,10 +48,10 @@ public sealed class FleetUpdateObservationStore(TimeProvider? time = null)
     {
         using (gate.EnterScope())
         {
-            DateTimeOffset now = clock.GetUtcNow();
+            long now = clock.GetTimestamp();
             Prune(now);
             return entries.Values.OrderByDescending(entry => entry.Observation.Activity.UpdatedAt)
-                .Select(entry => entry.Observation with { Stale = entry.Observation.Stale || !entry.Observation.Activity.Completed && Freshness <= now - entry.ReceivedAt }).ToArray();
+                .Select(entry => entry.Observation with { Stale = entry.Observation.Stale || !entry.Observation.Activity.Completed && Freshness <= clock.GetElapsedTime(entry.ReceivedAt, now) }).ToArray();
         }
     }
 
@@ -78,7 +84,7 @@ public sealed class FleetUpdateObservationStore(TimeProvider? time = null)
     }
 
     /// <summary>完了済みは5分、所有者を失った未完了は1時間まで有限保持します。</summary>
-    private void Prune(DateTimeOffset now)
+    private void Prune(long now)
     {
         foreach (KeyValuePair<Guid, Entry> pair in entries.ToArray())
         {
@@ -87,7 +93,7 @@ public sealed class FleetUpdateObservationStore(TimeProvider? time = null)
             {
                 retention = TimeSpan.FromMinutes(5);
             }
-            if (retention <= now - pair.Value.ReceivedAt)
+            if (retention <= clock.GetElapsedTime(pair.Value.ReceivedAt, now))
             {
                 entries.Remove(pair.Key);
             }
@@ -95,5 +101,5 @@ public sealed class FleetUpdateObservationStore(TimeProvider? time = null)
     }
 
     /// <summary>各プロセスの時計で通知の鮮度を測定します。</summary>
-    private sealed record Entry(FleetUpdateObservation Observation, DateTimeOffset ReceivedAt);
+    private sealed record Entry(FleetUpdateObservation Observation, long ReceivedAt);
 }
