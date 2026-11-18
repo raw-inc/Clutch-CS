@@ -189,19 +189,32 @@ public sealed class StateNode : IActionNode
     /// <returns>新規確保時だけ元入力を通す結果です。</returns>
     private async ValueTask<NodeResult> DeduplicateAsync(NodeExecutionContext context, string scope, string key, VersionedState? current, CancellationToken cancellationToken = default)
     {
-        DateTimeOffset now = context.TimeProvider.GetUtcNow();
-        if (current is not null && !Expired(current.Value, now))
-        {
-            return Result(current, false, "duplicate");
-        }
         NodeSettings settings = new(context.Settings);
-        DateTimeOffset? expiresAt = null;
+        TimeSpan? lifetime = null;
         if (settings.Get(SettingTtlMilliseconds).ValueKind == JsonValueKind.Number)
         {
-            expiresAt = now.AddMilliseconds(settings.ReadNumber("ttlMilliseconds"));
+            lifetime = TimeSpan.FromMilliseconds(settings.ReadNumber(SettingTtlMilliseconds));
         }
-        NodeValue marker = NodeValue.FromObject(new { reservedAt = now, expiresAt });
-        StateWriteResult written = await store.CompareExchangeAsync(scope, key, current?.Version, marker, cancellationToken).ConfigureAwait(false);
+        StateWriteResult written;
+        if (NodeStateScope.IsShared(scope) && (lifetime.HasValue || IsFiniteMarker(current?.Value)))
+        {
+            if (store is not ISharedDedupeStore shared)
+            {
+                return NodeResult.Failure("state.dedupe.unconfirmed", "共有キーの有効期限を確認できません。", EOutcome.NotExecuted);
+            }
+            written = await shared.ReserveAsync(scope, key, lifetime, cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            DateTimeOffset now = context.TimeProvider.GetUtcNow();
+            if (current is not null && !Expired(current.Value, now))
+            {
+                return Result(current, false, "duplicate");
+            }
+            DateTimeOffset? expiresAt = now + lifetime;
+            NodeValue marker = NodeValue.FromObject(new { reservedAt = now, expiresAt });
+            written = await store.CompareExchangeAsync(scope, key, current?.Version, marker, cancellationToken).ConfigureAwait(false);
+        }
         if (written.Outcome != EOutcome.Succeeded)
         {
             return NodeResult.Failure("state.dedupe.unconfirmed", "重複抑止の確保を確認できません。", written.Outcome);
@@ -218,6 +231,15 @@ public sealed class StateNode : IActionNode
                 ["value"] = NodeSupport.Input(context)?.Copy() ?? NodeValue.Null,
             },
         };
+    }
+
+    /// <summary>期限なしで呼ばれた場合も、保存済みの有限TTLは状態所有者が判定します。</summary>
+    /// <returns>旧形式または現在の有限TTLマーカーかどうかです。</returns>
+    private static bool IsFiniteMarker(NodeValue? value)
+    {
+        string lease = "dedupeLease", expiry = "expiresAt";
+        return value?.Kind == EValueKind.Json && value.Json.ValueKind == JsonValueKind.Object
+            && (value.Json.TryGetProperty(lease, out _) || value.Json.TryGetProperty(expiry, out JsonElement end) && end.ValueKind == JsonValueKind.String);
     }
 
     /// <summary>明示された期限だけを判定します。</summary>

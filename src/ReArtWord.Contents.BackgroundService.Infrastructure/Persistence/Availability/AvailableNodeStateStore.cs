@@ -9,8 +9,14 @@ using ReArtWord.Contents.BackgroundService.Runtime.State;
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Availability;
 
 /// <summary>弱いget/setを明示し、dedupeとCASの強い保存経路をそのまま残します。</summary>
-public sealed class AvailableNodeStateStore(INodeStateStore durable, AvailabilityService availability, Func<bool>? isOnline = null) : IAvailableNodeStateStore, IObservableNodeStateStore
+public sealed class AvailableNodeStateStore(INodeStateStore durable, AvailabilityService availability, Func<bool>? isOnline = null) : IAvailableNodeStateStore, IObservableNodeStateStore, ISharedDedupeStore
 {
+    /// <summary>共有キーの有効期限を確保元で確認します。</summary>
+    /// <returns>確保の成否と確認済みの状態です。</returns>
+    public ValueTask<StateWriteResult> ReserveAsync(string scope, string key, TimeSpan? lifetime, CancellationToken cancellationToken = default)
+        => durable is ISharedDedupeStore reservations ? reservations.ReserveAsync(scope, key, lifetime, cancellationToken)
+                                                      : ValueTask.FromResult(new StateWriteResult(false, null, EOutcome.NotExecuted, "State.SharedStoreUnavailable"));
+
     /// <summary>未保存候補とは区別して、実際に保存された値を継続観測します。</summary>
     /// <returns>強い保存先の初期値と変更通知です。</returns>
     public IAsyncEnumerable<StateChange> WatchAsync(string scope, string key, CancellationToken cancellationToken = default)
