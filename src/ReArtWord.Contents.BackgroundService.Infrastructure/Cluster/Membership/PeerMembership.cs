@@ -172,6 +172,10 @@ internal sealed class PeerMembership
             {
                 return;
             }
+            if (IdentityConflict && status is not (EPeerStatus.Unavailable or EPeerStatus.Detached))
+            {
+                status = EPeerStatus.Conflict;
+            }
             DateTimeOffset? ready = null;
             if (PeerStatusRules.CanParticipate(status))
             {
@@ -235,14 +239,16 @@ internal sealed class PeerMembership
         {
             if (peers.TryGetValue(incoming.PeerId, out PeerInfo? known) && known.InstanceId != incoming.InstanceId && known.Status is not (EPeerStatus.Unavailable or EPeerStatus.Detached))
             {
-                // 既存通常参加者が特定できる場合は後発実体を採用しません。
-                if (!PeerStatusRules.CanParticipate(known.Status) || (string.Equals(incoming.PeerId, options.PeerId, StringComparison.Ordinal) && PeerStatusRules.CanParticipate(incoming.Status) && incoming.ReadySince < known.ReadySince))
+                // 参加前に既存の同名実体を観測した側は譲ります。既に双方が参加中なら、
+                // ReadySinceは別々のPCの日時なので先後を判定できず、自分の通常実行を止めます。
+                if (!PeerStatusRules.CanParticipate(known.Status) || (string.Equals(incoming.PeerId, options.PeerId, StringComparison.Ordinal) && PeerStatusRules.CanParticipate(incoming.Status)))
                 {
                     peers[incoming.PeerId] = known with { Status = EPeerStatus.Conflict, ReadySince = null };
                     if (string.Equals(incoming.PeerId, options.PeerId, StringComparison.Ordinal))
                     {
                         IdentityConflict = true;
                     }
+                    Elect();
                 }
                 return false;
             }

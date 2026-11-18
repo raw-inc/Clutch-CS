@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Cluster.Membership;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
@@ -14,6 +15,20 @@ internal sealed class SyncParticipation(PeerCluster cluster, PeerMembership memb
     {
         get; set;
     } = string.Empty;
+
+    /// <summary>受理した通常参加通知を基に、同期が必要な場合だけ相手へ接続します。</summary>
+    /// <returns>必要な同期の完了です。</returns>
+    internal async Task ObserveReadyAsync(PeerAnnouncement announcement, PeerInfo? previous, CancellationToken cancellationToken = default)
+    {
+        EPeerStatus localStatus = cluster.GetPeers().Single(peer => peer.InstanceId == cluster.LocalInstanceId).Status;
+        bool participating = PeerStatusRules.CanParticipate(localStatus);
+        bool conflictsResolved = localStatus == EPeerStatus.Ready && announcement.Peer.Status == EPeerStatus.Ready;
+        if (!recovery.Detached && PeerStatusRules.CanParticipate(announcement.Peer.Status) && (!string.Equals(announcement.Digest, Digest, StringComparison.Ordinal) || repositorySync.NeedsSynchronization(announcement.Peer, conflictsResolved) || !participating))
+        {
+            bool mustGate = previous?.Status == EPeerStatus.Unavailable || !participating;
+            await SynchronizeAsync(announcement.Peer, mustGate, conflictsResolved && previous?.InstanceId == announcement.Peer.InstanceId, cancellationToken).ConfigureAwait(false);
+        }
+    }
 
     /// <summary>双方の稼働基準を確認後にReadyへ進め、対応する過去本文は独立して補完します。</summary>
     /// <returns>同期の完了。</returns>
