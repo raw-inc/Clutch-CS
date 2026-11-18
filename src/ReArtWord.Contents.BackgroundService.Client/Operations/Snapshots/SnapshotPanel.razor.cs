@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using ReArtWord.Contents.BackgroundService.Client.Localization;
@@ -159,7 +160,7 @@ public sealed partial class SnapshotPanel
         captureOpen = false;
         foreach (SnapshotTarget? item in fixedTargets)
         {
-            SnapshotCaptureRequest? request = new SnapshotCaptureRequest(Guid.CreateVersion7(), item, fixedPermanent);
+            SnapshotCaptureRequest? request = new SnapshotCaptureRequest(OperationIdentity.CreateDurableRequest(), item, fixedPermanent);
             await Journal.StartAsync(request.OperationId, "Capture selected snapshot scope", "/api/v2/snapshots/capture", "/api/snapshots/captures/" + request.OperationId, request, cancellationToken: UiCancellation).ConfigureAwait(true);
         }
 
@@ -172,7 +173,7 @@ public sealed partial class SnapshotPanel
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "UIコールバックの呼出し署名を維持し、取消可能なI/Oには画面が所有するトークンを渡します。")]
     private Task CaptureAsync() => GuardAsync(async () =>
     {
-        SnapshotCaptureRequest? request = new SnapshotCaptureRequest(Guid.CreateVersion7(), Target(), permanent);
+        SnapshotCaptureRequest? request = new SnapshotCaptureRequest(OperationIdentity.CreateDurableRequest(), Target(), permanent);
         captureOpen = false;
         await Journal.StartAsync(request.OperationId, "Capture snapshot", "/api/v2/snapshots/capture", "/api/snapshots/captures/" + request.OperationId, request, cancellationToken: UiCancellation).ConfigureAwait(true);
         message = Ui.Deferred("Operation {0}: {1}", request.OperationId, OperationJournal.Outcome(Journal.LastResult));

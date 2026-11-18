@@ -178,7 +178,7 @@ internal sealed class DetachedWorkflowReintegration(IDurableRepository repositor
         {
             throw new InvalidDataException("局所版が変更されています。");
         }
-        DurableReceipt completed = await repository.ApplyBatchAsync(Guid.CreateVersion7(), [new(detached.Scope, id, entry!.Version, NodeValue.FromObject(record with { Pending = false }))], cancellationToken).ConfigureAwait(false);
+        DurableReceipt completed = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new(detached.Scope, id, entry!.Version, NodeValue.FromObject(record with { Pending = false }))], cancellationToken).ConfigureAwait(false);
         if (completed.Outcome != EOutcome.Succeeded)
         {
             throw new InvalidDataException("局所変更の完了を確認できません。");

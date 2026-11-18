@@ -95,7 +95,7 @@ public sealed class HostPowerScheduleStore(PeerCluster cluster, IDurableReposito
         }
         DurableEntry? activation = await repository.ReadAsync(ActiveScope, request.HostId, cancellationToken).ConfigureAwait(false);
         HostPowerScheduleActivation confirmed = new(record.OperationId, ContractJson.Hash(NodeValue.FromObject(record)));
-        DurableReceipt activated = await cluster.ReplicateAsync(Guid.CreateVersion7(),
+        DurableReceipt activated = await cluster.ReplicateAsync(OperationIdentity.Create(),
             [new(ActiveScope, request.HostId, activation?.Version, NodeValue.FromObject(confirmed))], cancellationToken).ConfigureAwait(false);
         if (activated.Outcome != EOutcome.Succeeded)
         {

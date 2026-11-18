@@ -11,6 +11,12 @@ namespace ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 /// <param name="Payload">処理固有の入力。</param>
 public sealed record ClusterRequest(Guid Id, string Kind, string TargetPeerId, Guid TargetInstanceId, DateTimeOffset ExpiresAt, NodeValue Payload)
 {
+    /// <summary>永続的な操作受付には日時を持たないIDを使い、開始期限は別に固定します。</summary>
+    /// <returns>保存先の旧日時境界に巻き込まれない、新規の永続要求です。</returns>
+    public static ClusterRequest StartDurable(string kind, string targetPeerId, Guid targetInstanceId, TimeSpan lifetime,
+        NodeValue payload, TimeProvider? timeProvider = null)
+        => Start(Contracts.Execution.OperationIdentity.CreateDurableRequest(kind), kind, targetPeerId, targetInstanceId, lifetime, payload, timeProvider);
+
     /// <summary>新しい時刻付きIDと受付期限を、一回の時刻取得から作成します。</summary>
     /// <returns>IDの生成日時と受付期間の基準が一致する要求です。</returns>
     public static ClusterRequest Start(string kind, string targetPeerId, Guid targetInstanceId, TimeSpan lifetime,

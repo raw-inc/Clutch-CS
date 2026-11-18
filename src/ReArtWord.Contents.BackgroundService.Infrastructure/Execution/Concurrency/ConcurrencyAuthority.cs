@@ -253,7 +253,7 @@ internal sealed class ConcurrencyAuthority(PeerCluster cluster, IDurableReposito
                     ConcurrencyPermit[] remaining = queue.Active.Where(permit => !ownership.TryGetValue(permit.Request.TicketId, out bool present) || present).ToArray();
                     if (remaining.Length != queue.Active.Count)
                     {
-                        _ = await permits.SaveAsync(target, queue, remaining, Guid.CreateVersion7(), cancellationToken).ConfigureAwait(false);
+                        _ = await permits.SaveAsync(target, queue, remaining, OperationIdentity.Create(), cancellationToken).ConfigureAwait(false);
                     }
                 }
             }

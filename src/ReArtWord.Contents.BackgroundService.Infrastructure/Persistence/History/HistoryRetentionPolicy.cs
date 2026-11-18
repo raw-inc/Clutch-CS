@@ -99,7 +99,7 @@ public static class HistoryRetentionPolicy
         {
             return ERetentionCategory.WorkflowVersions;
         }
-        if (scope?.StartsWith(requests, StringComparison.Ordinal) == true)
+        if (scope?.StartsWith(requests, StringComparison.Ordinal) == true || scope?.StartsWith(Receipts.BoundedRequestReceipts.Prefix, StringComparison.Ordinal) == true)
         {
             return ERetentionCategory.RequestHistory;
         }

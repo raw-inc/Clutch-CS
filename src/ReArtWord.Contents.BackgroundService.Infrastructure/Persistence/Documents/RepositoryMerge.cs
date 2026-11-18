@@ -46,32 +46,11 @@ internal static class RepositoryMerge
         string previousState = RepositoryStateVersion.HashEntries(document.Entries.Values.Concat(document.Conflicts));
         RepositoryCausality.Import(document, snapshot);
         RepositoryLegacyAncestry.Remember(document, snapshot.LegacyEntries ?? []);
-        foreach (RetiredHistoryKey key in snapshot.RetiredKeys ?? [])
-        {
-            if (string.IsNullOrWhiteSpace(key.Scope) || string.IsNullOrWhiteSpace(key.Key) || !RepositoryHistoryGuard.IsSingleUse(key.Scope))
-            {
-                throw new InvalidDataException("失効した履歴の種類またはキーが不正です。");
-            }
-            if (DurableRepository.IsShared(key.Scope))
-            {
-                (document.History ??= new()).RetiredKeys.Add(DurableRepository.GetAddress(key.Scope, key.Key));
-            }
-        }
-        if (snapshot.HistoryBoundary is { } boundary)
-        {
-            RepositoryHistoryGuard.Merge(document, boundary);
-        }
-        foreach (RetiredOperation retired in snapshot.RetiredOperations ?? [])
-        {
-            if (retired.Shared)
-            {
-                (document.History ??= new()).RetiredOperations[retired.Id] = retired;
-            }
-        }
+        RepositoryHistoryGuard.Import(document, snapshot);
         foreach (DurableReceipt receipt in snapshot.Receipts)
         {
             if (receipt.Entries.All(entry => DurableRepository.IsShared(entry.Scope))
-                && RepositoryHistoryGuard.Expired(receipt.OperationId, RepositoryHistoryGuard.Read(document), document.History?.RetiredOperations.GetValueOrDefault(receipt.OperationId)) is null)
+                && RepositoryHistoryGuard.FindExpired(document, receipt.OperationId) is null)
             {
                 document.Receipts.TryAdd(receipt.OperationId, receipt);
             }
@@ -84,7 +63,7 @@ internal static class RepositoryMerge
                 continue;
             }
             string address = DurableRepository.GetAddress(incoming.Scope, incoming.Key);
-            if (document.History?.RetiredKeys.Contains(address) == true)
+            if (RepositoryHistoryGuard.IsKnownRetiredKey(document, incoming.Scope, incoming.Key))
             {
                 continue;
             }
@@ -161,7 +140,7 @@ internal static class RepositoryMerge
         {
             return;
         }
-        bool expired = retired is null && RepositoryHistoryGuard.Expired(id, RepositoryHistoryGuard.Read(document)) is not null
+        bool expired = retired is null && RepositoryHistoryGuard.FindExpired(document, id) is not null
             && prepared.Mutations.All(mutation => mutation.CausalVersion is not null);
         string aborted = "Persistence.Aborted";
         if (retired?.Outcome == EOutcome.Failed && string.Equals(retired.Reason, aborted, StringComparison.Ordinal))
@@ -295,7 +274,7 @@ internal static class RepositoryMerge
         string fingerprint = ContractJson.Hash(new { scope, key, expectedVersions, value });
         if (document.Receipts.TryGetValue(operationId, out DurableReceipt? previous))
         {
-            if (string.Equals(previous.Fingerprint, fingerprint, StringComparison.Ordinal))
+            if (RepositoryHistoryGuard.HasUnknownContent(previous) || string.Equals(previous.Fingerprint, fingerprint, StringComparison.Ordinal))
             {
                 return previous;
             }

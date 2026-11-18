@@ -331,7 +331,7 @@ public sealed class FileTransactionService : IFileTransactionDispatcher, IDispos
         {
             return await cluster.ExecuteAsync(request, cancellationToken).ConfigureAwait(false);
         }
-        ClusterRequest command = new(request.Id, "node.execute", request.TargetPeerId, request.TargetInstanceId, request.ExpiresAt, NodeValue.FromObject(request));
+        ClusterRequest command = new(request.DeliveryId, "node.execute", request.TargetPeerId, request.TargetInstanceId, request.ExpiresAt, NodeValue.FromObject(request));
         ClusterRequestStatus status = await cluster.QueryRequestAsync(command, cancellationToken).ConfigureAwait(false);
         return status.Response?.Value?.Json.Deserialize<NodeResult>() ?? NodeResult.Failure(status.Reason ?? "File.ExecutionUnconfirmed", "元の実行結果を確認できません。", EOutcome.Unknown);
     }
@@ -342,7 +342,7 @@ public sealed class FileTransactionService : IFileTransactionDispatcher, IDispos
     {
         foreach (RemoteExecutionRequest request in operation.Request.Targets)
         {
-            ClusterRequestStatus status = await cluster.QueryRequestAsync(new ClusterRequest(request.Id, "node.execute", request.TargetPeerId, request.TargetInstanceId, request.ExpiresAt, NodeValue.FromObject(request)), cancellationToken).ConfigureAwait(false);
+            ClusterRequestStatus status = await cluster.QueryRequestAsync(new ClusterRequest(request.DeliveryId, "node.execute", request.TargetPeerId, request.TargetInstanceId, request.ExpiresAt, NodeValue.FromObject(request)), cancellationToken).ConfigureAwait(false);
             if (status.Running || status.Response?.Value is null)
             {
                 return false;

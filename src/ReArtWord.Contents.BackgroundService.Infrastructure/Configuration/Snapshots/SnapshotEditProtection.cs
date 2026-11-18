@@ -103,7 +103,7 @@ internal sealed class SnapshotEditProtection(IDurableRepository repository, Peer
         }
         if (mutations.Count != 0)
         {
-            DurableReceipt receipt = await cluster.ReplicateAsync(Guid.CreateVersion7(), mutations, cancellationToken).ConfigureAwait(false);
+            DurableReceipt receipt = await cluster.ReplicateAsync(OperationIdentity.Create(), mutations, cancellationToken).ConfigureAwait(false);
             return new ConfigurationPhaseResult(receipt.Outcome, receipt.Reason);
         }
         return new ConfigurationPhaseResult(EOutcome.Succeeded);

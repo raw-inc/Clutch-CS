@@ -106,7 +106,7 @@ internal sealed class ClusterUpdateLauncher : IUpdateScheduleLauncher
             await JsonSerializer.SerializeAsync(output, job, ContractJson.Options, cancellationToken).ConfigureAwait(false);
         }
         string scope = "peer:" + runtime.Cluster.LocalPeerId + ":update-launch";
-        DurableReceipt reserved = await runtime.Repository.ApplyBatchAsync(Guid.CreateVersion7(), [
+        DurableReceipt reserved = await runtime.Repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [
             new DurableMutation(scope, request.OperationId.ToString("N"), null, NodeValue.FromObject(ContractJson.Hash(job))),
             new DurableMutation("peer:" + runtime.Cluster.LocalPeerId + ":update-hook-owner", request.OperationId.ToString("N"), null, NodeValue.FromObject(request.OperationId)),
         ], cancellationToken).ConfigureAwait(false);

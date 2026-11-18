@@ -130,9 +130,9 @@ internal sealed class RepositorySynchronization : IAsyncDisposable
         bool pending = repository is IPreparedOperations preparations && (await preparations.ReadPreparedIdsAsync(Guid.Empty, 1, cancellationToken).ConfigureAwait(false)).Count != 0;
         if (options.MaximumMessageBytes < SyncInventory.MinimumMessageBytes)
         {
-            return new(HistoryRetention: true, StagedRecovery: RecoveryRepository.Create(repository) is not null, Pending: pending, Clock: cluster.AdmissionClock.Capture());
+            return new(HistoryRetention: true, StagedRecovery: RecoveryRepository.Create(repository) is not null, Pending: pending, Clock: cluster.AdmissionClock.Capture(), RetirementRanges: true);
         }
-        return new(Version: SyncInventoryExchange.Protocol, HistoryRetention: true, StagedRecovery: RecoveryRepository.Create(repository) is not null, Pending: pending, Clock: cluster.AdmissionClock.Capture());
+        return new(Version: SyncInventoryExchange.Protocol, HistoryRetention: true, StagedRecovery: RecoveryRepository.Create(repository) is not null, Pending: pending, Clock: cluster.AdmissionClock.Capture(), RetirementRanges: true);
     }
 
     /// <summary>対応する先行状態だけを受け付け、旧同期や背景本文と混同しません。</summary>
@@ -229,9 +229,9 @@ internal sealed class RepositorySynchronization : IAsyncDisposable
                 {
                     throw new SyncFailureException("Sync.PendingOperations");
                 }
-                return new(await exports.CreateReplyAsync(peer, current, SyncManifest.CurrentPhase, manifest.Timing, lifetime, cancellationToken).ConfigureAwait(false), Conflict: conflict);
+                return new(await exports.CreateReplyAsync(peer, current, SyncManifest.CurrentPhase, manifest.Timing, lifetime, manifest.RetirementRanges, cancellationToken).ConfigureAwait(false), Conflict: conflict);
             }
-            return new(await exports.CreateReplyAsync(peer, null, null, manifest.Timing, lifetime, cancellationToken).ConfigureAwait(false), Conflict: conflict);
+            return new(await exports.CreateReplyAsync(peer, null, null, manifest.Timing, lifetime, manifest.RetirementRanges, cancellationToken).ConfigureAwait(false), Conflict: conflict);
         }
         catch (Exception exception) when (SyncFailureException.IsExpected(exception))
         {

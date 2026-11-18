@@ -74,6 +74,10 @@ internal static class SyncInventory
         {
             buckets[Bucket("entry:" + key.Scope + "\0" + key.Key)].Add("retired-key:" + ContractJson.Hash(key));
         }
+        foreach (Persistence.History.RetiredIdRange range in snapshot.RetiredRanges ?? [])
+        {
+            buckets[RetiredRangeBucket(range)].Add("retired-range:" + ContractJson.Hash(range));
+        }
         return buckets.AsValueEnumerable().Select(bucket => ContractJson.Hash(bucket.AsValueEnumerable().Order(StringComparer.Ordinal).ToArray())).ToArray();
     }
 
@@ -92,7 +96,7 @@ internal static class SyncInventory
     internal static RepositorySnapshot Metadata(RepositorySnapshot snapshot) => snapshot with
     {
         Entries = [], Receipts = [], OperationOwners = Empty(snapshot.OperationOwners), CausalEntries = Empty(snapshot.CausalEntries),
-        LegacyEntries = Empty(snapshot.LegacyEntries), RetiredOperations = Empty(snapshot.RetiredOperations), RetiredKeys = Empty(snapshot.RetiredKeys),
+        LegacyEntries = Empty(snapshot.LegacyEntries), RetiredOperations = Empty(snapshot.RetiredOperations), RetiredKeys = Empty(snapshot.RetiredKeys), RetiredRanges = Empty(snapshot.RetiredRanges),
         HistoryBoundary = snapshot.HistoryBoundary is null ? null
                                                            : ContractJson.Copy(snapshot.HistoryBoundary),
         ProtectedHistory = snapshot.ProtectedHistory?.ToArray(), PendingOperations = snapshot.PendingOperations?.ToArray(),
@@ -126,6 +130,7 @@ internal static class SyncInventory
             LegacyEntries = snapshot.LegacyEntries?.Where(entry => changed[Bucket("entry:" + entry.Scope + "\0" + entry.Key)]).ToArray(),
             RetiredOperations = snapshot.RetiredOperations?.Where(operation => changed[ReceiptBucket(operation.Id)]).ToArray(),
             RetiredKeys = snapshot.RetiredKeys?.Where(key => changed[Bucket("entry:" + key.Scope + "\0" + key.Key)]).ToArray(),
+            RetiredRanges = snapshot.RetiredRanges?.Where(range => changed[RetiredRangeBucket(range)]).ToArray(),
         };
     }
 
@@ -140,6 +145,10 @@ internal static class SyncInventory
     /// <summary>操作結果と論理所有先を分けずに転送します。</summary>
     /// <returns>元操作の区分です。</returns>
     internal static int ReceiptBucket(Guid id) => Bucket("receipt:" + id.ToString("N"));
+
+    /// <summary>区間が結合・分割されても、同じ発行元と用途を同じ同期区分で照合します。</summary>
+    /// <returns>区間の両端に依存しない区分です。</returns>
+    internal static int RetiredRangeBucket(Persistence.History.RetiredIdRange range) => Bucket("retired-range:" + range.Bucket);
 
     /// <summary>実行環境で変化する文字列hashを区分選択に使用しません。</summary>
     /// <returns>SHA-256の先頭バイトです。</returns>

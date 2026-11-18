@@ -93,9 +93,6 @@ internal static class SqliteHistoryRetirement
         RepositoryDocument metadata = new();
         Dictionary<ERetentionCategory, DateTimeOffset> deleted = [];
         SqliteHistoryGuard.Load(session, metadata);
-        int maximumDays = Enum.GetValues<ERetentionCategory>().Where(category => !HistoryRetentionPolicy.IsLog(category)).Select(category => policy.Window(category).TotalDays ?? 0).DefaultIfEmpty(30).Max();
-        DateTimeOffset operationBefore = HistoryRetentionPolicy.Boundary(policy, now).AddDays(-Math.Max(1, maximumDays));
-        RepositoryHistoryGuard.Merge(metadata, new(new Dictionary<ERetentionCategory, DateTimeOffset>(), new Dictionary<ERetentionCategory, DateTimeOffset>(), operationBefore, now));
         foreach (HistoryRow row in rows)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -116,7 +113,7 @@ internal static class SqliteHistoryRetirement
                     deleted[category] = position;
                 }
             }
-            Retire(session, row, operationBefore);
+            Retire(session, row);
             query.Parameters.Clear();
             query.CommandText = """
                 DELETE FROM history_index WHERE kind=$kind AND key=$key;
@@ -131,7 +128,7 @@ internal static class SqliteHistoryRetirement
         if (removed != 0)
         {
             ReplaceBlock(session, block, keep);
-            RepositoryHistoryGuard.Merge(metadata, new(new Dictionary<ERetentionCategory, DateTimeOffset>(), deleted, operationBefore, now));
+            RepositoryHistoryGuard.Merge(metadata, new(new Dictionary<ERetentionCategory, DateTimeOffset>(), deleted, default, now, RetirementFormat: 1));
             session.Save(metadata);
             query.CommandText = "UPDATE repository_identity SET version=MAX(version,3)";
             query.ExecuteNonQuery();
@@ -140,7 +137,7 @@ internal static class SqliteHistoryRetirement
         return removed;
     }
 
-    /// <summary>時刻付きIDの個別マーカーを単調な受付境界へ畳み込みます。</summary>
+    /// <summary>移行前に既に失効した範囲の重複記録だけを除き、旧境界を進めません。</summary>
     private static void PruneMarkers(SqliteSession session)
     {
         RepositoryDocument metadata = new();
@@ -184,22 +181,27 @@ internal static class SqliteHistoryRetirement
         return false;
     }
 
-    /// <summary>時刻付き操作は単調な境界、旧IDは小さい索引で再実行を拒否します。</summary>
-    internal static void Retire(SqliteSession session, HistoryRow row, DateTimeOffset floor)
+    /// <summary>本文を削除したIDだけを区間または個別索引に残し、未使用のIDを失効させません。</summary>
+    internal static void Retire(SqliteSession session, HistoryRow row)
     {
         using SqliteCommand command = session.HistoryCommand();
         string receiptKind = "receipt";
         if (string.Equals(row.Kind, receiptKind, StringComparison.Ordinal))
         {
             DurableReceipt receipt = JsonSerializer.Deserialize<DurableReceipt>(row.Payload)!;
-            if (OperationIdentity.TryGetIssuedAt(receipt.OperationId, out DateTimeOffset issued) && issued < floor)
+            bool shared = HistoryReceiptScope.Shared(session, receipt);
+            if (receipt.Outcome == EOutcome.Succeeded && receipt.Entries.Count != 0)
             {
+                SqliteRetiredRanges.Add(session, RetiredIdRange.Operation(receipt.OperationId, shared));
+                command.CommandText = "DELETE FROM retired_operations WHERE id=$id";
+                command.Parameters.AddWithValue("$id", row.Key);
+                command.ExecuteNonQuery();
                 return;
             }
             command.CommandText = "INSERT INTO retired_operations(id,fingerprint,shared,outcome,reason) VALUES($id,$fingerprint,$shared,$outcome,$reason) ON CONFLICT(id) DO NOTHING";
             command.Parameters.AddWithValue("$id", row.Key);
             command.Parameters.AddWithValue("$fingerprint", receipt.Fingerprint);
-            command.Parameters.AddWithValue("$shared", HistoryReceiptScope.Shared(session, receipt));
+            command.Parameters.AddWithValue("$shared", shared);
             command.Parameters.AddWithValue("$outcome", (int)receipt.Outcome);
             command.Parameters.AddWithValue("$reason", (object?)receipt.Reason ?? DBNull.Value);
             command.ExecuteNonQuery();
@@ -223,10 +225,16 @@ internal static class SqliteHistoryRetirement
         command.Parameters.AddWithValue("$causal", DurableRepository.GetAddress(RepositoryCausality.Scope, RepositoryCausality.EntryKey(entry.Scope, entry.Key)));
         command.Parameters.AddWithValue("$legacy", DurableRepository.GetAddress(RepositoryCausality.Scope, "legacy:" + DurableRepository.GetAddress(entry.Scope, entry.Key)));
         command.ExecuteNonQuery();
-        if (HistoryRetentionPolicy.Category(row.Kind, row.Scope) is ERetentionCategory.RequestHistory or ERetentionCategory.OperationHistory or ERetentionCategory.ExecutionHistory or ERetentionCategory.Snapshots)
+        if (HistoryRetentionPolicy.Category(row.Kind, row.Scope) is ERetentionCategory.RequestHistory or ERetentionCategory.OperationHistory or ERetentionCategory.ExecutionHistory or ERetentionCategory.Snapshots
+            && !BoundedRequestReceipts.IsBounded(entry.Scope, entry.Key))
         {
-            if (RepositoryHistoryGuard.TryOperationId(entry.Key, out Guid id) && OperationIdentity.TryGetIssuedAt(id, out DateTimeOffset issued) && issued < floor)
+            if (RetiredIdRange.Key(entry.Scope, entry.Key) is { } range)
             {
+                SqliteRetiredRanges.Add(session, range);
+                command.CommandText = "DELETE FROM retired_keys WHERE scope=$scope AND key=$key";
+                command.Parameters.AddWithValue("$scope", entry.Scope);
+                command.Parameters.AddWithValue("$key", entry.Key);
+                command.ExecuteNonQuery();
                 return;
             }
             command.CommandText = "INSERT INTO retired_keys(scope,key) VALUES($scope,$key) ON CONFLICT(scope,key) DO NOTHING";

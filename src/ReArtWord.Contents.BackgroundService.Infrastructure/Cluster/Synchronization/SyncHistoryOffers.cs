@@ -64,7 +64,7 @@ internal sealed class SyncHistoryOffers(PeerCluster cluster, RecoveryRepository 
         {
             IReadOnlyList<RecoveryRecordBody> bodies = await store.ReadBodiesAsync(request.Receipts, cancellationToken).ConfigureAwait(false);
             RepositorySnapshot snapshot = new([], [], RecoveredHistory: bodies);
-            return new(await exports.CreateReplyAsync(target, snapshot, SyncManifest.HistoryPhase, request.Timing, lifetime, cancellationToken).ConfigureAwait(false));
+            return new(await exports.CreateReplyAsync(target, snapshot, SyncManifest.HistoryPhase, request.Timing, lifetime, false, cancellationToken).ConfigureAwait(false));
         }
         catch (Exception error) when (SyncFailureException.IsExpected(error))
         {

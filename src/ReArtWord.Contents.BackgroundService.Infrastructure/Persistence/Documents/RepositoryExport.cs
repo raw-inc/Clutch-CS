@@ -13,7 +13,7 @@ internal static class RepositoryExport
     internal static RepositorySnapshot Create(RepositoryDocument document, bool includeReceipts = true)
     {
         DurableEntry[] entries = document.Entries.Values.Concat(document.Conflicts).Where(entry => DurableRepository.IsShared(entry.Scope)
-            && document.History?.RetiredKeys.Contains(DurableRepository.GetAddress(entry.Scope, entry.Key)) != true).Distinct().ToArray();
+            && !RepositoryHistoryGuard.IsKnownRetiredKey(document, entry.Scope, entry.Key)).Distinct().ToArray();
         IReadOnlyList<DurableReceipt> receipts = [];
         if (includeReceipts)
         {
@@ -25,6 +25,7 @@ internal static class RepositoryExport
             ProtectedHistory: entries.Where(entry => entry.Value?.Json.ValueKind == JsonValueKind.Object && HistoryRetentionPolicy.Category("entry", entry.Scope) is { } category
                 && JsonHistoryEligibility.Protected(document, entry, category)).Select(entry => DurableRepository.GetAddress(entry.Scope, entry.Key) + entry.Version).ToArray(),
             RetiredKeys: RepositoryHistoryGuard.ExportKeys(document),
-            PendingOperations: document.Prepared.Values.Where(batch => batch.Mutations.Any(mutation => DurableRepository.IsShared(mutation.Scope))).Select(batch => batch.OperationId).ToArray());
+            PendingOperations: document.Prepared.Values.Where(batch => batch.Mutations.Any(mutation => DurableRepository.IsShared(mutation.Scope))).Select(batch => batch.OperationId).ToArray(),
+            RetiredRanges: document.History?.RetiredRanges?.Export());
     }
 }

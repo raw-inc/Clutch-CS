@@ -321,7 +321,7 @@ internal sealed class LogStore : IDisposable
     {
         string key = segment.Id.ToString("N");
         DurableEntry? previous = await repository.ReadAsync(scope, key, cancellationToken).ConfigureAwait(false);
-        DurableReceipt receipt = await repository.ApplyBatchAsync(Guid.CreateVersion7(), [new(scope, key, previous?.Version, null)], cancellationToken).ConfigureAwait(false);
+        DurableReceipt receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new(scope, key, previous?.Version, null)], cancellationToken).ConfigureAwait(false);
         if (receipt.Outcome != EOutcome.Succeeded)
         {
             throw new IOException("log.index.delete.unavailable");

@@ -25,8 +25,6 @@ internal static class JsonHistoryMaintenance
         Dictionary<ERetentionCategory, DateTimeOffset> raw = [];
         Dictionary<ERetentionCategory, DateTimeOffset> deletedHot = [];
         int hotRemoved = 0;
-        int maximumDays = Enum.GetValues<ERetentionCategory>().Where(category => !HistoryRetentionPolicy.IsLog(category)).Max(category => policy.Window(category).TotalDays ?? 0);
-        DateTimeOffset floor = HistoryRetentionPolicy.Boundary(policy, now).AddDays(-Math.Max(1, maximumDays));
         foreach (HistoryRow row in rows)
         {
             string address = JsonHistoryAccess.Address(row.Kind, row.Key);
@@ -92,7 +90,7 @@ internal static class JsonHistoryMaintenance
             }
             if (tooLarge)
             {
-                Retire(document, row, deadline.Category, floor);
+                Retire(document, row, deadline.Category);
                 history.Deadlines.Remove(address);
                 deletedHot[deadline.Category] = date.Value.AddSeconds(1);
                 hotRemoved++;
@@ -108,7 +106,7 @@ internal static class JsonHistoryMaintenance
         }
         if (hotRemoved != 0)
         {
-            RepositoryHistoryGuard.Merge(document, new(raw, deletedHot, floor, now));
+            RepositoryHistoryGuard.Merge(document, new(raw, deletedHot, default, now, RetirementFormat: 1));
         }
         int deleted = Delete(document, policy, now, maximum);
         JsonHistoryCheckpoints.Maintain(history, policy, now);
@@ -121,8 +119,6 @@ internal static class JsonHistoryMaintenance
     {
         RepositoryHistory history = document.History!;
         DateTimeOffset boundary = HistoryRetentionPolicy.Boundary(policy, now);
-        int maximumDays = Enum.GetValues<ERetentionCategory>().Where(category => !HistoryRetentionPolicy.IsLog(category)).Max(category => policy.Window(category).TotalDays ?? 0);
-        DateTimeOffset floor = boundary.AddDays(-Math.Max(1, maximumDays));
         int deleted = 0;
         Dictionary<ERetentionCategory, DateTimeOffset> deletedBefore = [];
         foreach ((string address, JsonHistoryRecord record) in history.Archives.ToArray())
@@ -139,7 +135,7 @@ internal static class JsonHistoryMaintenance
             {
                 continue;
             }
-            Retire(document, row, deadline.Category, floor);
+            Retire(document, row, deadline.Category);
             if (deletedBefore.GetValueOrDefault(deadline.Category) < deadline.RecordedAt.AddSeconds(1))
             {
                 deletedBefore[deadline.Category] = deadline.RecordedAt.AddSeconds(1);
@@ -153,7 +149,7 @@ internal static class JsonHistoryMaintenance
         }
         if (deleted != 0)
         {
-            RepositoryHistoryGuard.Merge(document, new(new Dictionary<ERetentionCategory, DateTimeOffset>(), deletedBefore, floor, now));
+            RepositoryHistoryGuard.Merge(document, new(new Dictionary<ERetentionCategory, DateTimeOffset>(), deletedBefore, default, now, RetirementFormat: 1));
         }
         DateTimeOffset retiredBefore = RepositoryHistoryGuard.Read(document)?.OperationBefore ?? default;
         foreach (Guid id in history.RetiredOperations.Keys.Where(id => OperationIdentity.TryGetIssuedAt(id, out DateTimeOffset issued) && issued < retiredBefore).ToArray())
@@ -182,7 +178,7 @@ internal static class JsonHistoryMaintenance
     }
 
     /// <summary>本文を持たずに旧IDの再使用だけを拒否します。</summary>
-    private static void Retire(RepositoryDocument document, HistoryRow row, ERetentionCategory category, DateTimeOffset floor)
+    private static void Retire(RepositoryDocument document, HistoryRow row, ERetentionCategory category)
     {
         RepositoryHistory history = document.History!;
         string receiptKind = "receipt";
@@ -190,9 +186,16 @@ internal static class JsonHistoryMaintenance
         {
             DurableReceipt receipt = JsonSerializer.Deserialize<DurableReceipt>(row.Payload)!;
             history.Events.Remove(receipt.OperationId);
-            if (!OperationIdentity.TryGetIssuedAt(receipt.OperationId, out DateTimeOffset issued) || floor <= issued)
+            bool shared = HistoryReceiptScope.Shared(document, receipt);
+            if (receipt.Outcome == EOutcome.Succeeded && receipt.Entries.Count != 0)
             {
-                history.RetiredOperations.TryAdd(receipt.OperationId, new(receipt.OperationId, receipt.Fingerprint, HistoryReceiptScope.Shared(document, receipt), receipt.Outcome, receipt.Reason));
+                (history.RetiredRanges ??= new()).Add(RetiredIdRange.Operation(receipt.OperationId, shared));
+                history.RetiredOperations.Remove(receipt.OperationId);
+            }
+            else
+            {
+                // 中止や空の確定結果は、遅れて戻った予約の照合に結果と指紋が必要です。
+                history.RetiredOperations.TryAdd(receipt.OperationId, new(receipt.OperationId, receipt.Fingerprint, shared, receipt.Outcome, receipt.Reason));
             }
         }
         else
@@ -209,10 +212,18 @@ internal static class JsonHistoryMaintenance
                         owner.Operation.Scopes.All(DurableRepository.IsShared), result.Outcome, result.Reason));
                 }
             }
-            if (category is ERetentionCategory.RequestHistory or ERetentionCategory.OperationHistory or ERetentionCategory.ExecutionHistory or ERetentionCategory.Snapshots && (!RepositoryHistoryGuard.TryOperationId(entry.Key, out Guid id)
-                || !OperationIdentity.TryGetIssuedAt(id, out DateTimeOffset issued) || floor <= issued))
+            if (category is ERetentionCategory.RequestHistory or ERetentionCategory.OperationHistory or ERetentionCategory.ExecutionHistory or ERetentionCategory.Snapshots
+                && !BoundedRequestReceipts.IsBounded(entry.Scope, entry.Key))
             {
-                history.RetiredKeys.Add(row.Key);
+                if (RetiredIdRange.Key(entry.Scope, entry.Key) is { } range)
+                {
+                    (history.RetiredRanges ??= new()).Add(range);
+                    history.RetiredKeys.Remove(row.Key);
+                }
+                else
+                {
+                    history.RetiredKeys.Add(row.Key);
+                }
             }
             document.Entries.Remove(DurableRepository.GetAddress(RepositoryCausality.Scope, RepositoryCausality.EntryKey(entry.Scope, entry.Key)));
             document.Entries.Remove(DurableRepository.GetAddress(RepositoryCausality.Scope, "legacy:" + DurableRepository.GetAddress(entry.Scope, entry.Key)));

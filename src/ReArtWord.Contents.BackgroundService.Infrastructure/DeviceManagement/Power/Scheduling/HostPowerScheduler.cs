@@ -174,7 +174,7 @@ public sealed class HostPowerScheduler
         {
             return;
         }
-        await cluster.ReplicateAsync(Guid.CreateVersion7(), [new(HostPowerScheduleStore.WakeProfiles, hostId, previous?.Version, value)], cancellationToken).ConfigureAwait(false);
+        await cluster.ReplicateAsync(OperationIdentity.Create(), [new(HostPowerScheduleStore.WakeProfiles, hostId, previous?.Version, value)], cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>一回の障害を他Hostの予定へ波及させず、送信済みの再試行はしません。</summary>

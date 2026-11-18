@@ -41,6 +41,7 @@ internal static class SqliteHistorySchema
                   AND f.operation_fingerprint IS NOT NULL AND f.outcome IS NOT NULL);
             """, connection, transaction);
         command.ExecuteNonQuery();
+        SqliteRetiredRanges.Initialize(connection, transaction);
         Recovery.RecoveryRecordLedger.Initialize(connection, transaction);
         LegacyHistoryFormat.Initialize(connection, transaction);
     }

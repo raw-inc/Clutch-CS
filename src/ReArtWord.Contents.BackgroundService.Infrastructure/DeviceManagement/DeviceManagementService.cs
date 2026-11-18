@@ -124,7 +124,7 @@ public sealed class DeviceManagementService : IDisposable
             }
             DeviceChangeResult pending = new(request.OperationId, EOutcome.Unknown, "Device.Started");
             DurableMutation mutation = new(scope, request.OperationId.ToString("D"), null, NodeValue.FromObject(new DeviceOperationRecord(fingerprint, pending)));
-            DurableReceipt started = await repository.ApplyBatchAsync(Guid.CreateVersion7(), [mutation], cancellationToken).ConfigureAwait(false);
+            DurableReceipt started = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [mutation], cancellationToken).ConfigureAwait(false);
             if (started.Outcome != EOutcome.Succeeded)
             {
                 return new(request.OperationId, EOutcome.NotExecuted, "Device.RecordUnavailable");

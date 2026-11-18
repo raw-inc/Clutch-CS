@@ -134,11 +134,11 @@ public sealed class NodeStateSnapshotParticipant : IRuntimeSnapshotParticipant
         string sharedPrefix = "workflow:";
         if (scope.StartsWith(sharedPrefix, StringComparison.Ordinal))
         {
-            receipt = await cluster.ReplicateAsync(Guid.CreateVersion7(), mutations, cancellationToken).ConfigureAwait(false);
+            receipt = await cluster.ReplicateAsync(OperationIdentity.Create(mutations.All(mutation => DurableRepository.IsShared(mutation.Scope))), mutations, cancellationToken).ConfigureAwait(false);
         }
         else
         {
-            receipt = await repository.ApplyBatchAsync(Guid.CreateVersion7(), mutations, cancellationToken).ConfigureAwait(false);
+            receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(mutations.All(mutation => DurableRepository.IsShared(mutation.Scope))), mutations, cancellationToken).ConfigureAwait(false);
         }
         return new ConfigurationPhaseResult(receipt.Outcome, receipt.Reason);
     }

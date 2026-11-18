@@ -20,6 +20,7 @@ namespace ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Docume
 /// <param name="DeferredHistory">段階同期で、本文を背景取得する確定済み操作と過去保存版の存在証明です。</param>
 /// <param name="DeferredSourcePeer">背景本文の取得元です。受信時に通信上の送信Peerと照合します。</param>
 /// <param name="RecoveredHistory">背景転送だけで使用する、有限の元本文です。</param>
+/// <param name="RetiredRanges">実際に退役した共有IDの区間です。未使用の欠番は含みません。</param>
 public sealed record RepositorySnapshot(IReadOnlyList<DurableEntry> Entries, IReadOnlyList<DurableReceipt> Receipts,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<PersistenceOperationOwner>? OperationOwners = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<RepositoryCausalEntry>? CausalEntries = null,
@@ -31,4 +32,5 @@ public sealed record RepositorySnapshot(IReadOnlyList<DurableEntry> Entries, IRe
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<Guid>? PendingOperations = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<Recovery.RecoveryRecord>? DeferredHistory = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? DeferredSourcePeer = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<Recovery.RecoveryRecordBody>? RecoveredHistory = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<Recovery.RecoveryRecordBody>? RecoveredHistory = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<RetiredIdRange>? RetiredRanges = null);

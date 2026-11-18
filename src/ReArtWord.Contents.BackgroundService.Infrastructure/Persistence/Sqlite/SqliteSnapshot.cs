@@ -22,8 +22,13 @@ internal static class SqliteSnapshot
     {
         RetiredHistoryKey[] retired = SqliteHistoryGuard.ExportKeys(session);
         HashSet<(string Scope, string Key)> retiredKeys = retired.Select(key => (key.Scope, key.Key)).ToHashSet();
+        RetiredRangeIndex ranges = new();
+        foreach (RetiredIdRange range in SqliteRetiredRanges.Export(session))
+        {
+            ranges.Add(range);
+        }
         DurableEntry[] entries = session.List<DurableEntry>("entry", sharedOnly: true).Concat(session.List<DurableEntry>("conflict", sharedOnly: true))
-            .Where(entry => DurableRepository.IsShared(entry.Scope) && !retiredKeys.Contains((entry.Scope, entry.Key))).Distinct().ToArray();
+            .Where(entry => DurableRepository.IsShared(entry.Scope) && !retiredKeys.Contains((entry.Scope, entry.Key)) && !ranges.ContainsKey(entry.Scope, entry.Key)).Distinct().ToArray();
         RepositoryDocument metadata = new();
         session.LoadPrepared(metadata);
         SqliteCausality.Load(session, metadata, entries.Select(entry => (entry.Scope, entry.Key)));
@@ -39,7 +44,8 @@ internal static class SqliteSnapshot
             ProtectedHistory: entries.Where(entry => entry.Value?.Json.ValueKind == System.Text.Json.JsonValueKind.Object
                 && HistoryRetentionPolicy.Category("entry", entry.Scope) is { } category && RetainedHistoryEligibility.Protected(session, entry, category))
                 .Select(entry => DurableRepository.GetAddress(entry.Scope, entry.Key) + entry.Version).ToArray(), RetiredKeys: retired,
-            PendingOperations: metadata.Prepared.Values.Where(batch => batch.Mutations.Any(mutation => DurableRepository.IsShared(mutation.Scope))).Select(batch => batch.OperationId).ToArray());
+            PendingOperations: metadata.Prepared.Values.Where(batch => batch.Mutations.Any(mutation => DurableRepository.IsShared(mutation.Scope))).Select(batch => batch.OperationId).ToArray(),
+            RetiredRanges: ranges.Export());
     }
 
     /// <summary>既存の祖先判定、操作ID衝突、混在操作と予約解放を維持して必要行を集めます。</summary>
@@ -77,6 +83,7 @@ internal static class SqliteSnapshot
         }
         SqliteReceipts.LoadReconciliationEvidence(session, document, snapshot.Receipts, cancellationToken);
         SqliteHistoryGuard.Load(session, document);
+        SqliteRetiredRanges.Load(session, document);
         foreach (RetiredHistoryKey key in SqliteHistoryGuard.ExportKeys(session))
         {
             (document.History ??= new()).RetiredKeys.Add(DurableRepository.GetAddress(key.Scope, key.Key));

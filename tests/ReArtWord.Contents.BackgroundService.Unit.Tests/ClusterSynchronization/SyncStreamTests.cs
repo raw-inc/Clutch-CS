@@ -184,7 +184,7 @@ public sealed class SyncStreamTests
         {
             _ = await peer.Repository.ApplyBatchAsync(Guid.NewGuid(), [new DurableMutation("stream-probe", "value", null, NodeValue.FromObject(new string('x', 5 * 1024 * 1024)))], cancellationToken).ConfigureAwait(false);
             PeerInfo local = peer.Target.GetPeers().Single();
-            return await Exports.CreateAsync(local, false, cancellationToken).ConfigureAwait(false);
+            return await Exports.CreateAsync(local, false, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>作業接続を先に閉じ、保存とUDPを最後に解放します。</summary>

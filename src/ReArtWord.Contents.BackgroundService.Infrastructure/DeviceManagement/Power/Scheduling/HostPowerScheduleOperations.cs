@@ -41,7 +41,7 @@ internal sealed class HostPowerScheduleOperations(PeerCluster cluster, IDurableR
         {
             return null;
         }
-        HostPowerScheduleOccurrence accepted = new(scheduleId, due, Guid.CreateVersion7(), EOutcome.Unknown, "powerSchedule.unconfirmed");
+        HostPowerScheduleOccurrence accepted = new(scheduleId, due, OperationIdentity.Create(), EOutcome.Unknown, "powerSchedule.unconfirmed");
         DurableReceipt result = await cluster.ReplicateAsync(accepted.OperationId,
             [new(HostPowerScheduleStore.Occurrences, key, current?.Version, NodeValue.FromObject(accepted))], cancellationToken).ConfigureAwait(false);
         return result.Outcome == EOutcome.Succeeded ? accepted

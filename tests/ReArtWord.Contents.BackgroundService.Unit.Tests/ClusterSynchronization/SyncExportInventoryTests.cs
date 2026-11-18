@@ -73,7 +73,7 @@ public sealed class SyncExportInventoryTests
         Assert.Equal(EOutcome.Succeeded, (await peer.Repository.ApplyBatchAsync(Guid.NewGuid(), mutations, timeout.Token).ConfigureAwait(true)).Outcome);
         RepositorySnapshot original = await peer.Repository.ExportAsync(timeout.Token).ConfigureAwait(true);
         string[] originalHashes = SyncInventory.Describe(original);
-        SyncManifest manifest = await exports.CreateAsync(local, true, timeout.Token).ConfigureAwait(true);
+        SyncManifest manifest = await exports.CreateAsync(local, true, cancellationToken: timeout.Token).ConfigureAwait(true);
         string[] hashes = Assert.IsType<string[]>(exports.Describe(manifest).Hashes);
         Assert.Equal(originalHashes, hashes);
         hashes[0] = new string('0', 64);

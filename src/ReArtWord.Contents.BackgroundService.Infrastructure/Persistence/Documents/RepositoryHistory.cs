@@ -1,10 +1,18 @@
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.History;
+using System.Text.Json.Serialization;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Documents;
 
 /// <summary>本文削除を有効にした保存先だけが持つ、形式を更新した履歴管理です。</summary>
 internal sealed record RepositoryHistory
 {
+    /// <summary>実際に退役したIDだけをまとめた索引です。旧文書の検査値を変えないよう、移行前は省略します。</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public RetiredRangeIndex? RetiredRanges
+    {
+        get; set;
+    }
+
     /// <summary>時刻を持たない旧操作だけの最小索引です。</summary>
     public Dictionary<Guid, RetiredOperation> RetiredOperations
     {

@@ -13,10 +13,34 @@ internal static class RepositoryHistoryGuard
     internal static string Scope => "peer:repository-history";
     internal static string ExpiredReason => "Persistence.HistoryExpired";
 
+    /// <summary>削除境界しか残っていない結果では、要求内容の一致・不一致を判定できません。</summary>
+    /// <returns>内容の不一致へ読み替えず、再実行を禁止する確認不能を返す必要があるかです。</returns>
+    internal static bool HasUnknownContent(DurableReceipt receipt)
+        => receipt.Outcome == EOutcome.Unknown && string.IsNullOrEmpty(receipt.Fingerprint)
+            && string.Equals(receipt.Reason, ExpiredReason, StringComparison.Ordinal);
+
     /// <summary>全操作共通の削除境界を読みます。</summary>
     /// <returns>保持処理前ならnullです。</returns>
     internal static HistoryRetentionBoundary? Read(RepositoryDocument document)
         => document.Entries.GetValueOrDefault(DurableRepository.GetAddress(Scope, "boundary"))?.Value?.Json.Deserialize<HistoryRetentionBoundary>();
+
+    /// <summary>日時へ畳み込まれた旧境界と、個別に確認した新しい退役記録を区別して照合します。</summary>
+    /// <returns>再実行を拒否する結果、またはまだ退役していないnullです。</returns>
+    internal static DurableReceipt? FindExpired(RepositoryDocument document, Guid id)
+    {
+        RetiredOperation? retired = document.History?.RetiredOperations.GetValueOrDefault(id);
+        if (retired is null && document.History?.RetiredRanges?.ContainsOperation(id) == true)
+        {
+            retired = new(id, string.Empty, false);
+        }
+        return Expired(id, Read(document), retired);
+    }
+
+    /// <summary>受付の用途と元キーに対応する、実際に確認済みの退役だけを照合します。</summary>
+    /// <returns>個別索引または区間に含まれているかです。</returns>
+    internal static bool IsKnownRetiredKey(RepositoryDocument document, string scope, string key)
+        => document.History?.RetiredKeys.Contains(DurableRepository.GetAddress(scope, key)) == true
+            || document.History?.RetiredRanges?.ContainsKey(scope, key) == true;
 
     /// <summary>既知の本文がない場合だけ、期限切れを未実行と混同せず返します。</summary>
     /// <returns>再実行を禁止する確認不能、または新規受付可能なnullです。</returns>
@@ -34,7 +58,7 @@ internal static class RepositoryHistoryGuard
     internal static bool IsRetiredKey(RepositoryDocument document, string scope, string key)
     {
         string address = DurableRepository.GetAddress(scope, key);
-        if (document.History?.RetiredKeys.Contains(address) == true)
+        if (IsKnownRetiredKey(document, scope, key))
         {
             return true;
         }
@@ -43,7 +67,7 @@ internal static class RepositoryHistoryGuard
         {
             return false;
         }
-        return IsSingleUse(scope) && TryOperationId(key, out Guid id) && Expired(id, Read(document)) is not null;
+        return !BoundedRequestReceipts.IsBounded(scope, key) && IsSingleUse(scope) && TryOperationId(key, out Guid id) && Expired(id, Read(document)) is not null;
     }
 
     /// <summary>業務状態の任意キーを、操作IDの時刻で拒否しません。</summary>
@@ -69,12 +93,76 @@ internal static class RepositoryHistoryGuard
         => (document.History?.RetiredKeys.AsEnumerable() ?? []).Select(address => JsonSerializer.Deserialize<string[]>(address)!)
             .Where(parts => DurableRepository.IsShared(parts[0])).Select(parts => new RetiredHistoryKey(parts[0], parts[1])).ToArray();
 
+    /// <summary>共有で得た退役証拠を現在値の取込み前に合成し、削除した操作を未実行へ戻しません。</summary>
+    internal static void Import(RepositoryDocument document, RepositorySnapshot snapshot)
+    {
+        foreach (RetiredIdRange range in snapshot.RetiredRanges ?? [])
+        {
+            if (range is null)
+            {
+                throw new InvalidDataException("退役済みIDの区間が欠けています。");
+            }
+            range.Validate();
+            if (range.Shared)
+            {
+                ((document.History ??= new()).RetiredRanges ??= new()).Add(range);
+            }
+        }
+        foreach (RetiredHistoryKey key in snapshot.RetiredKeys ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(key.Scope) || string.IsNullOrWhiteSpace(key.Key) || !RepositoryHistoryGuard.IsSingleUse(key.Scope))
+            {
+                throw new InvalidDataException("失効した履歴の種類またはキーが不正です。");
+            }
+            if (DurableRepository.IsShared(key.Scope))
+            {
+                if (RetiredIdRange.Key(key.Scope, key.Key) is { } range && range.Identity(range.First).Version == 8)
+                {
+                    ((document.History ??= new()).RetiredRanges ??= new()).Add(range);
+                }
+                else
+                {
+                    (document.History ??= new()).RetiredKeys.Add(DurableRepository.GetAddress(key.Scope, key.Key));
+                }
+            }
+        }
+        if (snapshot.HistoryBoundary is { } boundary)
+        {
+            RepositoryHistoryGuard.Merge(document, boundary);
+        }
+        foreach (RetiredOperation retired in snapshot.RetiredOperations ?? [])
+        {
+            if (retired.Shared)
+            {
+                if (string.IsNullOrEmpty(retired.Fingerprint) && retired.Outcome == EOutcome.Unknown && string.Equals(retired.Reason, RepositoryHistoryGuard.ExpiredReason, StringComparison.Ordinal))
+                {
+                    // 旧版向けに展開した区間が戻ってきても、個別マーカーを再び増やしません。
+                    // 結果や指紋が残る従来の記録は、予約の照合に必要なためそのまま保持します。
+                    ((document.History ??= new()).RetiredRanges ??= new()).Add(RetiredIdRange.Operation(retired.Id, true));
+                }
+                else
+                {
+                    (document.History ??= new()).RetiredOperations[retired.Id] = retired;
+                }
+            }
+        }
+        if (document.History?.RetiredRanges is { Groups.Count: not 0 })
+        {
+            RepositoryHistoryGuard.Merge(document, new(new Dictionary<Contracts.Retention.ERetentionCategory, DateTimeOffset>(),
+                new Dictionary<Contracts.Retention.ERetentionCategory, DateTimeOffset>(), default, default, RetirementFormat: 1));
+        }
+    }
+
     /// <summary>圧縮・削除の実績は過去へ戻さず、同期元の境界と合成します。</summary>
     internal static void Merge(RepositoryDocument document, HistoryRetentionBoundary incoming)
     {
         document.History ??= new();
         ArgumentNullException.ThrowIfNull(incoming.RawBefore);
         ArgumentNullException.ThrowIfNull(incoming.DeletedBefore);
+        if (incoming.RetirementFormat is not (0 or 1))
+        {
+            throw new InvalidDataException("この退役記録の形式は扱えません。");
+        }
         if (incoming.RawBefore.Keys.Concat(incoming.DeletedBefore.Keys).Any(category => !Enum.IsDefined(category)))
         {
             throw new InvalidDataException("保持境界の種類が不正です。");
@@ -90,7 +178,8 @@ internal static class RepositoryHistoryGuard
         {
             deleted[category] = Max(deleted.GetValueOrDefault(category), date);
         }
-        HistoryRetentionBoundary merged = new(raw, deleted, Max(old?.OperationBefore ?? default, incoming.OperationBefore), Max(old?.ObservedAt ?? default, incoming.ObservedAt));
+        HistoryRetentionBoundary merged = new(raw, deleted, Max(old?.OperationBefore ?? default, incoming.OperationBefore), Max(old?.ObservedAt ?? default, incoming.ObservedAt),
+            Math.Max(old?.RetirementFormat ?? 0, incoming.RetirementFormat));
         NodeValue value = NodeValue.FromObject(merged);
         document.Entries[DurableRepository.GetAddress(Scope, "boundary")] = new(Scope, "boundary", ContractJson.Hash(value), value);
     }

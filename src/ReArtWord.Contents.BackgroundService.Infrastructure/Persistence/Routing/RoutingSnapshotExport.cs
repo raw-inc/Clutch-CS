@@ -88,6 +88,7 @@ internal sealed class RoutingSnapshotExport(RepositoryRoutes routes, RoutingStat
         List<RetiredOperation> retired = [];
         List<string> protectedHistory = [];
         List<RetiredHistoryKey> retiredKeys = [];
+        RetiredRangeIndex retiredRanges = new();
         List<Guid> pending = [];
         RepositoryDocument boundary = new();
         Dictionary<Guid, DurableReceipt> receipts = [];
@@ -109,6 +110,10 @@ internal sealed class RoutingSnapshotExport(RepositoryRoutes routes, RoutingStat
             retired.AddRange(snapshot.RetiredOperations ?? []);
             protectedHistory.AddRange(snapshot.ProtectedHistory ?? []);
             retiredKeys.AddRange(snapshot.RetiredKeys ?? []);
+            foreach (RetiredIdRange range in snapshot.RetiredRanges ?? [])
+            {
+                retiredRanges.Add(range);
+            }
             pending.AddRange(snapshot.PendingOperations ?? []);
             if (snapshot.HistoryBoundary is { } retained)
             {
@@ -150,7 +155,8 @@ internal sealed class RoutingSnapshotExport(RepositoryRoutes routes, RoutingStat
             owners.Add(owner?.Operation ?? new(receipt.OperationId, receipt.Fingerprint, receipt.Entries.Select(entry => entry.Scope).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray()));
         }
         return new(entries.Distinct().ToArray(), receipts.Values.ToArray(), owners, causal.Distinct().ToArray(), legacy.Distinct().ToArray(),
-            RepositoryHistoryGuard.Read(boundary), retired.DistinctBy(operation => operation.Id).ToArray(), protectedHistory.Distinct(StringComparer.Ordinal).ToArray(), retiredKeys.Distinct().ToArray(), pending.Distinct().ToArray());
+            RepositoryHistoryGuard.Read(boundary), retired.DistinctBy(operation => operation.Id).ToArray(), protectedHistory.Distinct(StringComparer.Ordinal).ToArray(), retiredKeys.Distinct().ToArray(), pending.Distinct().ToArray(),
+            RetiredRanges: retiredRanges.Export());
     }
 
     /// <summary>同一操作の異なる結果を時刻等で勝手に選びません。</summary>

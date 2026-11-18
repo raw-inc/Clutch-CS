@@ -84,7 +84,7 @@ public sealed class NodeStateStore : INodeStateStore, IObservableNodeStateStore
         {
             expected = old?.Version;
         }
-        DurableReceipt receipt = await repository.ApplyBatchAsync(Guid.CreateVersion7(), [new DurableMutation(scope, key, expected, value)], cancellationToken).ConfigureAwait(false);
+        DurableReceipt receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(DurableRepository.IsShared(scope)), [new DurableMutation(scope, key, expected, value)], cancellationToken).ConfigureAwait(false);
         VersionedState? current = await ReadAsync(scope, key, cancellationToken).ConfigureAwait(false);
         return new StateWriteResult(receipt.Outcome == EOutcome.Succeeded, current, receipt.Outcome, receipt.Reason);
     }

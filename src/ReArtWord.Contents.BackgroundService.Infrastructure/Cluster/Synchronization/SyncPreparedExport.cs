@@ -51,7 +51,7 @@ internal sealed class SyncPreparedExport(SyncExportStore owner, PeerInfo target,
                 ?? throw new InvalidOperationException("Deferred snapshot support changed.");
             SyncLifetime lifetime = new(clock, options.SyncSessionLifetime);
             SyncInventoryRequest request = new(Guid.NewGuid(), SyncInventory.Describe(frozen.Description), clock.GetUtcNow() + options.SyncSessionLifetime,
-                SyncInventory.Metadata(frozen.Description.Snapshot).HistoryBoundary, Timing: owner.Clocks.Create(target.InstanceId, lifetime));
+                SyncInventory.Metadata(frozen.Description.Snapshot).HistoryBoundary, Timing: owner.Clocks.Create(target.InstanceId, lifetime), RetirementRanges: true);
             SyncPreparedExport result = new(owner, target, frozen, request, reservation, lifetime);
             retained = true;
             return result;

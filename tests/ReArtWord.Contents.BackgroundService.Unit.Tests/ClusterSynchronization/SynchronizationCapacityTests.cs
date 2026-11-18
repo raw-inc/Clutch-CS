@@ -48,7 +48,7 @@ public sealed class SynchronizationCapacityTests
             PeerInfo local = Assert.Single(first.GetPeers(), peer => peer.InstanceId == first.LocalInstanceId);
             for (int attempt = 0; attempt < 2; attempt++)
             {
-                SyncFailureException failure = await Assert.ThrowsAsync<SyncFailureException>(() => exports.CreateAsync(local, false, timeout.Token)).ConfigureAwait(true);
+                SyncFailureException failure = await Assert.ThrowsAsync<SyncFailureException>(() => exports.CreateAsync(local, false, cancellationToken: timeout.Token)).ConfigureAwait(true);
                 Assert.Equal(reason, failure.Code);
             }
             Assert.Equal(reason, second.SynchronizationProblem);

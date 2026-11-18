@@ -55,7 +55,7 @@ internal sealed class ProcessScheduleStore(IDurableRepository repository, string
     /// <summary>起動の前に受付位置を確定し、結果不明時には同じ時刻を再送しません。</summary>
     /// <returns>比較保存の成否です。</returns>
     internal async ValueTask<EOutcome> SaveAsync(string application, string schedule, string? version, ProcessScheduleCursor cursor, CancellationToken cancellationToken = default)
-        => (await repository.ApplyBatchAsync(Guid.CreateVersion7(), [new(scope, Key(application, schedule), version, Encode(cursor))], cancellationToken).ConfigureAwait(false)).Outcome;
+        => (await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new(scope, Key(application, schedule), version, Encode(cursor))], cancellationToken).ConfigureAwait(false)).Outcome;
 
     /// <summary>自由な論理名や識別子の区切り文字が衝突しないキーです。</summary>
     /// <returns>一登録・一予定に固定したキーです。</returns>
