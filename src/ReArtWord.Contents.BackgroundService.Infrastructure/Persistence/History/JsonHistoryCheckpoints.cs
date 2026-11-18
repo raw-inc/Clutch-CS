@@ -49,7 +49,8 @@ internal static class JsonHistoryCheckpoints
             return;
         }
         RepositorySnapshot snapshot = new(current, [], CausalEntries: RepositoryCausality.Export(document, current), LegacyEntries: RepositoryLegacyAncestry.Export(document, current),
-            HistoryBoundary: RepositoryHistoryGuard.Read(document), RetiredOperations: history.RetiredOperations.Values.Where(operation => operation.Shared).ToArray());
+            HistoryBoundary: RepositoryHistoryGuard.Read(document), RetiredOperations: history.RetiredOperations.Values.Where(operation => operation.Shared).ToArray(),
+            RetiredKeys: RepositoryHistoryGuard.ExportKeys(document), RetiredRanges: history.RetiredRanges?.Export());
         byte[] payload = HistoryCheckpointCodec.Encode(snapshot);
         HistoryCheckpointInfo info = new(Guid.CreateVersion7(now).ToString("N"), history.Sequence, now, false, payload.Length, payload.Length);
         DateTimeOffset? expires = null;

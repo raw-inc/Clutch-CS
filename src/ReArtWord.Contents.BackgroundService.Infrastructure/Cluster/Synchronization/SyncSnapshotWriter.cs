@@ -84,6 +84,7 @@ internal static class SyncSnapshotWriter
         WriteArray(nameof(snapshot.RetiredOperations), snapshot.RetiredOperations, operation => SyncInventory.ReceiptBucket(operation.Id), (output, value) => JsonSerializer.Serialize(output, value));
         WriteProperty(writer, nameof(snapshot.ProtectedHistory), snapshot.ProtectedHistory);
         WriteArray(nameof(snapshot.RetiredKeys), snapshot.RetiredKeys, key => SyncInventory.KeyBucket(key.Scope, key.Key), (output, value) => JsonSerializer.Serialize(output, value));
+        WriteArray(nameof(snapshot.RetiredRanges), snapshot.RetiredRanges, SyncInventory.RetiredRangeBucket, (output, value) => JsonSerializer.Serialize(output, value));
         WriteProperty(writer, nameof(snapshot.PendingOperations), snapshot.PendingOperations);
         WriteProperty(writer, nameof(snapshot.DeferredHistory), snapshot.DeferredHistory);
         WriteProperty(writer, nameof(snapshot.DeferredSourcePeer), snapshot.DeferredSourcePeer);

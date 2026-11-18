@@ -40,13 +40,21 @@ internal static class SqliteHistoryGuard
         }
         command.CommandText = "SELECT payload,hash FROM records WHERE kind='entry' AND key=$key";
         command.Parameters.AddWithValue("$key", DurableRepository.GetAddress(RepositoryHistoryGuard.Scope, "boundary"));
-        using SqliteDataReader boundaryReader = command.ExecuteReader();
         HistoryRetentionBoundary? boundary = null;
-        if (boundaryReader.Read())
+        using (SqliteDataReader boundaryReader = command.ExecuteReader())
         {
-            string payload = boundaryReader.GetString(0);
-            SqlitePayload.Verify(payload, boundaryReader.GetString(1));
-            boundary = JsonSerializer.Deserialize<DurableEntry>(payload)?.Value?.Json.Deserialize<HistoryRetentionBoundary>();
+            if (boundaryReader.Read())
+            {
+                string payload = boundaryReader.GetString(0);
+                SqlitePayload.Verify(payload, boundaryReader.GetString(1));
+                boundary = JsonSerializer.Deserialize<DurableEntry>(payload)?.Value?.Json.Deserialize<HistoryRetentionBoundary>();
+            }
+        }
+        if (retired is null && boundary?.RetirementFormat == 1
+            && (SqliteRetiredRanges.Find(command, RetiredIdRange.Operation(id, true)) is not null
+                || SqliteRetiredRanges.Find(command, RetiredIdRange.Operation(id, false)) is not null))
+        {
+            retired = new(id, string.Empty, false);
         }
         return RepositoryHistoryGuard.Expired(id, boundary, retired);
     }
@@ -73,7 +81,9 @@ internal static class SqliteHistoryGuard
             return false;
         }
         DurableEntry? retained = session.Read<DurableEntry>("entry", DurableRepository.GetAddress(RepositoryHistoryGuard.Scope, "boundary"));
-        return RepositoryHistoryGuard.Expired(id, retained?.Value?.Json.Deserialize<HistoryRetentionBoundary>()) is not null;
+        HistoryRetentionBoundary? boundary = retained?.Value?.Json.Deserialize<HistoryRetentionBoundary>();
+        return boundary?.RetirementFormat == 1 && RetiredIdRange.Key(scope, key) is { } point && SqliteRetiredRanges.Find(command, point) is not null
+            || RepositoryHistoryGuard.Expired(id, boundary) is not null;
     }
 
     /// <summary>一つの同期取引に境界を読み込みます。</summary>
@@ -111,6 +121,10 @@ internal static class SqliteHistoryGuard
     internal static void Save(SqliteSession session, RepositoryDocument document)
     {
         using SqliteCommand command = session.HistoryCommand();
+        foreach (RetiredIdRange range in document.History?.RetiredRanges?.Export(sharedOnly: false) ?? [])
+        {
+            SqliteRetiredRanges.Add(session, range);
+        }
         if (document.History is not null)
         {
             command.CommandText = "UPDATE repository_identity SET version=MAX(version,3) WHERE version<3";

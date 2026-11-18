@@ -191,7 +191,7 @@ public abstract class DurableRepository : IDurableRepository, ILocalSnapshotBatc
             return new(operationId, fingerprint, EOutcome.Unknown, [], RepositoryHistoryGuard.ExpiredReason);
         }
         if (!document.Receipts.ContainsKey(operationId) && !document.Prepared.ContainsKey(operationId)
-            && RepositoryHistoryGuard.Expired(operationId, RepositoryHistoryGuard.Read(document), document.History?.RetiredOperations.GetValueOrDefault(operationId)) is { } expired)
+            && RepositoryHistoryGuard.FindExpired(document, operationId) is { } expired)
         {
             return expired;
         }
@@ -305,7 +305,7 @@ public abstract class DurableRepository : IDurableRepository, ILocalSnapshotBatc
                 return new(operationId, fingerprint, EOutcome.Unknown, [], RepositoryHistoryGuard.ExpiredReason);
             }
         }
-        if (!completingPrepared && !document.Receipts.ContainsKey(operationId) && RepositoryHistoryGuard.Expired(operationId, RepositoryHistoryGuard.Read(document), document.History?.RetiredOperations.GetValueOrDefault(operationId)) is { } expired)
+        if (!completingPrepared && !document.Receipts.ContainsKey(operationId) && RepositoryHistoryGuard.FindExpired(document, operationId) is { } expired)
         {
             return expired;
         }

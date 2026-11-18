@@ -55,6 +55,12 @@ internal sealed class RetiredRangeIndex
     /// <returns>元の受付が退役したかです。</returns>
     internal bool ContainsKey(string scope, string key) => RetiredIdRange.Key(scope, key) is { } point && Contains(point);
 
+    /// <summary>区間の分割履歴に左右されない順序で、同期・チェックポイントへ渡します。</summary>
+    /// <returns>共有指定に従った正規化済みの区間です。</returns>
+    internal RetiredIdRange[] Export(bool sharedOnly = true)
+        => Groups.OrderBy(pair => pair.Key, StringComparer.Ordinal).SelectMany(pair => pair.Value)
+            .Where(range => !sharedOnly || range.Shared).ToArray();
+
     /// <summary>未対応の内容を黙って捨てず、保存した索引の区間と用途を検証します。</summary>
     internal void Validate()
     {

@@ -280,7 +280,8 @@ internal sealed class RoutingSynchronization(string directory, RepositoryRoutes 
             snapshot.CausalEntries?.Where(entry => routes.Backend(entry.Scope) == pair.Key).ToArray(),
             snapshot.LegacyEntries?.Where(entry => routes.Backend(entry.Scope) == pair.Key).ToArray(), snapshot.HistoryBoundary, snapshot.RetiredOperations, snapshot.ProtectedHistory,
             snapshot.RetiredKeys?.Where(key => routes.Backend(key.Scope) == pair.Key).ToArray(), DeferredHistory: snapshot.DeferredHistory,
-            DeferredSourcePeer: snapshot.DeferredSourcePeer)), existingOwners);
+            DeferredSourcePeer: snapshot.DeferredSourcePeer,
+            RetiredRanges: snapshot.RetiredRanges?.Where(range => range.Scope is null || routes.Backend(range.Scope) == pair.Key).ToArray())), existingOwners);
     }
 
     /// <summary>準備前と準備後の取消が行き違っても、各媒体に確定済みの取消記録と所有先を維持します。</summary>

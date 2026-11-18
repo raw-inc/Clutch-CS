@@ -62,7 +62,7 @@ internal sealed class SqliteSession : IDisposable
             using SqliteCommand identity = Create();
             identity.CommandText = "SELECT version FROM repository_identity";
             object? version = identity.ExecuteScalar();
-            if (version is not null && (version is not long actualVersion || actualVersion is not (1 or 2 or 3 or 4)))
+            if (version is not null && (version is not long actualVersion || actualVersion is not (1 or 2 or 3 or 4 or 5 or 6)))
             {
                 throw new InvalidDataException("この保存形式の版は扱えません。");
             }
@@ -88,7 +88,7 @@ internal sealed class SqliteSession : IDisposable
                 using FileStream marker = new(markerPath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read, 1, FileOptions.WriteThrough);
                 marker.Flush(true);
             }
-            records = new(connection, transaction, loaded, conflictKeys, version is long archiveVersion && 2 <= archiveVersion, write, version is 4L);
+            records = new(connection, transaction, loaded, conflictKeys, version is long archiveVersion && 2 <= archiveVersion, write, version is 4L or 6L);
             historyHeads = new(connection, transaction, address => Read<DurableEntry>("entry", address));
             completed = true;
         }
