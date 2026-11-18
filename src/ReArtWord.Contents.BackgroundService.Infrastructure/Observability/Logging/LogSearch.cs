@@ -13,7 +13,19 @@ internal static class LogSearch
 {
     /// <summary>全ファイルをメモリへ展開せず最新の一ページを検索します。</summary>
     /// <returns>検索結果と続き位置、完全性です。</returns>
-    internal static async Task<LogQueryResult> QueryAsync(LogStore store, LogQuery query, IReadOnlyList<string> patterns, CancellationToken cancellationToken = default)
+    internal static Task<LogQueryResult> QueryAsync(LogStore store, LogQuery query, IReadOnlyList<string> patterns, CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<LogSegment> segments = store.Segments;
+        if (query.Cursor?.StartsWith(ArchiveLogPage.Prefix, StringComparison.Ordinal) == true)
+        {
+            return ArchiveLogPage.ReadAsync(store, segments, query, patterns, cancellationToken);
+        }
+        return ScanAsync(store, segments, query, patterns, cancellationToken);
+    }
+
+    /// <summary>指定した保存ファイルから条件に一致するログを検索します。</summary>
+    /// <returns>日時とIDで並べた一ページです。</returns>
+    internal static async Task<LogQueryResult> ScanAsync(LogStore store, IReadOnlyList<LogSegment> segments, LogQuery query, IReadOnlyList<string> patterns, CancellationToken cancellationToken = default)
     {
         if (query.Limit is < 1 or > 1000 || query.MaximumBytes is < 16384 or > 1048576 || (query.From is not null && query.Until is not null && query.Until < query.From))
         {
@@ -23,7 +35,7 @@ internal static class LogSearch
         Comparer<WorkflowLogEntry> comparer = Comparer<WorkflowLogEntry>.Create(Compare);
         PriorityQueue<LogPageEntry, WorkflowLogEntry> result = new(comparer);
         bool complete = true;
-        foreach (LogSegment segment in store.Segments.AsValueEnumerable().Where(segment => !query.UncompressedOnly || !segment.Compressed)
+        foreach (LogSegment segment in segments.AsValueEnumerable().Where(segment => !query.UncompressedOnly || !segment.Compressed)
             .OrderByDescending(segment => segment.LastTime ?? DateTimeOffset.MaxValue).ToArray())
         {
             if (query.Levels is { Count: > 0 } && !query.Levels.Contains(segment.Level, StringComparer.OrdinalIgnoreCase))

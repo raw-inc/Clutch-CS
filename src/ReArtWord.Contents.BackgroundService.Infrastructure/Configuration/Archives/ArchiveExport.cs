@@ -21,7 +21,7 @@ internal static class ArchiveExport
         cluster.RegisterInspection("archive.logs", async (request, token) =>
         {
             LogQuery query = request.Payload.Json.Deserialize<LogQuery>(ContractJson.Options) ?? throw new InvalidDataException("Archive log query is missing.");
-            if (query.Cursor is null)
+            if (query.Cursor is null || string.Equals(query.Cursor, ArchiveLogPage.Prefix, StringComparison.Ordinal))
             {
                 await log.FlushAsync(token).ConfigureAwait(false);
             }
@@ -52,7 +52,7 @@ internal static class ArchiveExport
         if (request.IncludeLogs)
         {
             configuration = configuration with { LogPeers = members.Select(peer => peer.PeerId).ToArray() };
-            read = ClusterLogs(cluster, log, members, configuration.CapturedAt);
+            read = ClusterLogs(cluster, log, members);
         }
         string temporary = workspace.FileFor(request.OperationId, "archive.tmp");
         using (FileStream output = new(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536, FileOptions.Asynchronous))
@@ -68,10 +68,11 @@ internal static class ArchiveExport
     /// <summary>既存のログ検索を使い、重複を除いて各ピアのログを取得します。</summary>
     /// <returns>同じ検索の次ページを取得する関数。</returns>
     private static Func<LogQuery, CancellationToken, Task<LogQueryResult>> ClusterLogs(PeerCluster cluster, WorkflowLogService log,
-        IReadOnlyList<PeerInfo> members, DateTimeOffset captured)
+        IReadOnlyList<PeerInfo> members)
     {
         async Task<LogQueryResult?> ReadAsync(LogSearchSource source, LogQuery query, CancellationToken token)
         {
+            query = query with { Cursor = query.Cursor ?? ArchiveLogPage.Prefix };
             PeerInfo member = members.Single(peer => string.Equals(peer.PeerId, source.PeerId, StringComparison.Ordinal));
             if (member.InstanceId == cluster.LocalInstanceId)
             {
@@ -85,7 +86,7 @@ internal static class ArchiveExport
             }
             return reply.Value?.Json.Deserialize<LogQueryResult>(ContractJson.Options);
         }
-        LogSearchSession search = new(new(Until: captured, Limit: 1000, MaximumBytes: 524288),
+        LogSearchSession search = new(new(Limit: 1000, MaximumBytes: 524288),
             members.Select(peer => new LogSearchSource(cluster.LocalClusterId, peer.PeerId)), ReadAsync, maximumResultBytes: 524288);
         int index = 0;
         return async (_, token) =>
