@@ -21,8 +21,10 @@ public sealed class SynchronizationSessionTests
 {
     /// <summary>同じopenを再Importせず、readで期限を延ばさず、解放後も遅延openを拒否します。</summary>
     /// <returns>実UDPと永続保存の観測完了です。</returns>
-    [Fact]
-    public async Task ReplayedSessionHasOneImportAndReadOnlyFiniteLifetime()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ReplayedSessionHasOneImportAndReadOnlyFiniteLifetime(bool useElapsedClock)
     {
         string root = Path.Combine(Path.GetTempPath(), "contents-sync-session-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -77,10 +79,19 @@ public sealed class SynchronizationSessionTests
                 Assert.NotNull(reply);
                 return reply.Body;
             };
-            Func<Guid, object> manifest = id => new
+            Func<Guid, object> manifest = id =>
             {
-                Id = id, SourcePeerId = "source", SourceInstanceId = instance, TargetPeerId = "target", TargetInstanceId = target.LocalInstanceId,
-                Length = data.LongLength, Hash = Convert.ToHexString(SHA256.HashData(data)), ExpiresAt = clock.GetUtcNow().AddSeconds(20),
+                SyncTiming? timing = null;
+                if (useElapsedClock)
+                {
+                    long deadline = target.AdmissionClock.Capture().ElapsedTicks + TimeSpan.FromSeconds(20).Ticks;
+                    timing = new(instance, deadline, target.LocalInstanceId, deadline, TimeSpan.FromSeconds(20).Ticks, 0);
+                }
+                return new
+                {
+                    Id = id, SourcePeerId = "source", SourceInstanceId = instance, TargetPeerId = "target", TargetInstanceId = target.LocalInstanceId,
+                    Length = data.LongLength, Hash = Convert.ToHexString(SHA256.HashData(data)), ExpiresAt = clock.GetUtcNow().AddSeconds(20), Timing = timing,
+                };
             };
             Func<Guid, Task> read = async id =>
             {

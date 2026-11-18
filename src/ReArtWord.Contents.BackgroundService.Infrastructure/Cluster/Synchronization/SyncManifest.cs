@@ -2,7 +2,8 @@ namespace ReArtWord.Contents.BackgroundService.Infrastructure.Cluster.Synchroniz
 
 /// <summary>一度固定した共有保存状態と、転送可能な元の実体を表します。</summary>
 internal sealed record SyncManifest(Guid Id, string SourcePeerId, Guid SourceInstanceId, string TargetPeerId, Guid TargetInstanceId,
-    long Length, string Hash, DateTimeOffset ExpiresAt, SyncStreamTicket? Stream = null, string? Phase = null, bool RetirementRanges = false)
+    long Length, string Hash, DateTimeOffset ExpiresAt, SyncStreamTicket? Stream = null, string? Phase = null,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] SyncTiming? Timing = null, bool RetirementRanges = false)
 {
     /// <summary>現在状態と操作存在証明を先行して確定する転送です。</summary>
     internal static string CurrentPhase => "current-v1";

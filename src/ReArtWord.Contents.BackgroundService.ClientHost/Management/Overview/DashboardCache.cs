@@ -70,6 +70,7 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
         {
             return snapshot with { Peer = current[0], Status = null, Samples = [], Executions = null, Logs = null, NodeExecutions = null };
         }
+        snapshot = snapshot with { Executions = DashboardHistory.Present(snapshot.Executions, now) };
         ResourceSample[] samples = snapshot.Samples.Select(sample => DashboardSampleHistory.Present(sample, now))
             .Where(sample => now.AddMinutes(-6) <= sample.ObservedAt).ToArray();
         int index = Array.FindIndex(samples, sample => sample.Id == after);
@@ -102,7 +103,8 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
             {
                 if (query.DiagnosticsOnly && !query.HealthOnly && snapshots.TryGetValue((query.ClusterId, query.PeerId, query.InstanceId), out DashboardPeerSnapshot? diagnostic))
                 {
-                    snapshot = snapshot with { Samples = [], Logs = null, Health = null, Executions = null, NodeExecutions = diagnostic.NodeExecutions };
+                    snapshot = snapshot with { Samples = [], Logs = null, Health = null, Executions = null, NodeExecutions = diagnostic.NodeExecutions?.Where(node => DashboardHistory.Recent(node.CompletionAge, node.CompletedAt, clock.GetUtcNow(), TimeSpan.FromMinutes(5)))
+                        .Select(node => node with { CompletionAgeTicks = node.CompletionAge?.Elapsed.Ticks }).ToArray() };
                 }
                 result.Add(snapshot);
             }
@@ -168,11 +170,13 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
         DashboardPeerSnapshot empty = new(cluster, peer, null, null, null, []);
         if (details)
         {
-            Task<JsonElement?> executions = InspectAsync(cluster, peer, "executions.list", new ExecutionHistoryQuery(100, MaximumBytes: 65536), cancellationToken);
+            bool observed = snapshots.TryGetValue(key, out DashboardPeerSnapshot? known) && known.Executions?.ObservationInstanceId == peer.InstanceId;
+            Task<ExecutionHistoryPage?> executions = DashboardExecutionReader.ReadAsync(ReadExecutionAsync, peer.InstanceId, false, observed, clock, cancellationToken);
             Task<JsonElement?> logs = InspectAsync(cluster, peer, "logs.query", new LogQuery(From: clock.GetUtcNow().AddMinutes(-15), Limit: 8, MaximumBytes: 32768), cancellationToken);
             await Task.WhenAll(executions, logs).ConfigureAwait(false);
-            ExecutionHistoryPage? history = Deserialize<ExecutionHistoryPage>(await executions.ConfigureAwait(false));
-            ExecutionHistoryPage? completions = await ReadActivityAsync(cluster, peer, cancellationToken).ConfigureAwait(false) ?? history;
+            ExecutionHistoryPage? history = await executions.ConfigureAwait(false);
+            ExecutionHistoryPage? completions = await DashboardExecutionReader.ReadAsync(ReadExecutionAsync, peer.InstanceId, true,
+                observed || history?.ObservationInstanceId == peer.InstanceId, clock, cancellationToken).ConfigureAwait(false);
             LogQueryResult? recent = Deserialize<LogQueryResult>(await logs.ConfigureAwait(false));
             snapshots.AddOrUpdate(key, empty with { Executions = DashboardHistory.Activity(null, completions, clock.GetUtcNow()), Logs = recent, NodeExecutions = DashboardHistory.NodeResults(null, history, peer.PeerId, clock.GetUtcNow()) },
                 (_, previous) => previous with { Executions = DashboardHistory.Activity(previous.Executions, completions, clock.GetUtcNow()), Logs = recent, NodeExecutions = DashboardHistory.NodeResults(previous.NodeExecutions, history, peer.PeerId, clock.GetUtcNow()) });
@@ -200,6 +204,9 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
         DateTimeOffset now = clock.GetUtcNow();
         snapshots.AddOrUpdate(key, _ => Updated(empty), (_, previous) => Updated(previous));
 
+        Task<JsonElement?> ReadExecutionAsync(string operation, ExecutionHistoryQuery query, CancellationToken token)
+            => InspectAsync(cluster, peer, operation, query, token);
+
         DashboardPeerSnapshot Updated(DashboardPeerSnapshot previous) => previous with
         {
             Peer = peer,
@@ -213,42 +220,6 @@ internal sealed class DashboardCache : Microsoft.Extensions.Hosting.BackgroundSe
             Problem = incoming.Length == 0 ? "The latest read is unconfirmed"
                                            : null
         };
-    }
-
-    /// <summary>活動表示は完了順の要約を辿り、長時間実行や大きい出力で取得範囲を狭めません。</summary>
-    /// <returns>60秒窓の最大2000件です。未対応時はnull、途中で止まった場合は続き位置を残します。</returns>
-    private async Task<ExecutionHistoryPage?> ReadActivityAsync(string cluster, PeerInfo peer, CancellationToken cancellationToken = default)
-    {
-        using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(2));
-        DateTimeOffset from = clock.GetUtcNow().AddMinutes(-1);
-        List<ExecutionResultView> entries = [];
-        string? cursor = null;
-        do
-        {
-            ExecutionHistoryPage? page = Deserialize<ExecutionHistoryPage>(await InspectAsync(cluster, peer, "executions.activity",
-                new ExecutionHistoryQuery(100, cursor, 65536), timeout.Token).ConfigureAwait(false));
-            if (page is null)
-            {
-                return cursor is null ? null
-                                      : new(entries, cursor);
-            }
-            foreach (ExecutionResultView entry in page.Entries)
-            {
-                if ((entry.Report?.CompletedAt ?? entry.Summary?.CompletedAt) is { } completed && completed < from)
-                {
-                    return new(entries, null);
-                }
-                entries.Add(entry);
-            }
-            if (page.Cursor is not null && string.Equals(cursor, page.Cursor, StringComparison.Ordinal))
-            {
-                return new(entries, cursor);
-            }
-            cursor = page.Cursor;
-        }
-        while (cursor is not null && entries.Count < 2000 && !timeout.IsCancellationRequested);
-        return new(entries, cursor);
     }
 
     /// <summary>新Coreでは一往復にまとめ、旧Coreや欠測時は既存の独立照会を維持します。</summary>

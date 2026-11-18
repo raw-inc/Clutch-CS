@@ -73,6 +73,10 @@ internal sealed class SyncOutbound(PeerCluster cluster, IDurableRepository repos
         try
         {
             SyncResponse capabilities = await ProtocolAsync(peer, cancellationToken).ConfigureAwait(false);
+            if (string.Equals(capabilities.Reason, SyncSessionClocks.Unconfirmed, StringComparison.Ordinal))
+            {
+                throw new SyncFailureException(SyncSessionClocks.Unconfirmed);
+            }
             if (capabilities.Pending)
             {
                 recovery.Failed(peer, "Sync.PendingOperations");
@@ -101,8 +105,8 @@ internal sealed class SyncOutbound(PeerCluster cluster, IDurableRepository repos
                 }
             }
             negotiation = prepared?.Original.Id ?? offered!.Id;
-            DateTimeOffset expires = prepared?.Original.ExpiresAt ?? offered!.ExpiresAt;
-            using CancellationTokenSource expiry = new(expires - clock.GetUtcNow(), clock);
+            SyncLifetime lifetime = prepared?.Lifetime ?? exports.Lifetime(offered!);
+            using CancellationTokenSource expiry = new(lifetime.Remaining, clock);
             using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(expiry.Token, cancellationToken);
             bool historyBoundary = prepared is null ? exports.HasHistoryBoundary(offered!)
                                                     : prepared.Original.Boundary is not null;
@@ -171,7 +175,7 @@ internal sealed class SyncOutbound(PeerCluster cluster, IDurableRepository repos
             {
                 throw new SyncFailureException("Sync.ManifestMismatch");
             }
-            bool merged = await download.ImportAsync(received, peer.PeerId, peer.InstanceId, result.Conflict, linked.Token).ConfigureAwait(false);
+            bool merged = await download.ImportAsync(received, peer.PeerId, peer.InstanceId, result.Conflict, cancellationToken: linked.Token).ConfigureAwait(false);
             if (!merged || result.Conflict)
             {
                 recovery.Failed(peer, "Sync.Conflict");
@@ -225,12 +229,18 @@ internal sealed class SyncOutbound(PeerCluster cluster, IDurableRepository repos
         using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(probe.Token, cancellationToken);
         try
         {
+            long started = clock.GetTimestamp();
             SyncResponse response = await ExchangeAsync("sync.capabilities", peer, Guid.Empty, linked.Token).ConfigureAwait(false);
+            exports.Clocks.Observe(peer.InstanceId, response.Clock, started);
             return response;
         }
         catch (Exception error) when (SyncFailureException.IsExpected(error))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (error is SyncFailureException failure && string.Equals(failure.Code, SyncSessionClocks.Unconfirmed, StringComparison.Ordinal))
+            {
+                return new(Reason: "Sync.ClockUnconfirmed");
+            }
             return new();
         }
     }

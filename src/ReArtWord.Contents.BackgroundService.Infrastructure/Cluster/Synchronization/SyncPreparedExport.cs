@@ -5,7 +5,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Cluster.Synchronization;
 
 /// <summary>照合中は固定メタデータと一枠だけを所有し、本文ファイルの作成は相手の指紋を受け取ってから行います。</summary>
-internal sealed class SyncPreparedExport(SyncExportStore owner, PeerInfo target, FrozenSnapshotExport frozen, SyncInventoryRequest request, SemaphoreSlim reservation) : IDisposable
+internal sealed class SyncPreparedExport(SyncExportStore owner, PeerInfo target, FrozenSnapshotExport frozen, SyncInventoryRequest request, SemaphoreSlim reservation, SyncLifetime lifetime) : IDisposable
 {
     private readonly Lock gate = new();
     private FrozenSnapshotExport? source = frozen;
@@ -17,6 +17,9 @@ internal sealed class SyncPreparedExport(SyncExportStore owner, PeerInfo target,
     /// <summary>呼出元による配列変更から独立した照合要求です。</summary>
     internal SyncInventoryRequest Request => request with { Hashes = request.Hashes.ToArray(), Boundary = request.Boundary is null ? null
                                                                                                                                    : ContractJson.Copy(request.Boundary) };
+
+    /// <summary>本文作成前の待機にも消費する元の期限です。</summary>
+    internal SyncLifetime Lifetime => lifetime;
 
     /// <summary>同じ準備の期限を延長せず本文を作成するための元情報です。</summary>
     internal SyncInventoryRequest Original => request;
@@ -46,9 +49,10 @@ internal sealed class SyncPreparedExport(SyncExportStore owner, PeerInfo target,
             entered = true;
             FrozenSnapshotExport frozen = await SnapshotExport.FreezeAsync(repository, cancellationToken).ConfigureAwait(false)
                 ?? throw new InvalidOperationException("Deferred snapshot support changed.");
+            SyncLifetime lifetime = new(clock, options.SyncSessionLifetime);
             SyncInventoryRequest request = new(Guid.NewGuid(), SyncInventory.Describe(frozen.Description), clock.GetUtcNow() + options.SyncSessionLifetime,
-                SyncInventory.Metadata(frozen.Description.Snapshot).HistoryBoundary, RetirementRanges: true);
-            SyncPreparedExport result = new(owner, target, frozen, request, reservation);
+                SyncInventory.Metadata(frozen.Description.Snapshot).HistoryBoundary, Timing: owner.Clocks.Create(target.InstanceId, lifetime), RetirementRanges: true);
+            SyncPreparedExport result = new(owner, target, frozen, request, reservation, lifetime);
             retained = true;
             return result;
         }
@@ -66,7 +70,7 @@ internal sealed class SyncPreparedExport(SyncExportStore owner, PeerInfo target,
     }
 
     /// <summary>別Store・期限切れ・再利用を拒否して、一回の本文作成だけを許可します。</summary>
-    internal void Begin(SyncExportStore expectedOwner, DateTimeOffset now)
+    internal void Begin(SyncExportStore expectedOwner)
     {
         using (gate.EnterScope())
         {
@@ -74,7 +78,7 @@ internal sealed class SyncPreparedExport(SyncExportStore owner, PeerInfo target,
             {
                 throw new SyncFailureException("Sync.SessionUnavailable");
             }
-            if (request.ExpiresAt <= now)
+            if (lifetime.Expired)
             {
                 throw new SyncFailureException("Sync.SessionExpired");
             }

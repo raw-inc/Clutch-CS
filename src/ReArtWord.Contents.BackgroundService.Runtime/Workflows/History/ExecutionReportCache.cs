@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ReArtWord.Contents.BackgroundService.Contracts.Observability;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution.History;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
@@ -13,17 +14,22 @@ internal sealed class ExecutionReportCache
     private readonly int maximumCount;
     private readonly long maximumBytes;
     private long bytes;
+    private readonly TimeProvider clock;
+    private long completionOrder;
 
     /// <summary>最近の診断結果として保持する上限を指定します。</summary>
-    internal ExecutionReportCache(int maximumCount = 500, long maximumBytes = 64L * 1024 * 1024)
+    internal ExecutionReportCache(int maximumCount = 500, long maximumBytes = 64L * 1024 * 1024, TimeProvider? timeProvider = null)
     {
         this.maximumCount = maximumCount;
         this.maximumBytes = maximumBytes;
+        clock = timeProvider ?? TimeProvider.System;
     }
 
     /// <summary>実行結果を返す処理自体には影響せず、保持範囲だけを制限します。</summary>
     internal void Remember(ExecutionReport report)
     {
+        ObservationAge age = new(clock);
+        long order = Interlocked.Increment(ref completionOrder);
         ExecutionResultView view = ExecutionReportPresentation.Bound(report);
         ExecutionReport? retained = report;
         long size;
@@ -54,13 +60,16 @@ internal sealed class ExecutionReportCache
             if (entries.Remove(report.Id, out Entry? previous))
             {
                 bytes -= previous.Size;
+                age = previous.View.CompletionAge ?? age;
+                order = previous.View.CompletionOrder ?? order;
             }
+            view = view with { CompletionAge = age, CompletionOrder = order };
             entries.Add(report.Id, new Entry(report.Id, report.StartedAt, report.CompletedAt, retained, view, size));
             bytes += size;
             while (maximumCount < entries.Count || maximumBytes < bytes)
             {
                 // 長時間実行した結果も、完了直後は診断できるように残します。
-                Entry oldest = entries.Values.MinBy(static entry => entry.CompletedAt)!;
+                Entry oldest = entries.Values.MinBy(static entry => entry.View.CompletionOrder)!;
                 entries.Remove(oldest.Id);
                 bytes -= oldest.Size;
             }

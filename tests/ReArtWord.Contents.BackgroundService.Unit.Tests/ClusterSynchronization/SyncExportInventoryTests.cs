@@ -129,7 +129,7 @@ public sealed class SyncExportInventoryTests
             boundary = new(new Dictionary<ERetentionCategory, DateTimeOffset>(), new Dictionary<ERetentionCategory, DateTimeOffset>(), DateTimeOffset.UtcNow.AddDays(-30), DateTimeOffset.UtcNow);
         }
         SyncInventoryRequest request = new(Guid.NewGuid(), known, DateTimeOffset.UtcNow.AddSeconds(20), boundary);
-        SyncInventoryOffer offer = await exports.CreateOfferAsync(local, request, timeout.Token).ConfigureAwait(true);
+        SyncInventoryOffer offer = await exports.CreateOfferAsync(local, request, cancellationToken: timeout.Token).ConfigureAwait(true);
         RepositorySnapshot expected = full ? original
                                            : SyncInventory.Difference(original, hashes, known);
         using MemoryStream received = new();

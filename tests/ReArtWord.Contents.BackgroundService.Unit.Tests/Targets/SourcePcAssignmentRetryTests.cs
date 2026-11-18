@@ -29,8 +29,11 @@ public sealed class SourcePcAssignmentRetryTests
 {
     /// <summary>短周期の巡回では一回だけ保存を試し、期限後の成功で通常動作へ戻します。</summary>
     /// <returns>失敗履歴の増幅を止めつつ、担当確認を恒久停止しないことです。</returns>
-    [Fact]
-    public async Task RepeatedVersionConflictIsBackedOffAndRecoveryIsAutomaticAsync()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-3600)]
+    [InlineData(3600)]
+    public async Task RepeatedVersionConflictIsBackedOffAndRecoveryIsAutomaticAsync(int correction)
     {
         using MediaTestFiles files = new();
         RefusingRepository repository = new();
@@ -66,6 +69,10 @@ public sealed class SourcePcAssignmentRetryTests
         await assignments.RefreshAsync();
         Assert.Equal(2, repository.AssignmentReads);
         repository.Reject = false;
+        clock.Adjust(TimeSpan.FromSeconds(correction));
+        await assignments.RefreshAsync();
+        Assert.Equal(2, repository.AssignmentReads);
+        Assert.Equal(1, repository.Preparations);
         clock.Advance(TimeSpan.FromSeconds(2));
         await assignments.RefreshAsync();
         Assert.Equal(2, repository.Preparations);
@@ -78,13 +85,28 @@ public sealed class SourcePcAssignmentRetryTests
     private sealed class MutableClock : TimeProvider
     {
         private DateTimeOffset now = DateTimeOffset.UtcNow;
+        private long ticks;
+
+        /// <summary>経過時間の単位です。</summary>
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        /// <summary>試験で進めた経過時間です。</summary>
+        /// <returns>経過tick数です。</returns>
+        public override long GetTimestamp() => ticks;
+
+        /// <summary>日時だけを補正します。</summary>
+        internal void Adjust(TimeSpan offset) => now += offset;
 
         /// <summary>試験で指定した現在時刻です。</summary>
         /// <returns>UTC時刻です。</returns>
         public override DateTimeOffset GetUtcNow() => now;
 
         /// <summary>担当確認の期限を進めます。</summary>
-        internal void Advance(TimeSpan elapsed) => now += elapsed;
+        internal void Advance(TimeSpan elapsed)
+        {
+            now += elapsed;
+            ticks += elapsed.Ticks;
+        }
     }
 
     /// <summary>元の保存規則を保ち、準備拒否の回数だけを観測します。</summary>

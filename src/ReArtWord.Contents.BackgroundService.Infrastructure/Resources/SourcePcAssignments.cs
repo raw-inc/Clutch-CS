@@ -140,7 +140,7 @@ public sealed class SourcePcAssignments
         (string Workflow, string Node) attemptKey = (plan.Definition.Id, node.Id);
         FailedAttempt? previous = attempts.GetValueOrDefault(attemptKey);
         IReadOnlyList<PcSelection> choices = plan.PcSelections![node.Id];
-        if (sharedVersion is not null && previous is not null && clock.GetUtcNow() < previous.RetryAt && !choices.Any(UsesResource)
+        if (sharedVersion is not null && previous is not null && clock.GetElapsedTime(previous.Started) < TimeSpan.FromSeconds(previous.DelaySeconds) && !choices.Any(UsesResource)
             && string.Equals(previous.ReadVersion, sharedVersion, StringComparison.Ordinal) && string.Equals(previous.ReadContext, readContext, StringComparison.Ordinal))
         {
             // 保存だけでなく、待機中の同じ担当本文・競合集合・確定履歴の読取りも開始しません。
@@ -199,7 +199,7 @@ public sealed class SourcePcAssignments
         }
         string attemptIdentity = ContractJson.Hash(new { revision, Version = entry?.Version, resolveVersions,
             Targets = available.Select(peer => new { peer.PeerId, peer.InstanceId }).ToArray(), Members = members.OrderBy(peer => peer.PeerId, StringComparer.Ordinal).Select(peer => new { peer.PeerId, peer.InstanceId }).ToArray() });
-        if (previous is not null && string.Equals(previous.Identity, attemptIdentity, StringComparison.Ordinal) && clock.GetUtcNow() < previous.RetryAt)
+        if (previous is not null && string.Equals(previous.Identity, attemptIdentity, StringComparison.Ordinal) && clock.GetElapsedTime(previous.Started) < TimeSpan.FromSeconds(previous.DelaySeconds))
         {
             attempts[attemptKey] = previous with { ReadVersion = sharedVersion, ReadContext = readContext };
             return null;
@@ -223,7 +223,7 @@ public sealed class SourcePcAssignments
                                                      : null;
     }
 
-    /// <summary>同じ条件だけを有限時間待ち、設定・共有状態・参加実体の変化では読取りから再確認します。</summary>
+    /// <summary>同じ条件への再確認間隔は経過時間で測ります。設定・共有状態・参加実体の変化では待たずに読取りから再確認します。</summary>
     private void Defer((string Workflow, string Node) key, string identity, string? readVersion, string readContext)
     {
         FailedAttempt? previous = attempts.GetValueOrDefault(key);
@@ -232,7 +232,7 @@ public sealed class SourcePcAssignments
         {
             delay = Math.Min(5, previous.DelaySeconds * 2);
         }
-        attempts[key] = new(identity, delay, clock.GetUtcNow().AddSeconds(delay), readVersion, readContext);
+        attempts[key] = new(identity, delay, clock.GetTimestamp(), readVersion, readContext);
     }
 
     /// <summary>表示位置と安全停止方針の編集では待受の担当を作り直しません。</summary>
@@ -253,5 +253,5 @@ public sealed class SourcePcAssignments
             && assignment.Targets.Select(peer => peer.HostId).Distinct(StringComparer.Ordinal).Count() == assignment.Targets.Count;
 
     /// <summary>同じ確認条件で失敗を量産せず、設定・参加実体の変化では直ちに再確認する期限です。</summary>
-    private sealed record FailedAttempt(string Identity, int DelaySeconds, DateTimeOffset RetryAt, string? ReadVersion, string ReadContext);
+    private sealed record FailedAttempt(string Identity, int DelaySeconds, long Started, string? ReadVersion, string ReadContext);
 }
