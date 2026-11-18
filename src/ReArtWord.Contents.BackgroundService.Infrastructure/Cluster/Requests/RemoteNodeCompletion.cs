@@ -92,7 +92,7 @@ internal static class RemoteNodeCompletion
         {
             return NodeResult.Failure("Detached.RemoteExecutionNotAllowed", "明示離脱中の実行先はこのPeerだけです。", EOutcome.NotExecuted);
         }
-        ClusterRequest command = new(request.Id, "node.execute", request.TargetPeerId, request.TargetInstanceId, request.ExpiresAt, NodeValue.FromObject(request)) { Admission = request.Admission };
+        ClusterRequest command = new(request.DeliveryId, "node.execute", request.TargetPeerId, request.TargetInstanceId, request.ExpiresAt, NodeValue.FromObject(request)) { Admission = request.Admission };
         ClusterResponse response = await cluster.RequestAsync(command, cancellationToken).ConfigureAwait(false);
         response = await ConfirmAsync(cluster, command, response, cancellationToken).ConfigureAwait(false);
         return response.Value?.Json.Deserialize<NodeResult>() ?? NodeResult.Failure(response.Reason ?? "Execution.Unconfirmed", "実行結果を確認できません。", response.Outcome);

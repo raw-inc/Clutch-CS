@@ -94,7 +94,7 @@ internal sealed class ConfigurationOperationJournal(IDurableRepository repositor
         {
             throw new InvalidDataException("操作の開始記録がありません。");
         }
-        DurableReceipt receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(), [new DurableMutation(scope, id.ToString("N"), entry!.Version, NodeValue.FromObject(operation with { Result = JsonSerializer.SerializeToElement(result) }))], cancellationToken).ConfigureAwait(false);
+        DurableReceipt receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new DurableMutation(scope, id.ToString("N"), entry!.Version, NodeValue.FromObject(operation with { Result = JsonSerializer.SerializeToElement(result) }))], cancellationToken).ConfigureAwait(false);
         if (receipt.Outcome != EOutcome.Succeeded)
         {
             throw new InvalidDataException("操作結果を保存できません。");

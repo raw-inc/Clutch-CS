@@ -31,7 +31,7 @@ internal sealed class ReplicationStart
     internal Guid InitializationId
     {
         get;
-    } = OperationIdentity.Create();
+    } = OperationIdentity.Create(shared: false);
 
     /// <summary>非同期境界の前に所有した変更候補です。</summary>
     internal DurableMutation[] Mutations

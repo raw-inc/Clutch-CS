@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using System.Globalization;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
@@ -177,7 +178,7 @@ public sealed partial class RetentionDialog
                 RetentionWindow window = data.Window(Enum.Parse<ERetentionCategory>(level + "Log", ignoreCase: true));
                 return new LogRetentionRule(level, window.RawDays, window.TotalDays);
             }).ToArray();
-            Guid id = Guid.CreateVersion7();
+            Guid id = OperationIdentity.CreateDurableRequest();
             LogOptionsChangeRequest request = new(options with
             {
                 Retention = retention, RollingTime = rollingTime, TimeZoneId = timeZone

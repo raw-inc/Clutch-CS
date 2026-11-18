@@ -251,7 +251,7 @@ public sealed class ClusterUpdateCoordinator
                     previous?.Value?.Json.Deserialize<ClusterUpdateStatus>(ContractJson.Options), status, cancellationToken).ConfigureAwait(false);
                 if (notifications.Count != 0)
                 {
-                    await repository.ApplyBatchAsync(OperationIdentity.Create(), notifications, cancellationToken).ConfigureAwait(false);
+                    await repository.ApplyBatchAsync(OperationIdentity.Create(notifications.All(mutation => DurableRepository.IsShared(mutation.Scope))), notifications, cancellationToken).ConfigureAwait(false);
                 }
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or System.Data.Common.DbException or OperationCanceledException)

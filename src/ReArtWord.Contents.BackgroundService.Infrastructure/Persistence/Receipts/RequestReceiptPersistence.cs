@@ -26,7 +26,7 @@ internal static class RequestReceiptPersistence
         {
             return await store.CompareExchangeReceiptAsync(scope, key, expectedVersion, value, cancellationToken).ConfigureAwait(false);
         }
-        DurableReceipt result = await repository.ApplyBatchAsync(OperationIdentity.Create(), [new(scope, key, expectedVersion, value)], cancellationToken).ConfigureAwait(false);
+        DurableReceipt result = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new(scope, key, expectedVersion, value)], cancellationToken).ConfigureAwait(false);
         return result.Outcome == EOutcome.Succeeded ? result.Entries.Single()
                                                     : null;
     }

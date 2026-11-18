@@ -41,7 +41,7 @@ public sealed class StateReplication : IDisposable
             return new StateWriteResult(false, null, EOutcome.NotExecuted, "State.CoordinatorUnavailable");
         }
         StateUpdate update = new(scope, key, expectedVersion, value);
-        ClusterRequest request = ClusterRequest.Start("state.cas", coordinator.PeerId, coordinator.InstanceId, TimeSpan.FromSeconds(30), NodeValue.FromObject(update));
+        ClusterRequest request = ClusterRequest.StartDurable("state.cas", coordinator.PeerId, coordinator.InstanceId, TimeSpan.FromSeconds(30), NodeValue.FromObject(update));
         ClusterResponse response = await cluster.RequestAsync(request, cancellationToken).ConfigureAwait(false);
         return response.Value?.Json.Deserialize<StateWriteResult>() ?? new StateWriteResult(false, null, response.Outcome, response.Reason);
     }

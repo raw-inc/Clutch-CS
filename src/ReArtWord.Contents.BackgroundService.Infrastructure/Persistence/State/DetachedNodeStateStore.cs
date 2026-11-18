@@ -92,7 +92,7 @@ internal sealed class DetachedNodeStateStore(IDurableRepository repository, Peer
                 continue;
             }
             Guid operation = Guid.Parse(branch.Current.Version);
-            DurableReceipt owned = await repository.ApplyBatchAsync(OperationIdentity.Create(),
+            DurableReceipt owned = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false),
                 [new(Scope, row.Key, row.Version, NodeValue.FromObject(branch with { Submitted = true }))], cancellationToken).ConfigureAwait(false);
             if (owned.Outcome != EOutcome.Succeeded)
             {
@@ -105,7 +105,7 @@ internal sealed class DetachedNodeStateStore(IDurableRepository repository, Peer
                 if (result.Outcome == EOutcome.NotExecuted)
                 {
                     // 共有側が未開始と確認した場合だけ意図を戻します。受付済み・結果不明は再送しません。
-                    await repository.ApplyBatchAsync(OperationIdentity.Create(),
+                    await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false),
                         [new(Scope, row.Key, owned.Entries.Single().Version, NodeValue.FromObject(branch))], cancellationToken).ConfigureAwait(false);
                 }
             }
@@ -141,7 +141,7 @@ internal sealed class DetachedNodeStateStore(IDurableRepository repository, Peer
     /// <returns>ローカル記録の確認です。</returns>
     private async Task CompleteAsync(DurableEntry row, DetachedStateEntry branch, CancellationToken cancellationToken = default)
     {
-        await repository.ApplyBatchAsync(OperationIdentity.Create(), [new(Scope, row.Key, row.Version, NodeValue.FromObject(branch with { Pending = false }))], cancellationToken).ConfigureAwait(false);
+        await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new(Scope, row.Key, row.Version, NodeValue.FromObject(branch with { Pending = false }))], cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>論理共有addressに対応するローカル枝を取得します。</summary>

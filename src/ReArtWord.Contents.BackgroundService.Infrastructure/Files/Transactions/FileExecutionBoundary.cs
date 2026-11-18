@@ -95,7 +95,7 @@ internal sealed class FileExecutionBoundary(PeerCluster cluster, IDurableReposit
             if (released.Outcome != EOutcome.Succeeded)
             {
                 NodeValue recovery = NodeValue.FromObject(new { lease, execution = result, release = released, reservationConfirmed, fileExecutionStarted = executed });
-                await repository.ApplyBatchAsync(OperationIdentity.Create(), [new DurableMutation("peer:" + cluster.LocalPeerId + ":file-recovery", context.ExecutionId.ToString("N"), null, recovery)], CancellationToken.None).ConfigureAwait(false);
+                await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new DurableMutation("peer:" + cluster.LocalPeerId + ":file-recovery", context.ExecutionId.ToString("N"), null, recovery)], CancellationToken.None).ConfigureAwait(false);
                 Dictionary<string, NodeValue> outputs = result.Outputs.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
                 outputs["fileReservation"] = recovery;
                 result = result with { Outputs = outputs };

@@ -53,7 +53,19 @@ public sealed class OperationIdSequenceTests
     /// <summary>要求と保存操作は別の連番を使用します。</summary>
     [Fact]
     public void RequestsAndWritesUseSeparateOrigins()
-        => Assert.NotEqual(OperationIdentity.Create().ToString("N")[..24], OperationIdentity.CreateRequest().ToString("N")[..24]);
+        => Assert.NotEqual(OperationIdentity.Create().ToString("N")[..24], OperationIdentity.CreateDurableRequest().ToString("N")[..24]);
+
+    /// <summary>共有書込みの間にローカル取引を挟んでも、共有用の連番に欠番を作りません。</summary>
+    [Fact]
+    public void LocalWritesDoNotFragmentTheSharedRetirementSequence()
+    {
+        Guid shared = OperationIdentity.Create();
+        Guid local = OperationIdentity.Create(shared: false);
+        Guid next = OperationIdentity.Create();
+        Assert.Equal(shared.ToString("N")[..24], next.ToString("N")[..24]);
+        Assert.NotEqual(shared.ToString("N")[..24], local.ToString("N")[..24]);
+        Assert.True(Counter(shared) < Counter(next));
+    }
 
     /// <summary>公開されたUUIDv8の末尾32ビットを読みます。</summary>
     /// <returns>発行元内の連番です。</returns>

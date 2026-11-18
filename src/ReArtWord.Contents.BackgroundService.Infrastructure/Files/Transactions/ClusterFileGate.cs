@@ -105,7 +105,7 @@ public sealed class ClusterFileGate : IDisposable
                 }
             }
             RequestAdmission admission = RequestAdmission.Start(TimeProvider.System, TimeSpan.FromSeconds(30));
-            lease = lease with { ReservationId = Guid.CreateVersion7(admission.SourceNow), AdmissionExpiresAt = admission.ExpiresAt };
+            lease = lease with { ReservationId = OperationIdentity.CreateDurableRequest(AcquireKind), AdmissionExpiresAt = admission.ExpiresAt };
             ClusterRequest request = new(lease.ReservationId, AcquireKind, coordinator.PeerId, coordinator.InstanceId, lease.AdmissionExpiresAt, NodeValue.FromObject(lease)) { Admission = admission };
             ClusterResponse response = await RequestConfirmedAsync(request, cancellationToken).ConfigureAwait(false);
             FileLeaseResult result = response.Value?.Json.Deserialize<FileLeaseResult>() ?? new FileLeaseResult(response.Outcome, lease, response.Reason);
@@ -143,7 +143,7 @@ public sealed class ClusterFileGate : IDisposable
         {
             return new FilePhaseResult(EOutcome.Unknown, "File.ReleaseCoordinatorUnavailable");
         }
-        ClusterRequest request = ClusterRequest.Start(ReleaseKind, coordinator.PeerId, coordinator.InstanceId, TimeSpan.FromSeconds(30), NodeValue.FromObject(new FileGateRelease(lease, members)));
+        ClusterRequest request = ClusterRequest.StartDurable(ReleaseKind, coordinator.PeerId, coordinator.InstanceId, TimeSpan.FromSeconds(30), NodeValue.FromObject(new FileGateRelease(lease, members)));
         string scope = "peer:" + cluster.LocalPeerId + ":file-gate-requests", key = request.Id.ToString("N");
         EOutcome recorded = await repository.WriteLocalSnapshotAsync(scope, key, NodeValue.FromObject(request), cancellationToken).ConfigureAwait(false);
         if (recorded != EOutcome.Succeeded)
@@ -170,7 +170,7 @@ public sealed class ClusterFileGate : IDisposable
         {
             return new FileLeaseResult(EOutcome.Unknown, lease, "File.ReservationCoordinatorUnavailable");
         }
-        ClusterRequest request = ClusterRequest.Start("file.gate.confirm", owner.PeerId, owner.InstanceId, TimeSpan.FromSeconds(30), NodeValue.FromObject(lease));
+        ClusterRequest request = ClusterRequest.StartDurable("file.gate.confirm", owner.PeerId, owner.InstanceId, TimeSpan.FromSeconds(30), NodeValue.FromObject(lease));
         ClusterResponse response = await RequestConfirmedAsync(request, cancellationToken).ConfigureAwait(false);
         return response.Value?.Json.Deserialize<FileLeaseResult>() ?? new FileLeaseResult(EOutcome.Unknown, lease, response.Reason);
     }

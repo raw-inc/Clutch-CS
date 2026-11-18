@@ -70,7 +70,7 @@ internal static class LogRetentionManagement
             data = data with { Overrides = overrides, RollingTime = retention.RollingTime, TimeZoneId = retention.TimeZoneId };
         }
         ClusterOperationalSaveRequest shared = new(request.OperationId, state.Saved.Settings with { LogRetention = retention, DataRetention = data }, request.ExpectedRevision, state.SavedActivationPolicy);
-        DurableReceipt registered = await runtime.Repository.ApplyBatchAsync(OperationIdentity.Create(), [new(scope, key, null, ContractJson.ToValue(new RetentionRequest(fingerprint, shared)))], cancellationToken).ConfigureAwait(false);
+        DurableReceipt registered = await runtime.Repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new(scope, key, null, ContractJson.ToValue(new RetentionRequest(fingerprint, shared)))], cancellationToken).ConfigureAwait(false);
         if (registered.Outcome != EOutcome.Succeeded)
         {
             return Rejected(request.OperationId, EOutcome.Unknown, "LogRetention.RequestRegistrationUnconfirmed");

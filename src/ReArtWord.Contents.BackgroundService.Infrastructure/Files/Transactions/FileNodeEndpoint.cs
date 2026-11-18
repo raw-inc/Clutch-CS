@@ -179,7 +179,7 @@ internal sealed class FileNodeEndpoint
             return new ClusterResponse(EOutcome.Unknown, Reason: "File.CaptureAlreadyStarted");
         }
         PreparedFileOperation prepared = new(capture.Request, capture.Lease);
-        DurableReceipt started = await repository.ApplyBatchAsync(OperationIdentity.Create(), [new DurableMutation(PreparedScope, capture.Request.Id.ToString("N"), null, NodeValue.FromObject(prepared))], cancellationToken).ConfigureAwait(false);
+        DurableReceipt started = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new DurableMutation(PreparedScope, capture.Request.Id.ToString("N"), null, NodeValue.FromObject(prepared))], cancellationToken).ConfigureAwait(false);
         if (started.Outcome != EOutcome.Succeeded)
         {
             return new ClusterResponse(EOutcome.Unknown, Reason: "File.CaptureStartUnconfirmed");
@@ -197,7 +197,7 @@ internal sealed class FileNodeEndpoint
         {
             return new ClusterResponse(EOutcome.Unknown, Reason: "File.CaptureTokenMismatch");
         }
-        DurableReceipt saved = await repository.ApplyBatchAsync(OperationIdentity.Create(), [new DurableMutation(PreparedScope, capture.Request.Id.ToString("N"), started.Entries[0].Version, NodeValue.FromObject(prepared with { Token = token }))], cancellationToken).ConfigureAwait(false);
+        DurableReceipt saved = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new DurableMutation(PreparedScope, capture.Request.Id.ToString("N"), started.Entries[0].Version, NodeValue.FromObject(prepared with { Token = token }))], cancellationToken).ConfigureAwait(false);
         return new ClusterResponse(saved.Outcome, NodeValue.FromObject(token), saved.Reason);
     }
 
@@ -226,7 +226,7 @@ internal sealed class FileNodeEndpoint
         await node.ReleaseAsync(release.Token, cancellationToken).ConfigureAwait(false);
         DurableEntry? entry = await repository.ReadAsync(PreparedScope, release.Request.Id.ToString("N"), cancellationToken).ConfigureAwait(false);
         PreparedFileOperation prepared = entry!.Value!.Json.Deserialize<PreparedFileOperation>()!;
-        DurableReceipt saved = await repository.ApplyBatchAsync(OperationIdentity.Create(), [new DurableMutation(PreparedScope, release.Request.Id.ToString("N"), entry.Version, NodeValue.FromObject(prepared with { Released = true }))], cancellationToken).ConfigureAwait(false);
+        DurableReceipt saved = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new DurableMutation(PreparedScope, release.Request.Id.ToString("N"), entry.Version, NodeValue.FromObject(prepared with { Released = true }))], cancellationToken).ConfigureAwait(false);
         return new ClusterResponse(saved.Outcome, Reason: saved.Reason);
     }
 

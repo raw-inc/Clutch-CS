@@ -192,7 +192,7 @@ internal sealed class PeerRecovery : IDisposable
         {
             return;
         }
-        DurableReceipt receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(), [new DurableMutation(scope, options.PeerId, current?.Version, NodeValue.FromObject(value))], cancellationToken).ConfigureAwait(false);
+        DurableReceipt receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new DurableMutation(scope, options.PeerId, current?.Version, NodeValue.FromObject(value))], cancellationToken).ConfigureAwait(false);
         if (receipt.Outcome != EOutcome.Succeeded)
         {
             throw new InvalidDataException("参加状態を保存できません。");

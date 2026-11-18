@@ -55,7 +55,7 @@ internal sealed class WorkflowRunCancellation : IDisposable
                 return new(request.OperationId, request.RunId, EOutcome.NotExecuted, false, current?.Running, current?.Outcome, "run.cancelOwnerMismatch");
             }
             WorkflowCancelResult pending = new(request.OperationId, request.RunId, EOutcome.Unknown, false, current.Running, current.Outcome, "run.cancelPending");
-            DurableReceipt begun = await repository.ApplyBatchAsync(OperationIdentity.Create(), [new DurableMutation(Scope, key, null,
+            DurableReceipt begun = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new DurableMutation(Scope, key, null,
                 NodeValue.FromObject(new CancellationRecord(fingerprint, pending)))], cancellationToken).ConfigureAwait(false);
             if (begun.Outcome != EOutcome.Succeeded)
             {
@@ -70,7 +70,7 @@ internal sealed class WorkflowRunCancellation : IDisposable
         WorkflowCancelResult result = await RequestAsync(request, cancellationToken).ConfigureAwait(false);
         try
         {
-            DurableReceipt recorded = await repository.ApplyBatchAsync(OperationIdentity.Create(), [new DurableMutation(Scope, key, version,
+            DurableReceipt recorded = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new DurableMutation(Scope, key, version,
                 NodeValue.FromObject(new CancellationRecord(fingerprint, result)))], CancellationToken.None).ConfigureAwait(false);
             if (recorded.Outcome != EOutcome.Succeeded)
             {

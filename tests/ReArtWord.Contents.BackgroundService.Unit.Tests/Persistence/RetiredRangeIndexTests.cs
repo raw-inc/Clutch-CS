@@ -59,7 +59,7 @@ public sealed class RetiredRangeIndexTests
     public void KeyRangesKeepTheOriginalScopeAndRepresentation(string format)
     {
         ArgumentNullException.ThrowIfNull(format);
-        Guid id = OperationIdentity.CreateRequest();
+        Guid id = OperationIdentity.CreateDurableRequest();
         string text = id.ToString(format);
         if (char.IsUpper(format[0]))
         {

@@ -142,7 +142,11 @@ internal sealed class ScheduledTargetReadiness(IPeerDirectory peers, TimeProvide
                 // ここへ来る要求は未配送で、対象の復帰を待っていたものです。予定の許容遅延とは別に、
                 // 初回配送からの受付期間を確保します。IDの生成日時も同時に固定し、待機前のIDへ期限だけを継ぎ足しません。
                 RequestAdmission admission = RequestAdmission.Start(clock, admissionLifetime);
-                return new(request with { Id = Guid.CreateVersion7(admission.SourceNow), TargetInstanceId = current.InstanceId,
+                Guid requestId = request.Id.Version == 8 ? OperationIdentity.CreateExecution()
+                                                         : Guid.CreateVersion7(admission.SourceNow);
+                Guid receiptId = request.ReceiptId == Guid.Empty ? Guid.Empty
+                                                                 : Guid.CreateVersion7(admission.SourceNow);
+                return new(request with { Id = requestId, ReceiptId = receiptId, TargetInstanceId = current.InstanceId,
                     ExpiresAt = admission.ExpiresAt, Admission = admission });
             }
             try

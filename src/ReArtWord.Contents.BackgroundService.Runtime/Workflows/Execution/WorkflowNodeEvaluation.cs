@@ -72,6 +72,8 @@ internal sealed class WorkflowNodeEvaluation(NodeRegistry registry, IPeerDirecto
             return Skipped(node.Id, "input.inactive", "この一件で開始された入口ではありません。");
         }
         List<Task<TargetNodeResult>> executions = [];
+        string? failurePolicy = new NodeSettings(node.Settings).ReadText("failurePolicy", "keep");
+        bool compensate = registry.Find(node.Type) is ICompensableFileNode && string.Equals(failurePolicy, RollbackPolicy, StringComparison.Ordinal);
         List<RemoteExecutionRequest> requests = [];
         foreach (Contracts.Cluster.PeerInfo peer in target.Peers)
         {
@@ -114,8 +116,11 @@ internal sealed class WorkflowNodeEvaluation(NodeRegistry registry, IPeerDirecto
                 continue;
             }
             RequestAdmission admission = RequestAdmission.Start(timeProvider, admissionLifetime);
-            RemoteExecutionRequest request = new(Guid.CreateVersion7(admission.SourceNow), causationId, workflow.Definition.Id, workflow.Revision, executable, inputs, peer.PeerId, peer.InstanceId,
-                admission.ExpiresAt, trace.Enabled, workflow.ExecutionDefinition.ContainsPersonalData, operational?.Settings.TimeZoneId ?? timeZone.Id, operational, trace.Selection, ownership.Find(causationId)?.Hooks, IsValueRead: valueRead)
+            Guid requestId = OperationIdentity.CreateExecution();
+            Guid receiptId = compensate ? Guid.Empty
+                                        : Guid.CreateVersion7(admission.SourceNow);
+            RemoteExecutionRequest request = new(requestId, causationId, workflow.Definition.Id, workflow.Revision, executable, inputs, peer.PeerId, peer.InstanceId,
+                admission.ExpiresAt, trace.Enabled, workflow.ExecutionDefinition.ContainsPersonalData, operational?.Settings.TimeZoneId ?? timeZone.Id, operational, trace.Selection, ownership.Find(causationId)?.Hooks, IsValueRead: valueRead, ReceiptId: receiptId)
             {
                 SourceScopes = ownership.Find(causationId)?.SourceScopes,
                 Admission = admission,
@@ -134,8 +139,6 @@ internal sealed class WorkflowNodeEvaluation(NodeRegistry registry, IPeerDirecto
             }
             requests.Add(request);
         }
-        string? failurePolicy = new NodeSettings(node.Settings).ReadText("failurePolicy", "keep");
-        bool compensate = registry.Find(node.Type) is ICompensableFileNode && string.Equals(failurePolicy, RollbackPolicy, StringComparison.Ordinal);
         if (compensate)
         {
             if (executions.Count != 0)

@@ -99,7 +99,7 @@ public sealed class UpdateScheduleStore(IDurableRepository repository, string ow
     /// <returns>この呼出しが保存を確定したかです。</returns>
     internal async Task<UpdateScheduleResult> WriteAsync(string? expectedVersion, ScheduledUpdate schedule, CancellationToken cancellationToken = default)
     {
-        DurableReceipt receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(), [new(Scope, schedule.Plan.Update.OperationId.ToString("N"), expectedVersion, ContractJson.ToValue(schedule))], cancellationToken).ConfigureAwait(false);
+        DurableReceipt receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new(Scope, schedule.Plan.Update.OperationId.ToString("N"), expectedVersion, ContractJson.ToValue(schedule))], cancellationToken).ConfigureAwait(false);
         return new(receipt.Outcome, View(receipt.Entries.FirstOrDefault(entry => string.Equals(entry.Scope, Scope, StringComparison.Ordinal))), receipt.Reason);
     }
 
@@ -125,13 +125,13 @@ public sealed class UpdateScheduleStore(IDurableRepository repository, string ow
                 }
                 return known.Result ?? new(EOutcome.Unknown, null, "schedule.changeUnconfirmed");
             }
-            DurableReceipt begin = await repository.ApplyBatchAsync(OperationIdentity.Create(), [new(Operations, key, null, ContractJson.ToValue(new UpdateScheduleOperation(fingerprint)))], cancellationToken).ConfigureAwait(false);
+            DurableReceipt begin = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new(Operations, key, null, ContractJson.ToValue(new UpdateScheduleOperation(fingerprint)))], cancellationToken).ConfigureAwait(false);
             if (begin.Outcome != EOutcome.Succeeded)
             {
                 return new(EOutcome.Unknown, null, "schedule.changeAlreadyReserved");
             }
             UpdateScheduleResult result = await change(cancellationToken).ConfigureAwait(false);
-            DurableReceipt completed = await repository.ApplyBatchAsync(OperationIdentity.Create(), [new(Operations, key, begin.Entries.Single().Version, ContractJson.ToValue(new UpdateScheduleOperation(fingerprint, result)))], cancellationToken).ConfigureAwait(false);
+            DurableReceipt completed = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new(Operations, key, begin.Entries.Single().Version, ContractJson.ToValue(new UpdateScheduleOperation(fingerprint, result)))], cancellationToken).ConfigureAwait(false);
             if (completed.Outcome != EOutcome.Succeeded)
             {
                 return new(EOutcome.Unknown, result.View, "schedule.changeResultUnconfirmed");
