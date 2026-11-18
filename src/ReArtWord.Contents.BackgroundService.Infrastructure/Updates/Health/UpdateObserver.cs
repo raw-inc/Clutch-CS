@@ -15,13 +15,16 @@ public sealed class UpdateObserver : IAsyncDisposable
 {
     private readonly UdpObserver observer;
     private readonly string clusterId;
+    private readonly TimeSpan confirmationTimeout;
 
     /// <summary>明示NICと固定クラスタを使用しCore Peerとして参加しません。</summary>
-    public UpdateObserver(ClientNetworkBinding binding, string clusterId, TimeSpan? requestTimeout = null)
+    public UpdateObserver(ClientNetworkBinding binding, string clusterId, TimeSpan? requestTimeout = null, TimeSpan? confirmationTimeout = null)
     {
         ArgumentNullException.ThrowIfNull(binding);
         ArgumentException.ThrowIfNullOrWhiteSpace(clusterId);
         this.clusterId = clusterId;
+        this.confirmationTimeout = confirmationTimeout ?? TimeSpan.FromMinutes(2);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(this.confirmationTimeout, TimeSpan.Zero);
         observer = new(new ObserverOptions("updater-" + Guid.NewGuid().ToString("N"), binding) { RequestTimeout = requestTimeout ?? TimeSpan.FromSeconds(2) });
     }
 
@@ -81,9 +84,31 @@ public sealed class UpdateObserver : IAsyncDisposable
             return await observer.InspectWithRetryAsync(command, cancellationToken).ConfigureAwait(false);
         }
         ManagementReply reply = await observer.ExecuteAsync(command, cancellationToken).ConfigureAwait(false);
+        if (reply.Outcome != EOutcome.Unknown)
+        {
+            return reply;
+        }
+
+        // 受付期限を過ぎても、開始済みの更新結果は元のIDで照会できます。
+        using CancellationTokenSource confirmation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        confirmation.CancelAfter(confirmationTimeout);
+        try
+        {
+            return await ConfirmAsync(command, reply, confirmation.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (confirmation.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            return reply;
+        }
+    }
+
+    /// <summary>通信欠測が続く間は元の操作の結果だけを問い合わせます。</summary>
+    /// <returns>保存済みの結果、または元の未確認応答です。</returns>
+    private async Task<ManagementReply> ConfirmAsync(ManagementCommand command, ManagementReply reply, CancellationToken cancellationToken = default)
+    {
         string unconfirmedQuery = "Observer.ReceiptUnconfirmed";
         string notYetRecorded = "Execution.ReceiptMissing";
-        while (reply.Outcome == EOutcome.Unknown && DateTimeOffset.UtcNow < command.ExpiresAt)
+        while (!cancellationToken.IsCancellationRequested)
         {
             ManagementQueryResult queried = await observer.QueryAsync(command, cancellationToken).ConfigureAwait(false);
             if (queried.Reply is not null)
@@ -99,6 +124,7 @@ public sealed class UpdateObserver : IAsyncDisposable
             }
             await Task.Delay(100, cancellationToken).ConfigureAwait(false);
         }
+        cancellationToken.ThrowIfCancellationRequested();
         return reply;
     }
 

@@ -150,15 +150,27 @@ public sealed class PeerManagementClient(Func<string, string, UdpObserver?> find
     {
         ArgumentNullException.ThrowIfNull(observer);
         ArgumentNullException.ThrowIfNull(command);
-        while (DateTimeOffset.UtcNow < command.ExpiresAt)
+
+        // ファイル確定の受付期限を過ぎても、開始済みの処理の結果は照会できます。
+        using CancellationTokenSource confirmation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        confirmation.CancelAfter(TimeSpan.FromMinutes(5));
+        try
         {
-            ManagementQueryResult result = await observer.QueryAsync(command, cancellationToken).ConfigureAwait(false);
-            if (result.Reply is not null)
+            while (!confirmation.IsCancellationRequested)
             {
-                return result.Reply;
+                ManagementQueryResult result = await observer.QueryAsync(command, confirmation.Token).ConfigureAwait(false);
+                if (result.Reply is not null)
+                {
+                    return result.Reply;
+                }
+                await Task.Delay(250, confirmation.Token).ConfigureAwait(false);
             }
-            await Task.Delay(250, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            return unknown;
         }
-        return unknown;
+        catch (OperationCanceledException) when (confirmation.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            return unknown;
+        }
     }
 }

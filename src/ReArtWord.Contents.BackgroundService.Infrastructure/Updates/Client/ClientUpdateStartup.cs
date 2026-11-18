@@ -40,9 +40,9 @@ internal static class ClientUpdateStartup
         {
             await UnixInstallation.StartAsync(registration, cancellationToken).ConfigureAwait(false);
         }
-        DateTimeOffset deadline = DateTimeOffset.UtcNow.AddMilliseconds(job.TimeoutMilliseconds);
+        long started = Stopwatch.GetTimestamp();
         string executable = Path.Combine(job.InstallationRoot, manifest.EntryPoint);
-        while (DateTimeOffset.UtcNow < deadline)
+        while (Stopwatch.GetElapsedTime(started) < TimeSpan.FromMilliseconds(job.TimeoutMilliseconds))
         {
             Process? process = FindStartedProcess(executable, job.PreviousProcess);
             if (process is not null)

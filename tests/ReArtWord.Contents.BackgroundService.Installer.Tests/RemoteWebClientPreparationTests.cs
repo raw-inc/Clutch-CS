@@ -55,6 +55,14 @@ public sealed class RemoteWebClientPreparationTests
         target.Received = async (message, _, token) =>
         {
             string queryKind = "receipt.query", requestKind = "request", compact = "setup.client.stage";
+            string inspection = "inspect";
+            if (string.Equals(message.Kind, inspection, StringComparison.Ordinal))
+            {
+                // 旧Coreは受付時計の照会に未対応と応答します。無応答では、更新要求の送信には進みません。
+                ClusterResponse unsupported = new(EOutcome.NotExecuted, Reason: "Cluster.InspectionTargetUnavailable");
+                await target.SendAsync(WireMessage.Reply(message, "target", instance, JsonSerializer.SerializeToElement(unsupported)), token).ConfigureAwait(false);
+                return;
+            }
             if (string.Equals(message.Kind, queryKind, StringComparison.Ordinal))
             {
                 RequestQuery query = message.Body.Deserialize<RequestQuery>()!;
