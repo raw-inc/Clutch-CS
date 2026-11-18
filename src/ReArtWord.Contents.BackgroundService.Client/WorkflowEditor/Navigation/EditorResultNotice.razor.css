@@ -4,7 +4,7 @@
     padding: 9px 12px 12px;
     border: 1px solid var(--line);
     border-inline-start: 3px solid var(--accent);
-    border-radius: 8px;
+    border-radius: var(--radius-panel);
     background: var(--editor-overlay-background);
     color: var(--ink);
     box-shadow: 0 5px 18px #0005;
@@ -63,7 +63,7 @@
 .editor-result-notice.compact {
     width: 100%;
     padding: 6px 12px;
-    background: #1d2127;
+    background: var(--panel);
     pointer-events: none;
 }
 

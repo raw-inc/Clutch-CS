@@ -75,14 +75,13 @@ h3 {
     min-width: 0;
     min-height: 150px;
     position: relative;
-    background: color-mix(in srgb, var(--panel) 55%, transparent);
+    background: var(--nested);
 }
 
 .metric-content {
     position: relative;
     z-index: 1;
     padding: 10px 8px 24px;
-    text-shadow: 0 0 1px #0006;
 }
 
 .metric-detail {
@@ -171,7 +170,7 @@ h3 {
 .sample-status,
 .warning,
 .activity-warning {
-    color: #c9aa73;
+    color: var(--warn);
 }
 
 @media (min-width: 1000px) {

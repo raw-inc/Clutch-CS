@@ -25,7 +25,7 @@
     width: 100%;
     font-size: 11px;
     background: var(--paper);
-    border-color: #3b3e46;
+    border-color: var(--line);
     margin-top: 8px;
     padding: 6px 8px;
 }
@@ -43,13 +43,13 @@
     justify-content: space-between;
     padding: 13px 9px 5px;
     font-size: 10px;
-    color: #929cae;
+    color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.6px;
 }
 
 .catalog-category span {
-    color: #626b79;
+    color: var(--muted);
     letter-spacing: 0;
 }
 
@@ -64,7 +64,7 @@
     border: 1px solid transparent;
     background: transparent;
     margin: 2px 0;
-    border-radius: 4px;
+    border-radius: var(--radius-control);
 }
 
 .catalog-item:hover {
@@ -73,8 +73,8 @@
 }
 
 .catalog-item.selected {
-    background: #2c3747;
-    border-color: #425a79;
+    background: var(--accent-soft);
+    border-color: var(--accent);
 }
 
 .catalog-item > span:nth-child(2) {
@@ -100,15 +100,15 @@
     place-items: center;
     width: 26px;
     height: 28px;
-    background: #303844;
-    color: #9ebbe4;
-    border-radius: 4px;
+    background: var(--raised);
+    color: var(--accent);
+    border-radius: var(--radius-control);
     flex-shrink: 0;
 }
 
 .catalog-kind.source {
-    background: #313c36;
-    color: #a6c7af;
+    background: var(--green-soft);
+    color: var(--green);
 }
 
 .catalog-kind ::deep  .ui-icon {
@@ -117,7 +117,7 @@
 }
 
 .catalog-item-arrow {
-    color: #697789;
+    color: var(--muted);
     font-size: 17px;
 }
 
@@ -146,11 +146,11 @@
 .catalog-preview dd {
     margin: 0;
     overflow-wrap: anywhere;
-    color: #bcc5d3;
+    color: var(--muted);
 }
 
 .catalog-preview ::deep > .ui-icon {
-    color: #8090a6;
+    color: var(--muted);
 }
 
 .catalog-preview > .small {
@@ -261,7 +261,7 @@
 }
 
 .studio .catalog-item.selected {
-    border-color: color-mix(in srgb, var(--category-color) 45%, #34363c);
+    border-color: color-mix(in srgb, var(--category-color) 45%, var(--line));
     background: color-mix(in srgb, var(--category-color) 10%, var(--panel));
 }
 

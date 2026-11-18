@@ -25,7 +25,7 @@
     border-radius: 0;
     background: transparent;
     font-size: 11px;
-    color: #9ea7b3;
+    color: var(--muted);
     position: relative;
 }
 
@@ -37,7 +37,7 @@
 
 .cluster-tab small {
     font-size: 9px;
-    color: #7e8996;
+    color: var(--muted);
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -45,7 +45,7 @@
 
 .cluster-tab.selected {
     background: var(--panel);
-    color: #e0e8f2;
+    color: var(--ink);
 }
 
 .cluster-tab.selected::after {

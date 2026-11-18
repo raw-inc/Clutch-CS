@@ -21,12 +21,12 @@ before(async () =>
             if (pathname === '/')
             {
                 response.setHeader('Content-Type', 'text/html; charset=utf-8');
-                response.end('<!doctype html><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-desktop.css"><main id="desktop"></main>');
+                response.end('<!doctype html><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-desktop.css"><main id="desktop"></main>');
                 return;
             }
             const file = path.resolve(root, '.' + decodeURIComponent(pathname));
             assert.ok(file.startsWith(root));
-            response.setHeader('Content-Type', file.endsWith('.css') ? 'text/css' : 'text/javascript');
+            response.setHeader('Content-Type', file.endsWith('.css') ? 'text/css' : file.endsWith('.svg') ? 'image/svg+xml' : file.endsWith('.woff2') ? 'font/woff2' : 'text/javascript');
             response.end(await readFile(file));
         }
         catch
@@ -74,7 +74,12 @@ async function inputsAsync(sent, count, signal)
     return sent.filter(item => item[0] === 4);
 }
 
-for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' }], ['Firefox', firefox, {}]])
+// Firefoxの全画面切替中はブラウザーがツールバーへの入力を受け取るため、試験では通知と画面切替の演出を無効にします。
+for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' }], ['Firefox', firefox, { firefoxUserPrefs: {
+    'full-screen-api.warning.timeout': 0,
+    'full-screen-api.transition-duration.enter': '0 0',
+    'full-screen-api.transition-duration.leave': '0 0'
+} }]])
 {
     test(`${name}: 接続前の全画面と長押し入力を保持し、映像だけの全画面は切断で解除する`, { timeout: 30000 }, async context =>
     {

@@ -21,7 +21,7 @@
 
 .health-indicator.good .activity-ring,
 .power-syncing.confirmed .activity-ring {
-    color: color-mix(in srgb, var(--green) 92%, #111317);
+    color: color-mix(in srgb, var(--green) 92%, var(--paper));
 }
 
 .health-indicator .dot {

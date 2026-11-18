@@ -42,7 +42,7 @@
 .scope-advanced,
 .scope-limits {
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     padding: 7px 10px;
 }
 
@@ -51,7 +51,7 @@
     grid-template-columns: 310px minmax(0, 1fr);
     min-width: 0;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     overflow: hidden;
     background: var(--paper);
 }
@@ -178,7 +178,7 @@
     overflow-anchor: none;
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
 }
 
 .scope-packets {
@@ -267,7 +267,7 @@
     padding: 12px;
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     font-size: 11px;
     line-height: 1.55;
     tab-size: 4;

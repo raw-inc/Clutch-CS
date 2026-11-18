@@ -4,7 +4,7 @@
 
 .file-picker-owner {
     padding: 10px 12px;
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     background: var(--panel);
     overflow-wrap: anywhere;
 }
@@ -27,7 +27,7 @@
     overflow: auto;
     scrollbar-gutter: stable;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     background: var(--paper);
 }
 

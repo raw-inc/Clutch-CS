@@ -1,6 +1,6 @@
 .status-separator {
     margin: 0 10px;
-    color: #555b65;
+    color: var(--muted);
 }
 
 .studio {
@@ -89,7 +89,7 @@
 
 .split-button button:last-child {
     border-radius: 0 4px 4px 0;
-    border-left: 1px solid #577caa;
+    border-left: 1px solid var(--accent);
     min-width: 27px;
     padding: 5px;
 }
@@ -138,10 +138,10 @@
     gap: 15px;
     white-space: pre-wrap;
     padding: 7px 18px;
-    background: #28313e;
-    color: #bfcee4;
+    background: var(--accent-soft);
+    color: var(--muted);
     font-size: 11px;
-    border-bottom: 1px solid #3e4c5e;
+    border-bottom: 1px solid var(--line);
     max-height: 110px;
     overflow: auto;
 }
@@ -225,7 +225,7 @@
 
 .inspector ::deep fieldset > h3 {
     font-size: 11px;
-    color: #bdc7d5;
+    color: var(--muted);
     padding-top: 13px;
     border-top: 1px solid var(--line);
     margin-top: 20px;
@@ -297,16 +297,16 @@
     position: relative;
     overflow: auto;
     background-color: var(--paper);
-    background-image: radial-gradient(#383c45 0.65px, transparent 0.65px);
+    background-image: radial-gradient(var(--line) 0.65px, transparent 0.65px);
     background-size: 20px 20px;
 }
 
 .canvas-hint > span:last-child {
-    color: #717b8c;
+    color: var(--muted);
 }
 
 .canvas-hint .dot {
-    color: #769bc8;
+    color: var(--accent);
 }
 
 .canvas-empty {
@@ -322,13 +322,13 @@
 .canvas-empty ::deep > .ui-icon {
     width: 40px;
     height: 40px;
-    color: #62748b;
+    color: var(--muted);
     margin-bottom: 15px;
 }
 
 .canvas-empty h2 {
     font-size: 17px;
-    color: #c1cbda;
+    color: var(--ink);
     margin-bottom: 8px;
 }
 
@@ -494,11 +494,11 @@
     align-items: center;
     gap: 7px;
     z-index: 1;
-    color: #909aaa;
-    background: #20242bee;
+    color: var(--muted);
+    background: color-mix(in srgb, var(--panel) 95%, transparent);
     padding: 6px 9px;
-    border: 1px solid #303641;
-    border-radius: 4px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
     font-size: 9px;
     pointer-events: none;
     position: absolute;
@@ -566,9 +566,9 @@
 }
 
 .studio .canvas-empty button {
-    background: #242830;
-    border: 1px solid #3b444e;
-    color: #c0ccd9;
+    background: var(--raised);
+    border: 1px solid var(--line);
+    color: var(--muted);
     margin: 0;
 }
 
@@ -646,7 +646,7 @@
     margin: 0;
     padding: 6px 15px;
     font-size: 11px;
-    background: #252932;
+    background: var(--raised);
 }
 
 .graph-legend {

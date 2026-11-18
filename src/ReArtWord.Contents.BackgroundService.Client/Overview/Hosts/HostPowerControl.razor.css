@@ -64,7 +64,7 @@
     padding: 6px;
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     box-shadow: 0 8px 24px #0005;
 }
 

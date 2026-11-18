@@ -19,12 +19,12 @@ before(async() =>
             if (pathname === '/')
             {
                 response.setHeader('Content-Type', 'text/html; charset=utf-8');
-                response.end('<!doctype html><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-tools.css"><main id="tool"></main>');
+                response.end('<!doctype html><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-tools.css"><main id="tool"></main>');
                 return;
             }
             const file = pathname === '/local-fixture.mjs' ? fixture : path.resolve(root, '.' + decodeURIComponent(pathname));
             assert.ok(file === fixture || file.startsWith(root));
-            response.setHeader('Content-Type', file.endsWith('.css') ? 'text/css' : 'text/javascript');
+            response.setHeader('Content-Type', file.endsWith('.css') ? 'text/css' : file.endsWith('.svg') ? 'image/svg+xml' : file.endsWith('.woff2') ? 'font/woff2' : 'text/javascript');
             response.end(await readFile(file));
         }
         catch

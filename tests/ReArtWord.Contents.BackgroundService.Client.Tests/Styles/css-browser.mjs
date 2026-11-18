@@ -53,9 +53,9 @@ const properties = ['display', 'color', 'backgroundColor', 'width', 'height', 'm
 /** 子コンポーネントとJS生成要素を区別して、実ブラウザーの描画結果を取得します。
  * @returns 検査対象の算出スタイルです。
  */
-export async function captureStylesAsync(browser, styles, width, reducedMotion = 'no-preference')
+export async function captureStylesAsync(browser, styles, width, reducedMotion = 'no-preference', colorScheme = 'light')
 {
-    const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion });
+    const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion, colorScheme });
     try
     {
         await page.setContent(await readFile(fixturePath, 'utf8'));

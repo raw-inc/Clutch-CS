@@ -49,6 +49,28 @@ export async function terminalView(root, ctx)
         applicationCursor: () => !!term?.modes?.applicationCursorKeysMode });
     panel.append(keys.element);
     host.addEventListener('paste', () => keys.reset(), { capture: true, signal: ctx.signal });
+
+    /** xtermはCanvasに描画するため、端末面に適用された配色を渡します。
+     * @returns 文字・背景・カーソルの表示色です。
+     */
+    function terminalTheme()
+    {
+        const style = window.getComputedStyle(host);
+        return { background: style.backgroundColor, foreground: style.color, cursor: style.caretColor };
+    }
+
+    /** セッションとスクロール位置を保ったまま配色を切り替えます。 */
+    function refreshTheme()
+    {
+        if (term)
+        {
+            term.options.theme = terminalTheme();
+        }
+    }
+
+    const scheme = window.matchMedia('(prefers-color-scheme: dark)');
+    scheme.addEventListener('change', refreshTheme, { signal: ctx.signal });
+    window.addEventListener('clutch-theme-change', refreshTheme, { signal: ctx.signal });
     const sessionLists = new Map();
     const layout = createTerminalLayout(root, host, () => fit?.fit(), ctx.signal);
 
@@ -237,7 +259,7 @@ export async function terminalView(root, ctx)
             return;
         }
         session = claimed;
-        term = new window.Terminal({ cursorBlink: true, scrollback: 3000, fontSize: 14, theme: { background: '#101114', foreground: '#e5e7eb', cursor: '#91b8ee', selectionBackground: '#354a66' } });
+        term = new window.Terminal({ cursorBlink: true, scrollback: 3000, fontSize: 14, minimumContrastRatio: 4.5, theme: terminalTheme() });
         const surface = document.createElement('div');
         surface.className = 'terminal-surface';
         host.append(surface);

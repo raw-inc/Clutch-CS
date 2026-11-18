@@ -26,7 +26,11 @@ public sealed partial class CollaborationOverlay
 
     /// <summary>ブラウザー実体ごとに識別色を固定します。</summary>
     /// <returns>テーマに合う明るさの色です。</returns>
-    private static string Color(Guid id) => "hsl(" + (BitConverter.ToUInt16(id.ToByteArray()) % 360).ToString(System.Globalization.CultureInfo.InvariantCulture) + " 62% 72%)";
+    private static string Color(Guid id)
+    {
+        string hue = (BitConverter.ToUInt16(id.ToByteArray()) % 360).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return "light-dark(hsl(" + hue + " 62% 30%), hsl(" + hue + " 62% 72%))";
+    }
 
     /// <summary>同じ表示名のブラウザーも区別できるようにします。</summary>
     /// <returns>短い実体識別を添えた編集者名です。</returns>

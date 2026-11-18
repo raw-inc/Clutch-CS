@@ -13,7 +13,7 @@ let server, origin;
 
 before(async () =>
 {
-    const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.wasm': 'application/wasm', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml' };
+    const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.wasm': 'application/wasm', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.woff2': 'font/woff2', '.png': 'image/png', '.svg': 'image/svg+xml' };
     const management = {
         '/client/health': { buildVersion: 'pwa-test' },
         '/client/branding': { contentsName: 'Clutch-CS', subtitle: 'WebClient' },
@@ -118,9 +118,15 @@ test('published Desktop PWA is installable from the current origin and reopens i
         }
         assert.deepEqual(app.icons.map(icon => icon.sizes).sort(), ['192x192', '512x512']);
 
+        await page.emulateMedia({ colorScheme: 'light' });
+        await page.getByRole('tab', { name: 'Settings & maintenance' }).click();
+        const theme = page.getByLabel('Appearance');
+        await theme.selectOption('dark');
+        await page.getByRole('button', { name: 'Save display settings' }).click();
+        await page.waitForFunction(() => getComputedStyle(document.documentElement).colorScheme === 'dark');
         await page.evaluate(() => sessionStorage.setItem('contents.pwa.test-draft', 'preserved'));
         await context.setOffline(true);
-        for (const path of ['/manifest.webmanifest', ...app.icons.map(icon => '/' + icon.src)])
+        for (const path of ['/manifest.webmanifest', '/icons/controls.svg', '/vendor/fonts/roboto-latin.woff2', '/vendor/fonts/m-plus-2.woff2', '/vendor/fonts/zen-kaku-gothic-new-bold.woff2', ...app.icons.map(icon => '/' + icon.src)])
         {
             assert.equal(await page.evaluate(async resource => (await fetch(resource)).ok, path), true);
         }
@@ -131,6 +137,8 @@ test('published Desktop PWA is installable from the current origin and reopens i
             {
                 throw new Error(`${path}: ${await page.locator('body').innerText()} / ${errors.join('; ')}`, { cause: error });
             });
+            await page.waitForFunction(() => document.querySelector('.navigation svg')?.getBBox().width && Array.from(document.querySelectorAll('.navigation svg')).every(icon => 0 < icon.getBBox().width));
+            assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor), 'rgb(17, 17, 17)');
             assert.equal(await page.evaluate(() => sessionStorage.getItem('contents.pwa.test-draft')), 'preserved');
         }
         assert.equal(await page.evaluate(async () =>
@@ -148,6 +156,7 @@ test('published Desktop PWA is installable from the current origin and reopens i
 
         await context.setOffline(false);
         await page.goto(origin + '/ui-update.html');
+        assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme), 'dark');
         const recoveryManifest = await protocol.send('Page.getAppManifest');
         assert.equal(recoveryManifest.url, manifest.url);
         await page.getByRole('button', { name: /Update/ }).click();
@@ -161,5 +170,43 @@ test('published Desktop PWA is installable from the current origin and reopens i
         assert.equal(path.dirname(profile), temporary);
         assert.ok(path.basename(profile).startsWith('contents-pwa-'));
         await rm(profile, { recursive: true, force: true });
+    }
+});
+
+test('配色の保存と解除が別タブにも反映され、保存できない場合も端末の設定で開ける', async () =>
+{
+    const browser = await chromium.launch();
+    try
+    {
+        const context = await browser.newContext({ colorScheme: 'dark' });
+        const settings = await context.newPage(), update = await context.newPage();
+        await settings.goto(origin + '/dashboard');
+        await settings.getByRole('tab', { name: 'Settings & maintenance' }).click();
+        await update.goto(origin + '/ui-update.html');
+        const picker = settings.getByLabel('Appearance');
+        for (const [choice, background] of [['light', 'rgb(245, 245, 242)'], ['system', 'rgb(17, 17, 17)']])
+        {
+            await picker.selectOption(choice);
+            await settings.getByRole('button', { name: 'Save display settings' }).click();
+            await update.waitForFunction(color => getComputedStyle(document.documentElement).backgroundColor === color, background);
+        }
+        await update.emulateMedia({ colorScheme: 'light' });
+        assert.equal(await update.evaluate(() => getComputedStyle(document.documentElement).backgroundColor), 'rgb(245, 245, 242)');
+        await context.close();
+
+        const restricted = await browser.newPage({ colorScheme: 'dark' });
+        await restricted.addInitScript(() => Object.defineProperty(window, 'localStorage', {
+            /** 保存領域を読み取れないブラウザーを再現します。 */
+            get()
+            {
+                throw new DOMException('Storage unavailable', 'SecurityError');
+            } }));
+        await restricted.goto(origin + '/ui-update.html');
+        assert.equal(await restricted.evaluate(() => window.contentsTheme.get()), 'system');
+        assert.equal(await restricted.evaluate(() => getComputedStyle(document.documentElement).backgroundColor), 'rgb(17, 17, 17)');
+    }
+    finally
+    {
+        await browser.close();
     }
 });

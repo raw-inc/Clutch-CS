@@ -1,24 +1,6 @@
-
 :root {
-    color-scheme: dark;
-
-    --ink: #e5e7eb;
-    --muted: #969ca6;
-    --line: #2c3037;
-    --paper: #101114;
-    --panel: #181a1f;
-    --raised: #24272d;
-    --accent: #91b8ee;
-    --accent-soft: #263344;
-    --danger: #f09494;
-    --warn: #ddba78;
-    --green: #8bc7a5;
     --topbar-height: 58px;
     --statusbar-height: 26px;
-
-    font: 13px/1.5 "Segoe UI Variable Text", "Segoe UI", "Yu Gothic UI", sans-serif;
-    background: var(--paper);
-    color: var(--ink);
 }
 
 * {
@@ -54,40 +36,44 @@ button {
     display: inline-flex;
     justify-content: center;
     align-items: center;
-    gap: 7px;
-    border: 1px solid #41434b;
-    border-bottom-color: #34363c;
-    border-radius: 5px;
-    background: #303137;
-    padding: 7px 12px;
+    gap: 8px;
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
+    background: transparent;
+    padding: 9px 14px 7px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.45;
     cursor: pointer;
     white-space: nowrap;
-    transition: background 0.12s, border-color 0.12s;
 }
 
-button:hover {
-    background: #3b3d44;
-    border-color: #53555f;
+button:hover:where(:enabled) {
+    background: var(--raised);
+    border-color: var(--control);
 }
 
-button:active {
-    background: #25262b;
+button:enabled:active {
+    background: var(--accent-soft);
 }
 
-button:disabled {
+button:disabled,
+button.primary:disabled {
     cursor: not-allowed;
-    opacity: 0.42;
+    color: var(--disabled-ink);
+    background: var(--disabled-face);
+    border-color: var(--disabled-line);
 }
 
 button.primary {
     background: var(--accent);
-    color: #142239;
+    color: var(--on-accent);
     border-color: transparent;
     font-weight: 600;
 }
 
-button.primary:hover {
-    background: #a3c6f3;
+button.primary:enabled:hover {
+    background: var(--accent-hover);
 }
 
 button.danger {
@@ -101,8 +87,8 @@ button.quiet {
 
 button.quiet:hover,
 button.quiet.active {
-    background: #30343d;
-    color: #c3d9fa;
+    background: var(--raised);
+    color: var(--accent);
 }
 
 button.icon-button {
@@ -112,21 +98,20 @@ button.icon-button {
 
 a {
     color: var(--accent);
-    text-decoration: none;
+    text-underline-offset: 0.25em;
 }
 
 a:hover {
-    text-decoration: underline;
+    text-decoration-thickness: 2px;
 }
 
 input,
 select,
 textarea {
-    border: 1px solid #3f4149;
-    border-bottom-color: #686b75;
-    border-radius: 4px;
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
     padding: 7px 9px;
-    background: #292b30;
+    background: var(--panel);
     max-width: 100%;
     min-width: 0;
     outline: none;
@@ -135,17 +120,16 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-    border-bottom: 2px solid var(--accent);
-    padding-bottom: 6px;
-    background: #24262b;
+    border-color: var(--accent);
+    box-shadow: inset 0 -2px var(--accent);
 }
 
 input:disabled,
 select:disabled,
 textarea:disabled {
-    opacity: 0.5;
-    color: var(--muted);
-    border-color: var(--line);
+    color: var(--disabled-ink);
+    background: var(--disabled-face);
+    border-color: var(--disabled-line);
     cursor: not-allowed;
 }
 
@@ -193,17 +177,23 @@ fieldset {
     border: 0;
 }
 
+h1,
+h2,
+h3 {
+    font-family: var(--font-title);
+}
+
 h1 {
-    font-size: 25px;
+    font-size: clamp(22px, 2.4vw, 30px);
     line-height: 1.25;
-    letter-spacing: -0.5px;
-    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-weight: 700;
     margin: 0;
 }
 
 h2 {
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 18px;
+    font-weight: 700;
     margin: 0 0 14px;
 }
 
@@ -240,31 +230,35 @@ p {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 2px 7px;
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    background: #2d2f35;
-    color: #bbc1cb;
-    font-size: 11px;
+    justify-content: center;
+    min-width: 3em;
+    padding: 4px 9px 2px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    background: var(--raised);
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.45;
     white-space: nowrap;
 }
 
 .badge.good {
-    background: #24382f;
+    background: var(--green-soft);
     color: var(--green);
-    border-color: #344c40;
+    border-color: var(--green);
 }
 
 .badge.warn {
-    background: #3b3326;
+    background: var(--warn-soft);
     color: var(--warn);
-    border-color: #50432e;
+    border-color: var(--warn);
 }
 
 .badge.bad {
-    background: #3e292d;
+    background: var(--danger-soft);
     color: var(--danger);
-    border-color: #563940;
+    border-color: var(--danger);
 }
 
 .dot {
@@ -294,6 +288,12 @@ p {
     padding: 30px 34px 55px;
     max-width: 1600px;
     margin: auto;
+}
+
+.page-title button,
+.filter > button,
+.action-list button {
+    min-height: 44px;
 }
 
 .page-title {
@@ -341,17 +341,17 @@ p {
 .notice {
     white-space: pre-wrap;
     padding: 10px 13px;
-    border: 1px solid #39485a;
-    border-left: 3px solid #718daf;
-    border-radius: 4px;
-    background: #252d38;
+    border: 1px solid var(--accent);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-control);
+    background: var(--accent-soft);
     font-size: 12px;
     margin-bottom: 16px;
 }
 
 .notice.error {
-    border-color: #644147;
-    background: #35262b;
+    border-color: var(--danger);
+    background: var(--danger-soft);
     color: var(--danger);
 }
 
@@ -360,9 +360,9 @@ p {
 }
 
 .card {
-    background: var(--panel);
+    background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 7px;
+    border-radius: var(--radius-panel);
     padding: 20px;
 }
 
@@ -383,11 +383,15 @@ p {
     margin-top: 24px;
 }
 
+.card .card {
+    background: var(--nested);
+}
+
 .table-wrap {
     overflow: auto;
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 7px;
+    border-radius: var(--radius-panel);
 }
 
 table {
@@ -400,7 +404,7 @@ th {
     font-weight: 500;
     color: var(--muted);
     text-align: left;
-    background: #24262b;
+    background: var(--raised);
     font-size: 11px;
     letter-spacing: 0.2px;
 }
@@ -425,7 +429,7 @@ tr[data-select] {
 }
 
 tr[data-select]:hover {
-    background: #2d333e;
+    background: var(--accent-soft);
 }
 
 td button {
@@ -454,7 +458,7 @@ td details {
     margin: 0 auto 12px;
     width: 28px;
     height: 28px;
-    color: #68798e;
+    color: var(--control);
 }
 
 .split {
@@ -466,9 +470,9 @@ td details {
 .detail {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    background: #1c1d22;
+    background: var(--paper);
     border: 1px solid var(--line);
-    border-radius: 5px;
+    border-radius: var(--radius-control);
     padding: 14px;
     font: 11px/1.7 Consolas, monospace;
     max-height: 420px;
@@ -518,7 +522,7 @@ td details {
 
 summary {
     cursor: pointer;
-    color: #bcc2cd;
+    color: var(--muted);
 }
 
 details > summary {
@@ -555,7 +559,7 @@ details[open] > summary {
 
 .tabs button {
     position: relative;
-    padding: 12px 2px;
+    padding: 12px 8px;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -568,7 +572,7 @@ details[open] > summary {
 }
 
 .tabs button.active {
-    color: var(--ink);
+    color: var(--accent);
 }
 
 .tabs button.active::after {
@@ -586,15 +590,15 @@ details[open] > summary {
     place-items: center;
     min-width: 23px;
     padding: 2px 6px;
-    border-radius: 4px;
-    background: #30323a;
+    border-radius: var(--radius-pill);
+    background: var(--raised);
     color: var(--muted);
     font-size: 11px;
 }
 
 .secondary-details {
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     margin-top: 16px;
     background: var(--panel);
     padding: 3px 16px;
@@ -639,13 +643,13 @@ details[open] > summary {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #454a54;
-    border: 2px solid #22242a;
-    border-radius: 8px;
+    background: var(--control);
+    border: 2px solid var(--panel);
+    border-radius: var(--radius-panel);
 }
 
 ::-webkit-scrollbar-track {
-    background: #202227;
+    background: var(--panel);
 }
 
 @media (max-width: 1100px) {

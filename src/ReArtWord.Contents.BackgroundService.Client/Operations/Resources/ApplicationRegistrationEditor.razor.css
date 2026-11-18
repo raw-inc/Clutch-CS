@@ -5,7 +5,7 @@
 .application-owner {
     padding: 12px 14px;
     background: var(--panel);
-    border-radius: 8px;
+    border-radius: var(--radius-panel);
     overflow-wrap: anywhere;
 }
 
@@ -71,7 +71,7 @@
     padding: 14px;
     margin-bottom: 12px;
     border: 1px solid rgb(255 255 255 / 12%);
-    border-radius: 8px;
+    border-radius: var(--radius-panel);
 }
 
 @media (max-width: 600px) {

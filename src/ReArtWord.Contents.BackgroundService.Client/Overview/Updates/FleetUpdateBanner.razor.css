@@ -1,6 +1,6 @@
 .fleet-progress {
     background: var(--panel);
-    border-radius: 5px;
+    border-radius: var(--radius-control);
     padding: 18px 20px;
     margin: 0 0 18px;
     min-width: 0;

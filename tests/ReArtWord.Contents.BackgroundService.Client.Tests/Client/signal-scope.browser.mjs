@@ -19,12 +19,12 @@ before(async () =>
             if (pathname === '/')
             {
                 response.setHeader('Content-Type', 'text/html; charset=utf-8');
-                response.end('<!doctype html><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/signal-scope.css"><main id="scope" class="page"></main>');
+                response.end('<!doctype html><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/signal-scope.css"><main id="scope" class="page"></main>');
                 return;
             }
             const file = path.resolve(root, '.' + decodeURIComponent(pathname));
             assert(file.startsWith(path.resolve(root) + path.sep));
-            response.setHeader('Content-Type', file.endsWith('.css') ? 'text/css' : 'text/javascript');
+            response.setHeader('Content-Type', file.endsWith('.css') ? 'text/css' : file.endsWith('.svg') ? 'image/svg+xml' : file.endsWith('.woff2') ? 'font/woff2' : 'text/javascript');
             response.end(await readFile(file));
         }
         catch
@@ -170,6 +170,7 @@ async function mountAsync(page, experimental)
                 return button;
             } });
     });
+    await page.evaluate(() => document.fonts.ready);
     return { commands, closed, sockets };
 }
 
@@ -231,7 +232,9 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         await page.setViewportSize({ width: 390, height: 844 });
         const narrowSidebar = await page.locator('.scope-sidebar').boundingBox();
         const narrowResults = await page.locator('.scope-results').boundingBox();
-        assert(narrowSidebar.y + narrowSidebar.height <= narrowResults.y);
+
+        // Firefoxでは個別に取得した座標と高さの和に端数が残るため、描画ピクセルで上下の境界を比較します。
+        assert(Math.round(narrowSidebar.y + narrowSidebar.height) <= Math.round(narrowResults.y));
         assert(narrowResults.x + narrowResults.width <= 390);
         await page.evaluate(async () =>
         {

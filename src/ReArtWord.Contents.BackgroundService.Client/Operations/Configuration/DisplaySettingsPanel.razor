@@ -1,5 +1,10 @@
 <section class="card section">
     <h2>@Ui["display.settings.title"]</h2>
+    <label>@Ui["display.theme.label"]<select @bind="theme" disabled="@saving">
+        <option value="system">@Ui["display.theme.system"]</option>
+        <option value="light">@Ui["display.theme.light"]</option>
+        <option value="dark">@Ui["display.theme.dark"]</option>
+    </select></label>
     <p class="small muted">@Ui["display.timezone.help"]</p>
     <label>@Ui["display.timezone.label"]<select @bind="zoneId" disabled="@saving">
         <option value="UTC">UTC</option>

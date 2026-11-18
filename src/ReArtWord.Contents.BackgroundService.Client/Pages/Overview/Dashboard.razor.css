@@ -2,12 +2,6 @@
     margin-bottom: 18px;
 }
 
-.dashboard-page > .page-title h1 {
-    font-size: 25px;
-    font-weight: 600;
-    letter-spacing: -0.025em;
-}
-
 .dashboard-page > .page-title .page-description {
     font-size: 12px;
 }
@@ -88,7 +82,7 @@
 
 .dashboard-operations ::deep .card {
     border: 0;
-    background: var(--panel);
+    background: var(--card);
     padding: 20px;
 }
 

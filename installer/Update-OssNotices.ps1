@@ -123,6 +123,11 @@ Copy-Item (Join-Path $root 'src/ReArtWord.Contents.BackgroundService.Client/wwwr
 foreach ($package in (Get-Content (Join-Path $root 'src/ReArtWord.Contents.BackgroundService.Client/wwwroot/vendor/code-editor/packages.json') -Raw | ConvertFrom-Json)) {
     $rows += @{name=$package.name;version=$package.version;license=$package.license;authors=$package.authors;project=$package.project;notices=@(@{label='License';href='/licenses/code-editor-license.txt'})}
 }
+foreach ($asset in (Get-Content -LiteralPath (Join-Path $sourceRoot 'client-assets.json') -Raw | ConvertFrom-Json)) {
+    $file = [IO.Path]::GetFileName($asset.notices[0].href)
+    Copy-Item -LiteralPath (Join-Path $sourceRoot "licenses/$file") -Destination (Join-Path $output $file) -Force
+    $rows += $asset
+}
 $acorn = Join-Path $root 'src/ReArtWord.Contents.BackgroundService.Nodes/Scripting/JavaScript/vendor'
 $acornVersion = [regex]::Match([IO.File]::ReadAllText((Join-Path $acorn 'acorn.mjs')), 'var version = "([^"]+)";').Groups[1].Value
 if (-not $acornVersion) { throw 'Could not read the bundled Acorn version.' }

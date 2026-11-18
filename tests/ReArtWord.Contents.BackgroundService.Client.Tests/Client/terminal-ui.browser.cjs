@@ -52,7 +52,7 @@ test('terminal native fullscreen modes, controls, resize and Core policy', { tim
         if (url.pathname === '/terminal')
         {
             res.setHeader('Content-Type', 'text/html');
-            res.end(String.raw`<link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-tools.css"><link rel="stylesheet" href="/vendor/xterm/xterm.css">
+            res.end(String.raw`<link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-tools.css"><link rel="stylesheet" href="/vendor/xterm/xterm.css">
 <div style="height:90px"></div><main id="app" class="remote-tools" style="padding:12px"></main><footer class="app-statusbar" style="height:26px"></footer>
 <script src="/vendor/xterm/xterm.js"></script><script src="/vendor/xterm/addon-fit.js"></script>
 <script>
@@ -73,7 +73,7 @@ window.inputs=[];window.WebSocket=class{
             res.end();
             return;
         }
-        res.setHeader('Content-Type', file.endsWith('.js') ? 'text/javascript' : file.endsWith('.css') ? 'text/css' : 'application/octet-stream');
+        res.setHeader('Content-Type', file.endsWith('.js') ? 'text/javascript' : file.endsWith('.css') ? 'text/css' : file.endsWith('.svg') ? 'image/svg+xml' : 'application/octet-stream');
         res.end(readFileSync(file));
     });
     await new Promise(resolve =>

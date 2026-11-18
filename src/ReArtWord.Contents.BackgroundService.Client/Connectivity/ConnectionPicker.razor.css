@@ -1,7 +1,7 @@
 .connection-button {
     font-size: 12px;
-    background: #292b30;
-    border-color: #3a3d45;
+    background: var(--raised);
+    border-color: var(--line);
     gap: 9px;
     max-width: 340px;
 }

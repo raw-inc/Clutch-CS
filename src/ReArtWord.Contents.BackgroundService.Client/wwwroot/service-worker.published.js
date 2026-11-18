@@ -2,7 +2,7 @@
 const requestedVersion = new URL(self.location.href).searchParams.get('ui');
 self.importScripts('./service-worker-assets.js' + (requestedVersion ? '?ui=' + encodeURIComponent(requestedVersion) : ''));
 const prefix = 'contents-ui-', cacheName = prefix + self.assetsManifest.version;
-const resources = self.assetsManifest.assets.filter(asset => /\.(wasm|dll|js|json|webmanifest|css|html|svg|png|dat|pdb)$/.test(asset.url) && !asset.url.includes('service-worker') && asset.url !== 'ui-update.html');
+const resources = self.assetsManifest.assets.filter(asset => /\.(wasm|dll|js|json|webmanifest|css|html|svg|png|dat|pdb|woff2)$/.test(asset.url) && !asset.url.includes('service-worker') && asset.url !== 'ui-update.html');
 const entryPaths = ['/', '/ui-start.html', '/ui-update.js', '/ui-update.css'];
 let completed = 0, lastProgress = 0;
 

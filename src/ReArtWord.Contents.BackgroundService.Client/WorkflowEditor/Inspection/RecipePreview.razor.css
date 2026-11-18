@@ -5,8 +5,8 @@
 .recipe-viewport {
     overflow: auto;
     height: 70vh;
-    border: 1px solid var(--stroke, #41464f);
-    background: var(--surface, #20242b);
+    border: 1px solid var(--stroke, var(--line));
+    background: var(--surface, var(--panel));
 }
 
 .recipe-canvas {
@@ -14,18 +14,18 @@
 }
 
 .recipe-wire {
-    stroke: #69879f;
+    stroke: var(--control);
     stroke-width: 2;
 }
 
 .recipe-node > rect {
-    fill: var(--surface, #24282e);
-    stroke: #718096;
+    fill: var(--surface, var(--raised));
+    stroke: var(--control);
     stroke-width: 1.5;
 }
 
 .recipe-node text {
-    fill: var(--text, #eee);
+    fill: var(--text, var(--ink));
     font-size: 11px;
 }
 
@@ -40,20 +40,20 @@
 }
 
 .recipe-node circle {
-    fill: #77b1c7;
+    fill: var(--accent);
 }
 
 .recipe-node.running > rect {
-    stroke: #43df9a;
+    stroke: var(--green);
     stroke-width: 3;
-    filter: drop-shadow(0 0 7px #43df9a99);
+    filter: drop-shadow(0 0 7px color-mix(in srgb, var(--green) 60%, transparent));
 }
 
 .recipe-details {
     height: 100%;
     overflow: auto;
     font-size: 11px;
-    color: var(--text, #eee);
+    color: var(--text, var(--ink));
 }
 
 .recipe-details pre {

@@ -1,8 +1,8 @@
 .running-outline {
     fill: none;
-    stroke: var(--accent, #8fb9ee);
+    stroke: var(--accent);
     stroke-width: 2.5;
-    filter: drop-shadow(0 0 5px var(--accent, #8fb9ee));
+    filter: drop-shadow(0 0 5px var(--accent));
     pointer-events: none;
 }
 

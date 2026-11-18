@@ -4,7 +4,7 @@
     <button type="button" class="health-indicator @HealthClass" aria-label="@(HostId + ": " + StatusLabel)" aria-expanded="false" aria-controls="@panelId" aria-disabled="@((Busy || !CanAct) ? "true" : "false")" data-power-trigger>
         @if(Offline || Status == EPeerStatus.Ready)
         {
-            <svg class="power-symbol" data-power-animation="@(Offline ? "none" : "ready")" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9M6.3 5.7a9 9 0 1 0 11.4 0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" /></svg>
+            <svg class="power-symbol" data-power-animation="@(Offline ? "none" : "ready")" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><use href="/icons/controls.svg#power" fill="currentColor" /></svg>
         }
         else if(Status == EPeerStatus.Syncing)
         {

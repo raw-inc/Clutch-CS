@@ -3,10 +3,10 @@
     height: var(--topbar-height);
     display: flex;
     align-items: center;
-    gap: 20px;
-    padding: 0 22px;
+    gap: 12px;
+    padding: 0 20px;
     border-bottom: 1px solid var(--line);
-    background: #202125;
+    background: var(--panel);
 }
 
 .brand {
@@ -20,21 +20,18 @@
     flex: none;
     min-width: 0;
     max-width: 260px;
-}
-
-.brand:hover {
     text-decoration: none;
 }
 
 .brand-mark {
-    background: #303845;
-    color: #aecbf1;
+    background: var(--accent-soft);
+    color: var(--accent);
     width: 30px;
     height: 30px;
     display: grid;
     place-items: center;
-    border: 1px solid #414d60;
-    border-radius: 7px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-panel);
     flex: none;
 }
 
@@ -46,8 +43,8 @@
 .navigation {
     height: 100%;
     display: flex;
-    gap: 6px;
-    margin-left: 10px;
+    gap: 2px;
+    margin-left: 4px;
     min-width: 0;
     overflow-x: auto;
     flex: 1 1 auto;
@@ -63,30 +60,31 @@
     position: relative;
     color: var(--muted);
     padding: 0 15px;
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: 600;
     text-decoration: none;
     flex-shrink: 0;
     white-space: nowrap;
 }
 
 .navigation ::deep a:hover {
-    color: var(--ink);
-    background: #292b30;
+    color: var(--accent);
+    background: var(--accent-soft);
 }
 
 .navigation ::deep a.active,
 .navigation ::deep a[aria-current="page"] {
-    color: var(--ink);
-    background: #272a31;
+    color: var(--accent);
+    background: var(--accent-soft);
 }
 
 .navigation ::deep a.active::after {
     content: "";
     position: absolute;
-    height: 3px;
+    height: 2px;
     background: var(--accent);
     border-radius: 3px;
-    bottom: 0;
+    bottom: 4px;
     left: 15px;
     right: 15px;
 }
@@ -127,9 +125,9 @@
     gap: 12px;
     padding: 0 max(18px, env(safe-area-inset-right)) 0 max(18px, env(safe-area-inset-left));
     font-size: 10px;
-    color: #7f8590;
-    background: #1e1f23;
-    border-top: 1px solid #303239;
+    color: var(--muted);
+    background: var(--paper);
+    border-top: 1px solid var(--line);
     z-index: 5;
 }
 
@@ -262,7 +260,7 @@
 
 .brand-name strong {
     font-size: 15px;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: -0.25px;
 }
 

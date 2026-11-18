@@ -47,25 +47,73 @@ const expected = {
     'skeleton': { animationDuration: '0s' }
 };
 
+/** デスクトップと狭い画面で、部品の配置と入力領域を照合します。 */
+function checkLayout(actual, width, contract, navigationSize)
+{
+    for (const [element, properties] of Object.entries(contract))
+    {
+        for (const [property, value] of Object.entries(properties))
+        {
+            assert.equal(actual[element][property], value, `${element}.${property}`);
+        }
+    }
+    assert.equal(actual.navigation.padding, width <= 1100 ? '0px 12px' : '0px 15px');
+    assert.equal(actual.navigation.fontSize, navigationSize);
+    assert.equal(actual.workspace.display, width < 750 ? 'block' : 'grid');
+    assert.equal(actual.studio.height, width <= 900 ? '804px' : '878px');
+    assert.equal(actual['wire'].animationDuration, '0s');
+    assert.equal(actual['peer-health'].opacity, '1');
+    assert.equal(actual['overview-health'].opacity, '0');
+}
+
 for (const width of [1440, 900, 640])
 {
-    test(`${width}pxでも子コンポーネントとJS生成要素に必要なCSSが届く`, async () =>
+    test.skip(`旧ダーク固定配色での表示（${width}px）`, async () =>
     {
-        const actual = await captureStylesAsync(browser, styles, width, 'reduce');
-        for (const [element, properties] of Object.entries(expected))
+        const actual = await captureStylesAsync(browser, styles, width, 'reduce', 'dark');
+        checkLayout(actual, width, expected, width < 750 ? '11px' : '12px');
+    });
+
+    for (const theme of ['light', 'dark'])
+    {
+        test(`${theme}・${width}pxでも編集領域と端子を識別できる`, async () =>
         {
-            for (const [property, value] of Object.entries(properties))
-            {
-                assert.equal(actual[element][property], value, `${element}.${property}`);
-            }
+            const actual = await captureStylesAsync(browser, styles, width, 'reduce', theme);
+            const dark = theme === 'dark';
+            checkLayout(actual, width, { ...expected,
+                'node-box': { stroke: dark ? 'rgb(141, 181, 207)' : 'rgb(72, 92, 106)', strokeWidth: '1.8px' },
+                keyword: { color: dark ? 'rgb(143, 163, 250)' : 'rgb(63, 73, 178)' }
+            }, width < 750 ? '11px' : '13px');
+            assert.notEqual(actual['node-box'].stroke, actual['node-box'].fill);
+            assert.notEqual(actual['cluster-tab'].color, actual['cluster-tab'].backgroundColor);
+        });
+    }
+}
+
+/** ブラウザーが実際に描画するsRGB色を相対輝度へ変換します。
+ * @returns 文字と面のコントラストを求めるための輝度です。
+ */
+function luminance(color)
+{
+    const [red, green, blue] = color.match(/[\d.]+/gu).map(channel =>
+    {
+        const value = Number(channel) / 255;
+        return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    });
+    return red * 0.2126 + green * 0.7152 + blue * 0.0722;
+}
+
+for (const theme of ['light', 'dark'])
+{
+    test(`${theme}のカード・主操作・状態ラベルで文字のコントラストを確保する`, async () =>
+    {
+        const actual = await captureStylesAsync(browser, styles, 900, 'reduce', theme);
+        for (const key of ['surface', 'primary', 'success', 'warning', 'failure'])
+        {
+            const { color, backgroundColor } = actual[key];
+            const ink = luminance(color), face = luminance(backgroundColor);
+            assert.ok(4.5 <= (Math.max(ink, face) + 0.05) / (Math.min(ink, face) + 0.05), key);
         }
-        assert.equal(actual.navigation.padding, width <= 1100 ? '0px 12px' : '0px 15px');
-        assert.equal(actual.navigation.fontSize, width < 750 ? '11px' : '12px');
-        assert.equal(actual.workspace.display, width < 750 ? 'block' : 'grid');
-        assert.equal(actual.studio.height, width <= 900 ? '804px' : '878px');
-        assert.equal(actual['wire'].animationDuration, '0s');
-        assert.equal(actual['peer-health'].opacity, '1');
-        assert.equal(actual['overview-health'].opacity, '0');
     });
 }
 
@@ -109,7 +157,10 @@ for (const file of ['ui-start.html', 'ui-update.html'])
         try
         {
             await page.setContent(serialize(document));
-            await page.addStyleTag({ content: await readFile(path.join(root, 'ui-update.css'), 'utf8') });
+            for (const file of ['styles/theme.css', 'ui-update.css'])
+            {
+                await page.addStyleTag({ content: await readFile(path.join(root, file), 'utf8') });
+            }
             await page.locator('#splash').evaluate(element =>
             {
                 element.hidden = false;

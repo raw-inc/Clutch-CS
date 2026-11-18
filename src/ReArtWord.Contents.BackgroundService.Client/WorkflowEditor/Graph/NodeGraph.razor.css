@@ -4,8 +4,8 @@
 }
 
 .node-box {
-    fill: #272a31;
-    stroke: #4b5360;
+    fill: var(--raised);
+    stroke: var(--control);
     stroke-width: 1;
     filter: drop-shadow(0 3px 5px #0003);
 }
@@ -17,31 +17,31 @@
 
 .node-type {
     font-size: 10px;
-    fill: #98a4b6;
+    fill: var(--muted);
     pointer-events: none;
 }
 
 .graph-node > g > text,
 .port-label {
     font-size: 10px;
-    fill: #adb8c9;
+    fill: var(--muted);
     pointer-events: none;
 }
 
 .port {
-    fill: #242932;
-    stroke: #9bb9df;
+    fill: var(--panel);
+    stroke: var(--accent);
     stroke-width: 2;
     cursor: crosshair;
 }
 
 .port:hover {
-    fill: #9bb9df;
+    fill: var(--accent);
 }
 
 .wire {
     fill: none;
-    stroke: #718daa;
+    stroke: var(--control);
     stroke-width: 2;
     cursor: pointer;
     pointer-events: stroke;
@@ -55,12 +55,12 @@
 
 .wire-label {
     font-size: 9px;
-    fill: #a1b8d5;
+    fill: var(--muted);
     pointer-events: none;
 }
 
 .node-card-fields {
-    font: 11px/1.4 "Segoe UI", "Yu Gothic UI", sans-serif;
+    font: 11px/1.4 var(--font-ui);
     color: var(--ink);
     cursor: default;
     user-select: text;
@@ -76,8 +76,8 @@
     font-size: 9px;
     text-transform: uppercase;
     letter-spacing: 0.8px;
-    color: #92a0b5;
-    border-top: 1px solid #3c434e;
+    color: var(--muted);
+    border-top: 1px solid var(--line);
     padding-top: 4px;
 }
 
@@ -85,7 +85,7 @@
     margin: 0;
     padding: 3px 0 5px;
     font-size: 10px;
-    color: #abb6c7;
+    color: var(--muted);
     line-height: 16px;
 }
 
@@ -97,9 +97,9 @@
     margin-top: 4px;
     font-size: 11px;
     padding: 5px 7px;
-    border-color: #464e5c;
-    border-bottom-color: #64748b;
-    background: #20242b;
+    border-color: var(--line);
+    border-bottom-color: var(--control);
+    background: var(--panel);
 }
 
 ::deep .node-inline-field > input,
@@ -124,7 +124,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     margin-top: 2px;
-    color: #8d9ab0;
+    color: var(--muted);
 }
 
 ::deep .node-inline-field .error {
@@ -134,9 +134,9 @@
 ::deep .node-inline-field > input:disabled,
 ::deep .node-inline-field > select:disabled,
 ::deep .node-inline-field > textarea:disabled {
-    background: #272a30;
-    color: #818894;
-    border-color: #3a404a;
+    background: var(--raised);
+    color: var(--muted);
+    border-color: var(--line);
 }
 
 .graph-node:focus-visible {
@@ -144,8 +144,8 @@
 }
 
 .graph-node .node-box {
-    fill: #25282e;
-    stroke: #444b54;
+    fill: var(--card);
+    stroke: var(--control);
     filter: none;
     rx: 6px;
 }
@@ -155,7 +155,7 @@
 }
 
 .graph-node .node-type {
-    fill: #929ca8;
+    fill: var(--muted);
     font-size: 9px;
 }
 
@@ -167,7 +167,7 @@
 }
 
 .graph-node .port-group > text {
-    fill: #c4cad2;
+    fill: var(--ink);
     font-size: 10px;
 }
 
@@ -180,7 +180,7 @@
 
 .graph-node .port {
     stroke: var(--port-color);
-    fill: #20242a;
+    fill: var(--panel);
     stroke-width: 1.8;
 }
 
@@ -191,7 +191,7 @@
 .graph-node .port.wire-snap-target,
 .graph-node .port.wire-endpoint-hover {
     fill: var(--port-color);
-    stroke: #eff3f7;
+    stroke: var(--ink);
     stroke-width: 2;
 }
 
@@ -204,21 +204,21 @@
 .graph-node .node-card-fields ::deep .node-inline-group {
     font-size: 8px;
     letter-spacing: 0.4px;
-    color: #848e9b;
-    border-color: #353b45;
+    color: var(--muted);
+    border-color: var(--line);
 }
 
 .graph-node ::deep .node-inline-field > input,
 .graph-node ::deep .node-inline-field > select,
 .graph-node ::deep .node-inline-field > textarea {
-    border-color: #3c434d;
-    border-bottom-color: #545f6d;
-    background: #1e2228;
+    border-color: var(--line);
+    border-bottom-color: var(--control);
+    background: var(--panel);
 }
 
 .graph-node ::deep .node-inline-field > small {
     font-size: 8px;
-    color: #838b97;
+    color: var(--muted);
 }
 
 .wire-group .wire {
@@ -267,11 +267,11 @@
     gap: 8px;
     max-width: calc(100% - 28px);
     padding: 7px 10px;
-    background: #232830f2;
-    border: 1px solid #444d58;
-    border-radius: 4px;
+    background: color-mix(in srgb, var(--panel) 97%, transparent);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
     font-size: 10px;
-    color: #c5cbd3;
+    color: var(--ink);
     box-shadow: 0 3px 12px #0003;
 }
 
@@ -344,7 +344,7 @@
 
 .graph-node[data-search-match] > .node-box {
     vector-effect: non-scaling-stroke;
-    stroke: #e4b561;
+    stroke: var(--warn);
     stroke-width: 2px;
     stroke-dasharray: 7 3;
 }
@@ -352,7 +352,7 @@
 .graph-node[data-search-active] > .node-box,
 .graph-node[data-navigation-target] > .node-box {
     vector-effect: non-scaling-stroke;
-    stroke: #d3a5f5;
+    stroke: var(--violet);
     stroke-width: 3px;
     stroke-dasharray: none;
 }

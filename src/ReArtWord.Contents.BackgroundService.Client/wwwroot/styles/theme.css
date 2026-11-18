@@ -1,0 +1,79 @@
+@font-face {
+    font-family: Roboto;
+    src: url("../vendor/fonts/roboto-latin-ext.woff2") format("woff2");
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+    font-family: Roboto;
+    src: url("../vendor/fonts/roboto-latin.woff2") format("woff2");
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "M PLUS 2";
+    src: url("../vendor/fonts/m-plus-2.woff2") format("woff2");
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Zen Kaku Gothic New";
+    src: url("../vendor/fonts/zen-kaku-gothic-new-bold.woff2") format("woff2");
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+}
+
+:root {
+    color-scheme: light dark;
+
+    --paper: light-dark(#f5f5f2, #111);
+    --panel: light-dark(#fcfcfa, #202227);
+    --raised: light-dark(#e1e5ed, #2d3038);
+    --card: light-dark(#e1e5ed, #282b32);
+    --nested: light-dark(#fcfcfa, #111);
+    --ink: light-dark(#17181d, #f2f6f6);
+    --muted: light-dark(#424858, #cacfce);
+    --line: light-dark(#bac3d2, #494d57);
+    --control: light-dark(#616b80, #9caac2);
+    --accent: light-dark(#3f49b2, #8fa3fa);
+    --accent-hover: light-dark(#39419c, #a1b2f9);
+    --on-accent: light-dark(#f5f5f2, #111631);
+    --accent-soft: light-dark(#e1e2eb, #252f65);
+    --warn: light-dark(#963607, #ffac8a);
+    --warn-soft: light-dark(#f6e6da, #492718);
+    --green: light-dark(#1f674d, #83d9b5);
+    --green-soft: light-dark(#d9eee3, #19392f);
+    --danger: light-dark(#b02232, #ff9da8);
+    --danger-soft: light-dark(#f7dfe1, #40252d);
+    --violet: light-dark(#70468e, #d3acf1);
+    --disabled-ink: light-dark(#535b68, #9097a4);
+    --disabled-face: light-dark(#d1d6de, #25272d);
+    --disabled-line: light-dark(#a4acb9, #4a505c);
+    --backdrop: rgb(13 16 22 / 58%);
+    --radius-control: 6px;
+    --radius-panel: 12px;
+    --radius-pill: 999px;
+    --font-title: roboto, "Zen Kaku Gothic New", "M PLUS 2", meiryo, system-ui, sans-serif;
+    --font-ui: roboto, "M PLUS 2", "Yu Gothic UI", meiryo, system-ui, sans-serif;
+
+    font: 500 16px/1.75 var(--font-ui);
+    background: var(--paper);
+    color: var(--ink);
+}
+
+:root[data-theme="light"] {
+    color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+}

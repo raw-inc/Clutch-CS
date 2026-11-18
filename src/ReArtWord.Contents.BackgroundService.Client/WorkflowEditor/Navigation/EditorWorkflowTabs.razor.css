@@ -17,7 +17,7 @@
     gap: 7px;
     border: 0;
     border-radius: 0;
-    border-right: 1px solid #33363d;
+    border-right: 1px solid var(--line);
     background: transparent;
     font-size: 11px;
     padding: 6px 14px;
@@ -25,7 +25,7 @@
     max-width: 240px;
     flex-shrink: 0;
     position: relative;
-    color: #959eab;
+    color: var(--muted);
 }
 
 .workflow-tab > span:first-child {
@@ -45,7 +45,7 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: #788ba4;
+    background: var(--accent);
 }
 
 .workflow-tab:hover {
@@ -136,7 +136,7 @@
     width: 232px;
     padding: 5px;
     border: 1px solid var(--line);
-    border-radius: 7px;
+    border-radius: var(--radius-panel);
     background: var(--raised);
     box-shadow: 0 8px 24px #0005;
 }

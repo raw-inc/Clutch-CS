@@ -1,5 +1,5 @@
 .dialog::backdrop {
-    background: #0009;
+    background: var(--backdrop);
 }
 
 .dialog > h2 {
@@ -23,7 +23,7 @@
 }
 
 .dialog ::deep .card {
-    background: #22242a;
+    background: var(--card);
 }
 
 .dialog-heading {
@@ -42,9 +42,9 @@
     margin: auto;
     position: fixed;
     inset: 0;
-    background: #27292f;
-    border: 1px solid #4a4d56;
-    border-radius: 8px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-panel);
     padding: 26px;
     width: min(850px, 90vw);
     max-height: 86vh;

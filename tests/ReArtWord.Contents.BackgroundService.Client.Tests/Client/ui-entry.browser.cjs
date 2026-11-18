@@ -7,7 +7,7 @@ const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const { chromium } = require(process.env.CONTENTS_TEST_PLAYWRIGHT || 'playwright');
 const root = join(__dirname, '../../../src/ReArtWord.Contents.BackgroundService.Client/wwwroot');
-const staticFiles = Object.fromEntries(['ui-start.html', 'ui-update.html', 'ui-update.js', 'ui-update.css', 'client-branding.js', 'favicon.svg'].map(name => [name, readFileSync(join(root, name))]));
+const staticFiles = Object.fromEntries(['ui-start.html', 'ui-update.html', 'ui-update.js', 'ui-update.css', 'styles/theme.css', 'client-theme.js', 'vendor/fonts/roboto-latin.woff2', 'vendor/fonts/m-plus-2.woff2', 'client-branding.js', 'favicon.svg'].map(name => [name, readFileSync(join(root, name))]));
 const worker = readFileSync(join(root, 'service-worker.published.js'));
 
 test('root UI entry', async t =>

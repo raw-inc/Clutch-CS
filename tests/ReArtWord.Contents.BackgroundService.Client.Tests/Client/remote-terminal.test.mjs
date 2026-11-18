@@ -141,6 +141,10 @@ async function fixtureAsync(t, custom, experimental = false, alwaysExperimental 
 
         querySelector: () => null },
     window: {
+        matchMedia: () => new EventTarget(),
+
+        getComputedStyle: () => ({ color: 'rgb(23, 24, 29)', backgroundColor: 'rgb(245, 245, 242)', caretColor: 'rgb(63, 73, 178)' }),
+
         /** 試験で呼び出せるイベントハンドラーを登録します。 */
         addEventListener()
         {},

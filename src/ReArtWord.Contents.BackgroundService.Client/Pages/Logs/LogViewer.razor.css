@@ -1,9 +1,9 @@
 
 .log-search {
     padding: 16px;
-    background: #22242a;
+    background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     margin-bottom: 20px;
 }
 
@@ -84,7 +84,7 @@
     padding: 16px;
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     min-width: 0;
 }
 
@@ -113,7 +113,7 @@
     font-family: Consolas, monospace;
     display: block;
     margin-top: 5px;
-    color: #7e93af;
+    color: var(--muted);
 }
 
 .log-level {
@@ -131,7 +131,7 @@
 }
 
 .log-health strong {
-    color: #b9c4d4;
+    color: var(--muted);
     font-weight: 500;
     margin-left: 4px;
 }
@@ -259,7 +259,7 @@
     margin: 10px 0;
     padding: 2px 6px 2px 10px;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     color: var(--muted);
     font-size: 11px;
 }

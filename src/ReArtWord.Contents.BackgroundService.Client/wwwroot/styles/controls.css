@@ -2,10 +2,9 @@
     display: flex;
     align-items: center;
     gap: 7px;
-    background: #292b30;
-    border: 1px solid #42454e;
-    border-bottom-color: #626773;
-    border-radius: 4px;
+    background: var(--panel);
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
     padding: 0 9px;
 }
 
@@ -53,9 +52,9 @@
 }
 
 .health-card {
-    background: color-mix(in srgb, var(--panel) 70%, transparent);
+    background: var(--card);
     border: 0;
-    border-radius: 4px;
+    border-radius: var(--radius-panel);
     padding: 18px;
     min-width: 0;
     box-shadow: none;

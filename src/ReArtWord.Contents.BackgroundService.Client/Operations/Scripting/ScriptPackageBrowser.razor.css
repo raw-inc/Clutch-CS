@@ -59,7 +59,7 @@
     min-width: 0;
     padding: 1rem;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     align-self: start;
 }
 

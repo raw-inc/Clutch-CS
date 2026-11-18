@@ -18,7 +18,7 @@
 
 .inspector-section > summary {
     font-size: 11px;
-    color: #bec5cf;
+    color: var(--muted);
     padding: 9px 0;
 }
 
