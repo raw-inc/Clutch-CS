@@ -1,5 +1,5 @@
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
+using ReArtWord.Contents.BackgroundService.Contracts.Processes;
+using ReArtWord.Contents.BackgroundService.Infrastructure.Installation;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -72,17 +72,23 @@ internal static class InstallVerification
             if (request.CheckReady)
             {
                 stage = "ready";
-                if (!string.Equals(request.ConfigurationHash, configurationHash, StringComparison.Ordinal) || !string.Equals(request.ManifestHash, manifestHash, StringComparison.Ordinal) || request.StartedAfter is null || DateTimeOffset.UtcNow < request.StartedAfter)
+                if (!string.Equals(request.ConfigurationHash, configurationHash, StringComparison.Ordinal) || !string.Equals(request.ManifestHash, manifestHash, StringComparison.Ordinal) || request.ExpectedProcess is null && request.StartedService is null && (request.StartedAfter is null || DateTimeOffset.UtcNow < request.StartedAfter))
                 {
                     throw new InvalidDataException("登録前と設定またはreleaseが一致しません。");
                 }
-                await VerifyReadyAsync(request, configuration, manifest, binding, cancellationToken).ConfigureAwait(false);
+                using CancellationTokenSource ready = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                ready.CancelAfter(request.TimeoutMilliseconds);
+                if (request.StartedService is { } service)
+                {
+                    request = request with { ExpectedProcess = await InstallationLaunchIdentity.WaitForServiceAsync(service, ready.Token).ConfigureAwait(false) };
+                }
+                await VerifyReadyAsync(request, configuration, manifest, binding, ready.Token).ConfigureAwait(false);
             }
             else
             {
                 stage = "preflight";
             }
-            await Console.Out.WriteLineAsync(JsonSerializer.Serialize(new { success = true, stage, configurationHash, manifestHash, startedAfter = DateTimeOffset.UtcNow, peerId = configuration.Cluster.PeerId, clusterId = configuration.Cluster.Id, platform = manifest.Platform, manifest.ExpectedBuildVersion }, ContractJson.Options)).ConfigureAwait(false);
+            await Console.Out.WriteLineAsync(JsonSerializer.Serialize(new { success = true, stage, configurationHash, manifestHash, startedAfter = DateTimeOffset.UtcNow, supportsProcessIdentity = true, peerId = configuration.Cluster.PeerId, clusterId = configuration.Cluster.Id, platform = manifest.Platform, manifest.ExpectedBuildVersion }, ContractJson.Options)).ConfigureAwait(false);
             return 0;
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
@@ -129,7 +135,8 @@ internal static class InstallVerification
                 string instanceKey = "instanceId";
                 string peerKey = "peerId";
                 string buildKey = "buildVersion";
-                if (body.GetProperty(readyKey).ValueKind == JsonValueKind.True && body.GetProperty(instanceKey).GetGuid() == instance && string.Equals(body.GetProperty(peerKey).GetString(), peer.PeerId, StringComparison.Ordinal) && string.Equals(body.GetProperty(buildKey).GetString(), manifest.ExpectedBuildVersion, StringComparison.Ordinal) && MatchesLocalProcess(body, entry, request.StartedAfter!.Value))
+                ProcessIdentity reported = new(body.GetProperty("processId").GetInt32(), body.GetProperty("processStartedAt").GetDateTimeOffset());
+                if (body.GetProperty(readyKey).ValueKind == JsonValueKind.True && body.GetProperty(instanceKey).GetGuid() == instance && string.Equals(body.GetProperty(peerKey).GetString(), peer.PeerId, StringComparison.Ordinal) && string.Equals(body.GetProperty(buildKey).GetString(), manifest.ExpectedBuildVersion, StringComparison.Ordinal) && InstallationLaunchIdentity.Matches(reported, entry, request.ExpectedProcess, request.StartedAfter))
                 {
                     return;
                 }
@@ -137,22 +144,6 @@ internal static class InstallVerification
             await Task.Delay(200, timeout.Token).ConfigureAwait(false);
         }
         throw new TimeoutException("初回配置の通常参加を確認できません。");
-    }
-
-    /// <summary>別の保存領域や既存実行物のReadyを導入成功へ流用しません。</summary>
-    /// <returns>配置した実行物の今回の起動を確認できたかです。</returns>
-    // 抑制理由: BCLがDateTimeで公開するプロセス起動時刻をUTCのDateTimeOffsetへ変換します。
-    [SuppressMessage("SourceQuality", "RAW171", Justification = "OSのPID起動時刻を直ちにUTCへ変換し実体を照合します。")]
-    private static bool MatchesLocalProcess(JsonElement body, string entry, DateTimeOffset startedAfter)
-    {
-        using Process process = Process.GetProcessById(body.GetProperty("processId").GetInt32());
-        DateTimeOffset actual = new(process.StartTime.ToUniversalTime());
-        StringComparison comparison = StringComparison.Ordinal;
-        if (OperatingSystem.IsWindows())
-        {
-            comparison = StringComparison.OrdinalIgnoreCase;
-        }
-        return !process.HasExited && startedAfter <= actual && actual == body.GetProperty("processStartedAt").GetDateTimeOffset() && string.Equals(process.MainModule?.FileName, entry, comparison);
     }
 
     /// <summary>NIC省略時も設定IPを所有する一つだけへ解決します。</summary>
