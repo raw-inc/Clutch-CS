@@ -225,7 +225,8 @@ internal static class SqliteHistoryRetirement
         command.Parameters.AddWithValue("$causal", DurableRepository.GetAddress(RepositoryCausality.Scope, RepositoryCausality.EntryKey(entry.Scope, entry.Key)));
         command.Parameters.AddWithValue("$legacy", DurableRepository.GetAddress(RepositoryCausality.Scope, "legacy:" + DurableRepository.GetAddress(entry.Scope, entry.Key)));
         command.ExecuteNonQuery();
-        if (HistoryRetentionPolicy.Category(row.Kind, row.Scope) is ERetentionCategory.RequestHistory or ERetentionCategory.OperationHistory or ERetentionCategory.ExecutionHistory or ERetentionCategory.Snapshots)
+        if (HistoryRetentionPolicy.Category(row.Kind, row.Scope) is ERetentionCategory.RequestHistory or ERetentionCategory.OperationHistory or ERetentionCategory.ExecutionHistory or ERetentionCategory.Snapshots
+            && !BoundedRequestReceipts.IsBounded(entry.Scope, entry.Key))
         {
             if (RetiredIdRange.Key(entry.Scope, entry.Key) is { } range)
             {

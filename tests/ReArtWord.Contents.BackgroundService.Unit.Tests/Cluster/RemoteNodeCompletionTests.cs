@@ -3,10 +3,12 @@ using System.Net.Sockets;
 using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
+using ReArtWord.Contents.BackgroundService.Contracts.Retention;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Contracts.Workflow;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Cluster;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
+using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.History;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Sqlite;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 using ReArtWord.Contents.BackgroundService.Runtime.Configuration;
@@ -19,6 +21,54 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Cluster;
 public sealed class RemoteNodeCompletionTests : IDisposable
 {
     private readonly MediaTestFiles files = new();
+
+    /// <summary>永続記録と通信受付のIDを分けても、結果照会と保存方式を変えた再送は元の一回を参照します。</summary>
+    /// <returns>旧要求の互換読取りと、新要求の実通信・保存結果です。</returns>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task NodeIdentityAndDeliveryIdentityKeepOneExecutionAsync(bool legacy)
+    {
+        int port = Port();
+        string cluster = Guid.NewGuid().ToString("N");
+        SqliteRepository source = Repository(), target = Repository();
+        await using PeerCluster first = Peer(source, cluster, "first", port, true);
+        await using PeerCluster second = Peer(target, cluster, "second", port, false);
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
+        await first.StartAsync(timeout.Token);
+        await second.StartAsync(timeout.Token);
+        await WaitForParticipationAsync(first, second, timeout.Token);
+        RequestAdmission admission = RequestAdmission.Start(TimeProvider.System, TimeSpan.FromMinutes(5));
+        Guid id = legacy ? Guid.CreateVersion7(admission.SourceNow)
+                         : OperationIdentity.CreateDurableRequest();
+        Guid receipt = legacy ? Guid.Empty
+                              : Guid.CreateVersion7(admission.SourceNow);
+        RemoteExecutionRequest request = new(id, Guid.NewGuid(), "fixture", "revision", new("node", "test", NodeSettings.Schema("{}")),
+            new Dictionary<string, NodeValue>(), "second", second.LocalInstanceId, admission.ExpiresAt, BufferedReceipt: true, ReceiptId: receipt) { Admission = admission };
+        if (!legacy)
+        {
+            DateTimeOffset now = DateTimeOffset.UtcNow;
+            HistoryRetentionBoundary boundary = new(new Dictionary<ERetentionCategory, DateTimeOffset>(), new Dictionary<ERetentionCategory, DateTimeOffset>(), now.AddDays(1), now.AddDays(31));
+            await target.WriteLocalSnapshotAsync(RepositoryHistoryGuard.Scope, "boundary", NodeValue.FromObject(boundary), timeout.Token);
+        }
+        int effects = 0;
+        second.RemoteExecutionHandler = async (received, token) =>
+        {
+            Interlocked.Increment(ref effects);
+            Assert.Equal(request.Id, received.Id);
+            Assert.Equal(request.DeliveryId, received.DeliveryId);
+            DurableMutation mutation = new("peer:second:file-recovery", received.Id.ToString("N"), null,
+                NodeValue.FromObject(new { CompletedAt = DateTimeOffset.UtcNow }));
+            Assert.Equal(EOutcome.Succeeded, (await target.ApplyBatchAsync(OperationIdentity.Create(shared: false), [mutation], token).ConfigureAwait(false)).Outcome);
+            return NodeResult.Success(NodeValue.FromObject(42));
+        };
+        Assert.Equal(EOutcome.Succeeded, (await first.ExecuteAsync(request, timeout.Token)).Outcome);
+        ClusterRequest query = new(request.DeliveryId, "node.execute", request.TargetPeerId, request.TargetInstanceId, request.ExpiresAt, NodeValue.FromObject(request));
+        Assert.Equal(EOutcome.Succeeded, (await first.QueryRequestAsync(query, timeout.Token)).Response?.Outcome);
+        Assert.Equal(EOutcome.Failed, (await first.ExecuteAsync(request with { BufferedReceipt = false }, timeout.Token)).Outcome);
+        Assert.NotNull(await target.ReadAsync("peer:second:file-recovery", request.Id.ToString("N"), timeout.Token));
+        Assert.Equal(1, effects);
+    }
 
     /// <summary>初回の準備確認に失敗しても、要求送信前の復旧待ちでは試験時計を止めません。</summary>
     /// <returns>二台が実通信で参加を完了する確認です。</returns>

@@ -3,6 +3,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
+using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Receipts;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Cluster.Requests;
@@ -17,7 +18,7 @@ internal sealed class RuntimeRequestExecutor(IDurableRepository repository, stri
     private readonly Dictionary<Guid, RequestReceipt> completed = [];
     private readonly Dictionary<Guid, string> durableAdmissions = [];
     private readonly RuntimeRequestWindow seen = new();
-    private readonly Lazy<RuntimeReceiptWriter> writer = new(() => new(repository, scope));
+    private readonly Lazy<RuntimeReceiptWriter> writer = new(() => new(repository));
     private int reserved;
     private long bytes;
     private bool stopping;
@@ -125,7 +126,7 @@ internal sealed class RuntimeRequestExecutor(IDurableRepository repository, stri
         }
         if (operation is null)
         {
-            DurableEntry? stored = await repository.ReadAsync(scope, request.Id.ToString("N"), cancellationToken).ConfigureAwait(false);
+            DurableEntry? stored = await BoundedRequestReceipts.ReadAsync(repository, scope, request.Id, cancellationToken).ConfigureAwait(false);
             RequestReceipt? receipt = stored?.Value?.Json.Deserialize<RequestReceipt>();
             if (receipt is not null)
             {
@@ -227,10 +228,15 @@ internal sealed class RuntimeRequestExecutor(IDurableRepository repository, stri
                 size = 0;
             }
             bytes += size;
-            RequestReceipt receipt = new(fingerprint, request.TargetInstanceId, request.ExpiresAt, recorded);
+            bool bounded = request.Kind is not "node.execute" || BoundedRequestReceipts.HasBoundedNodeReceipt(request);
+            string receiptScope = BoundedRequestReceipts.Select(scope, request, bounded);
+            string receiptKey = request.Id.ToString("N");
+            DateTimeOffset? savedAt = BoundedRequestReceipts.IsBounded(receiptScope, receiptKey) ? clock.GetUtcNow()
+                                                                                                 : null;
+            RequestReceipt receipt = new(fingerprint, request.TargetInstanceId, request.ExpiresAt, recorded, savedAt);
             completed.Add(request.Id, receipt);
             running.Remove(request.Id);
-            if (!writer.Value.TryWrite(request.Id, receipt, saved => Release(request.Id, size, saved)))
+            if (!writer.Value.TryWrite(receiptScope, request.Id, receipt, saved => Release(request.Id, size, saved)))
             {
                 Release(request.Id, size, false);
             }

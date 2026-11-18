@@ -83,7 +83,7 @@ internal static class SqliteHistoryGuard
         DurableEntry? retained = session.Read<DurableEntry>("entry", DurableRepository.GetAddress(RepositoryHistoryGuard.Scope, "boundary"));
         HistoryRetentionBoundary? boundary = retained?.Value?.Json.Deserialize<HistoryRetentionBoundary>();
         return boundary?.RetirementFormat == 1 && RetiredIdRange.Key(scope, key) is { } point && SqliteRetiredRanges.Find(command, point) is not null
-            || RepositoryHistoryGuard.Expired(id, boundary) is not null;
+            || !Receipts.BoundedRequestReceipts.IsBounded(scope, key) && RepositoryHistoryGuard.Expired(id, boundary) is not null;
     }
 
     /// <summary>一つの同期取引に境界を読み込みます。</summary>

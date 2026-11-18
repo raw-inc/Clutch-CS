@@ -11,7 +11,7 @@ internal static class RequestReceiptPersistence
     {
         ArgumentNullException.ThrowIfNull(value);
         string prefix = "receipts:", format = "N";
-        if (!scope.StartsWith(prefix, StringComparison.Ordinal) || scope.Length == prefix.Length || !Guid.TryParseExact(key, format, out _))
+        if (!(scope.StartsWith(prefix, StringComparison.Ordinal) && prefix.Length < scope.Length || BoundedRequestReceipts.IsBounded(scope, key)) || !Guid.TryParseExact(key, format, out _))
         {
             throw new ArgumentException("要求受付の保存先が不正です。", nameof(scope));
         }

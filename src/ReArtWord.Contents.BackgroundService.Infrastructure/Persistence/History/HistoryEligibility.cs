@@ -36,7 +36,7 @@ internal static class HistoryEligibility
         {
             return null;
         }
-        if (row.Scope?.StartsWith(prefix, StringComparison.Ordinal) == true)
+        if (row.Scope?.StartsWith(prefix, StringComparison.Ordinal) == true || row.Scope?.StartsWith(BoundedRequestReceipts.Prefix, StringComparison.Ordinal) == true)
         {
             JsonElement value = saved.Value.Json;
             string responseKey = "Response", outcomeKey = "Outcome", expiryKey = "ExpiresAt";
@@ -46,6 +46,17 @@ internal static class HistoryEligibility
                 || !value.TryGetProperty(expiryKey, out JsonElement expiry) || expiry.ValueKind != JsonValueKind.String || !expiry.TryGetDateTimeOffset(out DateTimeOffset expires))
             {
                 return null;
+            }
+            if (BoundedRequestReceipts.IsBounded(row.Scope, saved.Key))
+            {
+                string savedAt = "SavedAt";
+                if (!value.TryGetProperty(savedAt, out JsonElement savedTime) || savedTime.ValueKind != JsonValueKind.String
+                    || !savedTime.TryGetDateTimeOffset(out DateTimeOffset savedTimeValue))
+                {
+                    return null;
+                }
+                observed = savedTimeValue.ToUnixTimeSeconds();
+                expires = savedTimeValue;
             }
             if (recordedAt == 0)
             {

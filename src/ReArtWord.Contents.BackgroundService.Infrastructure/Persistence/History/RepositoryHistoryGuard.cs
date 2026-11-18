@@ -67,7 +67,7 @@ internal static class RepositoryHistoryGuard
         {
             return false;
         }
-        return IsSingleUse(scope) && TryOperationId(key, out Guid id) && Expired(id, Read(document)) is not null;
+        return !BoundedRequestReceipts.IsBounded(scope, key) && IsSingleUse(scope) && TryOperationId(key, out Guid id) && Expired(id, Read(document)) is not null;
     }
 
     /// <summary>業務状態の任意キーを、操作IDの時刻で拒否しません。</summary>

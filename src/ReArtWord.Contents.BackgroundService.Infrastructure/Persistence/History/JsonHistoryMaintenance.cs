@@ -212,7 +212,8 @@ internal static class JsonHistoryMaintenance
                         owner.Operation.Scopes.All(DurableRepository.IsShared), result.Outcome, result.Reason));
                 }
             }
-            if (category is ERetentionCategory.RequestHistory or ERetentionCategory.OperationHistory or ERetentionCategory.ExecutionHistory or ERetentionCategory.Snapshots)
+            if (category is ERetentionCategory.RequestHistory or ERetentionCategory.OperationHistory or ERetentionCategory.ExecutionHistory or ERetentionCategory.Snapshots
+                && !BoundedRequestReceipts.IsBounded(entry.Scope, entry.Key))
             {
                 if (RetiredIdRange.Key(entry.Scope, entry.Key) is { } range)
                 {

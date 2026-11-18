@@ -41,7 +41,8 @@ internal static class JsonHistoryEligibility
         if (category == ERetentionCategory.RequestHistory)
         {
             RequestReceipt? request = entry.Value.Json.Deserialize<RequestReceipt>();
-            if (request?.Response is null || request.Response.Outcome == EOutcome.Unknown || now < request.ExpiresAt.AddMinutes(10))
+            if (request?.Response is null || request.Response.Outcome == EOutcome.Unknown
+                || Receipts.BoundedRequestReceipts.IsBounded(entry.Scope, entry.Key) && request.SavedAt is null || now < (request.SavedAt ?? request.ExpiresAt).AddMinutes(10))
             {
                 return null;
             }
