@@ -68,14 +68,24 @@ async function openFilesAsync(context, engine, mode)
         await route.fulfill({ json: clusters ? [{ clusterId: 'cluster', peers: [state.peer] }]
             : { jobs: [], totalJobs: 0, offset: 0, unconfirmedPeers: 0 } });
     });
+    const clockId = crypto.randomUUID();
     await page.route('**/api/**', async route =>
     {
-        const request = route.request(), body = request.postDataJSON();
-        if (request.url().endsWith('/browse'))
+        const request = route.request();
+        if (request.url().endsWith('/request-clock'))
         {
-            await route.fulfill({ json: { path: body.path, parent: null, entries: body.path ? [...state.entries.values()] : [], nextOffset: null } });
+            await route.fulfill({ json: { instanceId: clockId, elapsedTicks: 10000, observedAt: new Date().toISOString() } });
             return;
         }
+        if (request.url().endsWith('/browse'))
+        {
+            const { path } = request.postDataJSON();
+            await route.fulfill({ json: { path, parent: null, entries: path ? [...state.entries.values()] : [], nextOffset: null } });
+            return;
+        }
+        assert.equal(new URL(request.url()).pathname, '/api/v2/nodes/execute-clocked');
+        const { request: body, timing } = request.postDataJSON();
+        assert.equal(timing.instanceId, clockId);
         state.calls.push(body);
         assert.equal(request.headers()['x-contents-instance'], peer.instanceId);
         assert.equal(body.targetInstanceId, peer.instanceId);

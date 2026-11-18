@@ -34,13 +34,13 @@ test('terminal native fullscreen modes, controls, resize and Core policy', { tim
                     break;
                 case '/api/terminal/capabilities':value = { userAvailable: true, administratorAvailable: false, administratorReason: 'CoreAdministratorRequired', settings };
                     break;
-                case '/api/terminal/settings/save':settings = { ...body, version: 'saved' };
+                case '/api/v2/terminal/settings/save':settings = { ...body, version: 'saved' };
                     value = settings;
                     break;
-                case '/api/terminal/create':value = { ...body, shell: body.shell || 'C:/pwsh.exe', exited: false, sequence: 0 };
+                case '/api/v2/terminal/create':value = { ...body, shell: body.shell || 'C:/pwsh.exe', exited: false, sequence: 0 };
                     sessions.push(value);
                     break;
-                case '/api/terminal/claim':value = { ...sessions.find(s => s.sessionId === body.sessionId), owner: body.owner };
+                case '/api/v2/terminal/claim':value = { ...sessions.find(s => s.sessionId === body.sessionId), owner: body.owner };
                     break;
                 default:res.statusCode = 404;
                     value = { error: 'unexpected' };
