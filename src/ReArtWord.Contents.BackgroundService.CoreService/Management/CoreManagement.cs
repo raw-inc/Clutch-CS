@@ -20,7 +20,7 @@ internal static class CoreManagement
     {
         registry.ReadValue("health", _ => Health(service));
         Infrastructure.Processes.HostPowerController power = new(service.Configuration.Cluster.HostId, service.Cluster.LocalInstanceId, () => service.Status);
-        registry.Write("host.power", async (value, cancellation) => await power.ExecuteAsync(ManagementRegistry.Body<HostPowerRequest>(value), cancellation).ConfigureAwait(false));
+        registry.WriteCommand("host.power", async (command, cancellation) => await power.ExecuteAsync(ManagementRegistry.Body<HostPowerRequest>(command.Payload), command.Admission, cancellation).ConfigureAwait(false));
         Infrastructure.Processes.WakeOnLanSender wake = new();
         registry.Write("host.wake", async (value, cancellation) => await wake.SendAsync(ManagementRegistry.Body<HostWakeRequest>(value), cancellation).ConfigureAwait(false));
         registry.ReadValue("status", _ => Status(service));

@@ -49,6 +49,7 @@ public sealed class HostPowerScheduler
     /// <returns>設定観測、NIC保持と今回の受付の完了です。</returns>
     public async Task TickAsync(CancellationToken cancellationToken = default)
     {
+        long observed = clock.GetTimestamp();
         DateTimeOffset now = clock.GetUtcNow(), previous = after;
         after = now;
         if (previous == default)
@@ -100,6 +101,14 @@ public sealed class HostPowerScheduler
                 }
             }
         }
+        if (pending.Count == 0)
+        {
+            return;
+        }
+
+        // 暦で予定回を選んだ後は、送信権の保存や通信で経過した時間を同じ一分から差し引きます。
+        TimeSpan elapsed = clock.GetElapsedTime(observed);
+        RequestAdmission tick = new(clock, TimeSpan.FromMinutes(1) - elapsed, now.AddMinutes(1), now + elapsed);
         using CancellationTokenSource window = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         window.CancelAfter(TimeSpan.FromMinutes(1));
         try
@@ -128,10 +137,10 @@ public sealed class HostPowerScheduler
             // 他Hostへの要求を先に終え、送信元PC自身の停止で後続の送信を打ち切らない順序にします。
             await Parallel.ForEachAsync(accepted.Where(item => item.Schedule.Action != EHostPowerScheduleAction.Shutdown || !string.Equals(item.Host.HostId, hostId, StringComparison.Ordinal)),
                 new ParallelOptions { MaxDegreeOfParallelism = 2, CancellationToken = window.Token },
-                async (item, token) => await RunAsync(item.Host, item.Schedule, item.Occurrence, token).ConfigureAwait(false)).ConfigureAwait(false);
+                async (item, token) => await RunAsync(item.Host, item.Schedule, item.Occurrence, tick, token).ConfigureAwait(false)).ConfigureAwait(false);
             foreach ((HostPowerScheduleRecord host, HostPowerSchedule schedule, HostPowerScheduleOccurrence occurrence) in accepted.Where(item => item.Schedule.Action == EHostPowerScheduleAction.Shutdown && string.Equals(item.Host.HostId, hostId, StringComparison.Ordinal)))
             {
-                await RunAsync(host, schedule, occurrence, window.Token).ConfigureAwait(false);
+                await RunAsync(host, schedule, occurrence, tick, window.Token).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
@@ -179,14 +188,14 @@ public sealed class HostPowerScheduler
 
     /// <summary>一回の障害を他Hostの予定へ波及させず、送信済みの再試行はしません。</summary>
     /// <returns>今回の送信と結果記録です。</returns>
-    private async Task RunAsync(HostPowerScheduleRecord host, HostPowerSchedule schedule, HostPowerScheduleOccurrence accepted, CancellationToken cancellationToken = default)
+    private async Task RunAsync(HostPowerScheduleRecord host, HostPowerSchedule schedule, HostPowerScheduleOccurrence accepted, RequestAdmission tick, CancellationToken cancellationToken = default)
     {
         NodeResult result;
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(15));
         try
         {
-            result = await operations.DispatchAsync(host.HostId, schedule, accepted, timeout.Token).ConfigureAwait(false);
+            result = await operations.DispatchAsync(host.HostId, schedule, accepted, tick.ForDeadline(accepted.DueAt.AddMinutes(1)), timeout.Token).ConfigureAwait(false);
         }
         catch (Exception error) when (Expected(error))
         {
