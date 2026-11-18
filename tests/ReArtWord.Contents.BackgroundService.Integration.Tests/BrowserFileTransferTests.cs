@@ -39,7 +39,7 @@ public sealed class BrowserFileTransferTests
         await CorePeer.WaitAsync(async token =>
         {
             using HttpResponseMessage response = await client.SendAsync(HttpMethod.Get, "client/clusters", cancellationToken: token).ConfigureAwait(true);
-            DiscoveredCluster[]? clusters = await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ContractJson.Options, token).ConfigureAwait(true);
+            DiscoveredCluster[]? clusters = await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ClientObservationJson.Options, token).ConfigureAwait(true);
             instance = clusters?.SelectMany(item => item.Peers).FirstOrDefault()?.InstanceId ?? Guid.Empty;
             return instance != Guid.Empty;
         }).ConfigureAwait(true);

@@ -117,7 +117,7 @@ public sealed class ClientSelfUpdateProcessTests
             {
                 return false;
             }
-            plan = await response.Content.ReadFromJsonAsync<FleetUpdateRequest>(ContractJson.Options, token).ConfigureAwait(true);
+            plan = await response.Content.ReadFromJsonAsync<FleetUpdateRequest>(ClientObservationJson.Options, token).ConfigureAwait(true);
             return plan?.Targets.Count == 1;
         }, timeout.Token).ConfigureAwait(true);
         using (HttpResponseMessage accepted = await scope.Http.PostAsJsonAsync(new Uri("client/updates", UriKind.Relative), plan, ContractJson.Options, timeout.Token).ConfigureAwait(true))
@@ -171,6 +171,6 @@ public sealed class ClientSelfUpdateProcessTests
         Assert.NotEqual(original.Process, (await scope.HealthAsync(timeout.Token).ConfigureAwait(true)).Process);
         using HttpResponseMessage repeated = await scope.Http.PostAsJsonAsync(new Uri("client/updates", UriKind.Relative), plan, ContractJson.Options, timeout.Token).ConfigureAwait(true);
         repeated.EnsureSuccessStatusCode();
-        Assert.Equal(plan!.OperationId, (await repeated.Content.ReadFromJsonAsync<FleetUpdateStatus>(ContractJson.Options, timeout.Token).ConfigureAwait(true))!.Request.OperationId);
+        Assert.Equal(plan!.OperationId, (await repeated.Content.ReadFromJsonAsync<FleetUpdateStatus>(ClientObservationJson.Options, timeout.Token).ConfigureAwait(true))!.Request.OperationId);
     }
 }

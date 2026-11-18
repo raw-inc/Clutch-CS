@@ -40,7 +40,7 @@ public sealed class LogExportProcessTests
         await CorePeer.WaitAsync(async token =>
         {
             using HttpResponseMessage response = await client.SendAsync(HttpMethod.Get, "client/clusters", cancellationToken: token).ConfigureAwait(false);
-            DiscoveredCluster[]? clusters = await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ContractJson.Options, token).ConfigureAwait(false);
+            DiscoveredCluster[]? clusters = await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ClientObservationJson.Options, token).ConfigureAwait(false);
             return clusters?.Length == 2 && clusters.All(cluster => cluster.Peers.Count == 1);
         }, timeout.Token);
         LogExportRequest request = new(new(WorkflowId: "export-workflow", NodeId: "record", Levels: ["WARN"], Text: "export-marker", UncompressedOnly: true), "Asia/Tokyo");

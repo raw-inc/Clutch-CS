@@ -37,7 +37,7 @@ public sealed class TerminalStreamProcessTests
         await CorePeer.WaitAsync(async token =>
         {
             using HttpResponseMessage reply = await client.SendAsync(HttpMethod.Get, "client/clusters", cancellationToken: token).ConfigureAwait(true);
-            DiscoveredCluster[] clusters = (await reply.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ContractJson.Options, token).ConfigureAwait(true))!;
+            DiscoveredCluster[] clusters = (await reply.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ClientObservationJson.Options, token).ConfigureAwait(true))!;
             instance = clusters.SelectMany(item => item.Peers).FirstOrDefault()?.InstanceId ?? Guid.Empty;
             return instance != Guid.Empty;
         }, timeout.Token).ConfigureAwait(true);
@@ -117,7 +117,7 @@ public sealed class TerminalStreamProcessTests
             Assert.True(0 < await UntilReadyAsync(reconnected, timeout.Token).ConfigureAwait(true));
         }
         using HttpResponseMessage catalog = await client.SendAsync(HttpMethod.Get, "client/terminal/sessions", cancellationToken: timeout.Token).ConfigureAwait(true);
-        TerminalPeerSessions[] rows = (await catalog.Content.ReadFromJsonAsync<TerminalPeerSessions[]>(ContractJson.Options, timeout.Token).ConfigureAwait(true))!;
+        TerminalPeerSessions[] rows = (await catalog.Content.ReadFromJsonAsync<TerminalPeerSessions[]>(ClientObservationJson.Options, timeout.Token).ConfigureAwait(true))!;
         Assert.Equal(create.SessionId, Assert.Single(Assert.Single(rows).Sessions).SessionId);
         using HttpResponseMessage closed = await client.SendAsync(HttpMethod.Post, "api/terminal/close", create, cluster, "terminal", Guid.NewGuid(), timeout.Token).ConfigureAwait(true);
         closed.EnsureSuccessStatusCode();

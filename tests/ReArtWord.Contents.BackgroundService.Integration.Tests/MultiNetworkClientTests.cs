@@ -82,7 +82,7 @@ public sealed class MultiNetworkClientTests
     private static Task WaitForClustersAsync(ClientHostProcess client, int count) => CorePeer.WaitAsync(async token =>
     {
         using HttpResponseMessage response = await client.SendAsync(HttpMethod.Get, "/client/clusters", cancellationToken: token).ConfigureAwait(false);
-        DiscoveredCluster[]? clusters = await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ContractJson.Options, token).ConfigureAwait(false);
+        DiscoveredCluster[]? clusters = await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ClientObservationJson.Options, token).ConfigureAwait(false);
         return clusters?.Length == count;
     });
 }
