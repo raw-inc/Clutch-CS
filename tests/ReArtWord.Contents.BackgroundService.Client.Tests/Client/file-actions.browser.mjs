@@ -19,7 +19,7 @@ before(async() =>
             if (pathname === '/')
             {
                 response.setHeader('Content-Type', 'text/html; charset=utf-8');
-                response.end('<!doctype html><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-tools.css"><main id="tool"></main>');
+                response.end('<!doctype html><link rel="stylesheet" href="/styles/fonts.css"><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-tools.css"><main id="tool"></main>');
                 return;
             }
             const file = pathname === '/local-fixture.mjs' ? fixture : path.resolve(root, '.' + decodeURIComponent(pathname));

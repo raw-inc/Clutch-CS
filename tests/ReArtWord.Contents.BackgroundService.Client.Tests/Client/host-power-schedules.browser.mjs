@@ -16,7 +16,7 @@ async function serveAsync(context)
         if (request.url === '/')
         {
             response.setHeader('Content-Type', 'text/html');
-            response.end('<!doctype html><html lang="ja"><meta charset="utf-8"><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><main class="page host-manager"></main></html>');
+            response.end('<!doctype html><html lang="ja"><meta charset="utf-8"><link rel="stylesheet" href="/styles/fonts.css"><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><main class="page host-manager"></main></html>');
             return;
         }
         const file = new URL('.' + request.url, root);

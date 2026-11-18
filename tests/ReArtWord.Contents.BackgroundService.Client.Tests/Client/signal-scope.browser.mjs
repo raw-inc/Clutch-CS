@@ -19,7 +19,7 @@ before(async () =>
             if (pathname === '/')
             {
                 response.setHeader('Content-Type', 'text/html; charset=utf-8');
-                response.end('<!doctype html><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/signal-scope.css"><main id="scope" class="page"></main>');
+                response.end('<!doctype html><link rel="stylesheet" href="/styles/fonts.css"><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/signal-scope.css"><main id="scope" class="page"></main>');
                 return;
             }
             const file = path.resolve(root, '.' + decodeURIComponent(pathname));

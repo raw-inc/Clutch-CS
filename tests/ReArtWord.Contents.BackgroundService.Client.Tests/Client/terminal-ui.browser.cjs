@@ -52,7 +52,7 @@ test('terminal native fullscreen modes, controls, resize and Core policy', { tim
         if (url.pathname === '/terminal')
         {
             res.setHeader('Content-Type', 'text/html');
-            res.end(String.raw`<link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-tools.css"><link rel="stylesheet" href="/vendor/xterm/xterm.css">
+            res.end(String.raw`<link rel="stylesheet" href="/styles/fonts.css"><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-tools.css"><link rel="stylesheet" href="/vendor/xterm/xterm.css">
 <div style="height:90px"></div><main id="app" class="remote-tools" style="padding:12px"></main><footer class="app-statusbar" style="height:26px"></footer>
 <script src="/vendor/xterm/xterm.js"></script><script src="/vendor/xterm/addon-fit.js"></script>
 <script>

@@ -2,7 +2,7 @@
 
 [ドキュメント一覧](../README.md) · [開発環境とビルド](build.md)
 
-配色と書体は起動・更新画面でも読み込む `Client/wwwroot/styles/theme.css` に、基本要素と複数画面で使うユーティリティーは `Client/wwwroot/app.css` に置きます。共通コントロール、状態表示、ノードの意味色は `wwwroot/styles` に分けます。個別画面の定義を共通CSSへ追記しません。
+配色は起動・更新画面でも読み込む `Client/wwwroot/styles/theme.css` に、同梱フォントの定義は `styles/fonts.css` に置きます。起動・更新画面では、資材の切り替え中も読めるように端末の書体を使います。基本要素と複数画面で使うユーティリティーは `Client/wwwroot/app.css` に置きます。共通コントロール、状態表示、ノードの意味色は `wwwroot/styles` に分けます。個別画面の定義を共通CSSへ追記しません。
 
 Razor固有のスタイルは、同じディレクトリの `Component.razor.css` に置きます。SDKのスコープを使用し、子コンポーネントやコードハイライトの生成要素へ届く必要がある場合だけ `::deep` を使用します。`NavLink`、共通アイコン、ダイアログの `ChildContent`、SVG内の入力欄にも所有境界があります。
 

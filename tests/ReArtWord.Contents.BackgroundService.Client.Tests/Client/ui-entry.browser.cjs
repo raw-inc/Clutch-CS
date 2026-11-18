@@ -3,11 +3,14 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createServer } = require('node:http');
 const { createHash } = require('node:crypto');
-const { readFileSync } = require('node:fs');
-const { join } = require('node:path');
+const { readFileSync, readdirSync } = require('node:fs');
+const { join, extname } = require('node:path');
 const { chromium } = require(process.env.CONTENTS_TEST_PLAYWRIGHT || 'playwright');
 const root = join(__dirname, '../../../src/ReArtWord.Contents.BackgroundService.Client/wwwroot');
-const staticFiles = Object.fromEntries(['ui-start.html', 'ui-update.html', 'ui-update.js', 'ui-update.css', 'styles/theme.css', 'client-theme.js', 'vendor/fonts/roboto-latin.woff2', 'vendor/fonts/m-plus-2.woff2', 'client-branding.js', 'favicon.svg'].map(name => [name, readFileSync(join(root, name))]));
+const fonts = readdirSync(join(root, 'vendor/fonts')).filter(file => file.endsWith('.woff2')).map(file => 'vendor/fonts/' + file);
+const files = ['ui-start.html', 'ui-update.html', 'ui-update.js', 'ui-update.css', 'styles/theme.css', 'client-theme.js', 'client-branding.js', 'favicon.svg', ...fonts];
+const staticFiles = Object.fromEntries(files.map(name => [name, readFileSync(join(root, name))]));
+const contentTypes = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
 const worker = readFileSync(join(root, 'service-worker.published.js'));
 
 test('root UI entry', async t =>
@@ -73,7 +76,7 @@ test('root UI entry', async t =>
                         response.end();
                         return;
                     }
-                    response.setHeader('Content-Type', name.endsWith('.js') ? 'text/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.json') ? 'application/json' : name.endsWith('.svg') ? 'image/svg+xml' : 'text/html');
+                    response.setHeader('Content-Type', contentTypes[extname(name)]);
                     if (broken && name === 'chunk-0.json')
                     {
                         body = 'integrity failure';
@@ -131,6 +134,9 @@ test('root UI entry', async t =>
             await page.screenshot({ path: process.env.CONTENTS_TEST_UI_ENTRY_SCREENSHOT });
         }
         await dashboardAsync('one');
+        const fontRequests = requests.filter(item => item.path.endsWith('.woff2'));
+        assert.ok(fontRequests.some(item => item.version === 'one'));
+        assert.ok(fontRequests.every(item => item.version === 'one'), '起動画面は更新対象のフォントの読込みを必要としません。');
         assert.equal(await page.evaluate(async () => (await navigator.serviceWorker.getRegistration()).waiting), null);
     });
 
