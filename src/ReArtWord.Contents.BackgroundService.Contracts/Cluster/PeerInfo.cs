@@ -1,3 +1,5 @@
+using ReArtWord.Contents.BackgroundService.Contracts.Observability;
+
 namespace ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 
 /// <summary>発見・同期の結果として確認できたPeerの状態です。</summary>
@@ -25,4 +27,16 @@ public sealed record PeerInfo(
     DateTimeOffset LastSeen,
     int? LogPort = null,
     PeerPersistenceStatus? PersistenceStatus = null,
-    [property: System.Text.Json.Serialization.JsonIgnore] bool BufferedRuntime = false);
+    [property: System.Text.Json.Serialization.JsonIgnore] bool BufferedRuntime = false)
+{
+    /// <summary>この観測元が通信を受理してからの経過時間です。保存やPeer間通知へは含めません。</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public ObservationAge? ObservationAge
+    {
+        get; init;
+    }
+
+    /// <summary>観測元の経過時間を優先し、経過時間を含まない旧形式だけは同じ観測元の日時で比較します。</summary>
+    /// <returns>最後の受信からの時間です。旧形式の未来日時は負の値を保持します。</returns>
+    public TimeSpan AgeAt(DateTimeOffset observerNow) => ObservationAge?.Elapsed ?? observerNow - LastSeen;
+}

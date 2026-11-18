@@ -118,7 +118,7 @@ internal sealed class HostPowerScheduleRemote(ObserverConnection connection, Cli
             throw new InvalidOperationException("powerSchedule.clusterUnavailable");
         }
         PeerInfo? peer = cluster.Peers.FirstOrDefault(item => string.Equals(item.PeerId, coordinators[0], StringComparison.Ordinal)
-            && PeerStatusRules.CanParticipate(item.Status) && DateTimeOffset.UtcNow - item.LastSeen <= TimeSpan.FromSeconds(15));
+            && PeerStatusRules.CanParticipate(item.Status) && item.AgeAt(DateTimeOffset.UtcNow) <= TimeSpan.FromSeconds(15));
         if (peer is null || connection.FindObserver(clusterId, peer.PeerId) is not { } observer)
         {
             throw new InvalidOperationException("powerSchedule.clusterUnavailable");

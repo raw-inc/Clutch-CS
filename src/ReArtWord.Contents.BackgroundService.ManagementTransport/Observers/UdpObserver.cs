@@ -157,7 +157,7 @@ public sealed class UdpObserver : IAsyncDisposable
     public async Task<ManagementQueryResult> QueryAsync(ManagementReceiptQuery query, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
-        PeerInfo? current = FindPeers(query.ClusterId, query.TargetPeerId).OrderByDescending(peer => peer.LastSeen).FirstOrDefault();
+        PeerInfo? current = FindPeers(query.ClusterId, query.TargetPeerId).OrderBy(peer => peer.AgeAt(clock.GetUtcNow())).FirstOrDefault();
         if (current is null || !started || !transport.BindingAvailable)
         {
             return new(false, Reason: "Observer.ReceiptTargetUnavailable");

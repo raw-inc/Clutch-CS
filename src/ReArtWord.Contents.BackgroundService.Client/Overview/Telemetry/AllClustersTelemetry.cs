@@ -54,7 +54,7 @@ internal sealed class AllClustersTelemetry(ManagementApi api)
             .ToArray();
         int ready = verified.Count(peer => peer.VerifiedStatus == EPeerStatus.Ready);
         string state = "Unconfirmed";
-        if (!discoveryFailed && cluster.LastSeen <= now && now - cluster.LastSeen <= TimeSpan.FromSeconds(15))
+        if (!discoveryFailed && TimeSpan.Zero <= cluster.AgeAt(now) && cluster.AgeAt(now) <= TimeSpan.FromSeconds(15))
         {
             if ((0 < verified.Length && ready != verified.Length) || 1 < cluster.CoordinatorCandidates.Count)
             {
@@ -101,12 +101,12 @@ internal sealed class AllClustersTelemetry(ManagementApi api)
             discovered = discovered.Select(current =>
             {
                 DiscoveredCluster? previous = clusters.FirstOrDefault(old => string.Equals(old.ClusterId, current.ClusterId, StringComparison.Ordinal));
-                PeerInfo[] lost = (previous?.Peers ?? []).Where(old => api.UtcNow - old.LastSeen < TimeSpan.FromMinutes(1)
+                PeerInfo[] lost = (previous?.Peers ?? []).Where(old => old.AgeAt(api.UtcNow) < TimeSpan.FromMinutes(1)
                     && !current.Peers.Any(peer => string.Equals(peer.PeerId, old.PeerId, StringComparison.Ordinal)))
                     .Select(old => old with { Status = EPeerStatus.Unavailable }).ToArray();
                 return current with { Peers = current.Peers.Concat(lost).ToArray() };
             }).ToArray();
-            DiscoveredCluster[] missing = clusters.Where(old => !discovered.Any(current => string.Equals(current.ClusterId, old.ClusterId, StringComparison.Ordinal)) && api.UtcNow - old.LastSeen < TimeSpan.FromMinutes(1))
+            DiscoveredCluster[] missing = clusters.Where(old => !discovered.Any(current => string.Equals(current.ClusterId, old.ClusterId, StringComparison.Ordinal)) && old.AgeAt(api.UtcNow) < TimeSpan.FromMinutes(1))
                 .Select(old => old with { Peers = old.Peers.Select(peer => peer with { Status = EPeerStatus.Unavailable }).ToArray(), CoordinatorCandidates = [] }).ToArray();
             clusters.Clear();
             clusters.AddRange(discovered.Concat(missing).OrderBy(cluster => cluster.ClusterId, StringComparer.Ordinal));
@@ -150,7 +150,7 @@ internal sealed class AllClustersTelemetry(ManagementApi api)
                 DashboardTelemetry telemetry = observations[group.Key];
                 PeerInfo[] selected = group.Select(item => item.Peer).ToArray();
                 PeerInfo first = selected.FirstOrDefault(peer => string.Equals(peer.PeerId, telemetry.SelectedPeerId, StringComparison.Ordinal) && PeerStatusRules.CanParticipate(peer.Status))
-                    ?? selected.OrderByDescending(peer => PeerStatusRules.CanParticipate(peer.Status)).ThenByDescending(peer => peer.LastSeen).First();
+                    ?? selected.OrderByDescending(peer => PeerStatusRules.CanParticipate(peer.Status)).ThenBy(peer => peer.AgeAt(api.UtcNow)).First();
                 await telemetry.RefreshTargetAsync(group.Key, first.PeerId, first.InstanceId, selected, suppliedSnapshots: snapshots, cancellationToken: cancellationToken).ConfigureAwait(false);
             }
             finally

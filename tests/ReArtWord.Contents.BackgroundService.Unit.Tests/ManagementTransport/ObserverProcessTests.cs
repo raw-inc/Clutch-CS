@@ -75,6 +75,49 @@ public sealed class ObserverProcessTests
         Assert.Equal(save.Definition.Name, other.Value!.Json.GetProperty("saved").GetProperty("definition").GetProperty("name").GetString());
     }
 
+    /// <summary>別プロセスの2Coreを観測中に受信PCの日時を補正しても、発見した両実体を失いません。</summary>
+    /// <returns>実UDPと時計差を使った状態照会です。</returns>
+    [Fact]
+    public async Task ObserverClockCorrectionsPreserveTwoRunningCoreProcessesAsync()
+    {
+        using MediaTestFiles files = new();
+        string cluster = Guid.NewGuid().ToString("N");
+        int port;
+        using (UdpClient probe = new(new IPEndPoint(IPAddress.Loopback, 0)))
+        {
+            port = ((IPEndPoint)probe.Client.LocalEndPoint!).Port;
+        }
+        string address = "127.0.0.1";
+        ClientNetworkInterface network = ObserverNetwork.GetInterfaces().Single(item => item.Addresses.Any(candidate => string.Equals(candidate.Address, address, StringComparison.Ordinal)));
+        Cluster.RequestTestClock clock = new();
+        UdpObserver observer = new(new ObserverOptions("clock-process-test", new ClientNetworkBinding(network.InterfaceId, address, "127.255.255.255", port)), clock);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable observerLifetime = observer.ConfigureAwait(false);
+        await observer.StartAsync();
+        ObserverCoreProcess first = new(files.Root, cluster, "a", port, network.InterfaceId, true);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = first.ConfigureAwait(false);
+        ObserverCoreProcess second = new(files.Root, cluster, "b", port, network.InterfaceId, false);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable secondLifetime = second.ConfigureAwait(false);
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(30));
+        while (observer.GetClusters().SelectMany(value => value.Peers).Count(peer => peer.Status == EPeerStatus.Ready) != 2)
+        {
+            first.EnsureRunning();
+            second.EnsureRunning();
+            await Task.Delay(50, timeout.Token);
+        }
+        foreach (int correction in new[] { 3600, -7200 })
+        {
+            clock.AdvanceAndResume(TimeSpan.FromSeconds(correction));
+            PeerInfo[] peers = Assert.Single(observer.GetClusters()).Peers.ToArray();
+            Assert.Equal(2, peers.Length);
+            foreach (PeerInfo peer in peers)
+            {
+                Assert.Equal(EPeerStatus.Ready, peer.Status);
+                ManagementCommand inspect = Command(cluster, peer, "status", NodeValue.Null) with { ExpiresAt = clock.GetUtcNow().AddSeconds(30) };
+                Assert.Equal(EOutcome.Succeeded, (await observer.InspectAsync(inspect, timeout.Token)).Outcome);
+            }
+        }
+    }
+
     /// <summary>UI側で明示する元の実体と要求IDを固定します。</summary>
     /// <returns>そのまま再送できる要求です。</returns>
     private static ManagementCommand Command(string clusterId, PeerInfo peer, string operation, NodeValue value) => new(Guid.NewGuid(), clusterId, peer.PeerId, peer.InstanceId, DateTimeOffset.UtcNow.AddSeconds(30), operation, value);
