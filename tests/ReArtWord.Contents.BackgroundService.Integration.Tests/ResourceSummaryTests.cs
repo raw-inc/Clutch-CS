@@ -38,7 +38,7 @@ public sealed class ResourceSummaryTests
             {
                 return false;
             }
-            observed = await response.Content.ReadFromJsonAsync<DashboardPeerSnapshot>(ContractJson.Options, token).ConfigureAwait(true);
+            observed = await response.Content.ReadFromJsonAsync<DashboardPeerSnapshot>(ClientObservationJson.Options, token).ConfigureAwait(true);
             return observed?.Health is not null && observed.Samples.Count != 0;
         }).ConfigureAwait(true);
         DashboardPeerSnapshot first = Assert.IsType<DashboardPeerSnapshot>(observed);
@@ -48,11 +48,11 @@ public sealed class ResourceSummaryTests
         Assert.True(sample.ObservedAt <= first.CheckedAt);
         using HttpResponseMessage repeated = await client.SendAsync(HttpMethod.Get, "client/dashboard", clusterId: cluster, peerId: "sample-peer").ConfigureAwait(true);
         repeated.EnsureSuccessStatusCode();
-        DashboardPeerSnapshot second = (await repeated.Content.ReadFromJsonAsync<DashboardPeerSnapshot>(ContractJson.Options).ConfigureAwait(true))!;
+        DashboardPeerSnapshot second = (await repeated.Content.ReadFromJsonAsync<DashboardPeerSnapshot>(ClientObservationJson.Options).ConfigureAwait(true))!;
         Assert.Equal(sample.ObservedAt, second.Samples.Single(item => item.Id == sample.Id).ObservedAt);
         using HttpResponseMessage delta = await client.SendAsync(HttpMethod.Get, "client/dashboard?after=" + sample.Id, clusterId: cluster, peerId: "sample-peer").ConfigureAwait(true);
         delta.EnsureSuccessStatusCode();
-        DashboardPeerSnapshot difference = (await delta.Content.ReadFromJsonAsync<DashboardPeerSnapshot>(ContractJson.Options).ConfigureAwait(true))!;
+        DashboardPeerSnapshot difference = (await delta.Content.ReadFromJsonAsync<DashboardPeerSnapshot>(ClientObservationJson.Options).ConfigureAwait(true))!;
         Assert.DoesNotContain(difference.Samples, item => item.Id == sample.Id);
         Assert.NotNull(difference.Health);
     }
@@ -82,7 +82,7 @@ public sealed class ResourceSummaryTests
             {
                 return false;
             }
-            observed = await response.Content.ReadFromJsonAsync<DashboardPeerSnapshot>(ContractJson.Options, token).ConfigureAwait(true);
+            observed = await response.Content.ReadFromJsonAsync<DashboardPeerSnapshot>(ClientObservationJson.Options, token).ConfigureAwait(true);
             return observed?.Health is not null && observed.Samples.Count != 0;
         }).ConfigureAwait(true);
         DashboardPeerSnapshot first = Assert.IsType<DashboardPeerSnapshot>(observed);
@@ -92,14 +92,14 @@ public sealed class ResourceSummaryTests
         Assert.True(sample.ObservedAt <= first.CheckedAt);
         using HttpResponseMessage repeated = await client.SendAsync(HttpMethod.Get, "client/dashboard", clusterId: cluster, peerId: "sample-peer").ConfigureAwait(true);
         repeated.EnsureSuccessStatusCode();
-        DashboardPeerSnapshot second = (await repeated.Content.ReadFromJsonAsync<DashboardPeerSnapshot>(ContractJson.Options).ConfigureAwait(true))!;
+        DashboardPeerSnapshot second = (await repeated.Content.ReadFromJsonAsync<DashboardPeerSnapshot>(ClientObservationJson.Options).ConfigureAwait(true))!;
         ResourceSample same = second.Samples.Single(item => item.Id == sample.Id);
         Assert.Equal(sample.InstanceId, same.InstanceId);
         Assert.Equal(sample.Metrics, same.Metrics);
         Assert.True(same.ObservedAt <= second.CheckedAt);
         using HttpResponseMessage delta = await client.SendAsync(HttpMethod.Get, "client/dashboard?after=" + sample.Id, clusterId: cluster, peerId: "sample-peer").ConfigureAwait(true);
         delta.EnsureSuccessStatusCode();
-        DashboardPeerSnapshot difference = (await delta.Content.ReadFromJsonAsync<DashboardPeerSnapshot>(ContractJson.Options).ConfigureAwait(true))!;
+        DashboardPeerSnapshot difference = (await delta.Content.ReadFromJsonAsync<DashboardPeerSnapshot>(ClientObservationJson.Options).ConfigureAwait(true))!;
         Assert.DoesNotContain(difference.Samples, item => item.Id == sample.Id);
         Assert.NotNull(difference.Health);
     }

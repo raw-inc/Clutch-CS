@@ -71,7 +71,7 @@ public sealed class DesktopProcessTests(Xunit.Abstractions.ITestOutputHelper out
         await CorePeer.WaitAsync(async token =>
         {
             using HttpResponseMessage response = await client.SendAsync(HttpMethod.Get, "client/clusters", cancellationToken: token).ConfigureAwait(true);
-            DiscoveredCluster[] values = (await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ContractJson.Options, token).ConfigureAwait(true))!;
+            DiscoveredCluster[] values = (await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ClientObservationJson.Options, token).ConfigureAwait(true))!;
             return values.Any(value => string.Equals(value.ClusterId, cluster, StringComparison.Ordinal) && value.Peers.Any(peer => string.Equals(peer.HostId, "desktop-host", StringComparison.Ordinal) && peer.Status == Contracts.Cluster.EPeerStatus.Ready));
         }, timeout.Token).ConfigureAwait(true);
         using ClientWebSocket socket = new();

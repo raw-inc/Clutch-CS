@@ -41,7 +41,7 @@ public sealed class HostManagerTests
         await CorePeer.WaitAsync(async token =>
         {
             using HttpResponseMessage response = await client.SendAsync(HttpMethod.Get, "client/clusters", cancellationToken: token).ConfigureAwait(true);
-            DiscoveredCluster[]? clusters = await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ContractJson.Options, token).ConfigureAwait(true);
+            DiscoveredCluster[]? clusters = await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ClientObservationJson.Options, token).ConfigureAwait(true);
             return clusters?.Any(item => string.Equals(item.ClusterId, cluster, StringComparison.Ordinal) && item.Peers.Count == 2) == true;
         });
         using HttpResponseMessage listing = await client.SendAsync(HttpMethod.Get, "client/host-manager/hosts");
@@ -111,7 +111,7 @@ public sealed class HostManagerTests
         await CorePeer.WaitAsync(async token =>
         {
             using HttpResponseMessage discovery = await client.SendAsync(HttpMethod.Get, "client/clusters", cancellationToken: token).ConfigureAwait(true);
-            DiscoveredCluster[]? current = await discovery.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ContractJson.Options, token).ConfigureAwait(true);
+            DiscoveredCluster[]? current = await discovery.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ClientObservationJson.Options, token).ConfigureAwait(true);
             return current?.SelectMany(item => item.Peers).Any(peer => peer.InstanceId == selected.Target.InstanceId) == true;
         });
         using HttpResponseMessage recovered = await client.SendAsync(HttpMethod.Post, "client/host-manager/batches/" + batch.OperationId + "/reconcile", new { });

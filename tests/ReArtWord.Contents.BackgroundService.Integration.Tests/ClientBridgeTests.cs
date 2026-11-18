@@ -87,7 +87,7 @@ public sealed class ClientBridgeTests
     {
         using HttpResponseMessage response = await client.SendAsync(HttpMethod.Get, "client/clusters", cancellationToken: token).ConfigureAwait(true);
         response.EnsureSuccessStatusCode();
-        DiscoveredCluster[]? clusters = await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ContractJson.Options, token).ConfigureAwait(true);
+        DiscoveredCluster[]? clusters = await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ClientObservationJson.Options, token).ConfigureAwait(true);
         return clusters?.Any(cluster => string.Equals(cluster.ClusterId, clusterId, StringComparison.Ordinal) && cluster.Peers.Count == 1) == true;
     }, cancellationToken);
 
