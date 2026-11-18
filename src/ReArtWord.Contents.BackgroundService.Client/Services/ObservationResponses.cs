@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ReArtWord.Contents.BackgroundService.Contracts.Collaboration;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution.History;
 using ReArtWord.Contents.BackgroundService.Contracts.Management.Overview;
 using ReArtWord.Contents.BackgroundService.Contracts.Management.Preview;
@@ -24,6 +25,10 @@ internal static class ObservationResponses
                 snapshots[index] = Dashboard(snapshots[index], receive);
             }
         }
+        if (value is IList<PresenceView> presence)
+        {
+            ApplyPresence(presence, receive);
+        }
         if (value is IList<NodePreviewSnapshot> previews)
         {
             for (int index = 0; index < previews.Count; index++)
@@ -33,6 +38,23 @@ internal static class ObservationResponses
             }
         }
         return value;
+    }
+
+    /// <summary>参加表示の残り時間は送信時点の値なので、応答待ちに費やした時間もブラウザーでの期限判定に含めます。</summary>
+    private static void ApplyPresence(IList<PresenceView> presence, Func<TimeSpan, ObservationAge> receive)
+    {
+        for (int index = 0; index < presence.Count; index++)
+        {
+            PresenceView item = presence[index];
+            if (item is null || item.Presence is null || item.RemainingTicks < 0 || item.Sequence is < 1 || item.Sequence is not null && item.PeerInstanceId == Guid.Empty)
+            {
+                throw new JsonException("参加表示の残り時間または通知順序が不正です。");
+            }
+            if (item.RemainingTicks is not null)
+            {
+                presence[index] = item with { ResponseAge = receive(TimeSpan.Zero) };
+            }
+        }
     }
 
     /// <summary>一括観測と単体観測に、同じ応答の通信時間を適用します。</summary>

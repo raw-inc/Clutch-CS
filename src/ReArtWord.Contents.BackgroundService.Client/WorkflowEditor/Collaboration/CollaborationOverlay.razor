@@ -4,7 +4,7 @@
 @inject EditorDocument Model
 @inject EditorNodeActivity Activity
 <g class="collaboration-overlay" pointer-events="none">
-    @foreach(var peer in Collaboration.Presence.Where(item=>item.Presence.UiInstanceId!=Collaboration.UiInstanceId && item.ExpiresAt>DateTimeOffset.UtcNow && string.Equals(item.Presence.WorkflowId,Model.Draft.Document.Id,StringComparison.Ordinal)))
+    @foreach(var peer in Collaboration.Presence.Where(item=>item.Presence.UiInstanceId!=Collaboration.UiInstanceId && string.Equals(item.Presence.WorkflowId,Model.Draft.Document.Id,StringComparison.Ordinal)))
     {
         var presence=peer.Presence;
         var color=Color(presence.UiInstanceId);

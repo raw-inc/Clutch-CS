@@ -72,7 +72,7 @@ else
     <div class="workspace @(!catalogOpen?"catalog-hidden":string.Empty) @(!inspectorOpen?"inspector-hidden":string.Empty)" inert="@busy">
         <aside class="library" hidden="@(!catalogOpen)"><NodeCatalog Visible="catalogOpen" Catalog="catalog" Add="AddNode" Close="()=>catalogOpen=false" DragStarted="BeginCatalogDrag" DragEnded="EndCatalogDrag" /></aside>
         <section @ref="canvasContainer" class="canvas-container" tabindex="0" @ondragover:preventDefault="true" @ondrop="DropNodeAsync">
-            <div class="small muted" aria-live="polite">@foreach(var peer in Collaboration.Presence.Where(item=>item.Presence.WorkflowId==Model.Draft.Document.Id&&item.Presence.UiInstanceId!=Collaboration.UiInstanceId&&item.ExpiresAt>DateTimeOffset.UtcNow)){<span>@peer.Presence.DisplayName · @(peer.Presence.Dirty?Ui["Unsaved"]:Ui["No local changes"]) </span>}</div>
+            <div class="small muted" aria-live="polite">@foreach(var peer in Collaboration.Presence.Where(item=>item.Presence.WorkflowId==Model.Draft.Document.Id&&item.Presence.UiInstanceId!=Collaboration.UiInstanceId)){<span>@peer.Presence.DisplayName · @(peer.Presence.Dirty?Ui["Unsaved"]:Ui["No local changes"]) </span>}</div>
             <NodeGraph ToggleStates="@ToggleStates.Find(Model.ClusterId,Model.Draft.Document.Id)" ButtonPressed="RunCoreAsync" PreviewRequested="PreviewRecipe" ExtractRequested="ExtractSubworkflowAsync" @ref="graph" Catalog="catalog" SelectionChanged="StateHasChanged" DragChanged="value=>dragging=value" ShowDetails="showDetails" Zoom="zoom" ZoomChanged="value=>zoom=value" View="EffectiveView" />
             @if(Model.Draft.Document.Nodes.Count==0){<div class="canvas-empty"><button @onclick="()=>catalogOpen=true"><UiIcon Name="add" />@Ui["Add node"]</button></div>}
         </section>
@@ -128,7 +128,7 @@ else
 <WorkflowForceSaveDialog Open="forceSaveOpen" Activation="activation" Close="()=>forceSaveOpen=false" BusyChanged="value=>busy=value" Saved="result=>ForceSavedAsync(result,lifetime.Token)" />
 <Modal Open="collaborationOpen" Title="@Ui["Collaboration"]" Close="()=>collaborationOpen=false">
     <p>@(LocalContext?Ui["Editing locally. The shared draft has not been updated."]:Ui[Collaboration.Status])</p><label>@Ui["Name shown to collaborators and in operation history"]<input @bind="Collaboration.DisplayName" @bind:event="oninput" maxlength="120" /></label>
-    <p class="presence">@string.Join(" / ",Collaboration.Presence.Where(item=>item.Presence.UiInstanceId!=Collaboration.UiInstanceId&&item.ExpiresAt>DateTimeOffset.UtcNow).Select(item=>$"{item.Presence.DisplayName} ({item.PeerId}) · {string.Join(",",item.Presence.SelectedNodeIds)}"))</p>
+    <p class="presence">@string.Join(" / ",Collaboration.Presence.Where(item=>item.Presence.UiInstanceId!=Collaboration.UiInstanceId).Select(item=>$"{item.Presence.DisplayName} ({item.PeerId}) · {string.Join(",",item.Presence.SelectedNodeIds)}"))</p>
     <button @onclick="OpenConflicts" disabled="@(Model.Draft.Conflicts.Count==0)">@Ui.Format("Compare {0} conflicts",Model.Draft.Conflicts.Count)</button>
     @foreach(var issue in Collaboration.Validation){<p class="notice error">@Ui[issue.Message]</p>}
     <button disabled="@(busy||LocalContext)" @onclick="()=>{collaborationOpen=false;forceSaveOpen=true;}">@Ui["Force save current draft"]</button>
