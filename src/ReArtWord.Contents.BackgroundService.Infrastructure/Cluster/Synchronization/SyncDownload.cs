@@ -221,7 +221,7 @@ internal sealed class SyncDownload
         // 同期前の準備不足でもUnavailableになるため、読取同期はReadyを要求せずローカル観測の生存と元の実体を確認します。
         if (!cluster.GetPeers().Any(peer => string.Equals(peer.PeerId, sourcePeerId, StringComparison.Ordinal) && peer.InstanceId == sourceInstanceId
             && peer.Status != EPeerStatus.Detached && (allowConflict || peer.Status != EPeerStatus.Conflict)
-            && clock.GetUtcNow() - peer.LastSeen <= options.PeerTimeout))
+            && peer.AgeAt(clock.GetUtcNow()) <= options.PeerTimeout))
         {
             throw new SyncFailureException("Sync.SourceInstanceUnavailable");
         }

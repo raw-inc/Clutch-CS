@@ -311,25 +311,25 @@ public sealed class PeerCluster : IPeerDirectory, IRemoteNodeDispatcher, IAsyncD
         }
     }
 
-    /// <summary>期限検査と実状態の通知を続けます。</summary>
+    /// <summary>期限検査と実状態の通知を続けます。参加者の発見猶予は日時補正で満了させず、起動後の経過時間で測ります。</summary>
     /// <returns>停止までの監視。</returns>
     private Task HeartbeatAsync(CancellationToken cancellationToken = default)
     {
-        DateTimeOffset recoveryAt = clock.GetUtcNow() + options.PeerTimeout;
-        return PeerHeartbeat.RunAsync(options.HeartbeatInterval, clock, token => Task.WhenAll(RefreshHeartbeatAsync(recoveryAt, token), Retention.PublishAsync(token)),
+        long started = clock.GetTimestamp();
+        return PeerHeartbeat.RunAsync(options.HeartbeatInterval, clock, token => Task.WhenAll(RefreshHeartbeatAsync(started, token), Retention.PublishAsync(token)),
             token => DiscoveryProtocol.AnnounceAsync(transport, CreateMessage("hello", null, JsonSerializer.SerializeToElement(membership.CreateAnnouncement(participation.Digest))), options.Port, token),
             () => membership.SetLocal(EPeerStatus.Unavailable), cancellationToken);
     }
 
     /// <summary>現在の必要条件と共有版を確認し、失敗時の通知判断は周期処理へ返します。</summary>
     /// <returns>この一巡の状態確認です。</returns>
-    private async Task RefreshHeartbeatAsync(DateTimeOffset recoveryAt, CancellationToken cancellationToken = default)
+    private async Task RefreshHeartbeatAsync(long started, CancellationToken cancellationToken = default)
     {
         transport.ValidateBinding();
         membership.Expire();
         await replication.RecoverAsync(cancellationToken).ConfigureAwait(false);
         await repositorySync.CleanupAsync(cancellationToken).ConfigureAwait(false);
-        if (recoveryAt <= clock.GetUtcNow())
+        if (options.PeerTimeout <= clock.GetElapsedTime(started))
         {
             await recovery.RecoverAloneAsync(cancellationToken).ConfigureAwait(false);
         }

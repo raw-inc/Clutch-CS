@@ -73,7 +73,7 @@ internal sealed class PeerListTelemetry(ManagementApi api)
                 if (health is not null && health.InstanceId == row.Peer.InstanceId && string.Equals(health.PeerId, row.Peer.PeerId, StringComparison.Ordinal)
                     && string.Equals(health.ClusterId, row.Cluster, StringComparison.Ordinal) && snapshot?.CheckedAt is { } checkedAt
                     && checkedAt <= now && now - checkedAt <= TimeSpan.FromSeconds(15)
-                    && row.Peer.LastSeen <= now && now - row.Peer.LastSeen <= TimeSpan.FromSeconds(15))
+                    && TimeSpan.Zero <= row.Peer.AgeAt(now) && row.Peer.AgeAt(now) <= TimeSpan.FromSeconds(15))
                 {
                     page[index] = row with { Health = health };
                 }

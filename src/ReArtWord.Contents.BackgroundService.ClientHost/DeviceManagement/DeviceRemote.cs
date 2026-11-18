@@ -18,7 +18,7 @@ internal sealed class DeviceRemote(ObserverConnection connection, ClientCommandL
     internal async Task<IReadOnlyList<DeviceHostInfo>> HostsAsync(CancellationToken cancellationToken = default)
     {
         DeviceHostTarget[] targets = connection.GetClusters().SelectMany(cluster => cluster.Peers
-            .Where(peer => !string.IsNullOrWhiteSpace(peer.HostId) && DateTimeOffset.UtcNow - peer.LastSeen < TimeSpan.FromSeconds(15))
+            .Where(peer => !string.IsNullOrWhiteSpace(peer.HostId) && peer.AgeAt(DateTimeOffset.UtcNow) < TimeSpan.FromSeconds(15))
             .Select(peer => new DeviceHostTarget(peer.HostId!, cluster.ClusterId, peer.PeerId, peer.InstanceId))).ToArray();
         List<DeviceHostInfo> hosts = [];
         foreach (IGrouping<string, DeviceHostTarget> group in targets.GroupBy(target => target.HostId, StringComparer.Ordinal).OrderBy(group => group.Key, StringComparer.Ordinal))
@@ -166,7 +166,7 @@ internal sealed class DeviceRemote(ObserverConnection connection, ClientCommandL
         PeerInfo[] peers = connection.GetClusters().Where(cluster => string.Equals(cluster.ClusterId, target.ClusterId, StringComparison.Ordinal))
             .SelectMany(cluster => cluster.Peers).Where(peer => string.Equals(peer.PeerId, target.PeerId, StringComparison.Ordinal)).ToArray();
         if (peers.Length != 1 || !string.Equals(peers[0].HostId, target.HostId, StringComparison.Ordinal)
-            || (!recovery && peers[0].InstanceId != target.InstanceId) || TimeSpan.FromSeconds(15) < DateTimeOffset.UtcNow - peers[0].LastSeen)
+            || (!recovery && peers[0].InstanceId != target.InstanceId) || TimeSpan.FromSeconds(15) < peers[0].AgeAt(DateTimeOffset.UtcNow))
         {
             throw new InvalidOperationException("Device.TargetChanged");
         }

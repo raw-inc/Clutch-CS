@@ -14,7 +14,8 @@ internal sealed class EditorPresence(EditorDocument model, ManagementApi api)
     private string? dragNode, sent;
     private int generation = -1;
     private bool busy, realtime;
-    private DateTimeOffset nextRead, keepAlive, movingUntil;
+    private long? lastRead, lastSent, lastMovement;
+    private int readInterval = 1000;
     private string visible = string.Empty;
     private EditorDraft? scopeBasis;
     private readonly List<string> dirtyNodes = [];
@@ -43,7 +44,7 @@ internal sealed class EditorPresence(EditorDocument model, ManagementApi api)
                 return;
             }
             realtime = value;
-            nextRead = default;
+            lastRead = null;
             if (!value)
             {
                 dragNode = null;
@@ -53,7 +54,7 @@ internal sealed class EditorPresence(EditorDocument model, ManagementApi api)
     }
 
     /// <summary>同じUIの再接続をまとめた現在の表示です。</summary>
-    internal IReadOnlyList<PresenceView> Items => items;
+    internal IReadOnlyList<PresenceView> Items => items.Where(item => item.IsCurrent(api.UtcNow)).ToArray();
 
     /// <summary>表示位置が変わった場合だけ重ね表示を更新します。</summary>
     internal event Action? Changed;
@@ -67,7 +68,7 @@ internal sealed class EditorPresence(EditorDocument model, ManagementApi api)
         {
             if (cursor != point || dragPosition != position)
             {
-                movingUntil = api.UtcNow.AddSeconds(1);
+                lastMovement = api.Timestamp;
             }
             cursor = point;
             dragNode = Realtime ? node
@@ -85,7 +86,7 @@ internal sealed class EditorPresence(EditorDocument model, ManagementApi api)
     {
         items.Clear();
         sent = null;
-        nextRead = keepAlive = default;
+        lastRead = lastSent = null;
     }
 
     /// <summary>座標本文は変化時だけ、在席維持は20秒ごとに送ります。</summary>
@@ -105,6 +106,7 @@ internal sealed class EditorPresence(EditorDocument model, ManagementApi api)
         try
         {
             DateTimeOffset now = api.UtcNow;
+            long started = api.Timestamp;
             if (!ReferenceEquals(scopeBasis, model.Draft))
             {
                 scopeBasis = model.Draft;
@@ -127,7 +129,7 @@ internal sealed class EditorPresence(EditorDocument model, ManagementApi api)
                 model.Draft.Dirty || model.HasInvalidInputs, scopeNodes, dragNode, dragPosition);
             string stamp = ContractJson.Hash(update);
             string path = "/api/collaboration/" + Uri.EscapeDataString(id) + "/presence";
-            if (!string.Equals(stamp, sent, StringComparison.Ordinal) || keepAlive <= now)
+            if (!string.Equals(stamp, sent, StringComparison.Ordinal) || lastSent is null || TimeSpan.FromSeconds(20) <= api.ElapsedSince(lastSent.Value))
             {
                 await api.PostAsync<object>(path, update, timeout.Token).ConfigureAwait(false);
                 if (currentGeneration != model.Generation)
@@ -135,9 +137,9 @@ internal sealed class EditorPresence(EditorDocument model, ManagementApi api)
                     return;
                 }
                 sent = stamp;
-                keepAlive = now.AddSeconds(20);
+                lastSent = started;
             }
-            if (nextRead <= now)
+            if (lastRead is null || TimeSpan.FromMilliseconds(readInterval) <= api.ElapsedSince(lastRead.Value))
             {
                 IReadOnlyList<PresenceView>? incoming = await api.GetAsync<IReadOnlyList<PresenceView>>(path, timeout.Token).ConfigureAwait(false);
                 if (currentGeneration != model.Generation)
@@ -145,15 +147,29 @@ internal sealed class EditorPresence(EditorDocument model, ManagementApi api)
                     return;
                 }
                 int interval = 1000;
-                if (Realtime && now < movingUntil)
+                if (Realtime && lastMovement is { } moving && api.ElapsedSince(moving) < TimeSpan.FromSeconds(1))
                 {
                     interval = 150;
                 }
-                nextRead = now.AddMilliseconds(interval);
+                lastRead = started;
+                readInterval = interval;
+
+                // 同じ通知が再取得される間は、期限切れでも比較元を残します。
+                // 表示だけを除外し、再読込みのたびに参加期間が復活するのを防ぎます。
+                Dictionary<(string, Guid, Guid, string), PresenceView> previous = items.ToDictionary(item => (item.PeerId, item.PeerInstanceId, item.Presence.UiInstanceId, item.Presence.WorkflowId));
+                PresenceView[] received = (incoming ?? []).Where(item => string.Equals(item.Presence.WorkflowId, id, StringComparison.Ordinal)).Select(item =>
+                {
+                    if (previous.TryGetValue((item.PeerId, item.PeerInstanceId, item.Presence.UiInstanceId, item.Presence.WorkflowId), out PresenceView? old)
+                        && old.Sequence is { } known && (item.Sequence is null || item.Sequence <= known))
+                    {
+                        return old;
+                    }
+                    return item;
+                }).ToArray();
                 items.Clear();
-                items.AddRange((incoming ?? []).Where(item => now < item.ExpiresAt)
-                    .GroupBy(item => (item.Presence.WorkflowId, item.Presence.UiInstanceId))
-                    .Select(group => group.MaxBy(item => item.ExpiresAt)!).OrderBy(item => item.Presence.UiInstanceId));
+                items.AddRange(received.GroupBy(item => (item.Presence.WorkflowId, item.Presence.UiInstanceId))
+                    .Select(group => group.OrderByDescending(item => item.Remaining is not null)
+                        .ThenByDescending(item => item.Remaining ?? item.ExpiresAt - now).First()).OrderBy(item => item.Presence.UiInstanceId));
             }
         }
         catch (Exception error) when (error is HttpRequestException or OperationCanceledException or System.Text.Json.JsonException or InvalidOperationException)
@@ -163,11 +179,11 @@ internal sealed class EditorPresence(EditorDocument model, ManagementApi api)
         finally
         {
             busy = false;
-            string snapshot = ContractJson.Hash(items.Where(item => item.Presence.UiInstanceId != Id && api.UtcNow < item.ExpiresAt).Select(item => item.Presence));
+            string snapshot = ContractJson.Hash(items.Where(item => item.Presence.UiInstanceId != Id && item.IsCurrent(api.UtcNow)).Select(item => item.Presence));
             if (!string.Equals(snapshot, visible, StringComparison.Ordinal))
             {
                 visible = snapshot;
-                movingUntil = api.UtcNow.AddSeconds(1);
+                lastMovement = api.Timestamp;
                 Changed?.Invoke();
             }
         }

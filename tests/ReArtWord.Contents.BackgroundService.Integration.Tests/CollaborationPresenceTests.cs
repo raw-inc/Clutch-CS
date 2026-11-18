@@ -40,6 +40,14 @@ public sealed class CollaborationPresenceTests
             return peers.Any(item => item.Presence.UiInstanceId == a.UiInstanceId && item.Presence.Dirty && item.Presence.DragPosition == new NodePosition(300, 400))
                 && peers.Any(item => item.Presence.UiInstanceId == b.UiInstanceId);
         }).ConfigureAwait(true);
+        PresenceView received = (await second.GetAsync<PresenceView[]>("collaboration.presence", workflow.Id).ConfigureAwait(true))
+            .Single(item => item.Presence.UiInstanceId == a.UiInstanceId);
+        Assert.NotNull(received.Sequence);
+        Assert.InRange(received.RemainingTicks!.Value, 1, TimeSpan.FromSeconds(45).Ticks);
+        PresenceView reread = (await second.GetAsync<PresenceView[]>("collaboration.presence", workflow.Id).ConfigureAwait(true))
+            .Single(item => item.Presence.UiInstanceId == a.UiInstanceId);
+        Assert.Equal(received.Sequence, reread.Sequence);
+        Assert.True(reread.RemainingTicks <= received.RemainingTicks);
         _ = await first.NotifyAsync<JsonElement>("collaboration.update-presence", a with { CursorX = null, CursorY = null, Dirty = false, DragNodeId = null, DragPosition = null }).ConfigureAwait(true);
         await CorePeer.WaitAsync(async token =>
         {

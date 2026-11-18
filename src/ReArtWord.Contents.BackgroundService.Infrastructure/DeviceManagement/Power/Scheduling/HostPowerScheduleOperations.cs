@@ -58,7 +58,7 @@ internal sealed class HostPowerScheduleOperations(PeerCluster cluster, IDurableR
         {
             return NodeResult.Failure("powerSchedule.missed", "The scheduled time is no longer current.", EOutcome.NotExecuted);
         }
-        PeerInfo[] peers = cluster.GetPeers().Where(peer => now - peer.LastSeen <= TimeSpan.FromSeconds(15)).ToArray();
+        PeerInfo[] peers = cluster.GetPeers().Where(peer => peer.AgeAt(now) <= TimeSpan.FromSeconds(15)).ToArray();
         PeerInfo? target;
         object payload;
         string operation;

@@ -130,7 +130,7 @@ internal sealed class FleetUpdateVisibility(FleetUpdateStore store, ObserverConn
     {
         foreach (Contracts.Management.Discovery.DiscoveredCluster cluster in connection.GetClusters().Where(cluster => selected is null || selected.Contains(cluster.ClusterId, StringComparer.Ordinal)))
         {
-            foreach (PeerInfo peer in cluster.Peers.Where(peer => peer.Status == EPeerStatus.Ready && DateTimeOffset.UtcNow - peer.LastSeen < TimeSpan.FromSeconds(15)).OrderBy(peer => peer.PeerId, StringComparer.Ordinal).Take(2))
+            foreach (PeerInfo peer in cluster.Peers.Where(peer => peer.Status == EPeerStatus.Ready && peer.AgeAt(DateTimeOffset.UtcNow) < TimeSpan.FromSeconds(15)).OrderBy(peer => peer.PeerId, StringComparer.Ordinal).Take(2))
             {
                 if (connection.FindObserver(cluster.ClusterId, peer.PeerId) is { } observer)
                 {

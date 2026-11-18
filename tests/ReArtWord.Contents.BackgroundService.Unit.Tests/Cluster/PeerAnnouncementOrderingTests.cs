@@ -179,9 +179,21 @@ public sealed class PeerAnnouncementOrderingTests
     private sealed class AnnouncementClock : TimeProvider
     {
         private DateTimeOffset now = DateTimeOffset.UnixEpoch.AddYears(50);
+        private long ticks;
+
+        /// <summary>経過時間をTimeSpanと同じ単位で数えます。</summary>
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        /// <summary>模擬した経過時間を返します。</summary>
+        /// <returns>経過tick数です。</returns>
+        public override long GetTimestamp() => ticks;
 
         /// <summary>ローカル受信時刻を進めます。</summary>
-        internal void Advance() => now = now.AddSeconds(1);
+        internal void Advance()
+        {
+            now = now.AddSeconds(1);
+            ticks += TimeSpan.TicksPerSecond;
+        }
 
         /// <summary>受信側だけの時計を返します。</summary>
         /// <returns>現在のローカル時刻です。</returns>

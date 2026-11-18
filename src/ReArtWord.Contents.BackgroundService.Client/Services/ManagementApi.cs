@@ -9,9 +9,23 @@ using ReArtWord.Contents.BackgroundService.Contracts.Management;
 namespace ReArtWord.Contents.BackgroundService.Client.Services;
 
 /// <summary>型付き管理要求を一度だけ送信します。</summary>
-internal sealed class ManagementApi(HttpClient client, ServerClock? clock = null)
+internal sealed class ManagementApi
 {
-    private readonly ServerClock serverClock = clock ?? new();
+    private readonly HttpClient client;
+    private readonly ServerClock serverClock;
+    private readonly Lock reading = new();
+    private readonly JsonSerializerOptions observationOptions;
+    private long responseStarted;
+
+    /// <summary>最終受信からの経過時間の復元に使う時計と、再利用するJSON設定を接続します。</summary>
+    public ManagementApi(HttpClient client, ServerClock? clock = null)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+        this.client = client;
+        serverClock = clock ?? new();
+        observationOptions = new(responseOptions);
+        observationOptions.Converters.Add(new PeerObservationJsonConverter(age => serverClock.ObserveAge(age, responseStarted)));
+    }
 
     /// <summary>観測元と同じ時刻軸で鮮度を判断します。</summary>
     internal DateTimeOffset UtcNow => serverClock.UtcNow;
@@ -179,7 +193,16 @@ internal sealed class ManagementApi(HttpClient client, ServerClock? clock = null
         {
             return default;
         }
-        T? result = JsonSerializer.Deserialize<T>(content, responseOptions);
+
+        T? result;
+
+        // JSONの復元は同期処理です。この間だけ要求開始位置を固定することで、型情報のキャッシュを
+        // 再利用しつつ、同時に届いた別応答の通信時間を混ぜないようにします。
+        using (reading.EnterScope())
+        {
+            responseStarted = started;
+            result = JsonSerializer.Deserialize<T>(content, observationOptions);
+        }
         return ObservationResponses.Receive(result, age => serverClock.ObserveAge(age, started));
     }
 }

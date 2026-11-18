@@ -168,7 +168,7 @@ internal sealed class WakeHostCache : Microsoft.Extensions.Hosting.BackgroundSer
     internal async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
-        DeviceHostTarget[] targets = discover().SelectMany(cluster => cluster.Peers.Where(peer => now - peer.LastSeen < TimeSpan.FromSeconds(15)
+        DeviceHostTarget[] targets = discover().SelectMany(cluster => cluster.Peers.Where(peer => peer.AgeAt(now) < TimeSpan.FromSeconds(15)
             && peer.Status is EPeerStatus.Ready or EPeerStatus.Syncing && !string.IsNullOrWhiteSpace(peer.HostId))
             .Select(peer => new DeviceHostTarget(peer.HostId!, cluster.ClusterId, peer.PeerId, peer.InstanceId)))
             .GroupBy(target => target.HostId, StringComparer.Ordinal).Select(group => group.OrderBy(target => target.ClusterId, StringComparer.Ordinal).ThenBy(target => target.PeerId, StringComparer.Ordinal).First()).Take(128).ToArray();
