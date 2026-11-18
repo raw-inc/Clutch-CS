@@ -9,8 +9,8 @@ namespace ReArtWord.Contents.BackgroundService.Runtime.Workflows.Debugging;
 public sealed class WorkflowDebugRecorder(IPeerDirectory peers, NodeRegistry registry, TimeProvider clock)
 {
     private readonly Lock gate = new();
-    private readonly Dictionary<string, WorkflowDebugArm> armed = new(StringComparer.Ordinal);
-    private readonly Dictionary<Guid, WorkflowDebugArm> tickets = [];
+    private readonly Dictionary<string, Ticket> armed = new(StringComparer.Ordinal);
+    private readonly Dictionary<Guid, Ticket> tickets = [];
     private readonly Dictionary<Guid, WorkflowDebugCapture> captures = [];
     private readonly HashSet<Guid> cancelled = [];
 
@@ -20,24 +20,44 @@ public sealed class WorkflowDebugRecorder(IPeerDirectory peers, NodeRegistry reg
         get; set;
     }
 
+    /// <summary>予約本体と、受信時点で確認した残り時間です。</summary>
+    private sealed record Ticket(WorkflowDebugArm Arm, long Received, TimeSpan Remaining);
+
     /// <summary>同じチケットの再送を新しい予約として扱いません。</summary>
     /// <returns>予約を保持できたかです。</returns>
     public bool Prepare(WorkflowDebugArm arm)
     {
         ArgumentNullException.ThrowIfNull(arm);
+        if (arm.OwnerInstanceId == peers.LocalInstanceId && string.Equals(arm.OwnerPeerId, peers.LocalPeerId, StringComparison.Ordinal))
+        {
+            return Prepare(arm, arm.ExpiresAt - clock.GetUtcNow());
+        }
+        return Prepare(arm, WorkflowDebugArm.Lifetime);
+    }
+
+    /// <summary>予約元の残り時間を受信側の単調時計へ引き継ぎ、再送による延長を防ぎます。</summary>
+    /// <returns>同じ予約を保持中、または新規に保持できた場合はtrueです。</returns>
+    public bool Prepare(WorkflowDebugArm arm, TimeSpan remaining)
+    {
+        ArgumentNullException.ThrowIfNull(arm);
         using (gate.EnterScope())
         {
             Prune();
-            if (tickets.TryGetValue(arm.Id, out WorkflowDebugArm? existing))
+            if (tickets.TryGetValue(arm.Id, out Ticket? existing))
             {
-                return existing == arm;
+                return existing.Arm == arm && clock.GetElapsedTime(existing.Received) < existing.Remaining && !cancelled.Contains(arm.Id);
             }
-            if (16 <= tickets.Count || arm.ExpiresAt <= clock.GetUtcNow())
+            if (16 <= tickets.Count || remaining <= TimeSpan.Zero)
             {
                 return false;
             }
-            tickets.Add(arm.Id, arm);
-            armed[arm.WorkflowId] = arm;
+            if (WorkflowDebugArm.Lifetime < remaining)
+            {
+                remaining = WorkflowDebugArm.Lifetime;
+            }
+            Ticket ticket = new(arm, clock.GetTimestamp(), remaining);
+            tickets.Add(arm.Id, ticket);
+            armed[arm.WorkflowId] = ticket;
             return true;
         }
     }
@@ -51,7 +71,7 @@ public sealed class WorkflowDebugRecorder(IPeerDirectory peers, NodeRegistry reg
             {
                 cancelled.Add(id);
             }
-            foreach (string key in armed.Where(pair => pair.Value.Id == id).Select(pair => pair.Key).ToArray())
+            foreach (string key in armed.Where(pair => pair.Value.Arm.Id == id).Select(pair => pair.Key).ToArray())
             {
                 armed.Remove(key);
             }
@@ -70,10 +90,11 @@ public sealed class WorkflowDebugRecorder(IPeerDirectory peers, NodeRegistry reg
         WorkflowDebugArm? arm;
         using (gate.EnterScope())
         {
-            if (!armed.TryGetValue(workflow.Definition.Id, out arm) || arm.ExpiresAt <= clock.GetUtcNow())
+            if (!armed.TryGetValue(workflow.Definition.Id, out Ticket? ticket) || ticket.Remaining <= clock.GetElapsedTime(ticket.Received))
             {
                 return null;
             }
+            arm = ticket.Arm;
         }
         bool? accepted;
         try
@@ -92,7 +113,7 @@ public sealed class WorkflowDebugRecorder(IPeerDirectory peers, NodeRegistry reg
         }
         using (gate.EnterScope())
         {
-            if (accepted is not null && armed.GetValueOrDefault(workflow.Definition.Id)?.Id == arm.Id)
+            if (accepted is not null && armed.GetValueOrDefault(workflow.Definition.Id)?.Arm.Id == arm.Id)
             {
                 armed.Remove(workflow.Definition.Id);
             }
@@ -105,7 +126,7 @@ public sealed class WorkflowDebugRecorder(IPeerDirectory peers, NodeRegistry reg
         using (gate.EnterScope())
         {
             Prune();
-            if (cancelled.Contains(arm.Id))
+            if (cancelled.Contains(arm.Id) || !tickets.ContainsKey(arm.Id))
             {
                 return null;
             }
@@ -129,8 +150,8 @@ public sealed class WorkflowDebugRecorder(IPeerDirectory peers, NodeRegistry reg
     /// <summary>予約は10分で、記録はその後20分までの一時保持に限ります。</summary>
     private void Prune()
     {
-        DateTimeOffset now = clock.GetUtcNow();
-        foreach (Guid id in tickets.Where(pair => pair.Value.ExpiresAt.AddMinutes(20) <= now).Select(pair => pair.Key).ToArray())
+        long now = clock.GetTimestamp();
+        foreach (Guid id in tickets.Where(pair => pair.Value.Remaining + WorkflowDebugArm.Retention <= clock.GetElapsedTime(pair.Value.Received, now)).Select(pair => pair.Key).ToArray())
         {
             tickets.Remove(id);
             cancelled.Remove(id);
@@ -139,7 +160,7 @@ public sealed class WorkflowDebugRecorder(IPeerDirectory peers, NodeRegistry reg
                 capture.Complete("debug.expired");
             }
         }
-        foreach (string key in armed.Where(pair => pair.Value.ExpiresAt <= now).Select(pair => pair.Key).ToArray())
+        foreach (string key in armed.Where(pair => pair.Value.Remaining <= clock.GetElapsedTime(pair.Value.Received, now)).Select(pair => pair.Key).ToArray())
         {
             armed.Remove(key);
         }
