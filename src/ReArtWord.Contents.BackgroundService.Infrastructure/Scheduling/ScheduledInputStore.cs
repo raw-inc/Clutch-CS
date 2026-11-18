@@ -240,7 +240,7 @@ public sealed class ScheduledInputStore : IDisposable
             return default;
         }
         ScheduleClockBound? bound = entry.Value.Json.Deserialize<ScheduleClockBound[]>(ContractJson.Options)?.SingleOrDefault(item => item.Instance == cluster.LocalInstanceId);
-        return bound?.Restore(cluster.AdmissionClock.Capture(), TimeProvider.System) ?? default;
+        return bound?.Restore(cluster.AdmissionClock.Capture, TimeProvider.System) ?? default;
     }
 
     /// <summary>ローカル実行の記録を共有索引へ混ぜません。</summary>

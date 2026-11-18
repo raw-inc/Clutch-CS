@@ -18,13 +18,16 @@ internal sealed record ScheduleClockBound(Guid Instance, long Earliest, long Lat
 
     /// <summary>実体が同じ間だけ、元の許容時間の残りを復元します。</summary>
     /// <returns>この実体の時計で表した許容期限の範囲です。</returns>
-    internal ScheduleAllowance Restore(RequestClockSnapshot current, TimeProvider clock)
+    internal ScheduleAllowance Restore(Func<RequestClockSnapshot> capture, TimeProvider clock)
     {
+        long before = clock.GetTimestamp();
+        RequestClockSnapshot current = capture();
+        long after = clock.GetTimestamp();
         if (current.InstanceId != Instance)
         {
             return default;
         }
-        return new(clock, TimeSpan.FromTicks(Earliest - current.ElapsedTicks), TimeSpan.FromTicks(Latest - current.ElapsedTicks));
+        return new(clock, TimeSpan.FromTicks(Earliest - current.ElapsedTicks), TimeSpan.FromTicks(Latest - current.ElapsedTicks), before, after);
     }
 
     /// <summary>時計照会の往復の間に元の期限は進みます。両端を保存し、期限内とも期限切れとも断定できない時間幅を区別します。</summary>

@@ -97,7 +97,9 @@ public sealed class ScheduleNode : ISourceNode
             while (next is not null && !context.IsStopRequested)
             {
                 NodeExecutionContext current = context.BeginItem();
+                long beforeCalendar = current.TimeProvider.GetTimestamp();
                 DateTimeOffset now = current.TimeProvider.GetUtcNow();
+                long afterCalendar = current.TimeProvider.GetTimestamp();
                 TimeZoneInfo currentZone = Zone(current.Settings, current.TimeZone);
                 if (refreshCursor || !string.Equals(currentZone.Id, zone.Id, StringComparison.Ordinal) || !System.Text.Json.JsonElement.DeepEquals(current.Settings, snapshot.Settings))
                 {
@@ -169,7 +171,7 @@ public sealed class ScheduleNode : ISourceNode
                 current = current with
                 {
                     Schedule = new ScheduledOccurrence(cursor.Key, current.NodeId, context.Initial.ExecutionId, due,
-                        Enum.Parse<EScheduleMissedPolicy>(policy ?? "delay", true), TimeSpan.FromMilliseconds(tolerance)) { Allowance = new ScheduleAllowance(current.TimeProvider, allowance, allowance) },
+                        Enum.Parse<EScheduleMissedPolicy>(policy ?? "delay", true), TimeSpan.FromMilliseconds(tolerance)) { Allowance = new ScheduleAllowance(current.TimeProvider, allowance, allowance, beforeCalendar, afterCalendar) },
                 };
                 NodeResult result;
                 if (missed && (string.Equals(policy, SkipPolicy, StringComparison.Ordinal) || string.Equals(policy, WithinPolicy, StringComparison.Ordinal)))

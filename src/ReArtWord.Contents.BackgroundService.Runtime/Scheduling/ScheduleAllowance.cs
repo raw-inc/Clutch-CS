@@ -4,26 +4,28 @@ namespace ReArtWord.Contents.BackgroundService.Runtime.Scheduling;
 public readonly record struct ScheduleAllowance
 {
     private readonly TimeProvider? clock;
-    private readonly long sampled;
+    private readonly long earliestSample;
+    private readonly long latestSample;
     private readonly TimeSpan earliest;
     private readonly TimeSpan latest;
 
     /// <summary>期限の範囲を一度だけ経過時計に結び付けます。既定値は元の期限が確認できない状態です。</summary>
-    public ScheduleAllowance(TimeProvider clock, TimeSpan earliest, TimeSpan latest)
+    public ScheduleAllowance(TimeProvider clock, TimeSpan earliest, TimeSpan latest, long? beforeSample = null, long? afterSample = null)
     {
         ArgumentNullException.ThrowIfNull(clock);
         ArgumentOutOfRangeException.ThrowIfLessThan(latest, earliest);
         this.clock = clock;
-        sampled = clock.GetTimestamp();
+        earliestSample = beforeSample ?? clock.GetTimestamp();
+        latestSample = afterSample ?? earliestSample;
         this.earliest = earliest;
         this.latest = latest;
     }
 
     /// <summary>元の期限まで確実に残る時間です。</summary>
     public TimeSpan? Earliest => clock is null ? null
-                                               : earliest - clock.GetElapsedTime(sampled);
+                                               : earliest - clock.GetElapsedTime(earliestSample);
 
     /// <summary>元の期限まで残り得る最長時間です。</summary>
     public TimeSpan? Latest => clock is null ? null
-                                             : latest - clock.GetElapsedTime(sampled);
+                                             : latest - clock.GetElapsedTime(latestSample);
 }
