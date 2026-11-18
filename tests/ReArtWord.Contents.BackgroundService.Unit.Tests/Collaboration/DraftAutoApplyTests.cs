@@ -13,6 +13,35 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Collaboration;
 /// <summary>共有草稿の自動反映が既定で停止し、明示設定後も通常保存の境界を守ることを確認します。</summary>
 public sealed class DraftAutoApplyTests
 {
+    /// <summary>日時だけが前後しても2秒の安定待機を省略・延長せず、同じ変更を一度だけ反映します。</summary>
+    /// <returns>実保存と実UDPを通した安定待機です。</returns>
+    [Theory]
+    [InlineData(-3600)]
+    [InlineData(3600)]
+    public async Task ClockCorrectionsPreserveDraftSettlingAndSingleApplicationAsync(int correction)
+    {
+        DraftAutoApplyFixture fixture = new();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = fixture.ConfigureAwait(false);
+        await fixture.StartAsync();
+        fixture.Policy.Enabled = true;
+        await fixture.EditAsync("clock-corrected");
+        await fixture.Apply.TickAsync();
+        fixture.Clock.Adjust(TimeSpan.FromSeconds(correction));
+        await fixture.Apply.TickAsync();
+        Assert.Equal(1, fixture.Activations);
+        fixture.Clock.Advance(TimeSpan.FromSeconds(2) - TimeSpan.FromTicks(1));
+        await fixture.Apply.TickAsync();
+        Assert.Equal(1, fixture.Activations);
+        fixture.Clock.Advance(TimeSpan.FromTicks(1));
+        await fixture.Apply.TickAsync();
+        Assert.Equal(2, fixture.Activations);
+        Assert.Equal("clock-corrected", (await fixture.Store.GetAsync("flow"))!.Definition.Name);
+        fixture.Clock.Adjust(TimeSpan.FromSeconds(-correction * 2));
+        fixture.Clock.Advance(TimeSpan.FromSeconds(3));
+        await fixture.Apply.TickAsync();
+        Assert.Equal(2, fixture.Activations);
+    }
+
     /// <summary>通常の草稿共有間隔で編集が続く間は、履歴とスナップショットを増やしません。</summary>
     /// <returns>連続した変更が一回の保存へまとまることです。</returns>
     [Fact]
