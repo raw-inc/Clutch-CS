@@ -7,7 +7,7 @@ using ReArtWord.Contents.BackgroundService.Runtime.Processes.Commands;
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Processes;
 
 /// <summary>終了確認と復旧の待機中に、同じ実行ファイルの一意な後継を探します。</summary>
-internal sealed class ProcessReplacementProbe(Func<int, CancellationToken, Task<string[]?>>? readArguments = null)
+internal sealed class ProcessReplacementProbe(Func<int, CancellationToken, Task<string[]?>>? readArguments = null, ProcessWaitClock? waits = null)
 {
     private readonly Func<int, CancellationToken, Task<string[]?>> argumentsReader = readArguments ?? ProcessArguments.ReadAsync;
     private readonly ConcurrentDictionary<string, ProbeCache> cache = new(StringComparer.Ordinal);
@@ -16,12 +16,12 @@ internal sealed class ProcessReplacementProbe(Func<int, CancellationToken, Task<
     /// <returns>唯一の実体、候補なし、または照合不能の理由です。</returns>
     internal async ValueTask<(ProcessIdentity? Identity, string? Problem)> FindAsync(string application, ProcessReplacementWindow window, CancellationToken cancellationToken = default)
     {
-        if (cache.TryGetValue(application, out ProbeCache? previous) && previous.Window == window && DateTimeOffset.UtcNow < previous.ExpiresAt && DateTimeOffset.UtcNow < window.Deadline)
+        if (cache.TryGetValue(application, out ProbeCache? previous) && previous.Window == window && Stopwatch.GetElapsedTime(previous.Sampled) < TimeSpan.FromSeconds(1) && TimeSpan.Zero < waits?.Remaining(window.WaitOrigin, window.Deadline))
         {
             return (previous.Identity, previous.Problem);
         }
         (ProcessIdentity? identity, string? problem) = await SearchAsync(window, cancellationToken).ConfigureAwait(false);
-        cache[application] = new(window, DateTimeOffset.UtcNow.AddSeconds(1), identity, problem);
+        cache[application] = new(window, Stopwatch.GetTimestamp(), identity, problem);
         return (identity, problem);
     }
 
@@ -39,6 +39,26 @@ internal sealed class ProcessReplacementProbe(Func<int, CancellationToken, Task<
             name = Path.GetFileNameWithoutExtension(name);
             comparison = StringComparison.OrdinalIgnoreCase;
         }
+        DateTimeOffset minimum = window.NotBefore, maximum = window.NotBefore;
+        if (window.AliveOrigin is { } alive && ProcessWaitClock.OperatingSystemClock.Capture() is { } now && string.Equals(now.BootId, alive.BootId, StringComparison.Ordinal))
+        {
+            // 最終生存確認を現在の時計に換算し、時計補正の前後で先後関係が変わる候補は不明として残します。
+            DateTimeOffset adjusted = now.Wall - (now.Uptime - alive.Uptime);
+            if (adjusted < minimum)
+            {
+                minimum = adjusted;
+            }
+            else
+            {
+                maximum = adjusted;
+            }
+        }
+        else if (waits is not null)
+        {
+            // 起動回と最後の生存観測を対応付けられないため、一致するプロセスが残っていれば新規起動を保留します。
+            minimum = DateTimeOffset.MinValue;
+            maximum = DateTimeOffset.MaxValue;
+        }
         Process[] processes = Process.GetProcessesByName(name);
         ProcessIdentity? found = null;
         string? problem = null;
@@ -55,7 +75,7 @@ internal sealed class ProcessReplacementProbe(Func<int, CancellationToken, Task<
                         continue;
                     }
                     ProcessIdentity identity = ProcessOs.Identity(process);
-                    if (identity.StartedAt < window.NotBefore || process.HasExited)
+                    if (identity.StartedAt < minimum || process.HasExited)
                     {
                         continue;
                     }
@@ -94,6 +114,11 @@ internal sealed class ProcessReplacementProbe(Func<int, CancellationToken, Task<
                     }
                     if (ProcessOs.IsRunning(identity) != true)
                     {
+                        continue;
+                    }
+                    if (identity.StartedAt < maximum)
+                    {
+                        problem = "process.replacementUnconfirmed";
                         continue;
                     }
                     if (found is not null)
@@ -148,5 +173,5 @@ internal sealed class ProcessReplacementProbe(Func<int, CancellationToken, Task<
     }
 
     /// <summary>一登録・一確認区間だけを保持する照会抑制です。</summary>
-    private sealed record ProbeCache(ProcessReplacementWindow Window, DateTimeOffset ExpiresAt, ProcessIdentity? Identity, string? Problem);
+    private sealed record ProbeCache(ProcessReplacementWindow Window, long Sampled, ProcessIdentity? Identity, string? Problem);
 }

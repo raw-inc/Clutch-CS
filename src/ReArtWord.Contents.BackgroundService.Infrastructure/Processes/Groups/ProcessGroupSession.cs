@@ -37,7 +37,7 @@ internal sealed class ProcessGroupSession : IDisposable
         this.stateVersion = stateVersion;
         this.run = run;
         registration = new(version, definition, run.Status(definition.Id));
-        execution = new(processes, clock, definition.Id);
+        execution = new(processes, definition.Id);
         ownership.Set(definition, run.Active);
     }
 
@@ -222,7 +222,8 @@ internal sealed class ProcessGroupSession : IDisposable
         }
         ownership.SetActive(definition.Id, true);
         bool stopping = command is EProcessGroupCommand.Restart or EProcessGroupCommand.Stop;
-        DateTimeOffset now = clock.GetUtcNow();
+        ProcessWaitOrigin origin = processes.WaitClock.Capture();
+        DateTimeOffset now = origin.Wall;
         EProcessGroupPhase phase = EProcessGroupPhase.Waiting;
         int index = 0;
         DateTimeOffset? nextAt = now.AddMilliseconds(targets[0].DelayMilliseconds);
@@ -238,7 +239,7 @@ internal sealed class ProcessGroupSession : IDisposable
             startNotBefore = now.AddMilliseconds(definition.RecoveryDelayMilliseconds);
         }
         ProcessGroupRun next = new(Guid.NewGuid(), ContractJson.Copy(definition), targets, command, automatic, recoverOnly,
-            phase, index, NextAt: nextAt, StartNotBefore: startNotBefore,
+            phase, index, NextAt: nextAt, StartNotBefore: startNotBefore, WaitOrigin: origin,
             Suppressed: command == EProcessGroupCommand.Stop);
         if (!await SaveAsync(next, cancellationToken).ConfigureAwait(false))
         {
