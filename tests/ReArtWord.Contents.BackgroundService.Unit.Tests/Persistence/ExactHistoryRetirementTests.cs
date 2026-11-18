@@ -1,4 +1,6 @@
 using System.Text.Json;
+using Microsoft.Data.Sqlite;
+using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Recovery;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Persistence;
@@ -94,6 +96,65 @@ public sealed class ExactHistoryRetirementTests
             Assert.Equal(EOutcome.Succeeded, (await current.ApplyBatchAsync(ids[2], [new("workflow:exact-retirement", "late", null, NodeValue.FromObject(2))]).ConfigureAwait(true)).Outcome);
             Assert.Equal(7, (await current.ReadAsync("workflow:exact-retirement", "value").ConfigureAwait(true))!.Value!.Json.GetInt32());
         }
+    }
+
+    /// <summary>復元先に未取得の本文と削除済みIDが共存しても、背景取得で削除済みIDが復活しません。</summary>
+    /// <returns>SQLiteバックアップを別の配置へ復元し、形式6から5へ移行した後の受付結果です。</returns>
+    [Fact]
+    public async Task RestoringABackupKeepsRetiredIdsThroughoutBackgroundRecoveryAsync()
+    {
+        using MediaTestFiles files = new();
+        string sourcePath = Path.Combine(files.Root, "first");
+        IDurableRepository source = await RepositoryFactory.CreateAsync(sourcePath, "source", new()).ConfigureAwait(true);
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        OperationIdSequence sequence = new();
+        Guid retired = sequence.Next(), gap = sequence.Next(), live = sequence.Next();
+        await source.ApplyBatchAsync(retired, [new("workflow:backup", "value", null, NodeValue.FromObject(1))]).ConfigureAwait(true);
+        await source.ApplyBatchAsync(live, [new("workflow:backup", "value", retired.ToString("N"), NodeValue.FromObject(2))]).ConfigureAwait(true);
+        using (HistoryArchiveService archive = new(source))
+        {
+            await MaintainAsync(archive, now.AddDays(5)).ConfigureAwait(true);
+        }
+        Guid later = sequence.Next();
+        await source.ApplyBatchAsync(later, [new("workflow:backup", "other", null, NodeValue.FromObject(3))]).ConfigureAwait(true);
+        RecoveryRepository outgoing = RecoveryRepository.Create(source)!;
+        RepositorySnapshot snapshot = await outgoing.ReadAsync("source", now.AddDays(6)).ConfigureAwait(true);
+        Assert.NotEmpty(snapshot.RetiredRanges!);
+        Assert.Contains(snapshot.DeferredHistory!, item => item.OperationId == later);
+        string targetPath = Path.Combine(files.Root, "target"), copyPath = Path.Combine(files.Root, "copy");
+        IDurableRepository target = await RepositoryFactory.CreateAsync(targetPath, "target", new()).ConfigureAwait(true);
+        Assert.True(await target.ImportAsync(snapshot).ConfigureAwait(true));
+        Directory.CreateDirectory(copyPath);
+        using (SqliteConnection originalDb = new(new SqliteConnectionStringBuilder { DataSource = Path.Combine(targetPath, "state.db"), Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString()))
+        using (SqliteConnection copy = new(new SqliteConnectionStringBuilder { DataSource = Path.Combine(copyPath, "state.db"), Pooling = false }.ToString()))
+        {
+            await originalDb.OpenAsync().ConfigureAwait(true);
+            await copy.OpenAsync().ConfigureAwait(true);
+            originalDb.BackupDatabase(copy);
+        }
+        string db = Path.Combine(copyPath, "state.db");
+        Assert.Equal(6L, Format(db));
+        IDurableRepository restored = await RepositoryFactory.CreateAsync(copyPath, "target", new()).ConfigureAwait(true);
+        Assert.Equal("Persistence.HistoryExpired", (await restored.ReadReceiptAsync(retired).ConfigureAwait(true))!.Reason);
+        Assert.Equal("Persistence.HistoryPending", (await restored.ReadReceiptAsync(later).ConfigureAwait(true))!.Reason);
+        RecoveryRepository incoming = RecoveryRepository.Create(restored)!;
+        Assert.Equal(snapshot.DeferredHistory!.Count, await incoming.FillAsync(await outgoing.ReadBodiesAsync(snapshot.DeferredHistory).ConfigureAwait(true)).ConfigureAwait(true));
+        Assert.Equal(5L, Format(db));
+        Assert.Equal("Persistence.HistoryExpired", (await restored.ReadReceiptAsync(retired).ConfigureAwait(true))!.Reason);
+        Assert.Equal(EOutcome.Succeeded, (await restored.ReadReceiptAsync(later).ConfigureAwait(true))!.Outcome);
+        Assert.Equal(EOutcome.Succeeded, (await restored.ApplyBatchAsync(gap, [new("workflow:backup", "late", null, NodeValue.FromObject(4))]).ConfigureAwait(true)).Outcome);
+        Assert.Equal(2, (await restored.ReadAsync("workflow:backup", "value").ConfigureAwait(true))!.Value!.Json.GetInt32());
+    }
+
+    /// <summary>復元したDBが公開する互換性の版を確認します。</summary>
+    /// <returns>保存形式の版です。</returns>
+    private static long Format(string path)
+    {
+        using SqliteConnection db = new(new SqliteConnectionStringBuilder { DataSource = path, Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString());
+        db.Open();
+        using SqliteCommand command = db.CreateCommand();
+        command.CommandText = "SELECT version FROM repository_identity";
+        return (long)command.ExecuteScalar()!;
     }
 
     /// <summary>試験専用の保存先を再び開ける形で作ります。</summary>
