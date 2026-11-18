@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Debugging;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
@@ -60,6 +61,31 @@ public sealed class WorkflowDebugTests
         Assert.NotNull(captured.NextOffset);
         WorkflowDebugView next = fixture.Engine.Debug.Read(new(arm.Id, captured.NextOffset.Value, 1))!;
         Assert.NotEqual(captured.Nodes![0].InvocationId, Assert.Single(next.Nodes!).InvocationId);
+    }
+
+    /// <summary>予約を配ったあとでPCの時計が動いても、再送で期限が延びず、取得済みの結果も決めた時間だけ参照できます。</summary>
+    /// <returns>実行時の取得権照会と、予約・記録の実経過時間による失効を確認します。</returns>
+    [Theory]
+    [InlineData(-3600)]
+    [InlineData(3600)]
+    public async Task RemoteReservationRetainsItsOriginalRemainingTime(int seconds)
+    {
+        WorkflowFixture fixture = Fixture();
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable cleanup = fixture.ConfigureAwait(true);
+        ManagementTransport.AdmissionTestClock clock = new();
+        WorkflowDebugRecorder recorder = new(fixture.Peers, fixture.Registry, clock) { Claim = (_, _, _) => ValueTask.FromResult<bool?>(true) };
+        CompiledWorkflow workflow = Plan(fixture);
+        WorkflowDebugArm arm = new(Guid.NewGuid(), workflow.Definition.Id, "owner", Guid.NewGuid(), clock.GetUtcNow().AddHours(-1));
+        Assert.True(recorder.Prepare(arm, TimeSpan.FromSeconds(2)));
+        clock.Adjust(TimeSpan.FromSeconds(seconds));
+        clock.Advance(TimeSpan.FromSeconds(1));
+        Assert.True(recorder.Prepare(arm, WorkflowDebugArm.Lifetime));
+        Assert.NotNull(await recorder.BeginAsync(workflow, Guid.NewGuid()));
+        Assert.NotNull(recorder.Read(new(arm.Id)));
+        clock.Advance(TimeSpan.FromSeconds(1));
+        Assert.False(recorder.Prepare(arm, WorkflowDebugArm.Lifetime));
+        clock.Advance(WorkflowDebugArm.Retention);
+        Assert.Null(recorder.Read(new(arm.Id)));
     }
 
     /// <summary>無効時は取得権へ問い合わせず、通常実行だけが進みます。</summary>
