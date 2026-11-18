@@ -105,6 +105,7 @@ public sealed class HistoryRetentionProcessTests
         Assert.NotEmpty((await seed.ExportAsync().ConfigureAwait(true)).RetiredRanges!);
         await source.StartAsync().ConfigureAwait(true);
         await CorePeer.WaitAsync(async token => (await source.GetAsync<JsonElement>("health", token).ConfigureAwait(true)).GetProperty("ready").GetBoolean()).ConfigureAwait(true);
+        await WaitForCoordinatorAsync(source, "source").ConfigureAwait(true);
         await target.StartAsync().ConfigureAwait(true);
         await CorePeer.WaitAsync(async token => (await target.GetAsync<JsonElement>("status", token).ConfigureAwait(true)).GetProperty("peers").EnumerateArray()
             .Count(peer => peer.GetProperty("status").GetString() is "ready") == 2).ConfigureAwait(true);
@@ -115,6 +116,7 @@ public sealed class HistoryRetentionProcessTests
         CorePeer restarted = new(cluster, "target", port, false, executablePath: otherCore);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable restartedLifetime = restarted.ConfigureAwait(true);
         await restarted.StartAsync().ConfigureAwait(true);
+        await WaitForCoordinatorAsync(restarted, "target").ConfigureAwait(true);
         await restarted.StopAsync().ConfigureAwait(true);
         IDurableRepository reopened = await RepositoryFactory.CreateAsync(Path.Combine(target.DirectoryPath, "state"), "target", new(EStorageBackend.Sqlite)).ConfigureAwait(true);
         Assert.Equal(2, (await reopened.ReadAsync("workflow:retirement-sync", "state").ConfigureAwait(true))!.Value!.Json.GetInt32());
@@ -122,6 +124,12 @@ public sealed class HistoryRetentionProcessTests
         Assert.NotEqual(EOutcome.Succeeded, (await reopened.ApplyBatchAsync(first, original).ConfigureAwait(true)).Outcome);
         Assert.Equal(EOutcome.Succeeded, (await reopened.ApplyBatchAsync(hole, [new("workflow:retirement-sync", "late", null, NodeValue.FromObject(3))]).ConfigureAwait(true)).Outcome);
     }
+
+    /// <summary>再起動したプロセスの応答だけでなく、通常参加と担当の引継ぎまで確認します。</summary>
+    /// <returns>指定したピアが担当になるまでの待機です。</returns>
+    private static Task WaitForCoordinatorAsync(CorePeer peer, string expected, CancellationToken cancellationToken = default)
+        => CorePeer.WaitAsync(async token => string.Equals((await peer.GetAsync<JsonElement>("status", token).ConfigureAwait(false)).GetProperty("coordinator").GetString(), expected, StringComparison.Ordinal)
+            && (await peer.GetAsync<JsonElement>("health", token).ConfigureAwait(false)).GetProperty("ready").GetBoolean(), cancellationToken);
 
     /// <summary>時計を進めず、隔離された試験DB内の一件だけを古い確定履歴として準備します。</summary>
     /// <returns>対象レコードの経過日数の設定です。</returns>
