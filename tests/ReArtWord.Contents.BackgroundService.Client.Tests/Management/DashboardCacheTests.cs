@@ -270,7 +270,7 @@ public sealed class DashboardCacheTests
                 // 未対応の応答を返し、並列数の検証を照会期限の経過に依存させません。
                 return null;
             }
-            bool diagnostic = command.Operation is "executions.list" or "executions.activity" or "logs.query";
+            bool diagnostic = command.Operation is "executions.list" or "executions.activity" or "executions.observations" or "logs.query";
             lock (gate)
             {
                 if (diagnostic)

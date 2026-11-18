@@ -35,7 +35,7 @@ public sealed class WorkflowEngine
     private readonly WorkflowNodeDispatch delivery;
     private readonly TimeProvider timeProvider;
     private readonly WorkflowNodeEvaluation evaluation;
-    private readonly ExecutionReportCache completed = new();
+    private readonly ExecutionReportCache completed;
     private readonly WorkflowExecutionOwnership ownership;
     private readonly NodeOutputRetentionQueue retentionQueue = new();
 
@@ -169,6 +169,7 @@ public sealed class WorkflowEngine
         ArgumentNullException.ThrowIfNull(dispatcher);
         this.registry = registry;
         this.timeProvider = timeProvider ?? TimeProvider.System;
+        completed = new(timeProvider: this.timeProvider);
         Debug = new(directory, registry, this.timeProvider);
         Targets = new WorkflowTargetPlanner(registry, directory, this.timeProvider);
         ownership = new(directory.LocalPeerId, directory.LocalInstanceId, this.timeProvider, log);

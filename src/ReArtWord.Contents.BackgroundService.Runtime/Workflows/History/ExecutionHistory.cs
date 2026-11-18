@@ -75,7 +75,7 @@ public static class ExecutionHistory
 
     /// <summary>活動量の計数に必要な識別子・時刻・成否だけを返します。</summary>
     /// <returns>ノードの出力・診断を含まない要約です。</returns>
-    private static ExecutionResultView ActivitySummary(ExecutionResultView view)
+    internal static ExecutionResultView ActivitySummary(ExecutionResultView view)
     {
         ExecutionReportSummary summary;
         if (view.Report is { } report)
@@ -86,7 +86,7 @@ public static class ExecutionHistory
         {
             summary = view.Summary! with { Targets = [] };
         }
-        return new(null, summary);
+        return new(null, summary) { CompletionAge = view.CompletionAge, CompletionOrder = view.CompletionOrder, CompletionAgeIsLowerBound = view.CompletionAgeIsLowerBound };
     }
 
     /// <summary>不正な続き位置を明示拒否します。</summary>

@@ -10,7 +10,7 @@ namespace ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Diagnostics
 /// <summary>開いているワークフローの明示プレビューだけを照会し、媒体本体は利用者操作で取得します。</summary>
 internal sealed class EditorPreviews(ManagementApi api)
 {
-    private DateTimeOffset nextRead;
+    private long? lastRead;
     private string? currentCluster, currentWorkflow;
     private readonly List<NodePreviewSnapshot> snapshots = [];
     private readonly Dictionary<string, Guid> instances = new(StringComparer.Ordinal);
@@ -30,7 +30,7 @@ internal sealed class EditorPreviews(ManagementApi api)
 
     /// <summary>切断先の終了を未確認でも、Progressを無期限に実行中として表示しません。</summary>
     /// <returns>既存Preview、または有限保持中の進捗です。</returns>
-    internal bool IsCurrent(NodePreviewSnapshot snapshot) => snapshot.Session is null || api.UtcNow - snapshot.CapturedAt < TimeSpan.FromMinutes(5);
+    internal bool IsCurrent(NodePreviewSnapshot snapshot) => snapshot.Session is null || (snapshot.CaptureAge?.Elapsed ?? api.UtcNow - snapshot.CapturedAt) < TimeSpan.FromMinutes(5);
 
     /// <summary>別クラスタ・別ワークフローの値を流用しません。</summary>
     /// <returns>指定ノードで実際に取得されたPeer別の結果です。</returns>
@@ -40,7 +40,7 @@ internal sealed class EditorPreviews(ManagementApi api)
         {
             return [];
         }
-        return snapshots.Where(item => string.Equals(item.NodeId, node, StringComparison.Ordinal) && IsCurrent(item)).OrderByDescending(item => item.CapturedAt).ToArray();
+        return snapshots.Where(item => string.Equals(item.NodeId, node, StringComparison.Ordinal) && IsCurrent(item)).OrderBy(item => item.CaptureAge?.Elapsed ?? api.UtcNow - item.CapturedAt).ToArray();
     }
 
     /// <summary>媒体データを定期配信せず、最大64ノードのメタデータだけを3秒間隔で照会します。</summary>
@@ -48,7 +48,7 @@ internal sealed class EditorPreviews(ManagementApi api)
     internal async Task RefreshAsync(string cluster, WorkflowDefinition document, IReadOnlyList<PeerInfo> peers, CancellationToken cancellationToken = default)
     {
         bool changed = !string.Equals(cluster, currentCluster, StringComparison.Ordinal) || !string.Equals(document.Id, currentWorkflow, StringComparison.Ordinal);
-        if (!changed && api.UtcNow < nextRead)
+        if (!changed && lastRead is { } previousRead && api.ElapsedSince(previousRead) < TimeSpan.FromSeconds(3))
         {
             return;
         }
@@ -62,7 +62,7 @@ internal sealed class EditorPreviews(ManagementApi api)
         }
         currentCluster = cluster;
         currentWorkflow = document.Id;
-        nextRead = api.UtcNow.AddSeconds(3);
+        lastRead = api.Timestamp;
         bool recipe = SubworkflowInterface.IsSubworkflow(document);
         string[] nodes = document.Nodes.Where(node => !recipe && node.Type is "control.preview" or "control.progress").Select(node => node.Id).Take(64).ToArray();
         if (nodes.Length == 0)
@@ -103,13 +103,14 @@ internal sealed class EditorPreviews(ManagementApi api)
         {
             HashSet<string> retained = selected.Where(peer => !confirmed.Contains(peer.PeerId) && instances.GetValueOrDefault(peer.PeerId) == peer.InstanceId)
                 .Select(peer => peer.PeerId).ToHashSet(StringComparer.Ordinal);
-            found.AddRange(snapshots.Where(item => retained.Contains(item.PeerId) && nodes.Contains(item.NodeId, StringComparer.Ordinal)));
-            if (changed || Unavailable != unavailable || !snapshots.SequenceEqual(found))
+            found.AddRange(snapshots.Where(item => retained.Contains(item.PeerId) && nodes.Contains(item.NodeId, StringComparer.Ordinal) && IsCurrent(item)));
+            if (changed || Unavailable != unavailable || !snapshots.Select(item => item.Id).SequenceEqual(found.Select(item => item.Id)))
             {
                 Version++;
             }
+            Dictionary<Guid, NodePreviewSnapshot> previous = snapshots.ToDictionary(item => item.Id);
             snapshots.Clear();
-            snapshots.AddRange(found);
+            snapshots.AddRange(found.Select(item => item with { CaptureAge = previous.GetValueOrDefault(item.Id)?.CaptureAge ?? item.CaptureAge }));
             instances.Clear();
             foreach (PeerInfo peer in selected.Where(peer => confirmed.Contains(peer.PeerId) || retained.Contains(peer.PeerId)))
             {

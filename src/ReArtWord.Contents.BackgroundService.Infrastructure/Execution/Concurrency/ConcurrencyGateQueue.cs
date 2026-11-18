@@ -67,10 +67,22 @@ internal sealed class ConcurrencyGateQueue(Action<ConcurrencyGateQueue> returned
         }
     }
 
-    /// <summary>現役枠を所有する処理の再確認時刻です。</summary>
-    internal DateTimeOffset NextRecovery
+    /// <summary>現役枠の所有者を最後に照会した単調時計の位置です。日時補正で照会間隔を変えません。</summary>
+    internal long? RecoveryChecked
     {
         get; set;
+    }
+
+    /// <summary>ノード全体の所有確認は5秒おきに行います。呼出側はChangesの排他を保持します。</summary>
+    /// <returns>今回、現役枠の所有確認も行う場合はtrueです。</returns>
+    internal bool BeginRecovery(TimeProvider clock)
+    {
+        if (RecoveryChecked is not null && clock.GetElapsedTime(RecoveryChecked.Value) < TimeSpan.FromSeconds(5))
+        {
+            return false;
+        }
+        RecoveryChecked = clock.GetTimestamp();
+        return true;
     }
 
     private TaskCompletionSource changed = new(TaskCreationOptions.RunContinuationsAsynchronously);

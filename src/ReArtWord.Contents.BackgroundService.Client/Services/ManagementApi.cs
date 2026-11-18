@@ -180,6 +180,6 @@ internal sealed class ManagementApi(HttpClient client, ServerClock? clock = null
             return default;
         }
         T? result = JsonSerializer.Deserialize<T>(content, responseOptions);
-        return PresenceResponseTiming.Receive(result, () => serverClock.ObserveAge(TimeSpan.Zero, started));
+        return ObservationResponses.Receive(result, age => serverClock.ObserveAge(age, started));
     }
 }
