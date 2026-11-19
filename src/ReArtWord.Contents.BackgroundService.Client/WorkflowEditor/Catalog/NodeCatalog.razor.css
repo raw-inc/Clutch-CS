@@ -399,3 +399,9 @@
     color: var(--accent);
     font-weight: 650;
 }
+
+.catalog-view button[aria-pressed="true"] {
+    background: var(--accent-soft);
+    color: var(--ink);
+    border-block-end: 2px solid var(--accent);
+}

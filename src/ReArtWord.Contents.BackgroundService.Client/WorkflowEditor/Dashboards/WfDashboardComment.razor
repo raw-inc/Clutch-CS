@@ -7,7 +7,17 @@
     }
     else if (ReadOnly)
     {
-        <p class="comment-text">@Text</p>
+        var value = Text ?? string.Empty;
+        var lines = value.Split('\n');
+        @if(lines.Length > 6)
+        {
+            <p class="comment-text">@string.Join('\n',lines.Take(4))</p>
+            <details class="comment-continuation"><summary>@Ui["Read the rest of the comment"]</summary><p class="comment-text">@string.Join('\n',lines.Skip(4))</p></details>
+        }
+        else
+        {
+            <p class="comment-text">@value</p>
+        }
     }
     else
     {

@@ -50,9 +50,10 @@
                     else if(!lineBreak)
                     {
                         @if(reference is null){<p class="notice warn">@Ui["Invalid reference"]</p>}
-                        else{<WfDashboardCard Reference="reference" State="state" Cluster="@Model.ClusterId" Available="CanOperate" Busy="pending.Contains(card.Id)" Toggle="session.Toggle(reference)" Snapshots="session.Preview(Model.ClusterId??string.Empty,reference)" Pressed="()=>PressAsync(card)" ValueChanged="input=>SaveValueAsync(card,input)" />}
+                        else{<WfDashboardCard Reference="reference" State="state" Cluster="@Model.ClusterId" Available="CanOperate" EditingLayout="editingLayout" Busy="pending.Contains(card.Id)" Toggle="session.Toggle(reference)" Snapshots="session.Preview(Model.ClusterId??string.Empty,reference)" Pressed="()=>PressAsync(card)" ValueChanged="input=>SaveValueAsync(card,input)" />}
                     }
                     @if(lastPress.TryGetValue(card.Id,out var pressed)){<small role="status">@pressed</small>}
+                    else if(!editingLayout && reference?.NodeType is "control.button" or "control.toggleButton"){<small class="muted">@Ui["No action recorded on this page."]</small>}
                 </article>
             }
         </div></clutch-card-rows>

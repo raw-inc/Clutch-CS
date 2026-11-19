@@ -33,6 +33,33 @@ public sealed partial class EditorNavigator
         get; set;
     }
 
+    /// <summary>狭い画面で重なるパネルを閉じ、コード入力時は編集欄を優先します。</summary>
+    [Parameter] public EventCallback<bool> CompactCanvasChanged
+    {
+        get; set;
+    }
+
+    /// <summary>キャンバスに重なる全体マップを閉じます。</summary>
+    public void CloseMap()
+    {
+        mapVisible = false;
+        StateHasChanged();
+    }
+
+    /// <summary>画面幅の変更やコード入力に合わせて、表示とツールバーの選択を同期します。</summary>
+    /// <returns>親画面のパネル状態の更新です。</returns>
+    // 抑制理由: ブラウザーから呼び出す固定署名です。
+    [JSInvokable, System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "JSInvokableの固定署名です。")]
+    public Task CompactCanvasAsync(bool editingCode)
+    {
+        if (ComponentDisposed)
+        {
+            return Task.CompletedTask;
+        }
+        CloseMap();
+        return CompactCanvasChanged.InvokeAsync(editingCode);
+    }
+
     /// <summary>選択範囲に合わせた倍率を、キャンバスと同じ所有者へ通知します。</summary>
     [Parameter] public EventCallback<double> ZoomChanged
     {

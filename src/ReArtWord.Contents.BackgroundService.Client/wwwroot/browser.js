@@ -334,7 +334,8 @@ document.addEventListener('keydown', event =>
 
 window.contentsBrowser.narrowEditor = () => window.matchMedia('(max-width: 760px)').matches;
 
-window.contentsBrowser.revealTab = strip =>
+/** 選択したタブが幅の変更で隠れたとき、その列だけをスクロールします。 */
+function revealEditorTab(strip)
 {
     const active = strip?.querySelector('[aria-pressed="true"]');
     if (active)
@@ -342,4 +343,22 @@ window.contentsBrowser.revealTab = strip =>
         const tab = active.getBoundingClientRect(), bounds = strip.getBoundingClientRect();
         strip.scrollLeft += Math.min(0, tab.left - bounds.left) + Math.max(0, tab.right - bounds.right);
     }
+}
+
+let watchedTabWidth;
+window.contentsBrowser.revealTab = strip =>
+{
+    if (watchedTabWidth === undefined)
+    {
+        watchedTabWidth = window.innerWidth;
+        window.addEventListener('resize', () =>
+        {
+            if (window.innerWidth !== watchedTabWidth)
+            {
+                watchedTabWidth = window.innerWidth;
+                revealEditorTab(document.querySelector('.editor-workflow-tabs'));
+            }
+        });
+    }
+    revealEditorTab(strip);
 };

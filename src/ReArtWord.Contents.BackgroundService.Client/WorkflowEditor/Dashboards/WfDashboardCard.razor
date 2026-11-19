@@ -42,5 +42,5 @@
             <input type="text" aria-label="@((State?.Title??Reference.NodeId)+" · "+Ui["Value"])" title="@Ui["Edit the existing type. Enter or leave the field to save; Escape cancels."]" value="@text" @oninput="Input" @onchange="()=>CommitAsync(UiCancellation)" @onkeydown="e=>KeyAsync(e,UiCancellation)" disabled="@(!CanEdit)" maxlength="16384" />
         }
     }
-    @if(!Available){<small class="muted">@Ui["Waiting for source state…"]</small>}
+    @if(EditingLayout){<small class="muted">@Ui["Exit layout editing to operate the board."]</small>}else if(!Available){<small class="muted">@Ui["Waiting for source state…"]</small>}
 </div>

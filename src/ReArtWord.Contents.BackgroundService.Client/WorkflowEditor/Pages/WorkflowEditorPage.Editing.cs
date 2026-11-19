@@ -28,6 +28,7 @@ public sealed partial class WorkflowEditorPage
     private async Task TogglePanelAsync(bool catalog, CancellationToken cancellationToken = default)
     {
         bool compact = await Script.InvokeAsync<bool>("contentsBrowser.narrowEditor", cancellationToken).ConfigureAwait(true);
+        navigator?.CloseMap();
         if (catalog)
         {
             catalogOpen = !catalogOpen;
@@ -37,6 +38,19 @@ public sealed partial class WorkflowEditorPage
         {
             inspectorOpen = !inspectorOpen;
             catalogOpen &= !compact || !inspectorOpen;
+        }
+    }
+
+    /// <summary>狭い画面ではカタログとインスペクタを重ねず、コード入力時はキャンバスを空けます。</summary>
+    private void AdjustCompactPanels(bool editingCode)
+    {
+        if (catalogOpen || editingCode)
+        {
+            inspectorOpen = false;
+        }
+        if (editingCode)
+        {
+            catalogOpen = false;
         }
     }
 

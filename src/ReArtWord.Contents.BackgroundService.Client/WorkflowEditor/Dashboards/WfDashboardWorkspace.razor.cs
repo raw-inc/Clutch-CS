@@ -51,7 +51,7 @@ public sealed partial class WfDashboardWorkspace
     private bool editingLayout, catalogOpen, refreshing;
     private string? dragged, dropTarget;
     private ElementReference board;
-    private bool CanOperate => Connection.Connected && session.Available && !Busy
+    private bool CanOperate => !editingLayout && Connection.Connected && session.Available && !Busy
         && string.Equals(Model.ClusterId, Api.SelectedClusterId, StringComparison.Ordinal) && string.Equals(Model.PeerId, Api.SelectedPeerId, StringComparison.Ordinal);
     private bool LayoutLocked => Busy || Model.Locks.Whole(Model.Draft.Document.Id);
     private NodeDefinition[] Cards => Model.Draft.Document.Nodes.OrderBy(node => node.Position?.Y ?? 0).ThenBy(node => node.Position?.X ?? 0).ToArray();

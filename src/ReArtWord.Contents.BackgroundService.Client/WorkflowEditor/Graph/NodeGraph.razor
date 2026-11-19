@@ -22,6 +22,7 @@
             </g>
         }
     }
+    <CollaborationOverlay Bounds="bounds" HighlightRunning="View.HighlightRunning" />
     @foreach(var node in Model.Draft.Document.Nodes.OrderBy(node => node.Id == Model.SelectedNode))
     {
         var position=Position(node);var descriptor=inference.EditorDescriptor(node.Id);var inputs=Ports(descriptor,false,node.Id);var outputs=Ports(descriptor,true);
@@ -114,7 +115,6 @@
             }
         </g>
     }
-    <CollaborationOverlay Bounds="bounds" HighlightRunning="View.HighlightRunning" />
 </svg>
 @if(output is {} pendingOutput){<div class="graph-connection-pending" role="status">@pendingOutput.Node.@PortName(pendingOutput.Node,pendingOutput.Port,true) → <button @onclick="CancelConnection">@Ui["Cancel"]</button><span class="small">Esc</span></div>}
 @if(Model.SelectedWire is int selected && 0<=selected && selected<Model.Draft.Document.Wires.Count)

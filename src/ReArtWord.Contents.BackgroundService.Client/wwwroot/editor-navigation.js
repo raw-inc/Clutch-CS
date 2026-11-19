@@ -164,7 +164,9 @@ export function attachEditorNavigation(viewport, root, receiver)
         }
         const box = viewport.getBoundingClientRect();
         root.style.right = `${Math.max(8, document.documentElement.clientWidth - box.left - viewport.clientLeft - viewport.clientWidth + 8)}px`;
-        root.style.top = `${box.top + 8}px`;
+        const peers = viewport.querySelector('.canvas-editors');
+        const belowPeers = peers?.childElementCount ? peers.getBoundingClientRect().bottom : box.top;
+        root.style.top = `${Math.max(box.top, belowPeers) + 8}px`;
         root.style.maxWidth = `${Math.max(0, box.width - 16)}px`;
         root.setAttribute('data-navigation-ready', '');
         if (!visible && !matches.size)
@@ -267,6 +269,34 @@ export function attachEditorNavigation(viewport, root, receiver)
         schedule();
     });
     resize.observe(viewport);
+    const focusEvent = 'focusin';
+    const compact = window.matchMedia('(max-width: 760px)');
+
+    /** 狭い画面ではフォーカスしたコード欄を見える位置に保ちます。 */
+    function compactCanvas(event)
+    {
+        if (!compact.matches)
+        {
+            return;
+        }
+        const focusing = event.type === focusEvent;
+        const code = (focusing ? event.target : document.activeElement)?.closest?.('.cm-content');
+        if (focusing && !code)
+        {
+            return;
+        }
+        receiver.invokeMethodAsync('CompactCanvasAsync', Boolean(code)).then(() =>
+        {
+            if (code && !disposed)
+            {
+                code.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            }
+        }).catch(() =>
+        {});
+    }
+
+    compact.addEventListener('change', compactCanvas);
+    viewport.addEventListener('focusin', compactCanvas);
     viewport.addEventListener('scroll', schedule, { passive: true });
     window.addEventListener('resize', schedule);
     document.addEventListener('keydown', keyDown, true);
@@ -358,6 +388,8 @@ export function attachEditorNavigation(viewport, root, receiver)
             resize.disconnect();
             cancelAnimationFrame(frame);
             clearTimeout(highlightTimer);
+            compact.removeEventListener('change', compactCanvas);
+            viewport.removeEventListener('focusin', compactCanvas);
             viewport.removeEventListener('scroll', schedule);
             window.removeEventListener('resize', schedule);
             document.removeEventListener('keydown', keyDown, true);

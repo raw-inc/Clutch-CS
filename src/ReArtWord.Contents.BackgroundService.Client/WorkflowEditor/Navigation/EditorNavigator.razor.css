@@ -1,5 +1,5 @@
 .editor-navigator {
-    --editor-overlay-background: color-mix(in srgb, var(--panel) 92%, transparent);
+    --editor-overlay-background: var(--panel);
 
     position: fixed;
     z-index: 3;
@@ -71,7 +71,7 @@
 }
 
 .editor-minimap ::deep .map-node {
-    fill: var(--control);
+    fill: var(--muted);
 }
 
 .editor-minimap ::deep .map-node[data-search-match] {
@@ -127,4 +127,11 @@
 .editor-find[hidden],
 .editor-minimap[hidden] {
     display: none;
+}
+
+@media (max-width: 760px) {
+    .editor-minimap {
+        width: 140px;
+        height: 90px;
+    }
 }

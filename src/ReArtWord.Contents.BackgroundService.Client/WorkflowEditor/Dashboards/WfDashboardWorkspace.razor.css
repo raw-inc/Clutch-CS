@@ -179,7 +179,8 @@
 .dashboard-edit-tools {
     padding: 4px;
     border-radius: var(--radius-control);
-    background: var(--card);
+    background: transparent;
+    gap: 8px;
 }
 
 @media (max-width: 680px) {
@@ -203,4 +204,28 @@
     gap: 5px;
     align-items: center;
     color: var(--muted);
+}
+
+.dashboard-library ::deep .dashboard-catalog-item {
+    justify-items: start;
+    justify-content: stretch;
+}
+
+.dashboard-edit-tools [aria-pressed="true"] {
+    border-color: var(--accent);
+}
+
+.dashboard-edit-tools > button,
+.dashboard-heading .toolbar > .icon-button {
+    border: 1px solid var(--control);
+}
+
+@media (max-width: 680px) {
+    .dashboard-workspace.with-catalog {
+        overflow-y: auto;
+    }
+
+    .dashboard-workspace.with-catalog .dashboard-library {
+        max-height: none;
+    }
 }

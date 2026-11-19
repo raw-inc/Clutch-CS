@@ -142,6 +142,8 @@
     stroke: var(--control);
     filter: none;
     rx: var(--radius-panel);
+    stroke-width: 1.5px;
+    vector-effect: non-scaling-stroke;
 }
 
 .graph-node .node-header {
@@ -381,4 +383,13 @@
 .graph.scope-highlight .graph-node.outside-scope {
     opacity: 0.35;
     filter: brightness(0.65);
+}
+
+.graph-node .node-kind,
+.graph-node .node-identity div {
+    font-size: 14px;
+}
+
+.graph-node .port-caption {
+    font-size: 13px;
 }

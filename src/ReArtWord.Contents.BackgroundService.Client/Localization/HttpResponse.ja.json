@@ -10,7 +10,7 @@
   "port.http.request.out.contentType": "応答Content-Type",
   "port.http.request.out.fileName": "推奨ファイル名",
   "port.http.request.out.headers": "応答ヘッダー",
-  "node.http.response.parse.name": "HTTP応答を解析",
+  "node.http.response.parse.name": "HTTP 応答を解析",
   "node.http.response.parse.description": "保存・受け渡し済みのHTTP応答から本文・ステータス・メタデータを取り出します。HTTP要求は再送しません。JSON、Text、Binary、Content-Typeによる自動判別を選べます。",
   "port.http.response.parse.in.value": "HTTP応答",
   "port.http.response.parse.out.value": "解析した本文",

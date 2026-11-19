@@ -25,3 +25,13 @@
 .dashboard-catalog-item strong {
     overflow-wrap: anywhere;
 }
+
+.dashboard-catalog-items > .dashboard-catalog-item {
+    justify-content: stretch;
+    justify-items: start;
+    text-align: start;
+}
+
+.dashboard-catalog .section-heading h2 {
+    font-size: 16px;
+}
