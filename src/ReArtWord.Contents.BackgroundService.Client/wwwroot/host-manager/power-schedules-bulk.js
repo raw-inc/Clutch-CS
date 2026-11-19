@@ -125,6 +125,7 @@ function editTemplate(root, ctx, snapshots)
 /** 選択Host全体の設定と、有効・無効だけの変更を別の明示操作にします。 */
 export function powerScheduleBulk(root, ctx, panels, signal)
 {
+    root.classList.add('hm-schedule-bulk');
     root.append(node('span', `${ctx.t('powerSchedule.targets')}: ${panels.length}`),
         action(ctx, 'powerSchedule.bulk', 'settings', () => openBulk(ctx, panels, signal, 'replace')),
         action(ctx, 'powerSchedule.bulkEnable', 'check', () => openBulk(ctx, panels, signal, 'enable')),

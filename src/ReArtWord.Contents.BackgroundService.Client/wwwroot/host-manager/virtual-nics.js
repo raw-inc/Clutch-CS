@@ -8,7 +8,7 @@ export function virtualNics(root, ctx, entries, showSwitches)
     const toolbar = node('div', '', 'hm-toolbar'), available = entries.filter(entry => entry.state.switches.length);
     const create = action(ctx, 'Create management OS vNIC', 'plus', () => form(available[0], null), true);
     create.disabled = !available.length;
-    toolbar.append(create, node('span', ctx.t('Connect management OS adapters to an existing switch. Create or delete switches in Virtual switches.'), 'hm-muted'));
+    toolbar.append(node('span', ctx.t('Connect management OS adapters to an existing switch. Create or delete switches in Virtual switches.'), 'hm-muted'), create);
     if (!available.length && entries.length)
     {
         toolbar.append(node('span', ctx.t('A virtual switch is required to create a virtual NIC.'), 'hm-muted'), ctx.button('Virtual switches', showSwitches));

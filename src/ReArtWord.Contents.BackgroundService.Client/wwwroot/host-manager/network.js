@@ -54,6 +54,7 @@ export function networkView(root, ctx, actions)
         mode = value;
         updateMode();
     }, ctx.t('Network'));
+    views.classList.add('hm-view-tabs');
     const refresh = action(ctx, 'Refresh settings', 'refresh', () => ctx.discard(() =>
     {
         const expectedSwitches = 'switches';
@@ -191,9 +192,10 @@ export function networkView(root, ctx, actions)
             const update = () =>
             {
                 const value = pending.get(key)?.change[property], changed = value !== undefined;
-                toggle.setAttribute('aria-checked', String(value ?? configuration?.enabled === true));
+                const enabled = value ?? configuration?.enabled === true;
+                toggle.setAttribute('aria-checked', String(enabled));
                 toggle.dataset.pending = String(changed);
-                toggle.textContent = `IPv${version} · ${ctx.t(value ? 'Enabled' : 'Disabled')}`;
+                toggle.textContent = `IPv${version} · ${ctx.t(configuration ? enabled ? 'Enabled' : 'Disabled' : 'Unknown')}`;
                 caption.textContent = changed ? `${ctx.t(configuration.enabled ? 'Enabled' : 'Disabled')} → ${ctx.t(value ? 'Enabled' : 'Disabled')}` : '';
                 caption.hidden = !changed;
                 toggle.title = changed ? `${ctx.t('Pending protocol changes')}: ${caption.textContent}` : `IPv${version}`;
@@ -263,7 +265,11 @@ export function networkView(root, ctx, actions)
         refresh.disabled = awaitingRead;
         if (!records.length)
         {
-            if (!awaitingRead && !unavailable)
+            if (awaitingRead || unavailable)
+            {
+                listing.append(node('p', ctx.t(awaitingRead ? 'Reading interfaces…' : 'Interface data unavailable'), 'hm-read-state'));
+            }
+            else
             {
                 listing.append(node('p', ctx.t('No network interfaces were reported.'), 'hm-muted'));
             }

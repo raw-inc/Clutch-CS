@@ -32,7 +32,7 @@ function renderHost(root, ctx, state, draft, actionArea)
     const rows = [];
     const editable = state.host.capabilities.elevated === true;
     automatic.control.disabled = !editable;
-    section.append(node('h3', state.host.target.hostId), automatic.root, list.root);
+    section.append(node('h3', state.host.target.hostId), automatic.root, node('p', ctx.t('wake.overrideHint'), 'hm-muted'), list.root);
     for (const adapter of state.snapshot.data.inventory.interfaces)
     {
         const check = checkbox('', selected.has(adapter.id));
@@ -51,6 +51,7 @@ function renderHost(root, ctx, state, draft, actionArea)
                 selected.delete(adapter.id);
             }
             draft.selection.interfaceIds = [...selected];
+            updateReview();
         };
         rows.push({ adapter, control: check.control });
         list.add([check.root, adapter.name, adapter.macAddress, ctx.t(adapter.physical ? 'wake.physical' : 'wake.virtual')]);
@@ -75,10 +76,22 @@ function renderHost(root, ctx, state, draft, actionArea)
         {
             draft.selection.interfaceIds = [...selected];
         }
+        updateReview();
     };
     const save = action(ctx, 'wake.review', 'settings', () => ctx.preview([{ host: state.host, query: { area: 'wakeOnLan' }, action: 'wakeOnLan',
         baseRevision: draft.revision, change: structuredClone(draft.selection), label: ctx.t('wake.title') }]));
-    save.disabled = !editable;
+
+    /** 初期選択へ戻した場合も、保存する変更があるかを判定します。 */
+    function updateReview()
+    {
+        const initial = state.snapshot.data.selection;
+        const ids = new Set(initial.interfaceIds.map(id => id.toLowerCase()));
+        const modeMatches = initial.usePhysicalDefaults === draft.selection.usePhysicalDefaults;
+        const selectionMatches = draft.selection.usePhysicalDefaults || (ids.size === selected.size && [...selected].every(id => ids.has(id.toLowerCase())));
+        save.disabled = !editable || (modeMatches && selectionMatches);
+    }
+
+    updateReview();
     const row = node('div', '', 'hm-selection-bar');
     row.append(node('strong', ctx.t('Target hosts') + ': ' + state.host.target.hostId), save);
     actionArea.append(row);

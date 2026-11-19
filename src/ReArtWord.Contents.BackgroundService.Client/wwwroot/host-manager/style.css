@@ -279,6 +279,7 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+    scroll-padding-block: 16px;
 }
 
 .hm-heading {
@@ -305,7 +306,7 @@
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: end;
 }
 
 .hm-toolbar > .hm-field {
@@ -404,8 +405,9 @@
 }
 
 .hm-badge.warn {
-    color: var(--warn);
     background: color-mix(in srgb, var(--warn) 10%, var(--panel));
+    color: var(--warn);
+    font-size: 12px;
 }
 
 .hm-empty {
@@ -851,10 +853,10 @@
     padding: 0;
     color: var(--ink);
     background: var(--paper);
-    border: 1px solid var(--line);
     border-radius: var(--radius-panel);
     box-shadow: none;
     overflow: hidden;
+    border: 1px solid var(--control);
 }
 
 .hm-dialog[open] {
@@ -1074,11 +1076,12 @@
 }
 
 .hm-hosts-entry {
-    display: flex;
     align-items: center;
     gap: 7px;
     border-bottom: 1px solid var(--line);
     padding: 12px 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
 }
 
 .hm-hosts-entry:last-child {
@@ -1600,6 +1603,9 @@
     border-top: 1px solid var(--line);
     padding: 8px 12px;
     justify-content: flex-end;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
 }
 
 .hm-view-actions:empty,
@@ -1705,6 +1711,7 @@
 
 .hm-view-actions .hm-selection-bar > strong {
     margin-inline-end: auto;
+    font-size: 13px;
 }
 
 .hm-host-list label:focus-within {
@@ -1725,6 +1732,8 @@
 
 .hm-read-error[role="alert"]::before {
     content: "⚠";
+    font-size: 16px;
+    font-weight: 700;
 }
 
 .hm-section .hm-table-wrap {
@@ -1786,11 +1795,13 @@
 
 .hm-section td .hm-badge {
     white-space: nowrap;
+    width: fit-content;
 }
 
 .hm-section .hm-actions {
     justify-content: flex-end;
     gap: 8px;
+    align-items: center;
 }
 
 @media (max-width: 680px) {
@@ -1816,4 +1827,222 @@
         margin-inline: 0;
         white-space: normal;
     }
+}
+
+.hm-area > * {
+    flex-shrink: 0;
+}
+
+.hm-section .hm-tag {
+    justify-self: start;
+    width: fit-content;
+}
+
+@media (max-width: 760px) {
+    .hm-table-wrap tbody tr + tr {
+        border-top: 2px solid var(--line);
+    }
+}
+
+.hm-section > p {
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.hm-section h3 {
+    font-size: 16px;
+}
+
+.hm-dialog-body .hm-field select,
+.hm-dialog-body .hm-field input {
+    margin: 0;
+}
+
+.hm-toolbar .hm-name + .hm-badge,
+.hm-section td div > .hm-badge {
+    margin-inline-start: 6px;
+}
+
+.hm-dialog-body .hm-field {
+    gap: 6px;
+    margin: 0;
+}
+
+.hm-area .hm-section > .hm-toolbar {
+    align-items: center;
+}
+
+.hm-read-state {
+    border-inline-start: 3px solid var(--control);
+    background: var(--nested);
+    padding: 12px;
+    font-size: 14px;
+}
+
+.hm-toolbar .hm-field > span {
+    font-size: 13px;
+}
+
+.hm-view .hm-badge,
+.hm-dialog .hm-badge {
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.hm-area .hm-section > .hm-toolbar h3 {
+    margin: 0;
+    align-self: center;
+}
+
+@media (max-width: 680px) {
+    .hm-comparison .record-table {
+        display: table;
+        table-layout: fixed;
+    }
+
+    .hm-comparison .record-table thead {
+        display: table-header-group;
+    }
+
+    .hm-comparison .record-table tbody {
+        display: table-row-group;
+    }
+
+    .hm-comparison .record-table tr {
+        display: table-row;
+    }
+
+    .hm-comparison .record-table :is(th, td) {
+        display: table-cell;
+        width: auto;
+        padding: 8px 5px;
+    }
+
+    .hm-comparison .record-table td::before {
+        display: none;
+    }
+}
+
+.hm-warning .ui-icon {
+    width: 16px;
+    height: 16px;
+    margin-inline-end: 6px;
+    vertical-align: middle;
+}
+
+.hm-dialog-body :is(.hm-muted, .hm-field) {
+    word-break: auto-phrase;
+}
+
+.hm-section td .hm-name,
+.hm-section td :is(strong, small) {
+    overflow-wrap: anywhere;
+}
+
+.hm-section .hm-actions .danger,
+.hm-hosts-editor .danger {
+    border-color: var(--danger);
+}
+
+.hm-view .hm-selection-bar > .danger {
+    margin-inline-start: 12px;
+}
+
+.hm-view .hm-toolbar :is(select, input[type="search"], button) {
+    min-height: 40px;
+}
+
+.hm-host:focus-within:not(:has(input:checked)) {
+    background: var(--panel);
+}
+
+.hm-tabs.workspace-index button:focus-visible {
+    box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+@media (max-width: 680px) {
+    .hm-table-wrap .record-table:not(.hm-comparison table) td[data-field] {
+        align-items: baseline;
+    }
+}
+
+.hm-view .hm-area {
+    scrollbar-gutter: stable;
+    scrollbar-width: auto;
+}
+
+.hm-view-actions .hm-button {
+    min-height: 40px;
+}
+
+.hm-view :is(.hm-check, .hm-field) {
+    word-break: auto-phrase;
+}
+
+.hm-schedule-bulk > button:last-child {
+    margin-inline-start: 12px;
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+@media (max-width: 1150px) {
+    .hm-hosts-entry {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+    }
+
+    .hm-hosts-entry-copy {
+        grid-column: 2 / -1;
+    }
+
+    .hm-hosts-entry > button {
+        justify-self: start;
+    }
+
+    .hm-hosts-entry > button:last-child {
+        grid-column: 3;
+    }
+}
+
+.hm-view .hm-filter-field select,
+.hm-view .hm-search,
+.hm-view .hm-segmented button {
+    min-height: 40px;
+}
+
+.hm-view-actions > button {
+    align-self: end;
+}
+
+.hm-profile-scope {
+    display: grid;
+    gap: 8px;
+}
+
+.hm-profile-scope > * {
+    margin-block: 0;
+}
+
+.hm-comparison td {
+    word-break: auto-phrase;
+}
+
+@media (max-width: 680px) {
+    .hm-table-wrap .record-table td[data-field]:not(:has(.hm-actions)) {
+        grid-template-columns: minmax(7.5rem, 38%) minmax(0, 1fr);
+    }
+
+    .hm-table-wrap .record-table td[data-field] > div {
+        align-self: start;
+    }
+}
+
+.hm-view-tabs {
+    border: 0;
+    border-radius: 0;
+    border-block-end: 1px solid var(--line);
+}
+
+.hm-view-tabs button[aria-pressed="true"] {
+    border-bottom: 2px solid var(--accent);
+    background: transparent;
 }

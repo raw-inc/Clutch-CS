@@ -79,7 +79,7 @@ function editPower(ctx, states, preset)
         }
         values.shutdown = minutesInput(ctx);
         values.powerButtonAction = select([['', ctx.t('Keep unchanged')], ...powerActions.map((label, index) => [String(index), ctx.t(label)])]);
-        panel.append(field(ctx.t('Idle shutdown (Clutch-CS)'), values.shutdown), field(ctx.t('Power button action'), values.powerButtonAction));
+        panel.append(field(`${ctx.t('Idle shutdown (Clutch-CS)')} (${ctx.t('minutes')})`, values.shutdown), field(ctx.t('Power button action'), values.powerButtonAction));
         controls[supply] = values;
         grid.append(panel);
     }
@@ -110,8 +110,12 @@ function editPower(ctx, states, preset)
 function renderPowerState(root, ctx, state)
 {
     const value = state.snapshot.data, section = node('section', '', 'hm-section');
-    section.append(node('h3', state.host.target.hostId), node('p', `${ctx.t('Active power plan')}: ${value.schemeName}`), badge(ctx.t(powerStatus(value))));
+    const header = node('div', '', 'hm-toolbar');
+    const stateLabel = powerStatus(value), unconfirmed = 'Automatic power settings unconfirmed';
+    header.append(node('h3', state.host.target.hostId), badge(ctx.t(stateLabel), stateLabel === unconfirmed ? 'warn' : ''));
+    section.append(header, node('p', `${ctx.t('Active power plan')}: ${value.schemeName}`));
     const list = table([ctx.t('Setting'), ctx.t('AC power'), ctx.t('Battery power')]);
+    list.root.classList.add('hm-comparison');
     for (const [key, label] of Object.entries(powerTimers))
     {
         list.add([ctx.t(label), powerTime(value.ac[key], ctx.t), powerTime(value.dc[key], ctx.t)]);
@@ -129,7 +133,7 @@ function renderPowerState(root, ctx, state)
     }
     const edit = action(ctx, 'Edit power settings', 'settings', () => editPower(ctx, [state], false));
     edit.disabled = !state.host.capabilities.elevated || !!value.restrictions.length;
-    section.append(edit);
+    header.append(edit);
     root.append(section);
 }
 
@@ -147,15 +151,15 @@ export function powerView(root, ctx)
     const reader = createReader(ctx, hosts, () => ({ area: 'power' }), render);
     const edit = action(ctx, 'Edit selected hosts', 'settings', () => editPower(ctx, [...reader.states.values()], false));
     const preset = action(ctx, 'Prepare continuous operation settings', 'check', () => editPower(ctx, [...reader.states.values()], true));
-    edit.append(document.createTextNode(` (${hosts.length})`));
-    preset.append(document.createTextNode(` (${hosts.length})`));
+    edit.append(document.createTextNode(` · ${ctx.t('Target hosts')}: ${hosts.length}`));
+    preset.append(document.createTextNode(` · ${ctx.t('Target hosts')}: ${hosts.length}`));
     edit.disabled = true;
     preset.disabled = true;
     const buttons = node('div', '', 'hm-actions');
     edit.classList.add('primary');
     buttons.append(action(ctx, 'Refresh settings', 'refresh', () => reader.load()), edit, preset);
     title.append(buttons);
-    root.append(title, node('p', ctx.t('Review automatic timers before operation. The continuous operation preset disables these timers and Fast Startup; the power button action is retained.'), 'hm-warning'), status, listing);
+    root.append(title, node('p', ctx.t('Review automatic timers before operation. The continuous operation preset disables these timers and Fast Startup; the power button action is retained.'), 'hm-muted'), status, listing);
 
     /** 読取り成功・管理者権限をすべて確認できた対象だけを編集します。 */
     function render()

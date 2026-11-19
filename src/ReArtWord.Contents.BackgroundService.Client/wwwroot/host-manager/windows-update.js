@@ -71,7 +71,7 @@ function renderState(root, ctx, state)
         button.disabled = !editable(state);
         buttons.append(button);
     }
-    section.append(buttons);
+    header.append(buttons);
     root.append(section);
 }
 
@@ -88,7 +88,7 @@ export function windowsUpdateView(root, ctx, actionArea)
     const title = heading(ctx.t('Windows Update'), `${ctx.t('Selected hosts')}: ${hosts.length}`), status = node('div'), listing = node('div');
     const reader = createReader(ctx, hosts, () => ({ area: 'windowsUpdate' }), render);
     const manual = action(ctx, 'Require manual updates for selected hosts', 'settings', () => previewUpdate(ctx, [...reader.states.values()], true));
-    manual.append(document.createTextNode(` (${hosts.length})`));
+    manual.append(document.createTextNode(` · ${ctx.t('Target hosts')}: ${hosts.length}`));
     manual.disabled = true;
     title.append(action(ctx, 'Refresh settings', 'refresh', () => reader.load()));
     actionArea.append(manual);

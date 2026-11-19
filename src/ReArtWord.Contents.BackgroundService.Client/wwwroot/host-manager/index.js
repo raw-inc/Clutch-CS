@@ -336,6 +336,7 @@ export async function mount(element, labels)
         if (!screen.views.has(screen.area))
         {
             const root = node('section', '', 'hm-view'), body = node('div', '', 'hm-area'), actions = node('div', '', 'hm-view-actions');
+            body.tabIndex = 0;
             root.append(body, actions);
             root.id = 'hm-panel-' + screen.area;
             root.setAttribute('role', 'tabpanel');

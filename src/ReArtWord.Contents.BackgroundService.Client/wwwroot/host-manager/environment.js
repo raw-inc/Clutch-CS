@@ -37,7 +37,7 @@ export function environmentView(root, ctx, actionArea)
     const add = action(ctx, 'Add variable', 'plus', () => edit(null), true), refresh = action(ctx, 'Refresh settings', 'refresh', () => ctx.discard(reload, bulk?.hasChanges())), actions = node('div', '', 'hm-actions');
     actions.append(refresh, add);
     title.append(actions);
-    tools.append(field(ctx.t('Scope'), scopePicker), users, field(ctx.t('Variables on host'), hostPick), search);
+    tools.append(field(ctx.t('Scope'), scopePicker), users, field(ctx.t('Variables on host'), hostPick), field(ctx.t('Search variables'), search));
     hostPick.parentElement.hidden = !!bulk;
     root.append(title, node('p', ctx.t('Persistent environment variables apply to new processes. Existing processes and other user sessions may require a restart or sign-in.'), 'hm-muted'), tools, status, listing);
 
@@ -98,7 +98,7 @@ export function environmentView(root, ctx, actionArea)
         for (const variable of variables)
         {
             const path = variable.name.toUpperCase() === 'PATH', name = node('div'), value = node('div');
-            name.append(ctx.button(variable.name, () => edit(variable), 'hm-link'), node('small', ctx.t(variable.expandable ? 'Variable references' : 'Literal value')));
+            name.append(node('strong', variable.name), node('small', ctx.t(variable.expandable ? 'Variable references' : 'Literal value')));
             const content = node('pre', '', 'hm-value');
             for (const segment of (variable.value ?? '').split(/(?<=[\\;])/u))
             {

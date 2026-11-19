@@ -13,7 +13,7 @@
   "Delete": "削除",
   "Create": "作成",
   "Value": "値",
-  "Machine": "Machine（機械全体）",
+  "Machine": "システム全体",
   "User": "User（指定ユーザー）",
   "VLAN": "VLAN",
   "IPv4": "IPv4",
@@ -302,5 +302,9 @@
   "Wake-on-LAN requirements": "Wake-on-LAN の利用条件",
   "No network interfaces were reported.": "このホストに表示できるネットワークインターフェースはありません。",
   "Available switches for these adapters": "接続できる仮想スイッチ",
-  "Host configuration history": "ホスト設定の操作履歴"
+  "Host configuration history": "ホスト設定の操作履歴",
+  "Reading interfaces…": "ネットワーク情報を読み込み中…",
+  "Interface data unavailable": "ネットワーク情報を取得できませんでした。",
+  "Choose a different mode to preview the change.": "別の表示モードを選ぶと、変更内容を確認できます。",
+  "Firewall rules": "ファイアウォール規則"
 }

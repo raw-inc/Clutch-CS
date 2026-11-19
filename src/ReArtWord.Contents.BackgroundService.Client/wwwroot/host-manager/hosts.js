@@ -1,4 +1,4 @@
-import { node, select, field, heading, action, badge } from './dom.js';
+import { node, icon, select, field, heading, action, badge } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 import { hostsEditor } from './hosts-editor.js';
 import { validateHostsText } from './hosts-model.js';
@@ -58,7 +58,9 @@ export function hostsView(root, ctx, actions)
         edited = false;
         return reader.load();
     }, edited)));
-    root.append(title, node('p', `${ctx.t('The complete hosts content will replace each selected host’s file. Review every difference below.')} (${hosts.length})`, 'hm-warning'), status, grid);
+    const warning = node('p', `${ctx.t('The complete hosts content will replace each selected host’s file. Review every difference below.')} · ${ctx.t('Target hosts')}: ${hosts.length}`, 'hm-warning');
+    warning.prepend(icon('info'));
+    root.append(title, warning, status, grid);
     actions.append(bar);
 
     /** 現在の設定と状態から表示を更新します。 */
