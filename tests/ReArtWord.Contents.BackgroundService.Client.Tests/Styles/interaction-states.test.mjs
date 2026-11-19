@@ -56,3 +56,33 @@ test('キーボードで詳細を開閉し、閉じかけても開き直せる',
         await page.waitForFunction(() => !document.querySelector('details').open);
     }
 });
+
+test('ホスト設定の編集可能な欄はフォーカス前でも隣接する面と区別できる', async context =>
+{
+    const page = await browser.newPage();
+    context.after(() => page.close());
+    await page.setContent('<main class="page host-manager"><section style="background:var(--panel)"><label class="hm-field">Time zone<input value="UTC"></label><label class="hm-field">Action<select><option>Wake</option></select></label></section></main>');
+    await page.addStyleTag({ content: styles.css });
+    for (const colorScheme of ['light', 'dark'])
+    {
+        await page.emulateMedia({ colorScheme });
+        const ratios = await page.locator('input, select').evaluateAll(fields =>
+        {
+            /** ブラウザーが解決したsRGB色を相対輝度に変換する。
+             * @returns 黒を0、白を1とした相対輝度。
+             */
+            function luminance(color)
+            {
+                const [r, g, b] = color.match(/[\d.]+/gu).map(n => Number(n) / 255).map(n => n <= 0.04045 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4);
+                return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            }
+
+            return fields.map(field =>
+            {
+                const border = luminance(getComputedStyle(field).borderBottomColor), panel = luminance(getComputedStyle(field.closest('section')).backgroundColor);
+                return (Math.max(border, panel) + 0.05) / (Math.min(border, panel) + 0.05);
+            });
+        });
+        assert.ok(ratios.every(ratio => 3 <= ratio), JSON.stringify(ratios));
+    }
+});

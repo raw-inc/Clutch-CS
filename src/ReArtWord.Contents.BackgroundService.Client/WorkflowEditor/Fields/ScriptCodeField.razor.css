@@ -6,7 +6,7 @@
     min-height: 120px;
     resize: vertical;
     overflow: hidden;
-    border: 1px solid var(--line);
+    border: 1px solid var(--control);
     border-radius: var(--radius-control);
     background: var(--paper);
 }

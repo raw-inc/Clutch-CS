@@ -42,11 +42,12 @@
     font-weight: 500;
     background: transparent;
     border: 1px solid transparent;
+    border-bottom-color: var(--control);
     padding: 3px 5px;
 }
 
 .document-title input:hover {
-    border-color: var(--line);
+    border-color: var(--control);
 }
 
 .document-title input:focus {

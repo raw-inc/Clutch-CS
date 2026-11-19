@@ -124,7 +124,7 @@
     font-size: 12px;
     padding: 8px 10px;
     background: var(--paper);
-    border: 1px solid var(--line);
+    border: 1px solid var(--control);
     border-radius: var(--radius-control);
 }
 
@@ -321,7 +321,7 @@
 .hm-search {
     font-size: 12px;
     padding: 8px 10px;
-    border: 1px solid var(--line);
+    border: 1px solid var(--control);
     background: var(--panel);
     border-radius: var(--radius-control);
 }
@@ -779,7 +779,7 @@
     font-size: 12px;
     line-height: 1.5;
     padding: 8px 10px;
-    border: 1px solid var(--line);
+    border: 1px solid var(--control);
     border-radius: var(--radius-control);
     background: var(--panel);
     color: var(--ink);
@@ -1153,7 +1153,7 @@
     padding: 8px;
     font: 12px Consolas, monospace;
     background: var(--panel);
-    border: 1px solid var(--line);
+    border: 1px solid var(--control);
     border-radius: var(--radius-control);
 }
 

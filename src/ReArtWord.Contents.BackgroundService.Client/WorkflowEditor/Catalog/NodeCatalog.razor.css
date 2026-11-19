@@ -25,7 +25,7 @@
     width: 100%;
     font-size: 11px;
     background: var(--paper);
-    border-color: var(--line);
+    border-color: var(--control);
     margin-top: 8px;
     padding: 6px 8px;
 }

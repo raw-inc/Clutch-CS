@@ -26,13 +26,13 @@ body {
 
 @media (pointer: coarse) and (max-width: 900px) {
     :root {
-        --statusbar-height: calc(66px + env(safe-area-inset-bottom, 0px));
+        --statusbar-height: calc(67px + env(safe-area-inset-bottom, 0px));
     }
 }
 
 @media (pointer: coarse) and (min-width: 901px) {
     :root {
-        --statusbar-height: 44px;
+        --statusbar-height: 45px;
     }
 }
 
