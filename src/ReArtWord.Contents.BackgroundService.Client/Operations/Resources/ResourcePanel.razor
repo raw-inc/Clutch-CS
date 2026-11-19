@@ -3,12 +3,31 @@
 <section class="card">
 <div class="section-heading"><h2>@Ui["Resources"]</h2><div class="toolbar"><button class="quiet" @onclick="RefreshAsync"><UiIcon Name="refresh" />@Ui["Refresh"]</button><button @onclick="HistoryAsync"><UiIcon Name="logs" />@Ui["Sample history"]</button></div></div>
 @if(sample is not null){<p class="small muted">@sample.PeerId · @FormatTime(sample.ObservedAt)</p>
-<div class="resource-metrics">@foreach(var name in new[]{"cpu.usage","memory.usage","memory.used"}){var metric=sample.Metrics.FirstOrDefault(item=>item.Name==name&&item.Target=="machine");<div>
-<p class="metric-label">@Ui[name switch { "cpu.usage" => "CPU", "memory.usage" => "RAM", _ => "Used memory" }]</p>
-<strong class="metric-number">@Value(metric)</strong>
-</div>}</div>
-<details>
-<summary>@Ui["NIC, disk, GPU and collection details"]</summary>@foreach(var metric in sample.Metrics){<p class="port-row">@metric.Name / @metric.Target: @Value(metric)</p>}</details>@if(!sample.HistoryStored){<p>@Ui["History storage for this sample is unconfirmed."]</p>}}
+<dl class="resource-metrics">
+    @foreach (var name in new[]{"cpu.usage", "memory.usage", "memory.used"})
+    {
+        var metric = sample.Metrics.FirstOrDefault(item => item.Name == name && item.Target == "machine");
+        var label = Ui[name switch { "cpu.usage" => "CPU", "memory.usage" => "RAM", _ => "Used memory" }];
+        <div><dt>@label</dt><dd>@Value(metric)</dd>
+            @if (metric is { Unit: "percent", Value: double percent })
+            {
+                <meter aria-label="@label" min="0" max="100" value="@percent.ToString(CultureInfo.InvariantCulture)"></meter>
+            }
+        </div>
+    }
+</dl>
+<details class="resource-detail">
+    <summary>@Ui["NIC, disk, GPU and collection details"]</summary>
+    <div class="table-wrap"><table>
+        <thead><tr><th>@Ui["Measurement"]</th><th>@Ui["Target"]</th><th>@Ui["Measured value"]</th></tr></thead>
+        <tbody>
+            @foreach (var metric in sample.Metrics)
+            {
+                <tr><th scope="row">@metric.Name</th><td>@metric.Target</td><td>@Value(metric)</td></tr>
+            }
+        </tbody>
+    </table></div>
+</details>@if(!sample.HistoryStored){<p>@Ui["History storage for this sample is unconfirmed."]</p>}}
 <p class="notice">@(problem?.Invoke())</p>
 </section>
 <Modal Open="historyOpen" Title="@Ui["Saved resource samples"]" Close="()=>historyOpen=false">

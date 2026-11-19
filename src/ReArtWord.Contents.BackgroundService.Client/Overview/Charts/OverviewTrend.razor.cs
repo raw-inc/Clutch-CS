@@ -66,10 +66,14 @@ public sealed partial class OverviewTrend : IAsyncDisposable
         set;
     } = 100;
 
-    /// <summary>線からの距離だけで透明度を変える、共有形状の描画段数です。</summary>
-    private static int ShadowLayers => 24;
+    /// <summary>縦軸の上端に表示する値と単位です。</summary>
+    [Parameter]
+    public string ScaleLabel
+    {
+        get;
+        set;
+    } = "100 %";
 
-    private readonly string gradient = "usage-" + Guid.NewGuid().ToString("N");
     private string path = string.Empty;
     private ElementReference chart;
     private IJSObjectReference? module;

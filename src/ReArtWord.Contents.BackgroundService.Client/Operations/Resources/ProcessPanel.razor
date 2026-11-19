@@ -1,6 +1,6 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Processes
 <section class="applications-panel">
-    <div class="section-heading"><h2>@Ui["Applications"]</h2><div class="toolbar"><button class="quiet" disabled="@busy" @onclick="()=>RefreshAsync(UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh"]</button><button disabled="@(busy||target is null)" @onclick="()=>Edit(null)"><UiIcon Name="add" />@Ui["Register application"]</button></div></div>
+    <div class="section-heading"><h2>@Ui["Applications"]</h2><div class="toolbar"><button class="quiet" disabled="@busy" @onclick="()=>RefreshAsync(UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh"]</button><button class="primary" disabled="@(busy||target is null)" @onclick="()=>Edit(null)"><UiIcon Name="add" />@Ui["Register application"]</button></div></div>
     <div class="application-target card">
         <label>@Ui["Application host"]<select value="@peer" disabled="@(busy||refreshing||registrationOpen||selected is not null||removing is not null)" @onchange="e=>SelectPeerAsync(e.Value?.ToString(),UiCancellation)">
             @foreach(var item in (Connection.Current?.Peers??[]).OrderBy(item=>item.HostId,StringComparer.CurrentCulture))
@@ -11,16 +11,44 @@
         <div><strong>@Owner</strong><p class="small muted">@Ui["This application is registered on this host and cluster peer only."]</p></div>
     </div>
     @if(message is not null){<p class="notice" role="status">@message()</p>}
-    <div class="table-wrap"><table><thead><tr><th>@Ui["Application name"]</th><th>@Ui["Observed state"]</th><th>@Ui["Automatic monitoring"]</th><th>@Ui["Scheduled starts"]</th><th>@Ui["Actions"]</th></tr></thead>
-        <tbody>@foreach(var item in processes){<tr @key="item.Definition.Id">
-            <td><strong>@item.Definition.DisplayName</strong><div class="small muted application-path" title="@item.Definition.ExecutablePath">@item.Definition.ExecutablePath</div></td>
-            <td><span class="badge @(item.Observed.Status?.Running is true?"good":"muted")">@Ui[State(item)]</span>@if(item.Observed.Status?.Identity is {} identity){<div class="small muted">PID @identity.ProcessId</div>}</td>
-            <td>@Ui[item.Definition.AutomaticMonitoring?"Enabled":"Disabled"]<div class="small muted">@Ui[item.Definition.Mode.ToString()]</div>@if(item.Observed.Status?.RecoveryExhausted is true){<span class="small error">@Ui["Restart limit reached"]</span>}@if(item.Observed.Status?.RecoverySuppressed is true){<span class="small muted">@Ui["Recovery suppressed"]</span>}</td>
-            <td>@((item.Definition.Schedules??[]).Count(schedule=>schedule.Enabled))@foreach(var schedule in (item.Schedules??[]).Where(schedule=>schedule.NextAt is not null).Take(1)){<div class="small muted">@FormatTime(schedule.NextAt)</div>}</td>
-            <td><button disabled="@(busy||target is null)" @onclick="()=>selected=item">@Ui["Details and actions"]</button><button class="quiet" disabled="@(busy||target is null)" @onclick="()=>Edit(item)">@Ui["Edit"]</button><button class="quiet danger" disabled="@(busy||refreshing||target is null)" @onclick="()=>ConfirmRemoval(item)">@Ui["Remove registration"]</button></td>
-        </tr>}</tbody></table>
-        @if(processes.Count==0){<div class="empty">@Ui["No applications registered on this host."]</div>}
-    </div>
+    @if (processes.Count == 0)
+    {
+        <p class="empty">@Ui["No applications registered on this host."]</p>
+    }
+    else
+    {
+        <ul class="application-list">
+            @foreach (var item in processes)
+            {
+                <li @key="item.Definition.Id">
+                    <header>
+                        <h3>@item.Definition.DisplayName</h3>
+                        <span class="badge @(item.Observed.Status?.Running is true ? "good" : "muted")">@Ui[State(item)]</span>
+                    </header>
+                    <p class="application-path">@item.Definition.ExecutablePath</p>
+                    <dl class="application-facts">
+                        @if (item.Observed.Status?.Identity is {} identity)
+                        {
+                            <div><dt>PID</dt><dd>@identity.ProcessId</dd></div>
+                        }
+                        <div><dt>@Ui["Automatic monitoring"]</dt>
+                            <dd>@Ui[item.Definition.AutomaticMonitoring ? "Enabled" : "Disabled"] · @Ui[item.Definition.Mode.ToString()]</dd></div>
+                        <div><dt>@Ui["Scheduled starts"]</dt>
+                            <dd>@((item.Definition.Schedules ?? []).Count(schedule => schedule.Enabled))
+                            @foreach (var schedule in (item.Schedules ?? []).Where(schedule => schedule.NextAt is not null).Take(1)){<small>@FormatTime(schedule.NextAt)</small>}
+                            </dd></div>
+                    </dl>
+                    @if (item.Observed.Status?.RecoveryExhausted is true){<p class="notice">@Ui["Restart limit reached"]</p>}
+                    @if (item.Observed.Status?.RecoverySuppressed is true){<p class="small muted">@Ui["Recovery suppressed"]</p>}
+                    <div class="toolbar">
+                        <button disabled="@(busy||target is null)" @onclick="()=>selected=item">@Ui["Details and actions"]</button>
+                        <button class="quiet" disabled="@(busy||target is null)" @onclick="()=>Edit(item)">@Ui["Edit"]</button>
+                        <button class="quiet danger" disabled="@(busy||refreshing||target is null)" @onclick="()=>ConfirmRemoval(item)">@Ui["Remove registration"]</button>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
 </section>
 @if(peer is not null && cluster is not null)
 {

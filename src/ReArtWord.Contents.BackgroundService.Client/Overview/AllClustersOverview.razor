@@ -35,8 +35,9 @@
             <section><div class="panel-heading"><h2>@Ui["Workflow activity"]</h2><span>@Ui["Last 60 seconds"]</span></div>
                 <div class="health-card panel-content">
                 @{var activity=telemetry.Observations.SelectMany(pair=>pair.Value.Activity(Api.UtcNow).Select(row=>(Cluster:pair.Key,Row:row))).OrderByDescending(item=>item.Row.Completed).ToArray();}
+                @{var largest = Math.Max(1, activity.Select(item => item.Row.Completed).DefaultIfEmpty().Max());}
                 @if(activity.Length==0){<p class="empty">@Ui["No completions in the retrieved range."]</p>}
-                @foreach(var item in activity.Take(8)){<div class="activity-row"><div><small>@item.Cluster</small><strong title="@item.Row.WorkflowId">@telemetry.Observations[item.Cluster].WorkflowName(item.Row.WorkflowId)</strong></div><span>@item.Row.Completed <small>@Ui["per 60 sec"]</small></span>@if(item.Row.Unsuccessful!=0){<small>@Ui.Format("{0} non-success results",item.Row.Unsuccessful)</small>}</div>}
+                @foreach(var item in activity.Take(8)){<div class="activity-row"><div><small>@item.Cluster</small><strong title="@item.Row.WorkflowId">@telemetry.Observations[item.Cluster].WorkflowName(item.Row.WorkflowId)</strong></div><span>@item.Row.Completed <small>@Ui["per 60 sec"]</small></span><meter min="0" max="@largest" value="@item.Row.Completed" aria-label="@telemetry.Observations[item.Cluster].WorkflowName(item.Row.WorkflowId)"></meter>@if(item.Row.Unsuccessful!=0){<small>@Ui.Format("{0} non-success results",item.Row.Unsuccessful)</small>}</div>}
                 <footer>@Ui.Format("Latest poll: {0}/{1} peers",telemetry.Observations.Sum(pair=>pair.Value.ActivityPeers),telemetry.KnownPeers) · @Ui["Partial range, not a cluster total"] @if(activity.Length>8){<span> · @Ui.Format("Showing 8/{0} workflows",activity.Length)</span>}</footer>
                 </div>
             </section>

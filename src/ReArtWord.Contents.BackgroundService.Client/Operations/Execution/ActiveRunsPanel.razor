@@ -6,16 +6,28 @@
     @if(message is not null){<p class="notice" role="status">@message()</p>}
     @if(page is not null)
     {
-        <div class="table-wrap"><table><thead><tr><th>Workflow</th><th>@Ui["Operation ID"]</th><th>@Ui["Actions"]</th></tr></thead><tbody>
-        @foreach(var run in page.Items)
+        @if (page.Items.Count == 0)
         {
-            <tr @key="run.OperationId"><td>@run.WorkflowId</td><td class="mono">@run.OperationId</td><td>
-                @if(run.OwnerInstanceId is Guid owner){<RunCancelButton RunId="run.OperationId" OwnerInstanceId="owner" PeerId="@peer" ClusterId="@cluster" Completed="()=>CheckAsync(run.OperationId, UiCancellation)" />}
-                <button disabled="@busy" @onclick="()=>CheckAsync(run.OperationId, UiCancellation)">@Ui["Check execution result"]</button>
-            </td></tr>
+            <p class="empty"><UiIcon Name="play" />@Ui["No running workflows were found on this peer."]</p>
         }
-        </tbody></table></div>
-        @if(page.Items.Count==0){<p class="empty">@Ui["No running workflows were found on this peer."]</p>}
+        else
+        {
+            <ul class="run-list">
+                @foreach (var run in page.Items)
+                {
+                    <li @key="run.OperationId">
+                        <div><strong>@run.WorkflowId</strong><small>@Ui["Operation ID"] · @run.OperationId</small></div>
+                        <div class="toolbar">
+                            <button disabled="@busy" @onclick="()=>CheckAsync(run.OperationId, UiCancellation)">@Ui["Check execution result"]</button>
+                            @if (run.OwnerInstanceId is Guid owner)
+                            {
+                                <RunCancelButton RunId="run.OperationId" OwnerInstanceId="owner" PeerId="@peer" ClusterId="@cluster" Completed="()=>CheckAsync(run.OperationId, UiCancellation)" />
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
         @if(page.Next is Guid next){<button disabled="@busy" @onclick="()=>LoadAsync(next, UiCancellation)">@Ui["Next page"]</button>}
     }
     @if(result is not null)

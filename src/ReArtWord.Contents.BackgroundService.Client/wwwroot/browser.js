@@ -290,3 +290,25 @@ window.contentsBrowser.closeDialog = id =>
         state.previous.focus();
     }
 };
+
+// 矢印キーで表示可能な項目に移動し、クリックと同じ経路で内容を切り替える。
+document.addEventListener('keydown', event =>
+{
+    const previousKey = 'ArrowUp', nextKey = 'ArrowDown', firstKey = 'Home', lastKey = 'End';
+    const tab = event.target.closest?.('.dashboard-sections [role="tab"]');
+    if (!tab || ![previousKey, nextKey, firstKey, lastKey].includes(event.key))
+    {
+        return;
+    }
+    const tabs = [...tab.parentElement.querySelectorAll('[role="tab"]:enabled')];
+    const position = tabs.indexOf(tab);
+    const delta = event.key === previousKey ? -1 : 1;
+    let index = (tabs.length + position + delta) % tabs.length;
+    if (event.key === firstKey || event.key === lastKey)
+    {
+        index = event.key === firstKey ? 0 : tabs.length - 1;
+    }
+    event.preventDefault();
+    tabs[index].focus();
+    tabs[index].click();
+});

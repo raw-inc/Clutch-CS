@@ -1,0 +1,22 @@
+.run-list {
+    list-style: none;
+    padding: 0;
+    margin: 16px 0;
+}
+
+.run-list li {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 0;
+    border-top: 1px solid var(--line);
+    overflow-wrap: anywhere;
+}
+
+.run-list small {
+    display: block;
+    margin-top: 4px;
+    color: var(--muted);
+}

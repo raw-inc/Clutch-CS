@@ -57,6 +57,18 @@ public sealed partial class Dashboard : IAsyncDisposable
     private JsonElement? result;
     private WorkflowListSummary? activation;
     private bool secretOpen, membershipOpen;
+    private static readonly (string Name, string Icon)[] views =
+    [
+        ("All clusters", "dashboard"), ("Peer list", "monitor"), ("Selected cluster", "nodes"),
+        ("Execution & processes", "play"), ("Applications", "monitor"), ("Script packages", "terminal"),
+        ("Snapshots", "folder"), ("Resolve conflicts", "nodes"), ("Safety", "settings"),
+        ("Settings & maintenance", "settings"), ("Operations", "logs")
+    ];
+
+    /// <summary>接続先が未選択でもクラスタの探索とブラウザー設定は利用できます。</summary>
+    /// <returns>選択したピアが必要な画面で接続先が未選択ならtrueです。</returns>
+    private bool ViewUnavailable(string name) => !HasSelection && name is not ("All clusters" or "Peer list" or "Settings & maintenance");
+
     private string view = "All clusters";
     private bool HasSelection => Api.SelectedClusterId is not null && Api.SelectedPeerId is not null;
 

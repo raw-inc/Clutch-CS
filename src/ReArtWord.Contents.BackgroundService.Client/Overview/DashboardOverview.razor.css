@@ -173,8 +173,8 @@ h2 {
 }
 
 .activity-track {
-    height: 4px;
-    background: var(--line);
+    height: 12px;
+    background: var(--nested);
     border-radius: 2px;
     margin-top: 9px;
     overflow: hidden;
@@ -184,7 +184,7 @@ h2 {
     height: 100%;
     display: block;
     background: var(--accent);
-    border-radius: 2px;
+    border-radius: 0 3px 3px 0;
 }
 
 .activity-warning {

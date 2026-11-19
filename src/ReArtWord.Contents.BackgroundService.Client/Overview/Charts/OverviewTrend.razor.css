@@ -1,48 +1,58 @@
 .trend {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    pointer-events: none;
+    margin: 0;
+    min-width: 0;
+    align-self: end;
 }
 
-.trend span {
-    position: absolute;
-    bottom: 8px;
-    right: 8px;
-    font-size: 9px;
-    color: var(--muted);
+.trend-plot {
+    position: relative;
+    height: 48px;
 }
 
-svg {
+.trend-plot svg {
+    display: block;
     width: 100%;
     height: 100%;
     overflow: hidden;
 }
 
-path {
-    stroke-width: 1.6;
+.trend-grid,
+.trend-line {
     fill: none;
     vector-effect: non-scaling-stroke;
+}
+
+.trend-grid {
+    stroke: var(--line);
+    stroke-width: 1px;
+    stroke-dasharray: 2 4;
+}
+
+.trend-line {
+    stroke: var(--accent);
+    stroke-width: 2px;
     stroke-linejoin: round;
     stroke-linecap: round;
 }
 
-path.baseline {
-    stroke: var(--line);
-    stroke-width: 1;
-    opacity: 0.5;
+.trend-plot small {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    color: var(--muted);
 }
 
-g[data-series] > path {
-    stroke: none;
+.trend-scale {
+    font-size: 10px;
+    color: var(--muted);
 }
 
-path.area-band {
-    fill: inherit;
-    stroke: none;
-}
-
-path.area-clip {
-    fill: #fff;
-    stroke: none;
+figcaption {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 10px;
 }

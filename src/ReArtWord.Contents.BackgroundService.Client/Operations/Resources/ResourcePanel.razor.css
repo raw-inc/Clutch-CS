@@ -1,7 +1,33 @@
-.port-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    border-bottom: 1px solid var(--line);
-    padding: 6px 0;
+.resource-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+    gap: 10px;
+    margin: 18px 0;
+}
+
+.resource-metrics > div {
+    background: var(--nested);
+    border-radius: var(--radius-control);
+    padding: 14px;
+}
+
+.resource-metrics dt {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.resource-metrics dd {
+    margin: 4px 0;
+    font-size: 20px;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.resource-metrics meter {
+    width: 100%;
+}
+
+.resource-detail td:last-child {
+    text-align: end;
+    font-variant-numeric: tabular-nums;
 }

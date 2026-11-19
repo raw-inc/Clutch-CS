@@ -11,11 +11,59 @@
     max-width: 100%;
 }
 
+.application-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
+    gap: 12px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.application-list li {
+    min-width: 0;
+    padding: 16px;
+    background: var(--nested);
+    border-radius: var(--radius-control);
+}
+
+.application-list header {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: start;
+}
+
+.application-list h3 {
+    margin: 0;
+    font-size: 18px;
+    overflow-wrap: anywhere;
+}
+
 .application-path {
-    max-width: 30rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    margin: 4px 0 16px;
+    font-size: 12px;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+
+.application-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    padding-block: 12px;
+    border-block: 1px solid var(--line);
+}
+
+.application-facts dt,
+.application-facts small {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.application-facts dd {
+    margin: 0;
 }
 
 .application-state {
