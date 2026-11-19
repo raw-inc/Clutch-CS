@@ -63,7 +63,6 @@ function checkLayout(actual, width, contract, navigationSize)
     assert.equal(actual.studio.height, width <= 900 ? '804px' : '878px');
     assert.equal(actual['wire'].animationDuration, '0s');
     assert.equal(actual['peer-health'].opacity, '1');
-    assert.equal(actual['overview-health'].opacity, '0');
 }
 
 for (const width of [1440, 900, 640])
@@ -130,7 +129,7 @@ for (const theme of ['light', 'dark'])
     });
 }
 
-test('Background Syncの進捗はホバーなしで表示され、通常Readyだけが省略される', async () =>
+test('Background Syncの進捗はホバーなしで表示され、通常Readyだけが省略される', { skip: '旧画面では正常時の状態名をホバー時だけ表示していました。' }, async () =>
 {
     for (const width of [1440, 900, 640])
     {
@@ -138,6 +137,17 @@ test('Background Syncの進捗はホバーなしで表示され、通常Readyだ
         assert.equal(actual['background-health'].opacity, '1');
         assert.equal(actual['background-health'].maxWidth, 'none');
         assert.equal(actual['overview-health'].opacity, '0');
+    }
+});
+
+test('同期中も正常時もホバーせずに状態名を確認できる', async () =>
+{
+    for (const width of [1440, 900, 640])
+    {
+        const actual = await captureStylesAsync(browser, styles, width, 'reduce');
+        assert.equal(actual['background-health'].opacity, '1');
+        assert.equal(actual['background-health'].maxWidth, 'none');
+        assert.equal(actual['overview-health'].opacity, '1');
     }
 });
 

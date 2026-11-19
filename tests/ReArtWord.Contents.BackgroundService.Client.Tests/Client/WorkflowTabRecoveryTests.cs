@@ -28,6 +28,7 @@ public sealed class WorkflowTabRecoveryTests
         EditorWorkflowTabLayout layout = new(["orphan"], [], [new("orphan", "New workflow", false, false)]);
         await storage.WriteAsync("contents.editor.tabs.v1.[null,null]", layout).ConfigureAwait(true);
         ServiceCollection services = new();
+        services.AddSingleton<Microsoft.JSInterop.IJSRuntime>(browser);
         services.AddLogging();
         services.AddSingleton(storage);
         services.AddSingleton(new EditorDocument(storage));

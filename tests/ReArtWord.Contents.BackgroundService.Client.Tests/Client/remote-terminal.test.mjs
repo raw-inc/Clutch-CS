@@ -141,6 +141,8 @@ async function fixtureAsync(t, custom, experimental = false, alwaysExperimental 
 
         querySelector: () => null },
     window: {
+        confirm: () => true,
+
         matchMedia: () => new EventTarget(),
 
         getComputedStyle: () => ({ color: 'rgb(23, 24, 29)', backgroundColor: 'rgb(245, 245, 242)', caretColor: 'rgb(63, 73, 178)' }),
@@ -467,7 +469,7 @@ test('the persistent Core policy has no editing control outside experimental mod
     f.setCapabilityRead(async() => ({ userAvailable: true, administratorAvailable: true, settings: { strictUserToken: true, version: 'two' } }));
     await f.button('host-a / peer-a').onclick();
     assert.equal(f.button('Strict unelevated: ON'), undefined);
-    await f.button('＋ User session').onclick();
+    await f.button('User session').onclick();
     assert.equal(f.calls.find(c => c.path.endsWith('/create')).body.strictUserToken, undefined);
 });
 
@@ -477,19 +479,19 @@ test('administrator mode stays disabled without a confirmed elevated user token 
     await f.mounting;
     f.setCapabilityRead(async() => ({ userAvailable: true, administratorAvailable: false, administratorReason: 'CoreAdministratorRequired' }));
     await f.button('host-a / peer-a').onclick();
-    assert.equal(f.button('＋ Administrator').disabled, true);
-    assert.equal(f.button('＋ User session').disabled, false);
-    await f.button('＋ Administrator').onclick();
+    assert.equal(f.button('Administrator').disabled, true);
+    assert.equal(f.button('User session').disabled, false);
+    await f.button('Administrator').onclick();
     assert.equal(f.calls.filter(c => c.path.endsWith('/create')).length, 0);
     f.setCapabilityRead(async() => ({ userAvailable: true, administratorAvailable: true }));
     await f.tick();
-    assert.equal(f.button('＋ Administrator').disabled, false);
+    assert.equal(f.button('Administrator').disabled, false);
     f.setCapabilityRead(async() =>
     {
         throw Error('unavailable');
     });
     await f.tick();
-    assert.equal(f.button('＋ Administrator').disabled, true);
+    assert.equal(f.button('Administrator').disabled, true);
 });
 
 test('no logged-on user makes SYSTEM explicit and disables ordinary user creation', async t =>
@@ -498,9 +500,9 @@ test('no logged-on user makes SYSTEM explicit and disables ordinary user creatio
     await f.mounting;
     f.setCapabilityRead(async() => ({ userAvailable: false, administratorAvailable: true, administratorUsesSystem: true }));
     await f.button('host-a / peer-a').onclick();
-    assert.equal(f.button('＋ User session').disabled, true);
-    assert.equal(f.button('＋ SYSTEM session').disabled, false);
-    assert.match(f.button('＋ SYSTEM session').title, /No user is logged on/);
+    assert.equal(f.button('User session').disabled, true);
+    assert.equal(f.button('SYSTEM session').disabled, false);
+    assert.match(f.button('SYSTEM session').title, /No user is logged on/);
     f.values.set('peer-a', [{ ...shell('system-session'), elevated: true, system: true }]);
     await f.tick();
     assert.match(f.row(a).textContent, /SYSTEM/);
@@ -521,7 +523,7 @@ test('shell catalog is cached by Core instance and the chosen shell is pinned on
     await f.button('host-a / peer-a').onclick();
     assert.equal(choice.value, 'C:/cmd.exe');
     assert.equal(f.calls.filter(call => call.path.endsWith('/shells') && call.target.peerId === 'peer-a').length, 1);
-    await f.button('＋ User session').onclick();
+    await f.button('User session').onclick();
     const created = f.calls.find(call => call.path.endsWith('/create'));
     assert.equal(created.body.shell, 'C:/cmd.exe');
     assert.equal(created.target.instanceId, a.instanceId);
@@ -541,7 +543,7 @@ test('late shell responses cannot replace the newly selected peer catalog', asyn
     }) : [{ name: 'other', path: 'C:/other.exe' }]);
     const first = f.button('host-a / peer-a').onclick();
     await turnsAsync();
-    assert.equal(f.button('＋ User session').disabled, true);
+    assert.equal(f.button('User session').disabled, true);
     await f.button('host-b / peer-b').onclick();
     release([{ name: 'stale', path: 'C:/stale.exe' }]);
     await first;
@@ -557,8 +559,8 @@ test('missing shell metadata disables creation without breaking session takeover
         throw new Error('unavailable');
     });
     await f.button('host-a / peer-a').onclick();
-    assert.equal(f.button('＋ User session').disabled, true);
-    assert.equal(f.button('＋ Administrator').disabled, true);
+    assert.equal(f.button('User session').disabled, true);
+    assert.equal(f.button('Administrator').disabled, true);
     await f.tick();
     assert.equal(f.calls.filter(call => call.path.endsWith('/shells')).length, 1);
     await f.row(a).children.find(item => item.textContent === 'Take over').onclick();
@@ -589,7 +591,7 @@ test('all shared sessions are visible without selecting a peer and selection doe
     await f.mounting;
     assert.ok(f.row(a));
     assert.ok(f.row(b));
-    assert.equal(f.button('＋ User session').disabled, true);
+    assert.equal(f.button('User session').disabled, true);
     assert.equal(f.button('Refresh sessions').disabled, false);
     await f.button('host-b / peer-b').onclick();
     assert.ok(f.row(a));
@@ -716,4 +718,16 @@ test('mobile modifier toggles and direct keys reach the connected stream in orde
     assert.equal(atob(socket.sent.at(-1).request.data), '\x1bx');
     await f.button('Disconnect').onclick();
     assert.equal(f.button('Alt').disabled, true);
+});
+
+test('declining session termination keeps the stream and sends no close request', async t =>
+{
+    const f = await fixtureAsync(t);
+    await f.mounting;
+    const row = f.row(a);
+    await row.children.find(item => item.textContent === 'Take over').onclick();
+    window.confirm = () => false;
+    await row.children.find(item => item.textContent === 'Terminate').onclick();
+    assert.equal(f.calls.some(item => item.path.endsWith('/close')), false);
+    assert.equal(f.terms[0].disposed, false);
 });

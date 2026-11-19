@@ -143,7 +143,7 @@ test('published Desktop PWA is installable from the current origin and reopens i
             {
                 throw new Error(`${path}: ${await page.locator('body').innerText()} / ${errors.join('; ')}`, { cause: error });
             });
-            await page.waitForFunction(() => document.querySelector('.navigation svg')?.getBBox().width && Array.from(document.querySelectorAll('.navigation svg')).every(icon => 0 < icon.getBBox().width));
+            await page.waitForFunction(() => document.querySelector('.navigation svg')?.getBBox().width && Array.from(document.querySelectorAll('.navigation svg')).filter(icon => icon.getClientRects().length).every(icon => 0 < icon.getBBox().width));
             assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor), 'rgb(17, 17, 17)');
             assert.equal(await page.evaluate(() => sessionStorage.getItem('contents.pwa.test-draft')), 'preserved');
         }
@@ -161,14 +161,16 @@ test('published Desktop PWA is installable from the current origin and reopens i
         }), true);
 
         await page.setViewportSize({ width: 390, height: 844 });
-        const picker = page.locator('.route-picker select');
-        await picker.selectOption('logs');
+        const picker = page.locator('.route-menu');
+        await picker.locator('summary').click();
+        await picker.getByRole('link', { name: 'LogViewer' }).click();
         await page.waitForURL('**/logs');
         const recent = page.getByRole('switch', { name: 'Search recent history only' });
         assert.ok(await recent.isChecked());
         await recent.uncheck();
         assert.equal(await recent.isChecked(), false);
-        await picker.selectOption('dashboard');
+        await picker.locator('summary').click();
+        await picker.getByRole('link', { name: 'Dashboard' }).click();
         await page.waitForURL('**/dashboard');
         await page.locator('.compact-view select').selectOption('Settings & maintenance');
         assert.ok(await page.getByLabel('Appearance').isVisible());
@@ -236,7 +238,7 @@ test('配色の保存と解除が別タブにも反映され、保存できな�
     }
 });
 
-test('published conflict cards keep their heading, explanation and action together at desktop and mobile widths', async context =>
+test('published conflict cards keep their heading, explanation and action together at desktop and mobile widths', { skip: '旧画面ではPC幅で説明の右に照会ボタンを置いていました。' }, async context =>
 {
     const browser = await chromium.launch();
     context.after(() => browser.close());
@@ -272,6 +274,38 @@ test('published conflict cards keep their heading, explanation and action togeth
                 assert.ok(help.bottom < action.top);
                 assert.ok(Math.abs(heading.left - action.left) <= 1);
             }
+        }
+    }
+});
+
+test('conflict actions follow the explanation at desktop and mobile widths', async context =>
+{
+    const browser = await chromium.launch();
+    context.after(() => browser.close());
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block' });
+    await page.addInitScript(() =>
+    {
+        sessionStorage.setItem('contents.client.cluster', JSON.stringify('studio'));
+        sessionStorage.setItem('contents.client.peer', JSON.stringify('review'));
+    });
+    await page.goto(origin + '/dashboard');
+    await page.getByRole('tab', { name: 'Resolve conflicts' }).click();
+    for (const width of [1440, 390, 320])
+    {
+        await page.setViewportSize({ width, height: 900 });
+        const headings = page.locator('.dashboard-operations:visible section h2');
+        assert.equal(await headings.count(), 2);
+        for (const title of await headings.all())
+        {
+            const boxes = await title.evaluate(heading =>
+            {
+                const section = heading.closest('section');
+                return [heading, section.querySelector('p'), section.querySelector('button'), section].map(e => e.getBoundingClientRect().toJSON());
+            });
+            const [heading, help, action, section] = boxes;
+            assert.ok(heading.bottom <= help.top && action.right <= section.right);
+            assert.ok(help.bottom <= action.top);
+            assert.ok(Math.abs(heading.left - action.left) <= 2);
         }
     }
 });

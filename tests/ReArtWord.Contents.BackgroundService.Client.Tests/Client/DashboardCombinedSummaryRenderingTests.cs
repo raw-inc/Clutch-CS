@@ -19,11 +19,23 @@ public sealed class DashboardCombinedSummaryRenderingTests
 {
     /// <summary>概要には六つのグラフと最大容量GPUを、詳細には従来の機器情報を表示します。</summary>
     /// <returns>接続や外部プロセスを使わない描画結果の検証です。</returns>
+    [Theory(Skip = "旧表示では概要のコア数とスレッド数を C/T で略記していました。")]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    public Task CombinedSummaryShowsTotalsAndDirectionalBreakdownAsync(bool detailed, bool measured) => RenderMetricsAsync(detailed, measured, true);
+
+    /// <summary>概要と詳細で同じ単位を使い、実測値と未計測を区別します。</summary>
+    /// <returns>表示を確認する試験です。</returns>
     [Theory]
     [InlineData(false, true)]
     [InlineData(false, false)]
     [InlineData(true, true)]
-    public async Task CombinedSummaryShowsTotalsAndDirectionalBreakdownAsync(bool detailed, bool measured)
+    public Task ConsistentUnitsShowTotalsAndDirectionalBreakdownAsync(bool detailed, bool measured) => RenderMetricsAsync(detailed, measured, false);
+
+    /// <summary>指定した表示契約の計測値と単位を確認します。</summary>
+    /// <returns>Razorの表示確認です。</returns>
+    private static async Task RenderMetricsAsync(bool detailed, bool measured, bool abbreviated)
     {
         using ClientCultureScope culture = new("en-US");
         Guid instance = Guid.NewGuid();
@@ -87,7 +99,9 @@ public sealed class DashboardCombinedSummaryRenderingTests
         {
             Assert.Equal(6, graphs);
             Assert.Contains("AMD Ryzen 9 9950X3D 16-Core Processor", html, StringComparison.Ordinal);
-            Assert.Contains("8 C / 16 T", html, StringComparison.Ordinal);
+            string cpuLabel = abbreviated ? "8 C / 16 T"
+                                          : "8 cores / 16 threads";
+            Assert.Contains(cpuLabel, html, StringComparison.Ordinal);
             Assert.Contains("8.00 GiB", html, StringComparison.Ordinal);
             Assert.Contains("/ 16.00 GiB · 50.0 %", html, StringComparison.Ordinal);
             Assert.Contains("Measured GPU usage", html, StringComparison.Ordinal);

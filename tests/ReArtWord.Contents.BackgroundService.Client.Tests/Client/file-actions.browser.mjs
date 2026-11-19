@@ -152,6 +152,7 @@ for (const [name, engine] of [['Chrome', chromium], ['Firefox', firefox]])
         await dialog.getByRole('button', { name: 'Create folder', exact: true }).click();
         const problem = dialog.locator('.file-name-error');
         await problem.waitFor();
+        assert.ok(await dialog.locator('form').evaluate(form => form.noValidate));
         assert.equal(await field.getAttribute('aria-invalid'), 'true');
         assert.equal(await field.getAttribute('aria-describedby'), await problem.getAttribute('id'));
         await field.fill('valid');
