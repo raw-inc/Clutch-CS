@@ -302,3 +302,32 @@ test('keyboard focus stays visible inside a field without shifting it; forced co
     await page.emulateMedia({ forcedColors: 'active' });
     assert.notEqual(await field.evaluate(e => getComputedStyle(e).outlineStyle), 'none');
 });
+
+test('touch footer actions remain reachable at narrow and wide viewport sizes', async context =>
+{
+    const browser = await chromium.launch();
+    context.after(() => browser.close());
+    const page = await browser.newPage({ hasTouch: true, viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
+    await page.addInitScript(() =>
+    {
+        sessionStorage.setItem('contents.client.cluster', JSON.stringify('studio'));
+        sessionStorage.setItem('contents.client.peer', JSON.stringify('review'));
+    });
+    await page.goto(origin + '/dashboard');
+    await page.locator('.statusbar-action').waitFor();
+    for (const width of [390, 1280])
+    {
+        await page.setViewportSize({ width, height: 844 });
+        const sizes = await page.locator('.statusbar-left').evaluate(e =>
+        {
+            const footer = e.closest('footer').getBoundingClientRect();
+            return [...e.querySelectorAll('a, button')].filter(n => n.checkVisibility()).map(n =>
+            {
+                const { top, bottom, height } = n.getBoundingClientRect();
+                return { height, within: footer.top <= top && bottom <= footer.bottom };
+            });
+        });
+        assert.ok(3 <= sizes.length);
+        assert.ok(sizes.every(s => 44 <= s.height && s.within), JSON.stringify(sizes));
+    }
+});

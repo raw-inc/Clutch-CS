@@ -336,7 +336,9 @@
 @media (pointer: coarse) {
     .statusbar-left,
     .statusbar-left > a,
-    .statusbar-left ::deep :is(button, a) {
+    .statusbar-left ::deep button.statusbar-action,
+    .statusbar-left ::deep button.transfer-toggle,
+    .statusbar-left ::deep a.pwa-state {
         min-height: 44px;
     }
 }
