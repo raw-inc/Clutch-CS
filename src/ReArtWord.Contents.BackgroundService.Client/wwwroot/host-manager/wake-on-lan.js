@@ -80,7 +80,7 @@ function renderHost(root, ctx, state, draft, actionArea)
         baseRevision: draft.revision, change: structuredClone(draft.selection), label: ctx.t('wake.title') }]));
     save.disabled = !editable;
     const row = node('div', '', 'hm-selection-bar');
-    row.append(node('strong', state.host.target.hostId), save);
+    row.append(node('strong', ctx.t('Target hosts') + ': ' + state.host.target.hostId), save);
     actionArea.append(row);
     root.append(section);
 }
@@ -108,7 +108,9 @@ export function wakeOnLanView(root, ctx, actionArea)
     };
 
     title.append(action(ctx, 'Refresh settings', 'refresh', reload));
-    root.append(title, node('p', ctx.t('wake.requirements'), 'hm-muted'), node('p', ctx.t('wake.inventoryCache'), 'hm-muted'), status, listing);
+    const help = node('details', '', 'secondary-details');
+    help.append(node('summary', ctx.t('Wake-on-LAN requirements')), node('p', ctx.t('wake.requirements')), node('p', ctx.t('wake.inventoryCache')));
+    root.append(title, help, status, listing);
 
     /** 別ホストの読み取り完了で、先に編集した選択を消しません。 */
     function render()

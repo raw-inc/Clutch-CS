@@ -37,7 +37,7 @@ export function hostsView(root, ctx, actions)
         }
     });
     copy.disabled = true;
-    left.append(field(ctx.t('Source host'), source), current, copy);
+    left.append(field(ctx.t('Source host'), source), copy, current);
     const rightHeading = node('div', '', 'hm-heading');
     rightHeading.append(node('h3', ctx.t('Replace hosts content')), changed);
     right.append(rightHeading, contents.root, metadata);
@@ -58,7 +58,7 @@ export function hostsView(root, ctx, actions)
         edited = false;
         return reader.load();
     }, edited)));
-    root.append(title, node('p', ctx.t('The complete hosts content will replace each selected host’s file. Review every difference below.'), 'hm-muted'), status, grid);
+    root.append(title, node('p', `${ctx.t('The complete hosts content will replace each selected host’s file. Review every difference below.')} (${hosts.length})`, 'hm-warning'), status, grid);
     actions.append(bar);
 
     /** 現在の設定と状態から表示を更新します。 */

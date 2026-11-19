@@ -43,11 +43,17 @@ export function displayView(root, ctx)
         const dialog = ctx.dialog('Change display mode');
         const current = display.modes.findIndex(mode => JSON.stringify(mode) === JSON.stringify(display.current));
         const modes = select(display.modes.map((mode, index) => [String(index), displayModeLabel(mode, ctx.t)]), String(current));
-        dialog.root.append(node('p', `${host.target.hostId} · ${display.name}`), field(ctx.t('Resolution and refresh rate'), modes));
-        dialog.footer.append(ctx.button('Cancel', dialog.close), action(ctx, 'Preview changes', 'check', () => ctx.preview([
+        dialog.root.append(node('p', `${ctx.t('Target hosts')}: ${host.target.hostId} · ${display.name}`), node('p', `${ctx.t('Current mode')}: ${displayModeLabel(display.current, ctx.t)}`), field(ctx.t('Resolution and refresh rate'), modes));
+        const preview = action(ctx, 'Preview changes', 'check', () => ctx.preview([
             { host, query: { area: 'display', resourceId: display.id }, action: 'display', baseRevision: display.revision,
                 change: displayChange(display, modes.value.length ? Number(modes.value) : Number.NaN), label: display.name }
-        ]), true));
+        ]), true);
+        preview.disabled = true;
+        modes.onchange = () =>
+        {
+            preview.disabled = !modes.value || Number(modes.value) === current;
+        };
+        dialog.footer.append(ctx.button('Cancel', dialog.close), preview);
     }
 
     /** 読取りが確認できたHostだけに編集操作を表示します。 */

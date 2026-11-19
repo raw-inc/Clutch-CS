@@ -15,7 +15,7 @@ import { showPreview, showHistory } from './operations.js';
 const screens = new WeakMap();
 const areas = [['network', 'NetworkIF', 'network', networkView], ['hosts', 'Hosts', 'file', hostsView],
     ['firewall', 'Firewall', 'shield', firewallView], ['environment', 'PATH', 'code', environmentView], ['display', 'Display', 'monitor', displayView], ['power', 'Power', 'power', powerView],
-    ['powerSchedules', 'powerSchedule.title', 'power', powerSchedulesView], ['windowsUpdate', 'Windows Update', 'refresh', windowsUpdateView], ['login', 'Login', 'user', loginView], ['wakeOnLan', 'wake.title', 'power', wakeOnLanView]];
+    ['powerSchedules', 'powerSchedule.title', 'history', powerSchedulesView], ['windowsUpdate', 'Windows Update', 'download', windowsUpdateView], ['login', 'Login', 'user', loginView], ['wakeOnLan', 'wake.title', 'signal', wakeOnLanView]];
 
 /** 画面の文言と表示するキーを対応付けます。
  * @returns 呼出し元が使用する値です。
@@ -182,6 +182,10 @@ export async function mount(element, labels)
         {
             const button = node('button', ctx.t(label), className);
             button.type = 'button';
+            if (className.split(' ').includes('danger'))
+            {
+                button.prepend(icon('trash'));
+            }
             button.onclick = () =>
             {
                 const expectedTrue = 'true';
@@ -494,7 +498,7 @@ export async function mount(element, labels)
     });
     search.oninput = renderTargets;
     selectionTools.append(ctx.button('Select visible', () => changeSelection(new Set([...screen.selected, ...visibleHosts().filter(supportedHost).map(host => host.target.hostId)]))), ctx.button('Clear selection', () => changeSelection(new Set())));
-    const historyButton = action(ctx, 'Operation history', 'history', openHistory), refreshButton = action(ctx, 'Refresh hosts', 'refresh', () => ctx.discard(refreshHostsAsync));
+    const historyButton = action(ctx, 'Host configuration history', 'history', openHistory), refreshButton = action(ctx, 'Refresh hosts', 'refresh', () => ctx.discard(refreshHostsAsync));
     titleTools.append(refreshButton, historyButton);
     activity.onclick = openHistory;
 
@@ -543,7 +547,7 @@ export async function mount(element, labels)
         {
             return;
         }
-        screen.historyDialog = ctx.dialog('Operation history');
+        screen.historyDialog = ctx.dialog('Host configuration history');
         screen.historyDialog.element.classList.add('hm-history-dialog');
         showHistory(screen.historyDialog.root, ctx, screen.history, refreshHistoryAsync);
     }

@@ -3,18 +3,22 @@ import { node, field, input, select, table, integer, action, badge, details, emp
 import { vlanLabel, vlanTone } from './vlan.js';
 
 /** 仮想NICの一覧と編集操作を構成します。 */
-export function virtualNics(root, ctx, entries)
+export function virtualNics(root, ctx, entries, showSwitches)
 {
     const toolbar = node('div', '', 'hm-toolbar'), available = entries.filter(entry => entry.state.switches.length);
     const create = action(ctx, 'Create management OS vNIC', 'plus', () => form(available[0], null), true);
     create.disabled = !available.length;
     toolbar.append(create, node('span', ctx.t('Connect management OS adapters to an existing switch. Create or delete switches in Virtual switches.'), 'hm-muted'));
+    if (!available.length && entries.length)
+    {
+        toolbar.append(node('span', ctx.t('A virtual switch is required to create a virtual NIC.'), 'hm-muted'), ctx.button('Virtual switches', showSwitches));
+    }
     root.append(toolbar);
     if (!entries.length)
     {
         return;
     }
-    const rows = table(['Name', 'Host / virtual switch', 'VLAN mode', 'Edit'].map(ctx.t));
+    const rows = table(['Name', 'Host / virtual switch', 'VLAN mode', 'Actions'].map(ctx.t));
     let count = 0;
     for (const entry of entries)
     {
@@ -52,7 +56,7 @@ export function virtualNics(root, ctx, entries)
             switches.add([host.target.hostId, `${item.name} · ${item.kind}`, item.physicalInterface]);
         }
     }
-    root.append(details(ctx.t('Virtual switches'), switches.root));
+    root.append(details(ctx.t('Available switches for these adapters'), switches.root));
 
     /** 仮想NICに対応するIPアドレスと経路情報を表示します。 */
     function appendAddressFacts(facts, adapter)

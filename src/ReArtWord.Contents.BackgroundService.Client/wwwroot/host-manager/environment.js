@@ -37,7 +37,7 @@ export function environmentView(root, ctx, actionArea)
     const add = action(ctx, 'Add variable', 'plus', () => edit(null), true), refresh = action(ctx, 'Refresh settings', 'refresh', () => ctx.discard(reload, bulk?.hasChanges())), actions = node('div', '', 'hm-actions');
     actions.append(refresh, add);
     title.append(actions);
-    tools.append(scopePicker, users, field(ctx.t('Variables on host'), hostPick), search);
+    tools.append(field(ctx.t('Scope'), scopePicker), users, field(ctx.t('Variables on host'), hostPick), search);
     hostPick.parentElement.hidden = !!bulk;
     root.append(title, node('p', ctx.t('Persistent environment variables apply to new processes. Existing processes and other user sessions may require a restart or sign-in.'), 'hm-muted'), tools, status, listing);
 
@@ -94,12 +94,17 @@ export function environmentView(root, ctx, actionArea)
             listing.append(empty(ctx.t('No matching variables'), ctx.t('Try another search or add a variable.'), 'code'));
             return;
         }
-        const rows = table(['Name', 'Value', 'Edit'].map(ctx.t));
+        const rows = table(['Name', 'Value', 'Actions'].map(ctx.t));
         for (const variable of variables)
         {
             const path = variable.name.toUpperCase() === 'PATH', name = node('div'), value = node('div');
             name.append(ctx.button(variable.name, () => edit(variable), 'hm-link'), node('small', ctx.t(variable.expandable ? 'Variable references' : 'Literal value')));
-            value.append(node('pre', path ? (variable.value ?? '').split(';').join('\n') : variable.value, 'hm-value'));
+            const content = node('pre', '', 'hm-value');
+            for (const segment of (variable.value ?? '').split(/(?<=[\\;])/u))
+            {
+                content.append(document.createTextNode(segment), document.createElement('wbr'));
+            }
+            value.append(content);
             if (path)
             {
                 value.append(node('small', `${(variable.value ?? '').split(';').length} ${ctx.t('path entries')}`));

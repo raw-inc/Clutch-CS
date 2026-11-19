@@ -87,6 +87,7 @@ export function checkbox(label, checked = false)
 export function table(headings)
 {
     const root = node('div', '', 'hm-table-wrap'), table = node('table'), head = node('thead'), row = node('tr'), body = node('tbody');
+    table.className = 'record-table';
     headings.forEach(heading =>
     {
         const cell = node('th', heading);
@@ -104,9 +105,10 @@ export function table(headings)
         add(values)
         {
             const row = node('tr');
-            values.forEach(value =>
+            values.forEach((value, index) =>
             {
                 const cell = node('td');
+                cell.dataset.field = headings[index] ?? '';
                 cell.append(value instanceof Node ? value : document.createTextNode(String(value ?? '—')));
                 row.append(cell);
             });
@@ -168,6 +170,12 @@ export function icon(name)
 export function action(ctx, label, glyph, run, primary = false)
 {
     const button = ctx.button(label, run, primary ? 'hm-button primary' : 'hm-button');
+    const deleteIcon = 'trash';
+    const disableSchedules = 'powerSchedule.bulkDisable';
+    if (glyph === deleteIcon || label === disableSchedules)
+    {
+        button.classList.add('danger');
+    }
     button.prepend(icon(glyph));
     return button;
 }

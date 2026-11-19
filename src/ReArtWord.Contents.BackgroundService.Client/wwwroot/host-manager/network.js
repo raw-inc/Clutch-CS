@@ -17,6 +17,7 @@ export function networkView(root, ctx, actions)
     {
         return noSelection(root, ctx);
     }
+    let awaitingRead = true, unavailable = false;
     let family = 4, mode = 'interfaces', records = [], selected = new Set(), switchView = null;
     const pending = new Map();
     const staged = node('div', '', 'hm-protocol-drafts');
@@ -92,6 +93,7 @@ export function networkView(root, ctx, actions)
             }
         }, true);
         clear.disabled = apply.disabled = !changes;
+        apply.classList.toggle('primary', !!changes);
         actions.append(clear, apply);
         tools.append(actions);
         staged.append(bulk, tools);
@@ -191,6 +193,7 @@ export function networkView(root, ctx, actions)
                 const value = pending.get(key)?.change[property], changed = value !== undefined;
                 toggle.setAttribute('aria-checked', String(value ?? configuration?.enabled === true));
                 toggle.dataset.pending = String(changed);
+                toggle.textContent = `IPv${version} · ${ctx.t(value ? 'Enabled' : 'Disabled')}`;
                 caption.textContent = changed ? `${ctx.t(configuration.enabled ? 'Enabled' : 'Disabled')} → ${ctx.t(value ? 'Enabled' : 'Disabled')}` : '';
                 caption.hidden = !changed;
                 toggle.title = changed ? `${ctx.t('Pending protocol changes')}: ${caption.textContent}` : `IPv${version}`;
@@ -252,9 +255,18 @@ export function networkView(root, ctx, actions)
     {
         listing.replaceChildren();
         const visible = visibleRecords();
-        count.textContent = `${visible.length} ${ctx.t('interfaces')}`;
+        count.textContent = awaitingRead || unavailable ? '—' : `${visible.length} ${ctx.t('interfaces')}`;
+        for (const control of filters.querySelectorAll('input, select, button'))
+        {
+            control.disabled = awaitingRead || unavailable;
+        }
+        refresh.disabled = awaitingRead;
         if (!records.length)
         {
+            if (!awaitingRead && !unavailable)
+            {
+                listing.append(node('p', ctx.t('No network interfaces were reported.'), 'hm-muted'));
+            }
             updateMode();
             return;
         }
@@ -264,7 +276,7 @@ export function networkView(root, ctx, actions)
             updateMode();
             return;
         }
-        const rows = table(['Network interface', 'IPv4 / IPv6', 'Addressing', 'DNS / gateway', 'Metric', 'VLAN', 'Edit'].map(ctx.t));
+        const rows = table(['Network interface', 'IPv4 / IPv6', 'Addressing', 'DNS / gateway', 'Metric', 'VLAN', 'Actions'].map(ctx.t));
         for (const record of visible)
         {
             renderInterfaceRow(rows, record);
@@ -329,14 +341,17 @@ export function networkView(root, ctx, actions)
 
     const reader = createReader(ctx, hosts, () => ({ area: 'network' }), states =>
     {
-        readStatus(status, ctx, states);
+        const values = [...states.values()];
+        awaitingRead = values.some(state => state.loading);
+        unavailable = !awaitingRead && values.every(state => !state.snapshot);
+        readStatus(status, ctx, states, () => reader.load());
         const loaded = [...states.values()].filter(state => state.snapshot);
         records = loaded.flatMap(({ host, snapshot }) => snapshot.data.interfaces.map(nic => ({ host, nic, key: host.target.hostId + '/' + nic.id })));
         selected = new Set([...selected].filter(key => records.some(record => record.key === key)));
         renderGroups();
         renderList();
         virtual.replaceChildren();
-        virtualNics(virtual, ctx, loaded.map(({ host, snapshot }) => ({ host, state: snapshot.data })));
+        virtualNics(virtual, ctx, loaded.map(({ host, snapshot }) => ({ host, state: snapshot.data })), () => views.querySelectorAll('button')[2].click());
         updateMode();
     });
     search.oninput = renderList;

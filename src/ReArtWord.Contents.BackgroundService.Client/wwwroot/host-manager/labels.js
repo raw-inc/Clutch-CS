@@ -1,4 +1,11 @@
 export const keys = [
+    "Host configuration history",
+    "Available switches for these adapters",
+    "No network interfaces were reported.",
+    "A virtual switch is required to create a virtual NIC.",
+    "No selectable local account.",
+    "Actions",
+    "Wake-on-LAN requirements",
     "Settings category",
     "Automatic login account saved; login notice prevents automatic login",
     "Disable the login notice on this PC",

@@ -1,4 +1,4 @@
-import { node, textarea, input, field, checkbox, action, segmented, empty, badge } from './dom.js';
+import { node, textarea, input, field, checkbox, action, segmented, empty } from './dom.js';
 import { parseHosts, hostsText, setHostsEntry, removeHostsEntry } from './hosts-model.js';
 
 /** hostsの構造化表示とテキスト編集を接続します。
@@ -48,7 +48,7 @@ export function hostsEditor(ctx, changed)
         }
         for (const { entry, index } of entries)
         {
-            const row = node('div', '', 'hm-hosts-entry'), enabled = checkbox('', entry.enabled), copy = node('div', '', 'hm-hosts-entry-copy');
+            const row = node('div', '', 'hm-hosts-entry'), enabled = checkbox(ctx.t('Enabled'), entry.enabled), copy = node('div', '', 'hm-hosts-entry-copy');
             enabled.control.setAttribute('aria-label', `${ctx.t('Enabled')} · ${entry.address} · ${entry.names}`);
             enabled.control.disabled = disabled;
             enabled.control.onchange = () =>
@@ -64,18 +64,22 @@ export function hostsEditor(ctx, changed)
             }
             const editButton = action(ctx, 'Edit', 'settings', () => edit(index)), remove = action(ctx, 'Delete', 'trash', () =>
             {
+                if (!window.confirm(ctx.t('Delete') + ' · ' + entry.address + ' ' + entry.names))
+                {
+                    return;
+                }
                 removeHostsEntry(document, index);
                 notify();
                 render();
             });
-            editButton.classList.add('hm-icon-button');
+            editButton.classList.add('hm-edit-entry');
             editButton.setAttribute('aria-label', `${ctx.t('Edit')} · ${entry.address}`);
             editButton.title = ctx.t('Edit');
-            remove.classList.add('hm-icon-button', 'danger');
+            remove.classList.add('danger');
             remove.setAttribute('aria-label', `${ctx.t('Delete')} · ${entry.address}`);
             remove.title = ctx.t('Delete');
             editButton.disabled = remove.disabled = disabled;
-            row.append(enabled.root, copy, badge(ctx.t(entry.enabled ? 'Enabled' : 'Disabled'), entry.enabled ? 'good' : ''), editButton, remove);
+            row.append(enabled.root, copy, editButton, remove);
             body.append(row);
         }
         if (document.lines.some(line => line.raw.trim() && !line.raw.trim().startsWith('#') && !line.entry))

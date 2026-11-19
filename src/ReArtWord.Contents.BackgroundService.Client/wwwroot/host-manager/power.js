@@ -65,6 +65,7 @@ function editPower(ctx, states, preset)
 {
     const ac = 'ac';
     const dialog = ctx.dialog('Edit power settings'), controls = {};
+    dialog.root.append(node('p', `${ctx.t('Target hosts')}: ${states.map(state => state.host.target.hostId).join(', ')} (${states.length})`));
     dialog.root.append(node('p', ctx.t('Blank fields are unchanged. Time is in minutes; 0 disables the timer.'), 'hm-muted'));
     const grid = node('div', '', 'hm-grid');
     for (const supply of ['ac', 'dc'])
@@ -74,7 +75,7 @@ function editPower(ctx, states, preset)
         for (const [key, label] of Object.entries(powerTimers))
         {
             values[key] = minutesInput(ctx);
-            panel.append(field(ctx.t(label), values[key]));
+            panel.append(field(`${ctx.t(label)} (${ctx.t('minutes')})`, values[key]));
         }
         values.shutdown = minutesInput(ctx);
         values.powerButtonAction = select([['', ctx.t('Keep unchanged')], ...powerActions.map((label, index) => [String(index), ctx.t(label)])]);
@@ -146,10 +147,15 @@ export function powerView(root, ctx)
     const reader = createReader(ctx, hosts, () => ({ area: 'power' }), render);
     const edit = action(ctx, 'Edit selected hosts', 'settings', () => editPower(ctx, [...reader.states.values()], false));
     const preset = action(ctx, 'Prepare continuous operation settings', 'check', () => editPower(ctx, [...reader.states.values()], true));
+    edit.append(document.createTextNode(` (${hosts.length})`));
+    preset.append(document.createTextNode(` (${hosts.length})`));
     edit.disabled = true;
     preset.disabled = true;
-    title.append(action(ctx, 'Refresh settings', 'refresh', () => reader.load()), edit, preset);
-    root.append(title, node('p', ctx.t('Review automatic timers before operation. The continuous operation preset disables these timers and Fast Startup; the power button action is retained.'), 'hm-muted'), status, listing);
+    const buttons = node('div', '', 'hm-actions');
+    edit.classList.add('primary');
+    buttons.append(action(ctx, 'Refresh settings', 'refresh', () => reader.load()), edit, preset);
+    title.append(buttons);
+    root.append(title, node('p', ctx.t('Review automatic timers before operation. The continuous operation preset disables these timers and Fast Startup; the power button action is retained.'), 'hm-warning'), status, listing);
 
     /** 読取り成功・管理者権限をすべて確認できた対象だけを編集します。 */
     function render()

@@ -255,7 +255,7 @@ export function powerSchedulesView(root, ctx, actionArea = root)
     }
     const abort = new AbortController(), signal = AbortSignal.any([ctx.signal, abort.signal]), toolbar = node('div', '', 'hm-toolbar');
     root.append(heading(ctx.t('powerSchedule.title'), ctx.t('powerSchedule.help')));
-    actionArea.append(toolbar);
+    root.append(toolbar);
     const panels = hosts.map(host => hostPanel(root, ctx, host, signal, actionArea));
     powerScheduleBulk(toolbar, ctx, panels, signal);
     ctx.guard(async () =>

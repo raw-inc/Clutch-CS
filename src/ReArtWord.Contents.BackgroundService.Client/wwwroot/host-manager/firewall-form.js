@@ -5,6 +5,7 @@ export function firewallForm(ctx, hosts)
 {
     const dialog = ctx.dialog('Add rule'), basic = section(ctx.t('Rule')), grid = node('div', '', 'hm-grid');
     const name = input(''), direction = select(['Inbound', 'Outbound'].map(value => [value, ctx.t(value)]), 'Inbound'), effect = select(['Allow', 'Block'].map(value => [value, ctx.t(value)]), 'Allow'), enabled = checkbox(ctx.t('Enabled'), true);
+    dialog.root.append(node('p', `${ctx.t('Target hosts')}: ${hosts.map(host => host.target.hostId).join(', ')} (${hosts.length})`));
     basic.append(field(ctx.t('Name'), name));
     grid.append(field(ctx.t('Direction'), direction), field(ctx.t('Action'), effect));
     basic.append(grid, enabled.root);

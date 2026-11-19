@@ -110,7 +110,7 @@ export function firewallView(root, ctx, actionArea)
             listing.append(empty(ctx.t('No matching rules'), ctx.t('Try another rule name or add a rule.'), 'shield'));
             return;
         }
-        const rows = table(['Name', 'Direction / action', 'Profile', 'Status', 'Edit'].map(ctx.t));
+        const rows = table(['Name', 'Direction / action', 'Profile', 'Status', 'Actions'].map(ctx.t));
         for (const rule of data.rules)
         {
             const expectedAllow = 'Allow';

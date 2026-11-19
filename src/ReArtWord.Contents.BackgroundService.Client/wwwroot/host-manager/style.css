@@ -129,18 +129,19 @@
 }
 
 .hm-selection-tools {
-    display: flex;
     justify-content: space-between;
-    gap: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .hm-selection-tools button {
     background: transparent;
-    border: 0;
-    min-height: 24px;
     padding: 3px 4px 1px;
     font-size: 11px;
     color: var(--muted);
+    min-height: 36px;
+    border: 1px solid var(--control);
 }
 
 .hm-selection-tools button:hover {
@@ -302,9 +303,9 @@
 
 .hm-toolbar {
     display: flex;
-    align-items: flex-end;
     gap: 10px;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 .hm-toolbar > .hm-field {
@@ -372,9 +373,10 @@
 }
 
 .hm-segmented button[aria-pressed="true"] {
-    color: var(--ink);
-    background: var(--raised);
-    box-shadow: 0 1px 3px #0002;
+    background: var(--accent-soft);
+    box-shadow: inset 0 -2px var(--accent);
+    color: var(--accent);
+    font-weight: 700;
 }
 
 .hm-badge {
@@ -597,9 +599,6 @@
 }
 
 .hm-read-error {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
     font-size: 12px;
     line-height: 1.6;
     padding: 10px 12px;
@@ -607,6 +606,10 @@
     border-radius: var(--radius-control);
     color: var(--warn);
     margin: 5px 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
 }
 
 .hm-table-wrap {
@@ -707,6 +710,9 @@
 .hm-address {
     font-family: Consolas, monospace;
     font-size: 11px;
+    white-space: pre-line;
+    word-break: keep-all;
+    overflow-wrap: normal;
 }
 
 .hm-stacked {
@@ -857,7 +863,7 @@
 }
 
 .hm-dialog::backdrop {
-    background: var(--backdrop);
+    background: rgb(0 0 0 / 68%);
 }
 
 .hm-dialog-title {
@@ -1024,13 +1030,15 @@
 }
 
 .hm-value {
-    max-width: 500px;
     max-height: 72px;
     overflow: hidden;
     font: 11px/1.6 Consolas, monospace;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
     margin: 0;
+    white-space: pre-wrap;
+    word-break: normal;
+    overflow-wrap: normal;
+    max-width: 100%;
+    overflow-x: auto;
 }
 
 .hm-pagination {
@@ -1548,8 +1556,8 @@
     flex: none;
     margin: var(--panel-inset) var(--panel-inset) 0;
     padding-inline: 12px;
-    border-radius: var(--radius-inset);
-    background: var(--panel);
+    background: var(--card);
+    border-radius: var(--radius-panel);
 }
 
 .hm-target-picker > summary {
@@ -1591,6 +1599,7 @@
     background: var(--panel);
     border-top: 1px solid var(--line);
     padding: 8px 12px;
+    justify-content: flex-end;
 }
 
 .hm-view-actions:empty,
@@ -1601,6 +1610,11 @@
 .hm-view-actions .hm-selection-bar {
     border: 0;
     padding: 6px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: flex-end;
 }
 
 .hm-view-actions > .hm-actions {
@@ -1650,4 +1664,156 @@
 
 .hm-tabs.workspace-index[role="tablist"] > button {
     padding-block: 9px;
+}
+
+.hm-warning {
+    border-inline-start: 3px solid var(--warn);
+    padding: 10px 14px;
+    color: var(--warn);
+}
+
+.hm-dialog-body label:has(:disabled) {
+    color: var(--disabled-ink);
+}
+
+.hm-dialog-title,
+.hm-dialog-actions {
+    flex: none;
+}
+
+@media (max-width: 680px) {
+    .hm-hosts-entry button,
+    .hm-actions button {
+        min-height: 44px;
+    }
+
+    .hm-table-wrap:has(.record-table) {
+        max-height: none;
+        overflow: visible;
+    }
+}
+
+.hm-hosts-entry > .danger,
+.hm-actions > .danger {
+    color: var(--danger);
+    margin-inline-start: 8px;
+}
+
+.hm-actions > .danger:disabled {
+    color: var(--disabled-ink);
+}
+
+.hm-view-actions .hm-selection-bar > strong {
+    margin-inline-end: auto;
+}
+
+.hm-host-list label:focus-within {
+    background: var(--panel);
+    box-shadow: inset 0 -2px var(--accent);
+}
+
+.hm-host-list label:has(:checked) {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+}
+
+.hm-read-error[role="alert"] {
+    color: var(--danger);
+    border-inline-start: 3px solid currentcolor;
+    padding: 12px;
+}
+
+.hm-read-error[role="alert"]::before {
+    content: "⚠";
+}
+
+.hm-section .hm-table-wrap {
+    margin-bottom: 12px;
+}
+
+.hm-hosts-editor textarea {
+    max-height: 45vh;
+}
+
+.hm-view :is(.hm-tab,.hm-button)[aria-pressed="true"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+}
+
+.hm-section td:last-child .hm-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.hm-selection-bar .danger {
+    margin-inline-start: 12px;
+}
+
+.hm-view .danger {
+    width: fit-content;
+    color: var(--danger);
+}
+
+.hm-dialog-body .hm-grid {
+    align-items: end;
+    gap: 16px 20px;
+}
+
+.hm-dialog-body label.hm-field {
+    display: grid;
+    gap: 4px;
+}
+
+.hm-dialog-body label:has(input:disabled) {
+    color: var(--disabled-ink);
+}
+
+.hm-toolbar :is(.hm-segmented button, select, input[type="search"]) {
+    min-height: 38px;
+}
+
+.hm-toolbar .hm-badge {
+    margin-block: 0;
+    align-self: center;
+}
+
+.hm-dialog-body .hm-grid > label {
+    align-content: start;
+    row-gap: 4px;
+}
+
+.hm-section td .hm-badge {
+    white-space: nowrap;
+}
+
+.hm-section .hm-actions {
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+@media (max-width: 680px) {
+    .hm-table-wrap .record-table td:has(> .hm-actions) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hm-table-wrap .record-table td:has(> .hm-actions)::before {
+        grid-row: auto;
+    }
+
+    .hm-table-wrap .record-table td > .hm-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+    }
+
+    .hm-table-wrap .record-table td > .hm-actions button {
+        min-width: 0;
+        max-width: 100%;
+        margin-inline: 0;
+        white-space: normal;
+    }
 }

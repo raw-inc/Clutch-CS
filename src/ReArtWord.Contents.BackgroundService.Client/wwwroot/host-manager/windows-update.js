@@ -53,7 +53,9 @@ function editable(state)
 function renderState(root, ctx, state)
 {
     const value = state.snapshot.data, section = node('section', '', 'hm-section');
-    section.append(node('h3', state.host.target.hostId), node('p', `Windows · ${value.edition}`), badge(ctx.t(windowsUpdateStatus(value))));
+    const header = node('div', '', 'hm-toolbar');
+    header.append(node('h3', state.host.target.hostId), badge(ctx.t(windowsUpdateStatus(value))));
+    section.append(header, node('p', `Windows · ${value.edition}`));
     const list = table([ctx.t('Setting'), ctx.t('Status')]);
     list.add([ctx.t('Update installation in progress'), ctx.t(value.installInProgress == null ? 'Unconfirmed' : value.installInProgress ? 'Yes' : 'No')]);
     list.add([ctx.t('Windows update restart pending'), ctx.t(value.rebootRequired ? 'Yes' : 'No')]);
@@ -86,6 +88,7 @@ export function windowsUpdateView(root, ctx, actionArea)
     const title = heading(ctx.t('Windows Update'), `${ctx.t('Selected hosts')}: ${hosts.length}`), status = node('div'), listing = node('div');
     const reader = createReader(ctx, hosts, () => ({ area: 'windowsUpdate' }), render);
     const manual = action(ctx, 'Require manual updates for selected hosts', 'settings', () => previewUpdate(ctx, [...reader.states.values()], true));
+    manual.append(document.createTextNode(` (${hosts.length})`));
     manual.disabled = true;
     title.append(action(ctx, 'Refresh settings', 'refresh', () => reader.load()));
     actionArea.append(manual);
