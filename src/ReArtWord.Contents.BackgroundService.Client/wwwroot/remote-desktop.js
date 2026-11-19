@@ -251,7 +251,7 @@ export async function desktopView(root, ctx)
     viewport.setAttribute('aria-label', ctx.t('Remote desktop. Click to send keyboard input.', 'リモートデスクトップ。クリックしてキーボード操作を開始します。'));
     const overlay = document.createElement('dl');
     overlay.className = 'desktop-stats';
-    overlay.hidden = false;
+    overlay.hidden = true;
     overlay.setAttribute('aria-label', ctx.t('Stream statistics', '配信の統計'));
     const metrics = {}, metricLabels = {};
     for (const [key, label] of [['speed', ctx.t('Receive', '受信')], ['fps', ctx.t('Display FPS', '表示FPS')], ['delivery', ctx.t('Send → receive', '送信から受信')], ['delay', ctx.t('Receive → display', '受信から表示')], ['bitrate', ctx.t('Target bitrate', '設定ビットレート')], ['codec', ctx.t('Codec', 'コーデック')]])
@@ -281,7 +281,7 @@ export async function desktopView(root, ctx)
     const codecNote = document.createElement('p');
     const settingsNotice = document.createElement('p');
     settingsNotice.className = 'small muted';
-    settingsNotice.textContent = ctx.t('Disconnect to change connection settings.', '接続設定を変更するときは、いったん切断してください。');
+    settingsNotice.textContent = ctx.t('Disconnect to change connection settings.', '接続を解除すると設定を変更できます。');
     settingsNotice.hidden = true;
     settingsMenu.body.append(settingsNotice);
     settingsMenu.body.append(labeled(ctx.t('Video codec', '映像コーデック'), codec), labeled(ctx.t('Video decoder', '映像デコーダー'), acceleration), fps.wrapper, bitrateMode, bitrate.wrapper, audioBuffer.wrapper);
@@ -426,7 +426,7 @@ export async function desktopView(root, ctx)
         if (compact !== compactControls)
         {
             compactControls = compact;
-            controls.open = !compact;
+            controls.open = root.dataset.state !== connectedState && !compact;
         }
     }, { signal: ctx.signal });
     controls.append(controlsLabel, toolbar);
@@ -516,6 +516,10 @@ export async function desktopView(root, ctx)
     /** 現在の接続状態を表示へ反映します。 */
     function connectionState(label, state = 'idle')
     {
+        if (state !== root.dataset.state)
+        {
+            controls.open = state !== connectedState && !compactControls;
+        }
         connection.textContent = label;
         connection.dataset.state = state;
         root.dataset.state = state;
@@ -1574,7 +1578,7 @@ export async function desktopView(root, ctx)
         const elevated = (0) < (encoders.length) && encoders.every(value => value.administratorInput);
         permission.className = elevated ? 'desktop-permission' : 'desktop-permission warn';
         permission.textContent = elevated ? ctx.t('Administrator input', '管理者権限で操作')
-            : ctx.t('Elevated apps require an administrator Core.', '昇格したアプリを操作するには、Core を管理者権限で起動してください。');
+            : ctx.t('Standard input. Run Core as administrator to control elevated apps.', '通常の権限で操作中です。昇格したアプリの操作には、Core の管理者権限が必要です。');
         if (appliedCodecSettings)
         {
             status.textContent += `\nGOP ≤ ${encoders[0]?.effectiveKeyFrameInterval ?? '—'} · B ≤ ${appliedCodecSettings.maximumBFrames ?? '—'}` + (appliedCodecSettings.quality == null ? '' : ` · CRF/CQ ${appliedCodecSettings.quality}`);
@@ -1990,7 +1994,14 @@ export async function desktopView(root, ctx)
     reconnectButton.title = ctx.t('Automatically reconnect after communication failures. The default is three attempts: immediately, then 3 seconds after failure, then 10 seconds after failure. Success resets the attempts. Manual disconnection stops retries.', '通信切断時に自動再接続します。既定は即時、失敗後3秒、次の失敗後10秒の3回です。接続成功で試行回数をリセットし、手動切断で中止します。');
     const reload = ctx.button(ctx.t('Refresh hosts', 'ホスト一覧を更新'), refreshAsync);
     const fullscreen = ctx.button(ctx.t('Fullscreen', '全画面表示'), () => document.fullscreenElement ? document.exitFullscreen() : enterFullscreenAsync(root));
-    const videoFullscreen = ctx.button(ctx.t('Video fullscreen', '映像のみ全画面'), () => views.filter(Boolean).length === 1 ? enterFullscreenAsync(viewport) : undefined);
+    const videoFullscreen = ctx.button(ctx.t('Video fullscreen', '映像のみ全画面'), () =>
+    {
+        if (views.filter(Boolean).length === 1)
+        {
+            controls.open = false;
+            return enterFullscreenAsync(viewport);
+        }
+    });
     const follow = ctx.button(ctx.t('Follow pointer', 'マウス追従'), () =>
     {
         followPointer = !followPointer;
@@ -2260,7 +2271,7 @@ export async function desktopView(root, ctx)
     follow.setAttribute('aria-pressed', 'true');
     start.className = 'primary desktop-connect';
     start.append(ctx.icon('play'));
-    action(stop, ctx.t('Disconnect', '接続解除'), 'stop', ctx.t('Disconnect', '接続解除'));
+    action(stop, ctx.t('Disconnect', '接続解除'), 'close', ctx.t('Disconnect', '接続解除'));
     action(reload, ctx.t('Refresh hosts', 'ホスト一覧を更新'), 'refresh');
     updateSound();
     action(fullscreen, ctx.t('Fullscreen', '全画面表示'), 'fullscreen');
@@ -2275,7 +2286,10 @@ export async function desktopView(root, ctx)
     }
     targets.append(connectedTarget, labeled(ctx.t('Transmission preset', '伝送プリセット'), transmissionPreset), labeled(ctx.t('Host', '接続先'), host), start, stop, connection);
     toolbar.append(sound, fullscreen, videoFullscreen, cursorSync, clipboardSync, sizing, follow);
-    toolbar.append(screens, keyboardSeparator, reconnectButton, viewOnlyButton, keyboardButton, displaySeparator, keybar, keySeparator, reload);
+    const displayOptions = document.createElement('div');
+    displayOptions.className = 'desktop-display-controls';
+    displayOptions.append(screens, keyboardSeparator, reconnectButton, viewOnlyButton);
+    toolbar.append(displayOptions, keyboardButton, displaySeparator, keybar, keySeparator, reload);
     cluster.onchange = hosts;
     rail.append(settingsMenu.element);
     if (codecMenu)
@@ -2285,7 +2299,7 @@ export async function desktopView(root, ctx)
     rail.append(statistics, detailsMenu.element);
     document.addEventListener('pointerdown', event =>
     {
-        if (compactControls && controls.open && root.dataset.state === connectedState && !controls.contains(event.target))
+        if (controls.open && root.dataset.state === connectedState && !controls.contains(event.target))
         {
             controls.open = false;
         }
@@ -2315,7 +2329,7 @@ export async function desktopView(root, ctx)
             }
             return;
         }
-        if (event.key === expectedEscape && compactControls && controls.open && root.dataset.state === connectedState)
+        if (event.key === expectedEscape && controls.open && root.dataset.state === connectedState)
         {
             event.preventDefault();
             event.stopPropagation();

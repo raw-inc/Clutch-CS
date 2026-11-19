@@ -33,8 +33,11 @@
     font-variant-numeric: tabular-nums;
     word-break: auto-phrase;
     line-height: 1.6;
-    font-size: 13px;
     text-wrap: pretty;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    font-size: 13px;
 }
 
 .scope-status.warn {
@@ -164,6 +167,7 @@
     padding: 2px 0 12px 20px;
     font-size: 11px;
     color: var(--muted);
+    padding-inline-start: 24px;
 }
 
 .scope-interfaces[hidden] {
@@ -226,7 +230,7 @@
 }
 
 .scope-packets th:nth-child(3) {
-    width: 76px;
+    width: 7rem;
 }
 
 .scope-packets th:nth-child(4),
@@ -313,12 +317,12 @@
 
 .scope-filters {
     display: flex;
-    align-items: center;
     flex-wrap: wrap;
     gap: 8px;
     padding: 12px;
     border-radius: var(--radius-control);
     background: var(--card);
+    align-items: end;
 }
 
 .scope-sidebar > .scope-toolbar {
@@ -334,6 +338,7 @@
 
 .scope-filters .scope-search {
     min-width: min(100%, 12rem);
+    width: 100%;
 }
 
 .scope-filters label {
@@ -341,10 +346,6 @@
     flex: 1;
     font-size: 13px;
     color: var(--muted);
-}
-
-.scope-filters label input {
-    width: 100%;
 }
 
 .scope-filters select,
@@ -360,14 +361,6 @@
 .scope-packets :is(th,td):is(:first-child,:nth-child(7)) {
     text-align: right;
     font-variant-numeric: tabular-nums;
-}
-
-.scope-host-heading::before {
-    content: "▸";
-}
-
-.scope-host[open] > .scope-host-heading::before {
-    content: "▾";
 }
 
 @media (max-width: 680px) {
@@ -396,10 +389,6 @@
         display: flex;
         align-items: center;
         gap: 5px;
-    }
-
-    .scope-column-choice input {
-        width: auto;
     }
 
     .signal-scope:not(.all-columns) .scope-packets {
@@ -433,12 +422,8 @@
 
     .scope-filters .scope-column-choice {
         grid-column: 1 / -1;
+        min-height: 40px;
         white-space: nowrap;
-    }
-
-    .scope-filters .scope-column-choice input {
-        width: 16px;
-        flex: none;
     }
 
     .signal-scope:not(.all-columns) .scope-packets,
@@ -528,4 +513,85 @@
 
 .scope-sidebar .scope-hosts {
     margin-block: 8px;
+}
+
+.scope-filters > label {
+    margin: 0;
+}
+
+.scope-filters :is(.scope-search, select, button) {
+    min-height: 40px;
+}
+
+.scope-filters > button[aria-pressed] {
+    border-color: var(--control);
+}
+
+.scope-filters > button[aria-pressed="true"] {
+    color: var(--accent);
+    border-color: var(--accent);
+    box-shadow: inset 0 -2px var(--accent);
+}
+
+.scope-filters select {
+    font-size: 13px;
+    min-width: 0;
+}
+
+.scope-status > span {
+    white-space: nowrap;
+}
+
+.scope-hosts .scope-host-heading {
+    min-height: 44px;
+    padding: 6px 28px 6px 0;
+    font-size: 13px;
+}
+
+.scope-host-heading label,
+.scope-interfaces label {
+    margin: 0;
+}
+
+.scope-sidebar > details summary,
+.scope-sidebar .scope-sources h2 {
+    font-size: 13px;
+}
+
+.scope-detail-empty {
+    display: none;
+    min-height: 40px;
+    margin-block: 8px 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.scope-details[data-empty="true"] .scope-detail-empty {
+    display: block;
+}
+
+.scope-details[data-empty="true"] pre {
+    display: none;
+}
+
+@media (max-width: 680px) {
+    .signal-scope:not(.all-columns) .scope-packets tr {
+        grid-template-columns: 5.5rem 5.4rem minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .scope-filters {
+        display: flex;
+        align-items: center;
+        justify-content: start;
+    }
+
+    .scope-filters > label:first-child {
+        flex-basis: 100%;
+    }
+
+    .scope-filters > :is(select, button) {
+        flex: 0 1 auto;
+    }
 }

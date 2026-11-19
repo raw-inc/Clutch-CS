@@ -193,6 +193,19 @@ async function mountAsync(page, experimental, supported = true)
         disconnect: () => remote.close({ code: 1011, reason: 'Desktop.UpstreamDisconnected' }) };
 }
 
+/** 展開した表示・入力欄から、現在の操作を選びます。
+ * @returns 押下する操作です。
+ */
+async function desktopControlAsync(page, name)
+{
+    const controls = page.locator('.desktop-deck > details');
+    if (!await controls.evaluate(element => element.open))
+    {
+        await controls.locator('summary').click();
+    }
+    return page.getByRole('button', { name, exact: true });
+}
+
 for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' }], ['Firefox', firefox, {}]])
 {
     test(`${name}: native focus loss before blur neither starts clipboard reads nor shows late warnings`, { timeout: 30000 }, async context =>
@@ -248,11 +261,11 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         const { messages, notify } = await mountAsync(page, false);
-        const button = page.getByRole('button', { name: 'Clipboard synchronization', exact: true });
+        const button = page.locator('button[aria-label="Clipboard synchronization"]');
         assert.equal(await button.getAttribute('aria-pressed'), 'false');
         assert.equal(await page.getByRole('button', { name: 'Cursor synchronization', exact: true }).evaluate(element => element.nextElementSibling.getAttribute('aria-label')), 'Clipboard synchronization');
         assert.equal(messages.some(message => message.kind === 15 || message.kind === 16), false);
-        await button.click();
+        await (await desktopControlAsync(page, 'Clipboard synchronization')).click();
         await untilAsync(() => messages.some(message => message.kind === 16));
         const initial = messages.findLast(message => message.kind === 16);
         assert.equal(initial.text, 'initial client');
@@ -312,7 +325,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         await untilAsync(() => messages.slice(start).some(message => message.kind === 4 && message.values[4] === 65 && message.values[5] === 1));
         const keys = messages.slice(start).filter(message => message.kind === 4 && message.values[5] === 1).map(message => message.values[4]);
         assert((0) <= (keys.indexOf(86)) && keys.indexOf(86) < keys.indexOf(65));
-        await page.getByRole('button', { name: 'View-only mode', exact: true }).click();
+        await (await desktopControlAsync(page, 'View-only mode')).click();
         assert(await button.isDisabled());
         await page.evaluate(() => window.desktop.dispose());
         assert.deepEqual(errors, []);
@@ -367,7 +380,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         context.after(() => browser.close());
         const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
         const { messages, notify } = await mountAsync(page, false);
-        const button = page.getByRole('button', { name: 'Clipboard synchronization', exact: true });
+        const button = page.locator('button[aria-label="Clipboard synchronization"]');
         assert.equal(await button.getAttribute('aria-pressed'), 'true');
         assert(messages.some(message => message.kind === 15 && message.values[1] === 1));
         assert.equal(messages.some(message => message.kind === 16), false);
@@ -380,10 +393,10 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         notify(1, initial.values[1], 1);
         notify(0, 0, 2, 'host copy');
         await page.waitForFunction(() => window.clipboardValue === 'host copy');
-        await page.getByRole('button', { name: 'View-only mode', exact: true }).click();
+        await (await desktopControlAsync(page, 'View-only mode')).click();
         assert(await button.isDisabled());
-        await page.getByRole('button', { name: 'View-only mode', exact: true }).click();
-        await button.click();
+        await (await desktopControlAsync(page, 'View-only mode')).click();
+        await (await desktopControlAsync(page, 'Clipboard synchronization')).click();
         assert.equal(await button.getAttribute('aria-pressed'), 'false');
         await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
         const beforeReconnect = messages.length;
@@ -394,7 +407,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         await page.evaluate(() => window.desktop.dispose());
         const reopened = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
         await mountAsync(reopened, false);
-        assert.equal(await reopened.getByRole('button', { name: 'Clipboard synchronization', exact: true }).getAttribute('aria-pressed'), 'true');
+        assert.equal(await reopened.locator('button[aria-label="Clipboard synchronization"]').getAttribute('aria-pressed'), 'true');
         await reopened.evaluate(() => window.desktop.dispose());
     });
 
@@ -451,13 +464,12 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         const viewport = page.locator('.desktop-viewport');
         await viewport.focus();
         await page.waitForFunction(() => typeof window.finishRead === 'function');
-        const toggle = page.getByRole('button', { name: 'View-only mode', exact: true });
-        await toggle.click();
+        await (await desktopControlAsync(page, 'View-only mode')).click();
         await untilAsync(() => messages.some(message => message.kind === 15 && message.values[1] === 0));
         await page.evaluate(() => window.finishRead('unapproved transfer'));
         notify(0, 0, 1, 'view-only host');
         await viewport.focus();
-        await toggle.click();
+        await (await desktopControlAsync(page, 'View-only mode')).click();
         await untilAsync(() => messages.filter(message => message.kind === 15 && message.values[1] === 1).length === 2);
         assert.equal(await page.evaluate(() => window.clipboardValue), 'initial client');
         assert.equal(messages.some(message => message.kind === 16), false);
@@ -504,7 +516,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
             }
             else
             {
-                assert.ok(await page.getByRole('button', { name: 'Clipboard synchronization', exact: true }).isDisabled());
+                assert.ok(await page.locator('button[aria-label="Clipboard synchronization"]').isDisabled());
                 await page.evaluate(() =>
                 {
                     navigator.clipboard.readText = () =>
@@ -531,7 +543,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         {
             const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
             const { messages } = await mountAsync(page, experimental, false);
-            const button = page.getByRole('button', { name: 'Clipboard synchronization', exact: true });
+            const button = page.locator('button[aria-label="Clipboard synchronization"]');
             assert.equal(await button.count(), 1);
             assert(await button.isDisabled());
             assert.equal(messages.some(message => message.kind === 15 || message.kind === 16), false);

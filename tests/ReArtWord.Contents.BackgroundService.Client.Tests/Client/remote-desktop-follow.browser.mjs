@@ -138,10 +138,10 @@ async function mountAsync(page, annotations)
     });
     await page.getByLabel('Host', { exact: true }).selectOption('remote');
     await page.getByLabel('Transmission preset', { exact: true }).selectOption('lan');
-    await page.getByRole('button', { name: 'View-only mode', exact: true }).click();
+    await (await desktopControlAsync(page, 'View-only mode')).click();
     await page.getByRole('button', { name: 'Connect', exact: true }).click();
     await page.waitForFunction(() => document.querySelector('.desktop-connection')?.textContent === 'Connected');
-    await page.getByRole('button', { name: 'Dot by dot (1:1)', exact: true }).click();
+    await (await desktopControlAsync(page, 'Dot by dot (1:1)')).click();
     const grouped = await page.getByRole('group', { name: 'Displays', exact: true }).evaluate(displays => ({
         separator: displays.nextElementSibling?.className,
         next: displays.nextElementSibling?.nextElementSibling?.getAttribute('aria-label'),
@@ -197,6 +197,19 @@ async function followedAsync(page, x)
 }
 
 // Firefoxの全画面切替中はブラウザーがツールバーへの入力を受け取るため、試験では通知と画面切替の演出を無効にします。
+/** 展開した表示・入力欄から、現在の操作を選びます。
+ * @returns 押下する操作です。
+ */
+async function desktopControlAsync(page, name)
+{
+    const controls = page.locator('.desktop-deck > details');
+    if (!await controls.evaluate(element => element.open))
+    {
+        await controls.locator('summary').click();
+    }
+    return page.getByRole('button', { name, exact: true });
+}
+
 for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' }], ['Firefox', firefox, { firefoxUserPrefs: {
     'full-screen-api.warning.timeout': 0,
     'full-screen-api.transition-duration.enter': '0 0',
@@ -238,13 +251,13 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
                     assert.deepEqual(sent.findLast(packet => packet[0] === 13).slice(0, 4), expected);
                 }
             }
-            await page.getByRole('button', { name: 'Follow pointer', exact: true }).click();
+            await (await desktopControlAsync(page, 'Follow pointer')).click();
             const stopped = await geometryAsync(page);
             await page.mouse.move(original.left + 30, original.top + 80);
             await renderedAsync(page);
             assert.equal((await geometryAsync(page)).scrollLeft, stopped.scrollLeft);
-            await page.getByRole('button', { name: 'Follow pointer', exact: true }).click();
-            await page.getByRole('button', { name: 'Fullscreen', exact: true }).click();
+            await (await desktopControlAsync(page, 'Follow pointer')).click();
+            await (await desktopControlAsync(page, 'Fullscreen')).click();
             await page.waitForFunction(() => document.fullscreenElement?.id === 'desktop');
             const fullscreen = await geometryAsync(page);
             await page.mouse.move(fullscreen.left + fullscreen.width * 0.5, fullscreen.top + fullscreen.height * 0.5);
@@ -252,7 +265,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
             const pinned = await geometryAsync(page);
             assert.ok(Math.abs(pinned.headerTop - pinned.top) <= 1);
             assert.ok(Math.abs(pinned.labelLeft - pinned.left - 8) <= 1);
-            await page.getByRole('button', { name: 'All screens side by side', exact: true }).press('Enter');
+            await (await desktopControlAsync(page, 'All screens side by side')).press('Enter');
             try
             {
                 await page.waitForFunction(() => document.querySelectorAll('.desktop-monitor').length === 2);
@@ -271,7 +284,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
             assert.ok(0 < followed.scrollLeft);
             assert.ok(Math.abs(followed.headerTop - followed.top) <= 1);
             assert.ok(Math.abs(followed.labelLeft - followed.left - 8) <= 1);
-            await page.getByRole('button', { name: 'Dot by dot (1:1)', exact: true }).click();
+            await (await desktopControlAsync(page, 'Dot by dot (1:1)')).click();
             await page.waitForFunction(() =>
             {
                 const viewport = document.querySelector('.desktop-viewport');

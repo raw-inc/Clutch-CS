@@ -804,7 +804,7 @@ test('viewers publish annotations without input and ordinary remote desktops rec
     });
 });
 
-test('view-only mode is generally available and sits immediately left of the software keyboard', async t =>
+test('view-only mode is generally available and sits immediately left of the software keyboard', { skip: 'Display and connection mode controls now share a toolbar group.' }, async t =>
 {
     for (const query of ['', '?experimental=false', '?experimental=true'])
     {
@@ -821,7 +821,7 @@ test('view-only mode is generally available and sits immediately left of the sof
     }
 });
 
-test('automatic reconnect starts enabled after the display separator and can be disabled', async t =>
+test('automatic reconnect starts enabled after the display separator and can be disabled', { skip: 'Display and connection mode controls now share a toolbar group.' }, async t =>
 {
     for (const experimental of [false, true])
     {
@@ -836,6 +836,37 @@ test('automatic reconnect starts enabled after the display separator and can be 
             assert.equal(all.some(item => item.getAttribute('aria-label') === 'Reconnect delays (ms)'), experimental);
             await f.click('Automatic reconnect');
             assert.equal(toolbar.children[displays + 2].getAttribute('aria-pressed'), 'false');
+            f.socket.onclose({ code: 1006, reason: '' });
+            assert.equal(f.sockets.length, 1);
+            assert.match(f.notices.at(-1), /without a close notification/u);
+            assert.doesNotMatch(f.notices.at(-1), /interactive user/u);
+        });
+    }
+});
+
+test('display modes and automatic reconnect work in the grouped toolbar', async t =>
+{
+    for (const query of ['', '?experimental=false', '?experimental=true'])
+    {
+        await t.test(query || 'normal', async t =>
+        {
+            const f = await fixtureAsync(t, null, { query }), all = descendants(f.root);
+            const toolbar = all.find(item => item.className === 'desktop-toolbar');
+            const modes = toolbar.children.find(item => item.className === 'desktop-display-controls');
+            const reconnect = modes.children.find(item => item.getAttribute('aria-label') === 'Automatic reconnect');
+            const viewOnly = modes.children.find(item => item.getAttribute('aria-label') === 'View-only mode');
+            const keyboard = toolbar.children.find(item => item.getAttribute('aria-label') === 'Show software keyboard');
+            assert.ok(reconnect && viewOnly && keyboard);
+            assert.equal(viewOnly.getAttribute('aria-pressed'), 'false');
+            assert.equal(reconnect.getAttribute('aria-pressed'), 'true');
+            assert.equal(all.some(item => item.getAttribute('aria-label') === 'Reconnect delays (ms)'), query === '?experimental=true');
+
+            await f.click('View-only mode');
+            assert.equal(viewOnly.getAttribute('aria-pressed'), 'true');
+            assert.equal(keyboard.disabled, true);
+
+            await f.click('Automatic reconnect');
+            assert.equal(reconnect.getAttribute('aria-pressed'), 'false');
             f.socket.onclose({ code: 1006, reason: '' });
             assert.equal(f.sockets.length, 1);
             assert.match(f.notices.at(-1), /without a close notification/u);
@@ -2707,10 +2738,49 @@ test('desktop starts at 30 fps and 4096 kbps without changing the supported limi
     assert.equal(f.initialCodec, 'vp9');
 });
 
-test('statistics overlay reports displayed frames and can be hidden without reconnecting', async t =>
+test('statistics overlay reports displayed frames and can be hidden without reconnecting', { skip: 'The statistics overlay is now closed by default.' }, async t =>
 {
     const f = await fixtureAsync(t), overlay = descendants(f.root).find(item => item.className === 'desktop-stats');
     const button = descendants(f.root).find(item => item.tag === 'button' && item.getAttribute('aria-label') === 'Statistics overlay');
+    assert.equal(overlay.hidden, false);
+    assert.equal(button.getAttribute('aria-pressed'), 'true');
+    for (const timestamp of [1000, 2000])
+    {
+        f.socket.onmessage(frame(2, 0, keyPicture, true, timestamp));
+        f.decoders[0].callbacks.output({ timestamp,
+
+            /** 対象を閉じ、関連する状態を整理します。 */
+            close()
+            {} });
+        f.callbacks.shift()();
+    }
+    f.advance(1000);
+    assert.equal(overlay.children[1].children[1].textContent, '2');
+    assert.equal(overlay.children[2].children[0].textContent, 'Send → receive');
+    assert.equal(overlay.children[2].children[1].textContent, '—');
+    assert.equal(overlay.children[3].children[0].textContent, 'Receive → display');
+    assert.equal(f.socket.sent.some(input => input[0] === 14), false);
+    assert.equal(overlay.children[4].children[1].textContent, '4096 kbps');
+    assert.equal(overlay.children[5].children[1].textContent, 'VP9');
+    assert.ok((0) < (parseFloat(overlay.children[0].children[1].textContent)));
+    assert.equal(overlay.parentElement.className, 'desktop-viewport');
+    await f.click('Statistics overlay');
+    assert.equal(overlay.hidden, true);
+    assert.equal(button.getAttribute('aria-pressed'), 'false');
+    assert.equal(f.decoders.length, 1);
+    await f.click('Statistics overlay');
+    assert.equal(overlay.hidden, false);
+    assert.equal(button.getAttribute('aria-pressed'), 'true');
+    assert.equal(f.decoders.length, 1);
+});
+
+test('statistics overlay starts closed, reports frames when opened and can be hidden without reconnecting', async t =>
+{
+    const f = await fixtureAsync(t), overlay = descendants(f.root).find(item => item.className === 'desktop-stats');
+    const button = descendants(f.root).find(item => item.tag === 'button' && item.getAttribute('aria-label') === 'Statistics overlay');
+    assert.equal(overlay.hidden, true);
+    assert.equal(button.getAttribute('aria-pressed'), 'false');
+    await f.click('Statistics overlay');
     assert.equal(overlay.hidden, false);
     assert.equal(button.getAttribute('aria-pressed'), 'true');
     for (const timestamp of [1000, 2000])
@@ -3171,7 +3241,7 @@ test('automatic reconnect preserves an explicit off choice on a host with a mous
     assert.equal(f.cursorSync.getAttribute('aria-pressed'), 'false');
 });
 
-test('icon controls and display tabs replace the old sidebar screen menu', async t =>
+test('icon controls and display tabs replace the old sidebar screen menu', { skip: 'Display and connection mode controls now share a toolbar group.' }, async t =>
 {
     const f = await fixtureAsync(t), all = descendants(f.root), toolbar = all.find(e => e.className === 'desktop-toolbar'), rail = all.find(e => e.className === 'desktop-rail');
     for (const name of ['Cursor synchronization', 'Dot by dot (1:1)', 'Follow pointer', 'Mute audio'])
@@ -3192,6 +3262,32 @@ test('icon controls and display tabs replace the old sidebar screen menu', async
     assert.equal(toolbar.children[toolbar.children.indexOf(keyboard) - 2].getAttribute('aria-label'), 'Automatic reconnect');
     assert.equal(toolbar.children[toolbar.children.indexOf(keyboard) - 3].className, 'desktop-key-separator');
     assert.equal(toolbar.children[toolbar.children.indexOf(keyboard) - 4], tabs);
+    await verifyScreenTabsAsync(f, tabs);
+});
+
+test('display tabs stay with the connection modes and switch screens', async t =>
+{
+    const f = await fixtureAsync(t), all = descendants(f.root);
+    const toolbar = all.find(e => e.className === 'desktop-toolbar'), rail = all.find(e => e.className === 'desktop-rail');
+    for (const name of ['Cursor synchronization', 'Dot by dot (1:1)', 'Follow pointer', 'Mute audio'])
+    {
+        const button = toolbar.children.find(e => e.getAttribute('aria-label') === name);
+        assert.equal(button.tag, 'button');
+        assert.equal(button.textContent, '');
+        assert.ok(button.title);
+    }
+    assert.equal(descendants(rail).some(e => e.getAttribute('aria-label') === 'Displays & scale'), false);
+    const tabs = all.find(e => e.className === 'desktop-screen-tabs');
+    assert.equal(tabs.parentElement.className, 'desktop-display-controls');
+    assert.equal(tabs.parentElement.parentElement, toolbar);
+    await verifyScreenTabsAsync(f, tabs);
+});
+
+/** 表示先の切替と切断後の項目消去を確認します。
+ * @returns 一連の操作と表示の検証です。
+ */
+async function verifyScreenTabsAsync(f, tabs)
+{
     const first = tabs.children.find(e => e.getAttribute('aria-label') === 'Display 1: Screen A');
     assert.equal(first.getAttribute('aria-pressed'), 'true');
     assert.equal(first.children[0].className, 'desktop-screen-symbol');
@@ -3200,7 +3296,7 @@ test('icon controls and display tabs replace the old sidebar screen menu', async
     assert.equal(tabs.children.find(e => e.getAttribute('aria-label') === 'Display 2: Screen B').getAttribute('aria-pressed'), 'true');
     await f.click('Disconnect');
     assert.equal(tabs.children.length, 0);
-});
+}
 
 test('software keyboard focuses synchronously, commits IME once and sends Unicode scalars', async t =>
 {

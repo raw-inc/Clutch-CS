@@ -15,9 +15,10 @@ export function createTerminalLayout(root, host, fit, signal)
         {
             return;
         }
-        const footer = document.querySelector('.app-statusbar')?.getBoundingClientRect().height ?? 26;
+        const statusbar = document.querySelector('.app-statusbar'), fixed = 'fixed';
+        const footer = statusbar && getComputedStyle(statusbar).position === fixed ? statusbar.getBoundingClientRect().height : 0;
         const viewport = globalThis.visualViewport?.height ?? innerHeight;
-        const height = document.fullscreenElement === root ? Math.floor(viewport) : Math.max(240, Math.floor(viewport - root.getBoundingClientRect().top - footer - 12));
+        const height = document.fullscreenElement === root ? Math.floor(viewport) : Math.max(240, Math.floor(viewport - root.getBoundingClientRect().top - window.scrollY - footer - 12));
         if (root.style.height !== height + 'px')
         {
             root.style.height = height + 'px';

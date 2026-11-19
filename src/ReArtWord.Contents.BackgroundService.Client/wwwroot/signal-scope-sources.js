@@ -6,7 +6,7 @@ export function scopeSources(container, ctx, send, changed)
     const hosts = new Map();
     const panel = document.createElement('section'), summary = document.createElement('h2'), body = document.createElement('div');
     panel.className = 'scope-sources';
-    summary.textContent = ctx.t('Hosts & network interfaces', 'Host・ネットワークインターフェース');
+    summary.textContent = ctx.t('Hosts & network interfaces', 'ホストと取得元');
     body.className = 'scope-hosts';
     panel.append(summary, body);
     container.append(panel);

@@ -236,6 +236,11 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         // Firefoxでは個別に取得した座標と高さの和に端数が残るため、描画ピクセルで上下の境界を比較します。
         assert(Math.round(narrowSidebar.y + narrowSidebar.height) <= Math.round(narrowResults.y));
         assert(narrowResults.x + narrowResults.width <= 390);
+        const columnToggle = page.getByRole('checkbox', { name: 'All columns', exact: true });
+        const toggleBox = await columnToggle.boundingBox();
+        assert(toggleBox.height < 24 && Math.abs(toggleBox.width - toggleBox.height) <= 1);
+        await page.locator('.scope-column-choice').click();
+        assert.equal(await columnToggle.isChecked(), true);
         await page.evaluate(async () =>
         {
             window.scopeLifetime.abort();

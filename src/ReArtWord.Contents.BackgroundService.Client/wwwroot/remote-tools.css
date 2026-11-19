@@ -371,10 +371,11 @@
 }
 
 .terminal-keys > div {
-    display: grid;
     grid-template-columns: repeat(8, minmax(44px, 1fr));
     gap: 4px;
-    min-width: 380px;
+    display: flex;
+    flex-wrap: wrap;
+    min-width: 0;
 }
 
 .terminal-keys > div + div {
@@ -618,10 +619,7 @@
 
 .file-pane-footer {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
     padding: 10px 12px;
     border-top: 1px solid var(--line);
     font-size: 11px;
@@ -630,6 +628,9 @@
     min-height: 52px;
     box-sizing: border-box;
     margin-top: auto;
+    flex-wrap: wrap;
+    justify-content: start;
+    gap: 8px;
 }
 
 .file-pane-footer button {
@@ -884,6 +885,8 @@
 
 .terminal-session-actions .terminal-shell {
     max-width: min(65vw, 18rem);
+    min-width: min(12rem, 58vw);
+    padding-inline-end: 8px;
 }
 
 .license-filter {
@@ -896,8 +899,16 @@
     margin: 0;
 }
 
-.license-filter input {
-    grid-column: 1;
+.license-filter > .search-field {
+    grid-column: 1 / -1;
+}
+
+.license-filter > label:not(:first-child) {
+    margin-block-start: 12px;
+}
+
+.license-back {
+    justify-self: start;
 }
 
 .license-filter output {
@@ -989,6 +1000,8 @@
 }
 
 .license-cards summary {
+    min-height: 36px;
+    padding-block: 8px;
     overflow-wrap: anywhere;
 }
 
@@ -1122,9 +1135,10 @@
     grid-column: 5;
 }
 
-.license-cards > section > .small {
+.license-cards > section > p {
     grid-column: 1 / -1;
     margin: 0;
+    font-size: 13px;
 }
 
 .license-cards details {
@@ -1204,7 +1218,7 @@
 .license-columns,
 .license-cards > section {
     display: grid;
-    grid-template-columns: minmax(12rem, 2fr) minmax(7rem, 0.8fr) minmax(6rem, 1fr) minmax(10rem, 2fr) minmax(3rem, auto);
+    grid-template-columns: minmax(0, 2fr) minmax(6rem, 0.75fr) minmax(6rem, 1fr) minmax(0, 2fr) 5.5rem;
     gap: 6px 16px;
     align-items: baseline;
     padding: 10px 12px;
@@ -1223,6 +1237,24 @@
     grid-row: 1;
     font-size: 14px;
     overflow-wrap: anywhere;
+}
+
+@media (min-width: 761px) {
+    .license-cards > section > h2 {
+        grid-row: 1;
+    }
+
+    .license-metadata > span:nth-child(1) {
+        grid-column: 2;
+    }
+
+    .license-metadata > span:nth-child(2) {
+        grid-column: 3;
+    }
+
+    .license-metadata > span:nth-child(3) {
+        grid-column: 4;
+    }
 }
 
 .license-notices {
@@ -1273,4 +1305,139 @@
 .file-action-dialog [role="alert"] {
     max-width: none;
     word-break: auto-phrase;
+}
+
+.terminal-sources {
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--control) transparent;
+}
+
+.terminal-sources .terminal-sidebar {
+    overflow: visible;
+}
+
+.terminal-sidebar > .toolbar:first-child {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--panel);
+    padding-block: 4px;
+}
+
+.terminal-session-actions .terminal-shell-field {
+    flex: 0 1 auto;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.terminal-launch-hint {
+    flex-basis: 100%;
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.terminal-keys button,
+.terminal-keys .terminal-navigation-key {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.terminal-keys .terminal-navigation-key:disabled {
+    color: var(--disabled-ink);
+}
+
+.terminal-sidebar .terminal-session > button {
+    min-height: 34px;
+    margin: 0;
+}
+
+.terminal-sidebar .terminal-session > .danger {
+    margin-inline-start: auto;
+}
+
+.terminal-panel > .terminal-state {
+    margin-block: 6px;
+}
+
+.file-pane .file-tree {
+    height: auto;
+    min-height: 7rem;
+    max-height: min(34dvh, 24rem);
+}
+
+.file-pane-footer > button:not(.danger) {
+    margin-inline-start: auto;
+}
+
+.file-pane :is(.file-picker-control, .file-picker-control > span:first-child, button.local-folder) {
+    min-height: 40px;
+    font-weight: 600;
+}
+
+.file-transfer-scope,
+.remote-tools .terminal-toolbar {
+    align-items: center;
+    background: var(--panel);
+}
+
+.file-transfer-scope {
+    padding: 10px 14px;
+}
+
+@media (min-width: 651px) {
+    .terminal-sources > summary {
+        display: none;
+    }
+
+    .terminal-sources::details-content {
+        block-size: auto;
+        opacity: 1;
+    }
+}
+
+@media (max-width: 650px) {
+    .terminal-workspace {
+        grid-template-rows: auto auto minmax(0, 1fr);
+    }
+
+    .terminal-sources {
+        max-height: 34dvh;
+        border-block-end: 1px solid var(--line);
+    }
+
+    .terminal-sources > summary {
+        position: sticky;
+        inset-block-start: 0;
+        z-index: 2;
+        font-size: 14px;
+        padding-inline-start: 14px;
+        min-height: 44px;
+        background: var(--panel);
+    }
+
+    .terminal-sidebar > .toolbar:first-child {
+        top: 44px;
+    }
+
+    .terminal-session-actions .terminal-shell-field {
+        flex-basis: 100%;
+    }
+
+    .terminal-session-actions .terminal-shell {
+        max-width: 100%;
+    }
+
+    .terminal-sidebar .terminal-session > button,
+    .file-pane :is(.file-picker-control, .file-picker-control > span:first-child, button.local-folder) {
+        min-height: 44px;
+    }
+}
+
+.terminal-keys > div > button {
+    flex: 1 1 auto;
+    min-width: 36px;
 }

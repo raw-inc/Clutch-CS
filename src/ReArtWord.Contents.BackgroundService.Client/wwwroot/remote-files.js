@@ -171,6 +171,7 @@ export async function filesView(root, ctx)
         const up = ctx.button(ctx.t('Up', '上へ'), () => openAsync(state.parent));
         up.prepend(ctx.icon('up'));
         const refresh = ctx.button(ctx.t('Refresh', '更新'), () => openAsync(state.directory));
+        refresh.prepend(ctx.icon('refresh'));
         toolbar.append(drives, up, refresh);
         footer.append(count);
         section.append(label, location, toolbar, tree, footer);

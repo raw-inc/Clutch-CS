@@ -20,11 +20,16 @@ export function scopeTable(container, ctx, send, report)
     viewport.append(table);
     const panels = document.createElement('div'), description = document.createElement('pre'), hex = document.createElement('pre');
     panels.className = 'scope-details';
+    panels.dataset.empty = 'true';
+    const detailHint = ctx.t('Select a packet to view its contents.', 'パケットを選ぶと内容を表示します。');
     for (const [name, content] of [[ctx.t('Packet details', 'パケット詳細'), description], ['Hex / ASCII', hex]])
     {
         const section = document.createElement('section'), title = document.createElement('h2');
         title.textContent = name;
-        section.append(title, content);
+        const empty = document.createElement('p');
+        empty.className = 'scope-detail-empty';
+        empty.textContent = detailHint;
+        section.append(title, empty, content);
         panels.append(section);
     }
     container.append(viewport, panels);
@@ -134,6 +139,7 @@ export function scopeTable(container, ctx, send, report)
         if (row)
         {
             selected = Number(row.dataset.packet);
+            panels.dataset.empty = 'false';
             anchor = null;
             follow = false;
             send({ type: 'detail', id: selected });

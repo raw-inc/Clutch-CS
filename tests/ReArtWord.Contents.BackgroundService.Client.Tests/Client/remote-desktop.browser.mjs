@@ -75,6 +75,19 @@ async function inputsAsync(sent, count, signal)
 }
 
 // Firefoxの全画面切替中はブラウザーがツールバーへの入力を受け取るため、試験では通知と画面切替の演出を無効にします。
+/** 展開した表示・入力欄から、現在の操作を選びます。
+ * @returns 押下する操作です。
+ */
+async function desktopControlAsync(page, name)
+{
+    const controls = page.locator('.desktop-deck > details');
+    if (!await controls.evaluate(element => element.open))
+    {
+        await controls.locator('summary').click();
+    }
+    return page.getByRole('button', { name, exact: true });
+}
+
 for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' }], ['Firefox', firefox, { firefoxUserPrefs: {
     'full-screen-api.warning.timeout': 0,
     'full-screen-api.transition-duration.enter': '0 0',
@@ -164,10 +177,10 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
             window.desktop = await desktopView(document.querySelector('#desktop'), ctx);
             document.querySelector('.desktop-viewport').addEventListener('keydown', event => window.keyEvents.push({ code: event.code, repeat: event.repeat }));
         });
-        assert.equal(await page.getByRole('button', { name: 'Video fullscreen', exact: true }).isDisabled(), true);
+        assert.equal(await (await desktopControlAsync(page, 'Video fullscreen')).isDisabled(), true);
         assert.equal(await page.getByLabel('Video codec', { exact: true }).inputValue(), 'vp9');
         assert.deepEqual(await page.getByLabel('Video codec', { exact: true }).locator('option').allTextContents(), ['VP9']);
-        await page.getByRole('button', { name: 'Fullscreen', exact: true }).click();
+        await (await desktopControlAsync(page, 'Fullscreen')).click();
         await page.waitForFunction(() => window.lastAction === 'Fullscreen');
         assert.equal(await page.evaluate(() => document.fullscreenElement?.id), 'desktop');
         assert.equal(sent.length, 0);
@@ -177,8 +190,8 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         await page.waitForFunction(() => document.querySelector('button[aria-label="Show software keyboard"]')?.disabled === false);
         assert.equal(sent.findLast(input => input[0] === 6)[2], 1);
         assert.equal(await page.evaluate(() => document.fullscreenElement?.id), 'desktop');
-        assert.equal(await page.getByRole('button', { name: 'Mute audio', exact: true }).getAttribute('data-muted'), 'false');
-        await page.getByRole('button', { name: 'Dot by dot (1:1)', exact: true }).click();
+        assert.equal(await (await desktopControlAsync(page, 'Mute audio')).getAttribute('data-muted'), 'false');
+        await (await desktopControlAsync(page, 'Dot by dot (1:1)')).click();
         const beforeScroll = await page.locator('.desktop-viewport').evaluate(viewport => ({
             nameTop: viewport.querySelector('.desktop-monitor > span').getBoundingClientRect().top,
             canvasTop: viewport.querySelector('canvas').getBoundingClientRect().top,
@@ -194,7 +207,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         }));
         assert.ok(Math.abs(afterScroll.nameTop - beforeScroll.nameTop) <= 2);
         assert.equal(beforeScroll.canvasTop - afterScroll.canvasTop, 300);
-        await page.getByRole('button', { name: 'Dot by dot (1:1)', exact: true }).click();
+        await (await desktopControlAsync(page, 'Dot by dot (1:1)')).click();
         await page.locator('.desktop-viewport').focus();
         let total = 0;
         for (const [key, code] of [['a', 65], ['ArrowLeft', 37], ['Backspace', 8], ['Minus', 0x10c]])
@@ -209,7 +222,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
             total += 6;
         }
         assert.deepEqual(await page.evaluate(() => window.keyEvents.map(event => event.repeat)), Array.from({ length: 4 }, () => [false, true, true, true, true]).flat());
-        await page.getByRole('button', { name: 'Show software keyboard', exact: true }).click();
+        await (await desktopControlAsync(page, 'Show software keyboard')).click();
         await page.keyboard.down('Control');
         for (let repeat = 0; repeat < 4; repeat++)
         {
@@ -219,8 +232,8 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         await page.keyboard.up('Control');
         const modified = await inputsAsync(sent, total + 7, context.signal);
         assert.deepEqual(modified.slice(total).map(value => value.slice(4)), [[0xa2, 1], [37, 1], [37, 1], [37, 1], [37, 1], [37, 0], [0xa2, 0]]);
-        await page.getByRole('button', { name: 'Hide software keyboard', exact: true }).click();
-        assert.equal(await page.getByRole('button', { name: 'Automatic reconnect', exact: true }).getAttribute('aria-pressed'), 'true');
+        await (await desktopControlAsync(page, 'Hide software keyboard')).click();
+        assert.equal(await (await desktopControlAsync(page, 'Automatic reconnect')).getAttribute('aria-pressed'), 'true');
         for (const count of [2, 3])
         {
             const beforeReconnect = sent.length;
@@ -237,7 +250,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         await page.waitForFunction(() => window.lastAction === 'Disconnect');
         assert.equal(connections.length, 3);
         assert.equal(await page.evaluate(() => document.fullscreenElement?.id), 'desktop');
-        await page.getByRole('button', { name: 'Exit fullscreen', exact: true }).click();
+        await (await desktopControlAsync(page, 'Exit fullscreen')).click();
         await page.waitForFunction(() => document.fullscreenElement === null);
         await page.getByRole('button', { name: 'Connect', exact: true }).click();
         await page.waitForFunction(() => document.querySelector('button[aria-label="Show software keyboard"]')?.disabled === false);
@@ -261,6 +274,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
             if (width <= 844)
             {
                 const tools = page.locator('.desktop-deck > details'), toolbar = tools.locator('.desktop-toolbar');
+                assert.equal(await tools.evaluate(element => element.open), false);
                 await tools.locator('summary').click();
                 assert.ok(await toolbar.isVisible());
                 assert.ok(await toolbar.evaluate(element => element.scrollWidth <= element.clientWidth + 1));
@@ -272,7 +286,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
             }
         }
         await page.locator('.desktop-deck > details > summary').click();
-        await page.getByRole('button', { name: 'Video fullscreen', exact: true }).click();
+        await (await desktopControlAsync(page, 'Video fullscreen')).click();
         await page.waitForFunction(() => document.fullscreenElement?.className === 'desktop-viewport');
         await page.evaluate(() => window.desktop.dispose());
         await page.waitForFunction(() => document.fullscreenElement === null);

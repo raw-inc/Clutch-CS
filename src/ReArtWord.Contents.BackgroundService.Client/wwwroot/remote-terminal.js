@@ -14,6 +14,16 @@ export async function terminalView(root, ctx)
     root.className = 'terminal-workspace';
     const sidebar = document.createElement('aside');
     sidebar.className = 'remote-sidebar terminal-sidebar';
+    const sidebarDetails = document.createElement('details'), sidebarSummary = document.createElement('summary');
+    sidebarDetails.className = 'terminal-sources';
+    sidebarDetails.open = true;
+    sidebarSummary.textContent = ctx.t('Peers and shared sessions', 'ピアと共有セッション');
+    sidebarDetails.append(sidebarSummary, sidebar);
+    const narrow = window.matchMedia('(max-width: 650px)');
+    narrow.addEventListener('change', () =>
+    {
+        sidebarDetails.open = !narrow.matches || !session;
+    }, { signal: ctx.signal });
     const peersTree = document.createElement('div');
     const sessions = document.createElement('div');
     const panel = document.createElement('section');
@@ -29,9 +39,9 @@ export async function terminalView(root, ctx)
     const connectionState = document.createElement('span');
     connectionState.className = 'badge terminal-state';
     connectionState.setAttribute('role', 'status');
-    host.dataset.emptyHint = ctx.t('Select a peer and start a user session.', 'ピアを選び、「ユーザー実行」で端末を開きます。');
+    host.dataset.emptyHint = ctx.t('Select a peer and start a user session.', 'ピアを選んで端末を開きます。');
     panel.append(connectionState, note, host);
-    root.append(toolbar, sidebar, panel);
+    root.append(toolbar, sidebarDetails, panel);
     let peer, session, term, fit, stream, generation = 0, owner;
     let disposed = false;
     let peers = [], listTimer, listing, sessionSignature = '', peerSignature = '';
@@ -39,8 +49,12 @@ export async function terminalView(root, ctx)
     shellSelect.className = 'terminal-shell';
     shellSelect.setAttribute('aria-label', ctx.t('New session shell', '新しいセッションのシェル'));
     const shellLabel = document.createElement('label');
-    shellLabel.textContent = 'Shell';
+    shellLabel.className = 'terminal-shell-field';
+    shellLabel.textContent = ctx.t('Shell', 'シェル');
     shellLabel.append(shellSelect);
+    const adminHint = document.createElement('p');
+    adminHint.className = 'terminal-launch-hint';
+    adminHint.hidden = true;
     const shellCatalogs = new Map();
     let shellTarget = '', shells = [], shellLoading = false, shellGeneration = 0;
     let capabilities = null, capabilityTarget = '', capabilityRequest = null, savingTokenPolicy = false;
@@ -269,6 +283,10 @@ export async function terminalView(root, ctx)
             return;
         }
         session = claimed;
+        if (narrow.matches)
+        {
+            sidebarDetails.open = false;
+        }
         term = new window.Terminal({ cursorBlink: true, scrollback: 3000, fontSize: 14, fontFamily: 'Consolas, "Liberation Mono", monospace', minimumContrastRatio: 4.5, theme: terminalTheme() });
         const surface = document.createElement('div');
         surface.className = 'terminal-surface';
@@ -703,6 +721,8 @@ export async function terminalView(root, ctx)
             capabilities?.administratorAvailable ? ctx.t('Start as this user with administrator privileges', 'ユーザー本人の管理者権限で起動') :
                 capabilities?.administratorReason === expectedCoreadministratorrequired ? ctx.t('Core must run as administrator or SYSTEM. Terminal does not request UAC elevation.', 'Coreを管理者またはSYSTEMで起動してください。TerminalからUAC昇格は行いません。') :
                     ctx.t('An elevated token could not be confirmed on this Core.', 'このCoreで昇格トークンを確認できません。');
+        adminHint.hidden = !capabilities || !admin.disabled || unavailable;
+        adminHint.textContent = admin.title;
         shellSelect.disabled = unavailable;
     }
 
@@ -734,7 +754,7 @@ export async function terminalView(root, ctx)
     screenActions.className = 'terminal-screen-actions';
     sessionActions.append(shellLabel, user, admin, leave);
     screenActions.append(copy, paste, ...fullscreen.buttons);
-    toolbar.append(sessionActions, screenActions);
+    toolbar.append(sessionActions, screenActions, adminHint);
     if (tokenPolicy)
     {
         sessionActions.append(tokenPolicy);
@@ -747,8 +767,11 @@ export async function terminalView(root, ctx)
     sessions.append(sessionHeading, empty);
     const sidebarActions = document.createElement('div');
     sidebarActions.className = 'toolbar';
-    sidebarActions.append(refreshSessions, ctx.button(ctx.t('Refresh peers', 'ピア更新'), list));
-    sidebar.append(sidebarActions);
+    refreshSessions.prepend(ctx.icon('refresh'));
+    const refreshPeers = ctx.button(ctx.t('Refresh peers', 'ピア更新'), list);
+    refreshPeers.prepend(ctx.icon('refresh'));
+    sidebarActions.append(refreshSessions, refreshPeers);
+    sidebar.prepend(sidebarActions);
     const menu = document.createElement('div');
     menu.className = 'terminal-context-menu';
     menu.hidden = true;

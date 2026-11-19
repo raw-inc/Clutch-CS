@@ -52,7 +52,7 @@ export async function signalScopeViewAsync(container, ctx)
 
     const emptyPackets = document.createElement('p');
     emptyPackets.className = 'scope-empty';
-    emptyPackets.textContent = ctx.t('Select a source and start capturing packets.', '取得元を選び、「取得開始」を押してください。');
+    emptyPackets.textContent = ctx.t('Select a source and start capturing packets.', '取得元を選んでパケット取得を開始できます。');
     const sources = scopeSources(selection, ctx, send, updateControls);
     const start = ctx.button(ctx.t('Start', '取得開始'), () =>
     {
@@ -68,8 +68,9 @@ export async function signalScopeViewAsync(container, ctx)
     });
     const latest = ctx.button(ctx.t('Follow latest', '最新に追従'), () => table.latest(!table.following));
     const reload = ctx.button(ctx.t('Refresh hosts', 'ホスト一覧を更新'), () => sources.loadAsync());
+    reload.prepend(ctx.icon('refresh'));
     display.setAttribute('aria-label', ctx.t('Endpoint display', '送受信先の表示'));
-    display.append(new Option('IP:Port', 'ip'), new Option('Host:Port', 'host'));
+    display.append(new Option(ctx.t('IP:Port', 'IPアドレス:ポート番号'), 'ip'), new Option(ctx.t('Host:Port', 'ホスト名:ポート番号'), 'host'));
     start.className = 'primary';
     const filters = document.createElement('div');
     filters.className = 'scope-filters';
@@ -86,23 +87,48 @@ export async function signalScopeViewAsync(container, ctx)
     showColumns.onchange = () => container.classList.toggle('all-columns', showColumns.checked);
     columns.append(showColumns, document.createTextNode(ctx.t('All columns', 'すべての列')));
     filters.append(filterLabel, latest, display, columns);
-    toolbar.append(start, stop, clear);
+    clear.prepend(ctx.icon('trash'));
+    filters.append(clear);
+    toolbar.append(start, stop);
     selection.prepend(reload);
     results.append(filters, searchError, status, emptyPackets);
     workspace.append(selection, results);
     selection.prepend(toolbar);
     container.append(workspace);
+
+    /** 統計の項目を作成します。
+     * @returns 表示値を更新するテキストノードです。
+     */
+    function stat(label)
+    {
+        const item = document.createElement('span'), value = document.createTextNode('');
+        item.append(label + ': ', value);
+        status.append(item, ' ');
+        return value;
+    }
+
+    const matched = stat(ctx.t('Matched', '一致'));
+    const received = stat(ctx.t('Observations', '受信'));
+    const merged = stat(ctx.t('Merged', '重複統合'));
+    const rolled = stat(ctx.t('Rolled out', '保持上限除外'));
+    const captureDrops = stat(ctx.t('Capture drops', '取得欠落'));
+    const deliveryDrops = stat(ctx.t('Delivery drops', '配送省略'));
+    const rowsSize = stat(ctx.t('Rows', '一覧'));
+    const contentsSize = stat(ctx.t('Contents', '原本'));
+    stat(ctx.t('Time zone', '時刻')).textContent = ctx.timeZone ?? 'UTC';
     const table = scopeTable(results, ctx, send, (view, following) =>
     {
         latest.setAttribute('aria-pressed', String(following));
         emptyPackets.hidden = (0) < (view.retained) || sources.running;
         status.classList.toggle('warn', (0) < (view.backendDropped) || (0) < (view.deliveryDropped));
-        status.textContent = ctx.t('Matched', '一致') + ': ' + view.total.toLocaleString() + ' / ' + view.retained.toLocaleString() + ' · '
-            + ctx.t('Observations', '受信') + ': ' + view.received.toLocaleString() + ' · ' + ctx.t('Merged', '重複統合') + ': ' + view.duplicates.toLocaleString() + ' · '
-            + ctx.t('Rolled out', '保持上限除外') + ': ' + view.rolled.toLocaleString() + ' · ' + ctx.t('Capture drops', '取得欠落') + ': ' + view.backendDropped.toLocaleString()
-            + ' · ' + ctx.t('Delivery drops', '配送省略') + ': ' + view.deliveryDropped.toLocaleString()
-            + ' · ' + ctx.t('Rows', '一覧') + ': ' + (view.bytes / 1048576).toFixed(1) + ' MiB · '
-            + ctx.t('Contents', '原本') + ': ' + (view.sourceBytes / 1048576).toFixed(1) + ' MiB · ' + (ctx.timeZone ?? 'UTC');
+        matched.textContent = view.total.toLocaleString() + ' / ' + view.retained.toLocaleString();
+        received.textContent = view.received.toLocaleString();
+        merged.textContent = view.duplicates.toLocaleString();
+        rolled.textContent = view.rolled.toLocaleString();
+        captureDrops.textContent = view.backendDropped.toLocaleString();
+        deliveryDrops.textContent = view.deliveryDropped.toLocaleString();
+        rowsSize.textContent = (view.bytes / 1048576).toFixed(1) + ' MiB';
+        contentsSize.textContent = (view.sourceBytes / 1048576).toFixed(1) + ' MiB';
     });
     search.addEventListener('input', () => send({ type: 'search', query: search.value }), { signal: ctx.signal });
     display.onchange = () => table.names(display.value === 'host');
