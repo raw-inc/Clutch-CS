@@ -22,7 +22,7 @@
         <div class="log-observation-controls">
             <label>@Ui["log.viewer.scope"]<select value="@(SearchAllClusters ? "all" : "current")" @onchange="ScopeChangedAsync"><option value="current" disabled="@(!HasSelection)">@Ui["log.viewer.current"]</option><option value="all">@Ui["log.viewer.all"]</option></select></label>
             <label>@Ui["log.viewer.refresh"]<select value="@refreshSeconds" @onchange="RefreshChangedAsync">@foreach(var seconds in refreshIntervals){<option value="@seconds">@(seconds == 0 ? Ui["log.viewer.off"] : Ui.Format("log.viewer.every", seconds))</option>}</select></label>
-            <label title="@Ui["log.viewer.recentHelp"]"><input type="checkbox" checked="@uncompressedOnly" @onchange="UncompressedOnlyChangedAsync" />@Ui["log.viewer.recentOnly"]</label>
+            <label title="@Ui["log.viewer.recentHelp"]"><input type="checkbox" role="switch" checked="@uncompressedOnly" @onchange="UncompressedOnlyChangedAsync" />@Ui["log.viewer.recentOnly"]</label>
             @if(lastRefresh is { } updated){<span class="small">@Ui.Format("log.viewer.updated", FormatTime(updated, "HH:mm:ss"))</span>}
         </div>
         @if(SearchAllClusters){<p class="small">@Ui[HasSelection ? "log.viewer.settingsContext" : "log.viewer.selectForSettings"]</p>}
@@ -54,9 +54,9 @@
                         <tr @key="(row.Source.ClusterId, entry.Id)" class="@(selected?.Source.ClusterId == row.Source.ClusterId && selected.Entry.Id == entry.Id ? "selected-log" : string.Empty)" data-select="true" tabindex="0" title="@(entry.WorkflowId is not null ? Ui["editor.navigation.logHint"] : null)" aria-label="@Ui.Format("Details for {0} {1}: {2}", entry.PeerId, entry.Level, entry.Message)" @onclick="()=>selected=row" @ondblclick="()=>OpenLog(row)" @onkeydown="e=>SelectLog(e,row)">
                             <td class="log-time" title="@FormatTime(entry.Time)">@FormatTime(entry.Time,"HH:mm:ss.fff")<small>@FormatTime(entry.Time,"yyyy-MM-dd")</small></td>
                             <td><span class="badge log-level @(entry.Level is "ERROR" or "FATAL"?"bad":entry.Level=="WARN"?"warn":string.Empty)">@entry.Level</span></td>
-                            <td class="log-origin">@row.Source.ClusterId</td>
-                            <td class="log-origin">@entry.PeerId</td>
-                            <td class="log-origin">
+                            <td class="log-origin" data-label='@Ui["Cluster"]'>@row.Source.ClusterId</td>
+                            <td class="log-origin" data-label='@Ui["PC / Peer"]'>@entry.PeerId</td>
+                            <td class="log-origin" data-label='@Ui["Workflow / Node"]'>
                                 @if (!string.IsNullOrEmpty(entry.WorkflowId)){<span>@entry.WorkflowId</span>}
                                 @if (!string.IsNullOrEmpty(entry.NodeId)){<small>@entry.NodeId</small>}
                                 @if (string.IsNullOrEmpty(entry.WorkflowId) && string.IsNullOrEmpty(entry.NodeId)){<span class="muted">@Ui["Not recorded"]</span>}
@@ -105,7 +105,7 @@
     }
     @if(session is { PageIndex: >= 0 })
     {
-        <nav class="toolbar section" aria-label="@Ui["log.viewer.pagination"]">
+        <nav class="toolbar log-pagination" aria-label="@Ui["log.viewer.pagination"]">
             <button @onclick="()=>SearchAsync(-1)" disabled="@(loading || session.PageIndex == 0)">@Ui["Previous page"]</button>
             <span role="status">@Ui.Format("log.viewer.page", session.PageIndex + 1)</span>
             <button @onclick="()=>SearchAsync(1)" disabled="@(loading || !hasMore)">@Ui["Next page"]</button>

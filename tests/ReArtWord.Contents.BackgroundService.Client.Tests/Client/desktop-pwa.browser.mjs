@@ -69,7 +69,7 @@ test('published Desktop PWA is installable from the current origin and reopens i
     let context;
     try
     {
-        context = await chromium.launchPersistentContext(profile, { headless: true, channel: process.env.CONTENTS_PWA_BROWSER });
+        context = await chromium.launchPersistentContext(profile, { headless: true, viewport: { width: 1440, height: 900 }, channel: process.env.CONTENTS_PWA_BROWSER });
         const page = await context.newPage();
         page.setDefaultTimeout(60000);
         const errors = [];
@@ -120,6 +120,12 @@ test('published Desktop PWA is installable from the current origin and reopens i
 
         await page.emulateMedia({ colorScheme: 'light' });
         await page.getByRole('tab', { name: 'Settings & maintenance' }).click();
+        const settingsTab = page.getByRole('tab', { name: 'Settings & maintenance' });
+        await settingsTab.focus();
+        await page.keyboard.press('Home');
+        await page.waitForFunction(() => document.activeElement?.textContent?.includes('All clusters'));
+        await page.keyboard.press('End');
+        await page.waitForFunction(() => document.activeElement?.textContent?.includes('Settings & maintenance'));
         const theme = page.getByLabel('Appearance');
         await theme.selectOption('dark');
         await page.getByRole('button', { name: 'Save display settings' }).click();
@@ -153,6 +159,19 @@ test('published Desktop PWA is installable from the current origin and reopens i
                 return true;
             }
         }), true);
+
+        await page.setViewportSize({ width: 390, height: 844 });
+        const picker = page.locator('.route-picker select');
+        await picker.selectOption('logs');
+        await page.waitForURL('**/logs');
+        await picker.selectOption('dashboard');
+        await page.waitForURL('**/dashboard');
+        await page.locator('.compact-view select').selectOption('Settings & maintenance');
+        assert.ok(await page.getByLabel('Appearance').isVisible());
+        await page.goto(origin + '/licenses');
+        await page.getByRole('searchbox').fill('Microsoft.Extensions.Configuration.EnvironmentVariables');
+        await page.locator('.license-list section:visible').first().waitFor();
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 390);
 
         await context.setOffline(false);
         await page.goto(origin + '/ui-update.html');

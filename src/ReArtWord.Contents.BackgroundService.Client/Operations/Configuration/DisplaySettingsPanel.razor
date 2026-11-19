@@ -11,6 +11,6 @@
         @foreach(var zone in zones){<option value="@zone">@zone</option>}
     </select></label>
     <p class="small">@Ui.Format("display.timezone.current", Preferences.Zone.Id, TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, Preferences.Zone).ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.CurrentCulture))</p>
-    <button type="button" @onclick="SaveAsync" disabled="@saving">@Ui["display.settings.save"]</button>
+    <button class="primary" type="button" @onclick="SaveAsync" disabled="@saving">@Ui["display.settings.save"]</button>
     @if(message is not null || Preferences.Problem is not null){<p class="notice" role="status">@Ui[Preferences.Problem??message!]</p>}
 </section>

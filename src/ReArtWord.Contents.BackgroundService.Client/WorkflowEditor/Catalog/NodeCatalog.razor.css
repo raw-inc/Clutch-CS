@@ -83,7 +83,7 @@
 }
 
 .catalog-item strong {
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 500;
     display: block;
 }
@@ -335,8 +335,9 @@
 
 .catalog-view {
     display: flex;
-    gap: 3px;
-    padding: 0 10px 8px;
+    gap: 4px;
+    padding: 8px 12px;
+    flex-wrap: wrap;
 }
 
 .catalog-view button {
@@ -346,13 +347,14 @@
     font-size: 10px;
     line-height: 16px;
     border: 0;
-    border-radius: 3px;
+    border-radius: var(--radius-pill);
     white-space: nowrap;
+    min-height: 32px;
 }
 
 .catalog-view button.active {
-    background: var(--accent-soft);
-    color: var(--accent);
+    background: var(--accent);
+    color: var(--on-accent);
 }
 
 .catalog-fold {
@@ -361,10 +363,12 @@
     width: 100%;
     text-align: left;
     border: 0;
-    background: transparent;
+    background: var(--card);
     color: var(--muted);
-    border-radius: 0;
+    border-radius: var(--radius-control);
     cursor: pointer;
+    min-height: 36px;
+    margin-top: 8px;
 }
 
 .catalog-fold:disabled {

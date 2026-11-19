@@ -1,4 +1,9 @@
 .dashboard-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 24px;
     padding: 12px 18px;
     background: var(--panel);
     border-bottom: 1px solid var(--line);
@@ -37,7 +42,7 @@
     container-type: inline-size;
     container-name: wf-dashboard;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
     gap: 16px;
     align-items: start;
 }
@@ -59,8 +64,9 @@
     gap: 10px;
     align-items: center;
     justify-content: space-between;
-    min-height: 40px;
-    padding: 8px 12px;
+    min-height: 44px;
+    background: var(--card);
+    padding: 10px 14px;
     border-bottom: 1px solid var(--line);
     cursor: grab;
     user-select: none;
@@ -148,4 +154,10 @@
             grid-column: span 2;
         }
     }
+}
+
+.dashboard-edit-tools {
+    padding: 4px;
+    border-radius: var(--radius-control);
+    background: var(--card);
 }

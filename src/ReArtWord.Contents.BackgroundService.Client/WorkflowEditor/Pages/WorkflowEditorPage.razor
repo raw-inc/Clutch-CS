@@ -54,7 +54,10 @@ else
             <button class="quiet @(catalogOpen?"active":string.Empty)" aria-pressed="@catalogOpen" aria-label="@Ui["Node catalog"]" @onclick="()=>catalogOpen=!catalogOpen"><UiIcon Name="add" />@Ui["Nodes"]</button>
             <span class="toolbar-divider"></span><button class="quiet icon-button" aria-label="@Ui["Undo"]" title="@Ui["Undo"]" @onclick="Model.Undo" disabled="@(!Model.CanUndo||busy)"><UiIcon Name="undo" /></button>
             <span class="toolbar-divider"></span>
-            <button class="quiet @(Model.Draft.Document.Enabled?"active":string.Empty)" aria-label="@Ui["Automatic workflow inputs"]" aria-pressed="@Model.Draft.Document.Enabled" title="@Ui["Edit automatic workflow inputs. Save and activate to apply. OFF stops automatic inputs after activation; manual runs remain available."]" disabled="@(busy||Model.Locks.Whole(Model.Draft.Document.Id))" @onclick="()=>Model.Change(document=>document with{Enabled=!document.Enabled})">@Ui[Model.Draft.Document.Enabled?"Automatic inputs: ON":"Automatic inputs: OFF"]</button>
+            <label class="workflow-input-switch" title='@Ui["Edit automatic workflow inputs. Save and activate to apply. OFF stops automatic inputs after activation; manual runs remain available."]'>
+                <input type="checkbox" role="switch" checked="@Model.Draft.Document.Enabled" disabled="@(busy||Model.Locks.Whole(Model.Draft.Document.Id))" @onchange="e=>Model.Change(document=>document with { Enabled=e.Value is true })" />
+                @Ui["Automatic workflow inputs"]
+            </label>
             @if(LivePolicy.Enabled){<span class="badge">@Ui["Live apply · cluster"]</span>}
             <span class="toolbar-spacer"></span>
             @if(ExperimentalEnabled){<button class="quiet" disabled="@(busy||LocalContext||Model.Draft.BaseRevision is null)" @onclick="()=>debugOpen=true">@Ui["Debug next input"]</button>}

@@ -15,13 +15,6 @@
     margin-top: 16px;
 }
 
-.dialog ::deep > .toolbar:last-child {
-    justify-content: flex-end;
-    border-top: 1px solid var(--line);
-    padding-top: 18px;
-    margin-top: 24px;
-}
-
 .dialog ::deep .card {
     background: var(--card);
 }
@@ -30,7 +23,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    gap: 12px;
 }
 
 .dialog-heading h2 {
@@ -45,7 +38,7 @@
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: var(--radius-panel);
-    padding: 26px;
+    padding: 0;
     width: min(850px, 90vw);
     max-height: 86vh;
     overflow: auto;
@@ -57,4 +50,35 @@
 .dialog.dialog-wide {
     width: min(1400px, 94vw);
     max-width: 94vw;
+}
+
+.dialog[open] {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.dialog-heading,
+.dialog > .toolbar {
+    flex: none;
+    padding: 14px clamp(16px, 3vw, 28px);
+    margin: 0;
+    background: var(--card);
+}
+
+.dialog .dialog-heading h2 {
+    overflow-wrap: anywhere;
+}
+
+.dialog-content {
+    min-height: 0;
+    padding: 16px clamp(16px, 3vw, 28px);
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+.dialog > .toolbar:last-child {
+    justify-content: flex-end;
+    margin: 0;
+    padding-block: 10px;
 }

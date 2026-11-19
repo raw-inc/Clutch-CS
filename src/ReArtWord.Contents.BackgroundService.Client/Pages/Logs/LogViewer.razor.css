@@ -170,15 +170,18 @@
 }
 
 .log-page .log-search {
-    padding: 14px;
+    padding: clamp(16px, 2vw, 28px);
     margin-bottom: 18px;
+    background: var(--card);
+    border: 0;
+    border-radius: var(--radius-panel);
 }
 
 .log-page .log-search,
 .log-page .table-wrap,
 .log-page .log-detail,
 .log-page .secondary-details {
-    background: color-mix(in srgb, var(--panel) 70%, transparent);
+    background: var(--panel);
 }
 
 .log-page .log-search .search-field,
@@ -304,5 +307,71 @@
 
     .log-facts {
         grid-template-columns: 85px minmax(0, 1fr);
+    }
+}
+
+.log-pagination {
+    justify-content: center;
+    margin-block: 16px;
+}
+
+.log-pagination > span[role="status"] {
+    padding: 4px 12px;
+    background: var(--accent);
+    color: var(--on-accent);
+    border-radius: var(--radius-control);
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 700px) {
+    .log-page .log-results,
+    .log-page .log-results.has-selection {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .log-table thead {
+        position: absolute;
+        clip-path: inset(50%);
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+    }
+
+    .log-table,
+    .log-table tbody {
+        display: block;
+    }
+
+    .log-table tr[data-select] {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 5px 12px;
+        padding: 14px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .log-page .log-table td {
+        min-width: 0;
+        border: 0;
+        padding: 0;
+    }
+
+    .log-entry-message,
+    .log-origin {
+        grid-column: 1 / -1;
+    }
+
+    .log-origin {
+        font-size: 12px;
+    }
+
+    .log-origin::before {
+        content: attr(data-label);
+        color: var(--muted);
+        margin-right: 8px;
+    }
+
+    .log-results.has-selection .log-detail {
+        grid-row: 1;
     }
 }

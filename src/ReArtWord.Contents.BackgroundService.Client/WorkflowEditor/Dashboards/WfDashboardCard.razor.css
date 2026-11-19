@@ -36,20 +36,19 @@
 }
 
 .dashboard-push {
-    border-color: color-mix(in srgb, var(--accent) 65%, var(--ink));
-    border-bottom-color: color-mix(in srgb, var(--accent) 65%, var(--panel));
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 18%), 0 2px 0 color-mix(in srgb, var(--accent) 35%, var(--paper));
-    transition: background 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+    background: var(--accent);
+    color: var(--on-accent);
+    border: 1px solid transparent;
 }
 
 .dashboard-push:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--accent) 80%, var(--ink));
+    background: var(--accent-hover);
 }
 
-.dashboard-push:active:not(:disabled) {
-    background: color-mix(in srgb, var(--accent) 82%, var(--panel));
-    box-shadow: inset 0 2px 3px rgb(0 0 0 / 20%);
-    transform: translateY(1px);
+@media (prefers-reduced-motion: no-preference) {
+    .dashboard-push:active:not(:disabled) {
+        transform: translateY(1px);
+    }
 }
 
 .dashboard-push-icon {

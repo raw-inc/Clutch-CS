@@ -301,3 +301,34 @@
         gap: 6px;
     }
 }
+
+.route-picker {
+    display: none;
+}
+
+@media (max-width: 1320px) {
+    .navigation ::deep a {
+        display: none;
+    }
+
+    .navigation {
+        align-items: center;
+        overflow: visible;
+    }
+
+    .route-picker {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        gap: 12px;
+        margin: 0;
+        font-size: 12px;
+    }
+
+    .route-picker select {
+        width: auto;
+        flex: 1;
+        max-width: 28rem;
+        min-height: 36px;
+    }
+}

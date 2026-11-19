@@ -526,15 +526,20 @@
 }
 
 .studio .editor-toolbar {
-    height: 34px;
-    padding: 0 13px;
+    min-height: 44px;
+    height: auto;
+    padding: 4px 12px;
+    flex-wrap: wrap;
+    gap: 6px;
     border-top: 0;
-    background: var(--panel);
+    background: var(--card);
 }
 
 .studio .editor-toolbar button {
     height: 27px;
     font-size: 11px;
+    min-height: 32px;
+    border-radius: var(--radius-pill);
 }
 
 .studio .editor-toolbar .icon-button {
@@ -579,6 +584,10 @@
 .studio .inspector-heading {
     padding: 9px 0;
     margin-bottom: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--panel);
 }
 
 .studio .inspector-heading .toolbar {
@@ -703,4 +712,29 @@
     right: 12px;
     max-width: calc(100% - 24px);
     z-index: 3;
+}
+
+.workflow-input-switch {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    gap: 6px;
+}
+
+.studio .editor-toolbar button[aria-pressed="true"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+}
+
+@media (max-width: 750px) {
+    .studio .editor-toolbar {
+        max-height: 25vh;
+        overflow-y: auto;
+    }
+
+    .editor-toolbar .toolbar-spacer,
+    .editor-toolbar .toolbar-divider {
+        display: none;
+    }
 }

@@ -2,7 +2,7 @@
 {
     <dialog @ref="dialog" class="@(Wide?"dialog dialog-wide":"dialog")" aria-modal="true" aria-label="@Ui[Title]" tabindex="-1" @onkeydown="KeyAsync">
         <div class="dialog-heading"><h2>@Ui[Title]</h2><button class="quiet icon-button" aria-label="@Ui["Close dialog"]" @onclick="Close"><UiIcon Name="close" /></button></div>
-        @ChildContent
+        <div class="dialog-content">@ChildContent</div>
         <div class="toolbar"><button @onclick="Close">@Ui["Close"]</button></div>
     </dialog>
 }

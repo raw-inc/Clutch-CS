@@ -14,7 +14,8 @@
         <button class="quiet icon-button" type="button" aria-label="@Ui["Open workflow"]" @onclick="Open"><UiIcon Name="chevron" /></button>
         <input class="dashboard-name" aria-label="@Ui["WFDashboard name"]" value="@Model.Draft.Document.Name" disabled="@LayoutLocked" @oninput="e=>Model.Change(document=>document with{Name=e.Value?.ToString()??string.Empty})" />
         <small class="muted">@Ui[Model.Draft.BaseRevision is null?"New · unsaved":Model.Draft.Dirty?"Unsaved":"Saved and shared"]</small>
-        <span class="toolbar-spacer"></span>
+    </div>
+    <div class="toolbar dashboard-edit-tools">
         <button type="button" class="quiet" @onclick="()=>catalogOpen=!catalogOpen"><UiIcon Name="add" />@Ui["Add reference"]</button>
         <button type="button" class="quiet" disabled="@LayoutLocked" @onclick="()=>AddCard(WfDashboardLayout.CommentType,WfDashboardLayout.CommentSettings(string.Empty))">@Ui["Add comment"]</button>
         <button type="button" class="quiet" disabled="@LayoutLocked" @onclick="()=>AddCard(WfDashboardLayout.BreakType,WfDashboardLayout.BreakSettings())">@Ui["Add line break"]</button>

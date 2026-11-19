@@ -10,8 +10,9 @@
     width: 100%;
     overflow: hidden;
     color: var(--ink);
-    font-size: 13px;
-    font-weight: 500;
+    font-family: var(--font-title);
+    font-size: 15px;
+    font-weight: 700;
     line-height: 24px;
     text-overflow: ellipsis;
     white-space: nowrap;

@@ -144,10 +144,14 @@
 }
 
 .graph-node .node-box {
-    fill: var(--card);
+    fill: var(--panel);
     stroke: var(--control);
     filter: none;
     rx: 6px;
+}
+
+.graph-node .node-header {
+    fill: var(--card);
 }
 
 .graph-node .category-strip {
