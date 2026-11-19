@@ -36,6 +36,15 @@ public sealed partial class SafetyPanel
     private ManualSafetyStatus? Current => targets.Count == 0 ? null
                                                               : status?.States.FirstOrDefault(item => string.Equals(item.WorkflowId, targets[selected].Workflow, StringComparison.Ordinal) && string.Equals(item.Scope, targets[selected].Scope, StringComparison.Ordinal));
 
+    private string OverrideState => (status?.Loaded == true, targets.Count, Current) switch
+    {
+        (false, _, _) => "Not checked",
+        (_, 0, _) => "Select a target",
+        (_, _, { Stopped: true }) => "New inputs stopped",
+        (_, _, { Continued: true }) => "Temporary continuation past an automatic stop",
+        _ => "No temporary override"
+    };
+
     /// <summary>対象の現在値を取得して編集または選択画面を開きます。</summary>
     /// <returns>要求処理と現時点の画面反映の完了です。</returns>
     // 抑制理由: UIコールバックの呼出し署名を維持し、取消可能なI/Oには画面が所有するトークンを渡します。
@@ -57,6 +66,7 @@ public sealed partial class SafetyPanel
         }
         catch (Exception exception) when (exception is HttpRequestException or InvalidOperationException or JsonException or OperationCanceledException)
         {
+            status = null;
             message = Ui.Deferred("Safety state and effective targets could not be confirmed.");
         }
     }

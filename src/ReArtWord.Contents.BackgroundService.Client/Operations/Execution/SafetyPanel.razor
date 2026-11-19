@@ -5,8 +5,7 @@
 <h2>@Ui["Safety"]</h2>
 <p class="small muted">@Ui["Pause or resume new inputs for a node or safety group."]</p>
 <div class="toolbar inline-status">
-@if(Current is {} active){<span class="badge @(active.Stopped||active.Continued ? "warn" : "good")">@Ui[active.Stopped?"New inputs stopped":active.Continued?"Temporary continuation past an automatic stop":"Normal decision"]</span>}
-@if(Current is null){<span class="badge">@Ui["Not checked"]</span>}
+<span class="badge @(Current is { Stopped: true } or { Continued: true } ? "warn" : targets.Count > 0 && status?.Loaded == true ? "good" : null)">@Ui[OverrideState]</span>
 <button @onclick="OpenAsync"><UiIcon Name="search" />@Ui["Review effective state and targets"]</button>
 </div>
 <p class="notice">@(message?.Invoke())</p>
@@ -15,11 +14,11 @@
 <Modal Open="open" Title="@Ui["Temporary safety targets"]" Close="()=>open=false">
 <WorkflowPagePicker Selected="LoadTargetsAsync" />
 <label>@Ui["Effective nodes and safety groups"]<select @bind="selected" disabled="@busy">@for(var i=0;i<targets.Count;i++){<option value="@i">@targets[i].Workflow / @targets[i].Scope</option>}</select></label>
-<p>@Ui["Current override"]: @(Current?.Stopped==true?Ui["New inputs stopped"]:Current?.Continued==true?Ui["Temporary continuation past an automatic stop"]:Ui["Normal decision"]) · @Ui["Reference revision"] @(Current?.Version??Ui["Not specified"]) @(Current?.LocalOnly==true?Ui["Local only"]:"")</p>
+<p>@Ui["Current override"]: @Ui[OverrideState] · @Ui["Reference revision"] @(Current?.Version??Ui["Not specified"]) @(Current?.LocalOnly==true?Ui["Local only"]:"")</p>
 <p>@Ui["Continuation requested"] @(Current?.RequestedContinued==true?Ui["Requested"]:Ui["None"]) / @Ui["Current effective decision"] @(Current?.Continued==true?Ui["Continue"]:Ui["Normal decision"]) · @Current?.ContinuationReason</p>
-<button @onclick="()=>ChangeAsync(true,false)" disabled="@busy">@Ui["Pause new inputs"]</button>
-<button @onclick="()=>ChangeAsync(false,true)" disabled="@busy">@Ui["Temporarily continue this target"]</button>
-<button @onclick="()=>ChangeAsync(false,false)" disabled="@busy">@Ui["Clear the override and return to normal decisions"]</button>
+<button @onclick="()=>ChangeAsync(true,false)" disabled="@(busy||targets.Count==0)">@Ui["Pause new inputs"]</button>
+<button @onclick="()=>ChangeAsync(false,true)" disabled="@(busy||targets.Count==0)">@Ui["Temporarily continue this target"]</button>
+<button @onclick="()=>ChangeAsync(false,false)" disabled="@(busy||targets.Count==0)">@Ui["Clear the override and return to normal decisions"]</button>
 <p>@Ui["Temporary continuation also clears the manual stop on the same target. It does not clear manual stops on other nodes or groups. Clearing the override restores the current normal safety decision."]</p>
 <p class="notice">@(message?.Invoke())</p>
 @if(preview is not null){<p>@preview.Impact</p><table><thead><tr><th>Node</th><th>@Ui["Effective stop"]</th><th>@Ui["Automatic stop"]</th><th>@Ui["Manual stop"]</th><th>@Ui["Temporary continuation"]</th></tr></thead><tbody>@foreach(var item in preview.Targets){<tr><td>@item.NodeId</td><td>@Ui[(item.Stopped).ToString() ?? "Unconfirmed"] · @(item.StopReason??Ui["Reason unconfirmed"])</td><td>@Ui[(item.AutomaticallyStopped).ToString() ?? "Unconfirmed"] · @(item.AutomaticStopReason??Ui["Reason unconfirmed"])</td><td>@Ui[(item.ManuallyStopped).ToString() ?? "Unconfirmed"]</td><td>@Ui[(item.Continued).ToString() ?? "Unconfirmed"]</td></tr>}</tbody></table>}

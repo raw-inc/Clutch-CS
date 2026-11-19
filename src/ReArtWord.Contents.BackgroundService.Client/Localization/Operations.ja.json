@@ -200,6 +200,7 @@
   "New inputs stopped": "新規入力停止",
   "Temporary continuation past an automatic stop": "自動停止への一時続行",
   "Normal decision": "通常判断",
+  "No temporary override": "一時指定なし",
   "Local only": "局所のみ",
   "Requested": "あり",
   "Continue": "続行",
