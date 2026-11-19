@@ -813,3 +813,38 @@
         padding-block: 2px;
     }
 }
+
+@media (min-width: 651px) {
+    .desktop-toolbar > *,
+    .desktop-toolbar .desktop-keybar {
+        flex-shrink: 0;
+        flex-wrap: nowrap;
+    }
+
+    .desktop-toolbar .desktop-keybar,
+    .desktop-toolbar .desktop-action {
+        white-space: nowrap;
+    }
+}
+
+@media (min-width: 901px) {
+    .desktop-workspace[data-state="connected"] .desktop-deck {
+        display: grid;
+        grid-template-columns: max-content minmax(0, 1fr);
+        align-items: center;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-deck > details {
+        min-width: 0;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-deck > details[open] {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-deck > details[open]::details-content {
+        display: contents;
+    }
+}
