@@ -24,7 +24,7 @@ public static long Run(long left, long right) => left + right;
 
 個別入力の `left` へ2、`right` へ3を渡すと、`value` は5です。一括入力では `arguments` へ `{"left":2,"right":3}` を渡します。`System`、`System.Collections.Generic`、`System.Linq`、`System.Threading.Tasks` はあらかじめ参照されます。コード先頭の `using`、別名、`using static` に対応します。
 
-NuGetパッケージはDashboardの「スクリプトパッケージの管理」から導入します。`#r` による個別DLL参照は扱いません。
+NuGetパッケージはDashboardの「スクリプトパッケージ」から導入します。`#r` による個別DLL参照は扱いません。
 
 専用Roslyn アナライザーは引数・返却型を検査し、WorkflowEditorの既存型に対応付けます。基本スカラー、nullable、一次元配列、List、string-key Dictionary、公開get/setプロパティと生成可能な既定コンストラクターを持つPOCOに対応します。ポート直下の`byte[]`はバイナリ、日時とGUIDはJSON文字列です。JSONオブジェクトや配列の内部にある`byte[]`はBase64文字列のまま扱います。
 
