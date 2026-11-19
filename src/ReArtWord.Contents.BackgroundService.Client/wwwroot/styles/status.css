@@ -82,3 +82,20 @@
         transition: none;
     }
 }
+
+clutch-status-labels {
+    display: contents;
+}
+
+[data-status-label] {
+    box-sizing: content-box;
+    min-inline-size: var(--status-width, 3em);
+    justify-content: center;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.badge:not([data-status-label]) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}

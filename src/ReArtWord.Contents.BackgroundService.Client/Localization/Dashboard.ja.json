@@ -39,6 +39,7 @@
   "Refresh every 3 seconds": "3秒ごとに取得",
   "Waiting for PC measurements": "PC の観測値を待っています",
   "Select a connection to view available measurements.": "接続先を選ぶと、取得できた実測値を表示します。",
+  "Current measurements unconfirmed": "現在の計測値は未確認です",
   "Previous / unconfirmed": "前回値 / 未確認",
   "Unavailable": "利用不可",
   "CPU temperature": "CPU 温度",

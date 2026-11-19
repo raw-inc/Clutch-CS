@@ -3,12 +3,12 @@
     <div class="section-heading"><h2>@Ui["Application groups"]</h2><button disabled="@(busy || !Available)" @onclick="()=>Edit(null)"><UiIcon Name="add" />@Ui["Create application group"]</button></div>
     <p class="small muted">@Ui["Combine registered applications on this PC and choose how to recover them."]</p>
     @if(message is not null){<p class="notice" role="status">@message()</p>}
-    <div class="table-wrap"><table><thead><tr><th>@Ui["Application group name"]</th><th>@Ui["Group recovery policy"]</th><th>@Ui["Status"]</th><th>@Ui["Actions"]</th></tr></thead><tbody>
+    <clutch-status-labels><div class="table-wrap"><table><thead><tr><th>@Ui["Application group name"]</th><th>@Ui["Group recovery policy"]</th><th>@Ui["Status"]</th><th>@Ui["Actions"]</th></tr></thead><tbody>
     @foreach(var item in groups)
     {
         <tr @key="item.Definition.Id"><td><strong>@item.Definition.Name</strong><div class="small muted">@string.Join(" → ",item.Definition.Members.Select(member=>Name(member.ApplicationId)))</div></td>
             <td>@Ui[Policy(item.Definition.RecoveryMode)]<div class="small muted">@Ui[item.Definition.AutomaticMonitoring?"Automatic monitoring":"Group automatic recovery disabled"]</div></td>
-            <td><span class="badge">@Ui[Phase(item.Status)]</span>@if(item.Status.ApplicationId is {} active){<div>@Name(active)</div>}
+            <td><span data-status-label class="badge">@Ui[Phase(item.Status)]</span>@if(item.Status.ApplicationId is {} active){<div>@Name(active)</div>}
                 @if(item.Status.NextAt is {} due){<div class="small muted">@due.ToLocalTime().ToString("G",CultureInfo.CurrentCulture)</div>}
                 @if(item.Status.Reason is {} reason){<div class="small error">@Ui[reason]</div>}
                 @if(item.Status.Phase==EProcessGroupPhase.Paused){<p class="small">@Ui["Check the applications, resolve any unknown launch, then choose Start or Restart to continue."]</p>}
@@ -19,7 +19,7 @@
                 <div class="toolbar"><button class="quiet" disabled="@(busy||!Available||item.Status.Phase!=EProcessGroupPhase.Idle)" @onclick="()=>Edit(item)">@Ui["Edit"]</button><button class="quiet danger" disabled="@(busy||!Available||Active(item))" @onclick="()=>removing=item">@Ui["Remove group"]</button></div></td>
         </tr>
     }
-    </tbody></table>@if(groups.Count==0){<div class="empty">@Ui["No application groups registered."]</div>}</div>
+    </tbody></table>@if(groups.Count==0){<div class="empty">@Ui["No application groups registered."]</div>}</div></clutch-status-labels>
 </section>
 <Modal Wide="true" Open="@(draft is not null)" Title='@Ui["Application group settings"]' Close="CloseEditor">
     @if(draft is {} form)

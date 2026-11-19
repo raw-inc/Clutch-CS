@@ -37,7 +37,7 @@
 
 .recipe-node .recipe-id {
     font-size: 10px;
-    opacity: 0.6;
+    fill: var(--muted);
 }
 
 .recipe-node circle {

@@ -45,7 +45,7 @@
     <div class="section-heading"><h2>@Ui["Search results"]</h2><span role="status">@ResultStatus</span><LogExportControl Query="ReadQuery" AllClusters="SearchAllClusters" ClusterId="Api.SelectedClusterId" PeerId="Api.SelectedPeerId" Disabled="loading" /></div>
     <div class="log-results @(selected is not null?"has-selection":string.Empty)">
         <div class="table-wrap">
-            <table class="log-table">
+            <clutch-status-labels><table class="log-table">
                 <thead><tr><th>@Ui.Format("display.timezone.time",DisplayTimeZone.Id)</th><th>@Ui["Severity"]</th><th>@Ui["Cluster"]</th><th>@Ui["PC / Peer"]</th><th>@Ui["Workflow / Node"]</th><th>@Ui["Content"]</th></tr></thead>
                 <tbody>
                     @foreach (var row in entries)
@@ -53,7 +53,7 @@
                         var entry = row.Entry;
                         <tr @key="(row.Source.ClusterId, entry.Id)" class="@(selected?.Source.ClusterId == row.Source.ClusterId && selected.Entry.Id == entry.Id ? "selected-log" : string.Empty)" data-select="true" tabindex="0" title="@(entry.WorkflowId is not null ? Ui["editor.navigation.logHint"] : null)" aria-label="@Ui.Format("Details for {0} {1}: {2}", entry.PeerId, entry.Level, entry.Message)" @onclick="()=>selected=row" @ondblclick="()=>OpenLog(row)" @onkeydown="e=>SelectLog(e,row)">
                             <td class="log-time" title="@FormatTime(entry.Time)">@FormatTime(entry.Time,"HH:mm:ss.fff")<small>@FormatTime(entry.Time,"yyyy-MM-dd")</small></td>
-                            <td><span class="badge log-level @(entry.Level is "ERROR" or "FATAL"?"bad":entry.Level=="WARN"?"warn":string.Empty)">@entry.Level</span></td>
+                            <td><span data-status-label class="badge log-level @(entry.Level is "ERROR" or "FATAL"?"bad":entry.Level=="WARN"?"warn":string.Empty)">@entry.Level</span></td>
                             <td class="log-origin" data-label='@Ui["Cluster"]'>@row.Source.ClusterId</td>
                             <td class="log-origin" data-label='@Ui["PC / Peer"]'>@entry.PeerId</td>
                             <td class="log-origin" data-label='@Ui["Workflow / Node"]'>
@@ -65,7 +65,7 @@
                         </tr>
                     }
                 </tbody>
-            </table>
+            </table></clutch-status-labels>
             @if (entries.Count == 0)
             {
                 <div class="empty"><h3>@(query is null ? Ui["No search yet"] : Ui["No matching logs"])</h3><p>@(query is null ? Ui["log.viewer.searchHint"] : Ui["Change the time range or filters."])</p></div>

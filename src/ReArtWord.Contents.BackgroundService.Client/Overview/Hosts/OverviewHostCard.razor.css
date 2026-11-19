@@ -1,5 +1,7 @@
-.host-card.stale {
-    opacity: 0.75;
+.host-name .observation-status {
+    display: block;
+    color: var(--warn);
+    font-weight: 600;
 }
 
 .host-card header {

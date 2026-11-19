@@ -17,13 +17,13 @@
     }
     else
     {
-        <clutch-card-rows><ul class="application-list">
+        <clutch-status-labels><clutch-card-rows><ul class="application-list">
             @foreach (var item in processes)
             {
                 <li @key="item.Definition.Id">
                     <header>
                         <h3>@item.Definition.DisplayName</h3>
-                        <span class="badge @(item.Observed.Status?.Running is true ? "good" : "muted")">@Ui[State(item)]</span>
+                        <span data-status-label class="badge @(item.Observed.Status?.Running is true ? "good" : "muted")">@Ui[State(item)]</span>
                     </header>
                     <p class="application-path" data-card-caption>@item.Definition.ExecutablePath</p>
                     <dl class="application-facts" data-card-inset>
@@ -47,7 +47,7 @@
                     </div>
                 </li>
             }
-        </ul></clutch-card-rows>
+        </ul></clutch-card-rows></clutch-status-labels>
     }
 </section>
 @if(peer is not null && cluster is not null)
@@ -57,7 +57,7 @@
 <Modal Open="@(selected is not null&&!registrationOpen&&removing is null)" Title='@(selected?.Definition.DisplayName??Ui["Application state"])' Close="()=>selected=null">
     @if(selected is {} item)
     {
-        <div class="application-summary"><span class="badge @(item.Observed.Status?.Running is true ? "good" : "muted")">@Ui[State(item)]</span><span>@Owner</span></div>
+        <div class="application-summary"><span data-status-label class="badge @(item.Observed.Status?.Running is true ? "good" : "muted")">@Ui[State(item)]</span><span>@Owner</span></div>
         @if(message is not null){<p class="notice" role="status">@message()</p>}
         <dl class="application-state">
             <div><dt>PID</dt><dd>@(item.Observed.Status?.Identity?.ProcessId.ToString(CultureInfo.InvariantCulture) ?? "—")</dd></div>

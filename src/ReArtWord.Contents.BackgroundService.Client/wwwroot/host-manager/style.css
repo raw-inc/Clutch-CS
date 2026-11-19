@@ -382,7 +382,7 @@
     align-items: center;
     gap: 5px;
     white-space: nowrap;
-    padding: 3px 7px;
+    padding: calc(3px + 0.1em) 7px calc(3px - 0.1em);
     border-radius: var(--radius-control);
     background: var(--raised);
     font-size: 10px;
@@ -991,7 +991,7 @@
 
 .hm-profile {
     border: 1px solid var(--line);
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-panel);
     padding: 14px;
     background: var(--panel);
     display: flex;

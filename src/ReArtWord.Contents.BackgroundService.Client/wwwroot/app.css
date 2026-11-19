@@ -225,7 +225,8 @@ p {
     gap: 6px;
     justify-content: center;
     min-width: 3em;
-    padding: 4px 9px 2px;
+    max-width: 100%;
+    padding: calc(3px + 0.1em) 9px calc(3px - 0.1em);
     border: 1px solid transparent;
     border-radius: var(--radius-control);
     background: var(--raised);

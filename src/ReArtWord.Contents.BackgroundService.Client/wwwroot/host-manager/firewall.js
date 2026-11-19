@@ -32,7 +32,11 @@ export function firewallView(root, ctx, actionArea)
     title.append(actions);
     tools.append(field(ctx.t('Rules on host'), hostPick), filter, search);
     pager.append(range, previous, next);
-    root.append(title, status, profiles, node('h3', ctx.t('Rules')), tools, listing, pager);
+    const profileRows = document.createElement('clutch-card-rows');
+    profileRows.append(profiles);
+    const profileLabels = document.createElement('clutch-status-labels');
+    profileLabels.append(profileRows);
+    root.append(title, status, profileLabels, node('h3', ctx.t('Rules')), tools, listing, pager);
 
     /** 現在選択されている値を取得します。
      * @returns 呼出し元が使用する値です。
@@ -52,7 +56,9 @@ export function firewallView(root, ctx, actionArea)
             const known = states.filter(state => state.snapshot?.data.profiles.some(profile => profile.name === name));
             const enabled = known.filter(state => state.snapshot.data.profiles.find(profile => profile.name === name).enabled).length;
             const card = node('section', '', 'hm-profile'), heading = node('div');
-            heading.append(node('strong', ctx.t(name)), badge(ctx.t(known.length < hosts.length ? states.some(state => state.loading) ? 'Loading…' : 'Unavailable' : enabled === hosts.length ? 'Enabled' : enabled ? 'Mixed' : 'Disabled'), enabled === hosts.length ? 'good' : enabled ? 'warn' : ''));
+            const label = badge(ctx.t(known.length < hosts.length ? states.some(state => state.loading) ? 'Loading…' : 'Unavailable' : enabled === hosts.length ? 'Enabled' : enabled ? 'Mixed' : 'Disabled'), enabled === hosts.length ? 'good' : enabled ? 'warn' : '');
+            label.setAttribute('data-status-label', '');
+            heading.append(node('strong', ctx.t(name)), label);
             const change = ctx.button('Change profile', () =>
             {
                 const dialog = ctx.dialog('Change profile'), state = select([['', ctx.t('Choose setting')], ['true', ctx.t('Enabled')], ['false', ctx.t('Disabled')]]);
@@ -123,9 +129,13 @@ export function firewallView(root, ctx, actionArea)
             {
                 actions.append(badge(ctx.t('Read only')));
             }
-            rows.add([name, behavior, rule.profile, badge(ctx.t(rule.enabled ? 'Enabled' : 'Disabled'), rule.enabled ? 'good' : ''), actions]);
+            const statusLabel = badge(ctx.t(rule.enabled ? 'Enabled' : 'Disabled'), rule.enabled ? 'good' : '');
+            statusLabel.setAttribute('data-status-label', '');
+            rows.add([name, behavior, rule.profile, statusLabel, actions]);
         }
-        listing.append(rows.root);
+        const ruleLabels = document.createElement('clutch-status-labels');
+        ruleLabels.append(rows.root);
+        listing.append(ruleLabels);
         const start = page?.offset ?? 0;
         range.textContent = `${start + 1}–${start + data.rules.length} · ${ctx.t('Rules')}` + (page?.filter ? ` · ${page.filter}` : '');
     }
