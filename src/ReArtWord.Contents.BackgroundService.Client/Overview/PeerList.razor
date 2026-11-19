@@ -4,7 +4,7 @@
 <section aria-busy="@refreshing.ToString().ToLowerInvariant()" class="peer-list" aria-label='@Ui["Peer list"]'>
     <div class="section-heading"><h2>@Ui["Peer list"]</h2><span>@Ui["Refresh every 3 seconds"] · @Ui.Format("{0} observed peers",telemetry?.Total??0)</span></div>
     @if(telemetry?.Problem is {} problem){<p class="notice" role="status">@Ui[problem]</p>}
-    <div class="table-wrap"><table aria-label='@Ui["Peer list"]'>
+    <div class="table-wrap"><table class="record-table" aria-label='@Ui["Peer list"]'>
         <thead><tr><th>PC</th><th>@Ui["Cluster"]</th><th>@Ui["Peer"]</th><th>@Ui["Status"]</th><th>@Ui["Version"]</th></tr></thead>
         <tbody>
         @if (!loaded && refreshing)
@@ -13,7 +13,7 @@
         }
         @foreach(var row in telemetry?.Rows??[])
         {
-            <tr @key="(row.Cluster,row.Peer.PeerId,row.Peer.InstanceId)"><th scope="row">@row.Peer.HostId</th><td>@row.Cluster</td><td title="@row.Peer.InstanceId">@row.Peer.PeerId</td><td><span tabindex="0" class="health-indicator @(row.Health?.Status==EPeerStatus.Ready?"good":"warn")"><ActivityRing Identity="@(row.Cluster+"/"+row.Peer.PeerId)" Active="@(row.Health?.Status is EPeerStatus.Ready or EPeerStatus.Syncing or EPeerStatus.Joining or EPeerStatus.Degraded)" /><span class="health-label"><PeerStateLabel State="@(row.Health?.Status.ToString()??"Unconfirmed")" History="row.Health?.HistorySynchronization" /></span></span></td><td class="version" title="@(row.Health?.BuildVersion??Ui["Unconfirmed"])">@(row.Health?.BuildVersion??Ui["Unconfirmed"])</td></tr>
+            <tr @key="(row.Cluster,row.Peer.PeerId,row.Peer.InstanceId)"><th data-field='PC' scope="row">@row.Peer.HostId</th><td data-field='@Ui["Cluster"]'>@row.Cluster</td><td data-field='@Ui["Peer"]' title="@row.Peer.InstanceId">@row.Peer.PeerId</td><td data-field='@Ui["Status"]'><span tabindex="0" class="health-indicator @(row.Health?.Status==EPeerStatus.Ready?"good":"warn")">@if(row.Health?.Status==EPeerStatus.Ready){<UiIcon Name="check" />}else{<UiIcon Name="info" />}<span class="health-label"><PeerStateLabel State="@(row.Health?.Status.ToString()??"Unconfirmed")" History="row.Health?.HistorySynchronization" /></span></span></td><td data-field='@Ui["Version"]' class="version" title="@(row.Health?.BuildVersion??Ui["Unconfirmed"])">@(row.Health?.BuildVersion??Ui["Unconfirmed"])</td></tr>
         }</tbody>
     </table>@if(loaded && telemetry?.Total==0 && telemetry.Problem is null){<p class="empty">@Ui["No peers have been discovered."]</p>}</div>
     @if (!loaded && refreshing){<span class="sr-only" role="status">@Ui["Loading…"]</span>}

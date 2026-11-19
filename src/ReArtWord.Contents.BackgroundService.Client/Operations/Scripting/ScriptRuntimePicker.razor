@@ -24,7 +24,8 @@
     </details>
     @if(Manage)
     {
-        <button type="button" disabled="@(Disabled||busy||catalog is null)" @onclick="()=>SetDefaultAsync(UiCancellation)">@Ui["Use selected runtime as default"]</button>
+        <button type="button" disabled="@(Disabled||busy||catalog is null||string.Equals(Value??string.Empty,catalog.DefaultPath??string.Empty,StringComparison.OrdinalIgnoreCase))" @onclick="()=>SetDefaultAsync(UiCancellation)">@Ui["Use selected runtime as default"]</button>
+    @if(catalog is null || string.Equals(Value??string.Empty,catalog.DefaultPath??string.Empty,StringComparison.OrdinalIgnoreCase)){<small>@Ui["Select another runtime to change the default."]</small>}
         @if(catalog is not null){<small>@Ui["Configured default"]: @(catalog.DefaultPath??Ui["Automatic detection"])</small>}
     }
     @if(problem is not null){<small class="error" role="status">@Ui[problem]</small>}

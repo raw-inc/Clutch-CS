@@ -5,8 +5,8 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Observability
 <main class="page log-page">
     <div class="page-title">
-        <h1>@Ui["Logs"]</h1>
-        <div class="toolbar"><button class="quiet" @onclick="()=>operationsOpen=true">@Ui["Operation history"]</button><button @onclick="()=>traceOpen=true" disabled="@(!HasSelection)"><UiIcon Name="settings" />@Ui["Trace settings"]</button><RetentionDialog Disabled="@(!HasSelection)" /></div>
+        <h1>LogViewer</h1>
+        <div class="toolbar"><button @onclick="()=>operationsOpen=true">@Ui["Operation history"]</button><button @onclick="()=>traceOpen=true" disabled="@(!HasSelection)"><UiIcon Name="settings" />@Ui["Trace settings"]</button><RetentionDialog Disabled="@(!HasSelection)" /></div>
     </div>
     @if (!string.IsNullOrWhiteSpace(message))
     {
@@ -38,11 +38,11 @@
                 <label>@Ui["PC (Peer ID)"]<input @bind="peer" @bind:event="oninput" placeholder="Peer ID" /></label>
                 <label>@Ui["Workflow"]<input @bind="workflow" @bind:event="oninput" placeholder="Workflow ID" /></label>
                 <label>@Ui["Node"]<input @bind="node" @bind:event="oninput" placeholder="Node ID" /></label>
-                <label>@Ui["Related log ID (exact match)"]<input @bind="causation" @bind:event="oninput" placeholder="GUID" /></label>
+                <label>@Ui["Related log ID (exact match)"]<input @bind="causation" @bind:event="oninput" placeholder="6865b4d1-0000-4000-8000-000000000001" /></label>
             </div>
         </details>
     </div>
-    <div class="section-heading"><h2>@Ui["Search results"]</h2><span role="status">@ResultStatus</span><LogExportControl Query="ReadQuery" AllClusters="SearchAllClusters" ClusterId="Api.SelectedClusterId" PeerId="Api.SelectedPeerId" Disabled="loading" /></div>
+    <div class="section-heading log-results-heading"><h2>@Ui["Search results"]</h2><span role="status">@ResultStatus</span><LogExportControl Query="ReadQuery" AllClusters="SearchAllClusters" ClusterId="Api.SelectedClusterId" PeerId="Api.SelectedPeerId" Disabled="loading" /></div>
     <div class="log-results @(selected is not null?"has-selection":string.Empty)">
         <div class="table-wrap">
             <clutch-status-labels><table class="log-table">
@@ -86,7 +86,7 @@
                 </dl>
                 @if (LogLocation(selected) is { } uri)
                 {
-                    <a href="@uri">@Ui["editor.navigation.openLog"]</a>
+                    <a class="log-editor-link" href="@uri">@Ui["editor.navigation.openLog"] <UiIcon Name="chevron" /></a>
                 }
                 @if (selected.Entry.CausationId is not null)
                 {
@@ -107,7 +107,7 @@
     {
         <nav class="toolbar log-pagination" aria-label="@Ui["log.viewer.pagination"]">
             <button @onclick="()=>SearchAsync(-1)" disabled="@(loading || session.PageIndex == 0)">@Ui["Previous page"]</button>
-            <span role="status">@Ui.Format("log.viewer.page", session.PageIndex + 1)</span>
+            <span aria-current="page" role="status">@Ui.Format("log.viewer.page", session.PageIndex + 1)</span>
             <button @onclick="()=>SearchAsync(1)" disabled="@(loading || !hasMore)">@Ui["Next page"]</button>
             @if(refreshSeconds != 0 && (hasMore || 0 < session.PageIndex)){<span class="small">@Ui["log.viewer.nextPauses"]</span>}
         </nav>

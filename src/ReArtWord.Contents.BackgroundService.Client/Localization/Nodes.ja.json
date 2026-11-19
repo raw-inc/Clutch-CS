@@ -99,7 +99,7 @@
   "node.osc.tcp.request.description": "OSC（TCP） のフレームを送信し、設定されている場合は一件の応答を待ちます。",
   "node.tcp.reply.name": "TCPで応答",
   "node.tcp.reply.description": "受信したリクエストハンドルを所有するピアから、一度だけ応答します。",
-  "node.http.reply.name": "HTTPで応答",
+  "node.http.reply.name": "HTTP で応答",
   "node.http.reply.description": "受信したリクエストハンドルを所有するピアから、一度だけ応答します。",
   "node.http.listen.name": "HTTP サーバー",
   "node.http.listen.description": "REST 要求または GraphQL の要求形式を受け取ります。GraphQL スキーマの実行エンジンは含みません。",

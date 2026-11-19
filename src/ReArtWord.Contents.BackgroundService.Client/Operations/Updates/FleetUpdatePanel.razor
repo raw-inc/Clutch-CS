@@ -5,14 +5,15 @@
     <p>@Ui["Update different PCs and clusters concurrently, confirming recovery before reusing each slot."]</p>
     <p>@Ui["The release must declare compatibility. Clusters with at least three peers must retain a Ready majority; smaller single-host clusters may disconnect temporarily."]</p>
     <div class="maintenance-form">
-    <label>@Ui["Manifest or release-bundle.json"]<InputFile OnChange="ReadManifestAsync" accept=".json" disabled="@busy" /></label>
+    <LocalFileField Label='@Ui["Manifest or release-bundle.json"]' OnChange="ReadManifestAsync" Accept=".json" Disabled="@busy" />
     <label>@Ui["Absolute payload path on this ClientHost"]<input @bind="payloadRoot" @bind:event="oninput" @bind:after="InvalidatePlan" disabled="@busy" /></label>
     <label><input type="checkbox" @bind="allowActive" @bind:after="InvalidatePlan" disabled="@busy" />@Ui["Explicitly allow updates while running"]</label>
     <label>@Ui["Maximum attempts per peer (including the first)"]<select @bind="maximumAttempts" @bind:after="InvalidatePlan" disabled="@busy"><option value="3">3</option><option value="2">2</option><option value="1">1</option></select></label>
     <label>@Ui["Maximum parallel peer updates"]<select @bind="maximumParallelism" @bind:after="InvalidatePlan" disabled="@busy"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
     <label>@Ui["Confirmation timeout per peer (seconds)"]<input @bind="timeoutSeconds" @bind:after="InvalidatePlan" inputmode="numeric" disabled="@busy" /></label>
     </div>
-    <button @onclick="PreviewAsync" disabled="@(busy || manifest is null)">@Ui["Preview update plan"]</button>
+    @if(manifest is null){<p class="small muted">@Ui["Choose a manifest to continue."]</p>}
+<button @onclick="PreviewAsync" disabled="@(busy || manifest is null)">@Ui["Preview update plan"]</button>
     <p class="notice" role="status">@(message?.Invoke())</p>
     @if(plan is not null)
     {

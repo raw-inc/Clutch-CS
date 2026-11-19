@@ -4,12 +4,13 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Management
 <section class="card">
 <h2>@Ui["Snapshots"]</h2>
+@if(snapshotCheckedAt is {} checkedAt){<p class="small muted">@Ui.Format("Snapshots retrieved: {0}", snapshots.Count) · @FormatTime(checkedAt,"HH:mm:ss")</p>}
 <p class="small muted">@Ui["Restore settings and explicitly included runtime state. External effects that already occurred are not undone."]</p>
 <div class="toolbar"><button class="primary" @onclick="OpenCapture"><UiIcon Name="save" />@Ui["Capture current state"]</button><button @onclick="OpenRestoreAsync"><UiIcon Name="undo" />@Ui["Restore by target"]</button></div>
 <p class="notice">@(message?.Invoke())</p>
 </section>
 <Modal Open="captureOpen" Title="@Ui["Capture current state"]" Close="()=>captureOpen=false">
-<label><input type="checkbox" @bind="permanent" />@Ui["Keep this snapshot permanently (otherwise use history retention)"]</label>
+    <ChildContent>
 <p class="notice">@(message?.Invoke())</p>
     <label>@Ui["Kind"]<select @bind="kind">@foreach(var value in Enum.GetValues<ESnapshotKind>()){<option value="@value">@Ui[value.ToString()]</option>}</select>
 </label>
@@ -17,7 +18,7 @@
 </label>
 <label>@Ui["Target ID"]<input @bind="target" @bind:event="oninput" placeholder="Workflow ID / workflow:ID / peer:Peer:ID" />
 </label>
-<button @onclick="CaptureAsync">@Ui["Capture and share"]</button>
+
 <SnapshotScopePicker Selected="ExpandCaptureAsync" />
 @if(captureTargets.Count!=0)
 {
@@ -25,15 +26,21 @@
     @foreach(var item in captureTargets){<p>@item.PeerId / @item.Id · @(item.NodeIds is null?Ui["Whole scope"]:string.Join(", ",item.NodeIds))</p>}
     <button @onclick="CaptureScopeAsync">@Ui["Capture these resolved targets"]</button>
 }
+<label><input type="checkbox" @bind="permanent" />@Ui["Keep this snapshot permanently (otherwise use history retention)"]</label>
+    </ChildContent>
+    <Actions>
+        <button class="primary" @onclick="CaptureAsync">@Ui["Capture and share"]</button>
+    </Actions>
 </Modal>
 <Modal Open="restoreOpen" Title="@Ui["Restore individual targets"]" Close="()=>restoreOpen=false">
+    <ChildContent>
 <p class="notice">@(message?.Invoke())</p>
 <p>@Ui["Choose one snapshot per target. Targets with no snapshot at that time are not applied but remain in the original compensation scope. Explicitly excluded targets are also excluded from compensation."]</p>
 <label>@Ui.Format("display.timezone.point",DisplayTimeZone.Id)<input type="datetime-local" value="@at" @oninput="TimeChanged" />
 </label>
 @foreach(var row in rows)
 {
-    <label>@row.Target.PeerId / @row.Target.Id (@Ui[row.Target.Kind.ToString()]) · @(row.Target.NodeIds is null?Ui["Whole scope"]:string.Join(", ",row.Target.NodeIds))<select @bind="row.Choice">
+    <label class="@(row.Choice == MatchOmit ? null : "included-target")">@row.Target.PeerId / @row.Target.Id (@Ui[row.Target.Kind.ToString()]) · @(row.Target.NodeIds is null?Ui["Whole scope"]:string.Join(", ",row.Target.NodeIds))<select @bind="row.Choice">
 <option value="omit">@Ui["Do not include in this request"]</option>
 <option value="at">@Ui["Latest at the specified time"]</option>
 <option value="exclude">@Ui["Explicitly exclude from scope"]</option>@foreach(var snapshot in snapshots.Where(item=>SnapshotSelectionRules.Covers(item,row.Target))){<option value="@snapshot.Id">@FormatTime(snapshot.CapturedAt) · @snapshot.Id</option>}</select>
@@ -52,6 +59,9 @@
 <button @onclick="AddTarget">@Ui["Add to scope"]</button>
 </details>
 <SnapshotScopePicker Selected="ExpandRestoreAsync" />
-<button @onclick="RestoreAsync">@Ui["Restore selected scope"]</button>
+    </ChildContent>
+    <Actions>
+        <button class="primary" disabled="@(SelectedRestoreCount == 0)" @onclick="RestoreAsync">@Ui.Format("Restore selected targets ({0})", SelectedRestoreCount)</button>
+    </Actions>
 </Modal>
 <SnapshotRestoreReview Request="pendingRestore" Closed="()=>pendingRestore=null" />

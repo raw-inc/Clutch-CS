@@ -3,9 +3,9 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Persistence
 @using ReArtWord.Contents.BackgroundService.Contracts.Nodes
 <section class="card">
-    <h2>@Ui["Inspect internal state and edit locally"]</h2>
+
     <p class="small muted">@Ui["Only workflow internal values are handled here. Files, processes, external sends and secrets are not queued offline. ClientHost candidates are unsaved and unsent, and are lost when it exits. Browser drafts are stored separately and are not sent to the execution peer until explicit integration."]</p>
-    <div class="toolbar"><label>Workflow ID<input disabled="@(scope==EInternalDataScope.Cluster)" @bind="workflow" @bind:event="oninput" maxlength="200" /></label><label>@Ui["Scope"]<select @bind="scope"><option value="@EInternalDataScope.Shared">@Ui["Workflow shared"]</option><option value="@EInternalDataScope.Peer">@Ui["Selected peer"]</option><option value="@EInternalDataScope.Cluster">Cluster State</option></select></label><label>@Ui["State key"]<input @bind="key" @bind:event="oninput" maxlength="512" /></label><button disabled="@busy" @onclick="()=>ReadAsync(false)">@Ui["Read current value"]</button></div>
+    <div class="toolbar field-actions"><label>@Ui["Workflow ID"]<input disabled="@(scope==EInternalDataScope.Cluster)" @bind="workflow" @bind:event="oninput" maxlength="200" /></label><label>@Ui["Scope"]<select @bind="scope"><option value="@EInternalDataScope.Shared">@Ui["Workflow shared"]</option><option value="@EInternalDataScope.Peer">@Ui["Selected peer"]</option><option value="@EInternalDataScope.Cluster">Cluster State</option></select></label><label>@Ui["State key"]<input @bind="key" @bind:event="oninput" maxlength="512" /></label><button disabled="@busy" @onclick="()=>ReadAsync(false)">@Ui["Read current value"]</button></div>
     @if(view is { } current)
     {
         <p class="small">@Ui["Owner"] @current.ClusterId / @current.PeerId / @current.InstanceId · @Ui["Saved value last confirmed"] @(FormatTime(current.ConfirmedAt)??Ui["Unconfirmed"])</p>

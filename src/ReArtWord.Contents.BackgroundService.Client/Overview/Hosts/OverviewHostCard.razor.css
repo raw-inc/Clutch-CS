@@ -41,7 +41,7 @@ h3 {
 }
 
 .host-name small {
-    font-size: 10px;
+    font-size: 12px;
     color: var(--muted);
 }
 
@@ -54,7 +54,7 @@ h3 {
 
 .metric-label {
     color: var(--muted);
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.08em;
 }
@@ -68,10 +68,10 @@ h3 {
 }
 
 .metric-number small {
-    font-size: 11px;
-    color: var(--muted);
     margin-left: 5px;
     font-weight: 400;
+    font-size: 0.6em;
+    color: var(--muted);
 }
 
 .metric-cell {
@@ -91,7 +91,7 @@ h3 {
 
 .metric-detail {
     margin-top: 8px;
-    font-size: 10px;
+    font-size: 12px;
     line-height: 1.6;
     font-variant-numeric: tabular-nums;
     color: var(--ink);
@@ -109,7 +109,7 @@ h3 {
     justify-content: space-between;
     gap: 14px;
     margin-top: 12px;
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .device-line > span:first-child {
@@ -130,11 +130,11 @@ h3 {
     display: flex;
     justify-content: space-between;
     color: var(--muted);
-    font-size: 10px;
+    font-size: 12px;
 }
 
 .network-caption span {
-    font-size: 9px;
+    font-size: 12px;
     letter-spacing: 0.05em;
 }
 
@@ -155,7 +155,7 @@ h3 {
 }
 
 .network small {
-    font-size: 9px;
+    font-size: 12px;
     color: var(--muted);
     display: block;
     margin-top: 7px;
@@ -166,7 +166,7 @@ h3 {
     justify-content: space-between;
     gap: 10px;
     color: var(--muted);
-    font-size: 9px;
+    font-size: 12px;
     border-top: 0;
     margin-top: 16px;
     padding-top: 11px;
@@ -229,7 +229,7 @@ h3 {
 
 .gpu-reading small {
     color: var(--muted);
-    font-size: 9px;
+    font-size: 12px;
     max-width: 155px;
     white-space: nowrap;
     overflow: hidden;
@@ -255,10 +255,10 @@ h3 {
 }
 
 .throughput-breakdown {
-    display: flex;
     flex-wrap: wrap;
-    gap: 0 4px;
-    font-size: 9px;
+    font-size: 12px;
+    display: grid;
+    gap: 2px;
 }
 
 .throughput-breakdown > span {
@@ -293,4 +293,17 @@ h3 {
     text-overflow: ellipsis;
     overflow-wrap: normal;
     margin-top: 0;
+}
+
+.device-line,
+.network {
+    background: var(--nested);
+    padding: 8px 12px;
+    border-radius: var(--radius-control);
+}
+
+.metric-alert {
+    color: var(--warn);
+    font-size: 12px;
+    font-weight: 700;
 }

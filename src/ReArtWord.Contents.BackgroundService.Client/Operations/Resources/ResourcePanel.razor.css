@@ -25,9 +25,28 @@
 
 .resource-metrics meter {
     width: 100%;
+    appearance: none;
+    height: 8px;
+    border-radius: var(--radius-chart);
+    background: var(--control);
 }
 
 .resource-detail td:last-child {
     text-align: end;
     font-variant-numeric: tabular-nums;
+}
+
+.resource-metrics meter::-webkit-meter-bar {
+    background: var(--control);
+    border: 0;
+    border-radius: var(--radius-chart);
+    height: 8px;
+}
+
+.resource-metrics meter::-webkit-meter-optimum-value {
+    background: var(--accent);
+}
+
+.resource-metrics meter::-moz-meter-bar {
+    background: var(--accent);
 }

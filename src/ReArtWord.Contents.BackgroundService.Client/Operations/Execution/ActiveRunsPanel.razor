@@ -1,7 +1,7 @@
 @using ReArtWord.Contents.BackgroundService.Client.Components
 @using ReArtWord.Contents.BackgroundService.Contracts.Execution
 <section class="section">
-    <div class="section-heading"><h2>@Ui["Running workflows"]</h2><button disabled="@busy" @onclick="()=>LoadAsync(null, UiCancellation)">@Ui["Refresh"]</button></div>
+    <div class="section-heading"><h2>@Ui["Running workflows"]</h2><button disabled="@busy" @onclick="()=>LoadAsync(null, UiCancellation)">@Ui["Refresh running workflows"]</button></div>
     <p class="footer-note">@Ui["Executions accepted by the selected peer. Cancellation targets the original execution; it does not undo completed effects."]</p>
     @if(message is not null){<p class="notice" role="status">@message()</p>}
     @if(page is not null)

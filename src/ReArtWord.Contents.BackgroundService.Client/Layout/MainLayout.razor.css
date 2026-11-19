@@ -302,10 +302,6 @@
     }
 }
 
-.route-picker {
-    display: none;
-}
-
 @media (max-width: 1320px) {
     .navigation ::deep a {
         display: none;
@@ -316,21 +312,6 @@
         overflow: visible;
     }
 
-    .route-picker {
-        display: flex;
-        width: 100%;
-        align-items: center;
-        gap: 12px;
-        margin: 0;
-        font-size: 12px;
-    }
-
-    .route-picker select {
-        width: auto;
-        flex: 1;
-        max-width: 28rem;
-        min-height: 36px;
-    }
 }
 
 @media (pointer: coarse) {
@@ -340,5 +321,91 @@
     .statusbar-left ::deep button.transfer-toggle,
     .statusbar-left ::deep a.pwa-state {
         min-height: 44px;
+    }
+}
+
+.route-menu {
+    display: none;
+}
+
+@media (max-width: 1320px) {
+    .route-menu {
+        display: block;
+        position: relative;
+    }
+
+    .route-menu summary {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        min-height: 44px;
+        cursor: pointer;
+    }
+
+    .route-menu > div {
+        position: absolute;
+        inset-block-start: 100%;
+        inset-inline-start: 0;
+        z-index: 35;
+        width: 15rem;
+        max-height: 70vh;
+        overflow: auto;
+        background: var(--panel);
+        border: 1px solid var(--control);
+        border-radius: var(--radius-control);
+        padding: 6px;
+    }
+
+    .navigation .route-menu a {
+        display: flex;
+        min-height: 44px;
+        padding: 8px 12px;
+    }
+}
+
+@media (max-width: 750px) {
+    .topbar {
+        display: flex;
+        height: auto;
+        min-height: 52px;
+        gap: 5px;
+        flex-wrap: nowrap;
+    }
+
+    .brand {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .navigation {
+        width: auto;
+        flex: none;
+        height: 44px;
+    }
+
+    .route-menu > div {
+        inset-inline: auto 0;
+    }
+
+    .topbar .connection {
+        flex: 0 1 8rem;
+        min-width: 0;
+    }
+}
+
+@media (max-width: 750px) {
+    .route-menu summary {
+        justify-content: center;
+        min-width: 44px;
+    }
+
+    .route-menu summary span {
+        display: none;
+    }
+
+    .route-menu > div {
+        position: fixed;
+        inset: 52px 8px auto;
+        width: auto;
     }
 }

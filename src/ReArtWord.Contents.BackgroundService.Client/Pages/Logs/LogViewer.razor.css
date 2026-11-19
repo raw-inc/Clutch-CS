@@ -172,6 +172,7 @@
 
 .log-page .page-title h1 {
     margin: 0;
+    letter-spacing: normal;
 }
 
 .log-page .log-search {
@@ -322,8 +323,8 @@
 
 .log-pagination > span[role="status"] {
     padding: 4px 12px;
-    background: var(--accent);
-    color: var(--on-accent);
+    background: var(--accent-soft);
+    color: var(--accent);
     border-radius: var(--radius-control);
     font-variant-numeric: tabular-nums;
 }
@@ -379,4 +380,46 @@
     .log-results.has-selection .log-detail {
         grid-row: 1;
     }
+}
+
+.log-table tr.selected-log .badge {
+    border: 1px solid currentcolor;
+}
+
+.log-table .badge {
+    min-width: 4.5em;
+    font-weight: 600;
+}
+
+.log-editor-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 40px;
+}
+
+@media (max-width: 680px) {
+    .log-detail {
+        position: fixed;
+        z-index: 9;
+        inset: auto 8px var(--statusbar-height);
+        padding: 16px;
+        max-height: 56dvh;
+        overflow: auto;
+        border: 1px solid var(--control);
+        border-radius: var(--radius-panel);
+        background: var(--panel);
+    }
+}
+
+.log-results-heading {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: baseline;
+    gap: 8px 12px;
+}
+
+.log-results-heading > span[role="status"] {
+    margin-inline-end: auto;
 }

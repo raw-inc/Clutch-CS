@@ -49,9 +49,10 @@
 }
 
 .pc-display-toggle button.active {
-    background: var(--accent);
+    background: var(--accent-soft);
     border-color: var(--accent);
-    color: var(--on-accent);
+    color: var(--accent);
+    font-weight: 700;
 }
 
 .health-card {
@@ -209,8 +210,9 @@ meter::-moz-meter-bar {
 }
 
 .choice-strip input:checked + span {
-    background: var(--accent);
-    color: var(--on-accent);
+    background: var(--accent-soft);
+    font-weight: 700;
+    color: var(--accent);
     border-color: var(--accent);
 }
 
@@ -489,4 +491,52 @@ input[type="file"]::file-selector-button {
 .field-label {
     min-width: 0;
     margin: 0;
+}
+
+.file-picker-control {
+    display: inline-flex;
+    position: relative;
+    align-items: center;
+    width: fit-content;
+    max-width: 100%;
+    gap: 10px;
+    min-height: 44px;
+}
+
+.file-picker-control > span:first-child {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding-inline: 12px;
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
+    background: var(--panel);
+}
+
+.file-picker-control > span + span {
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+
+.file-picker-control input[type="file"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.file-picker-control:focus-within > span:first-child {
+    border-color: var(--accent);
+    box-shadow: inset 0 -2px var(--accent);
+}
+
+.included-target {
+    background: var(--accent-soft);
+    padding: 8px;
+}
+
+.count-entry {
+    width: 10ch;
 }

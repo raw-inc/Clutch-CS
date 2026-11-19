@@ -2,7 +2,7 @@
 <div class="application-editor">
     <p class="application-owner"><strong>@Owner</strong><br /><span class="small muted">@Ui["This application is registered on this host and cluster peer only."]</span></p>
     @if(problem is not null){<p class="notice error" role="alert">@problem()</p>}
-    <fieldset disabled="@Busy">
+    <form id="application-registration" @onsubmit="()=>SaveAsync(UiCancellation)" @onsubmit:preventDefault><fieldset disabled="@Busy">
         <div class="application-fields">
             <label>@Ui["Application name"]<input @bind="draft.Name" @bind:event="oninput" maxlength="160" /></label>
             <label>@Ui["Management mode"]<select @bind="draft.Mode"><option value="Managed">@Ui["Managed"]</option><option value="ObserveOnly">@Ui["ObserveOnly"]</option></select></label>
@@ -10,7 +10,7 @@
             <label class="wide">@Ui["Working directory"]<input @bind="draft.Directory" @bind:event="oninput" placeholder="C:\Apps" /></label>
             @if(draft.Mode==EProcessMode.Managed)
             {
-                <label>@Ui["Application launch session"]<select @bind="draft.LaunchSession"><option value="Automatic">@Ui["Logged-in desktop on Windows (current environment on other OS)"]</option><option value="CoreAccount">@Ui["Core account and session"]</option></select></label>
+                <label>@Ui["Application launch session"]<select @bind="draft.LaunchSession"><option value="Automatic">@Ui["Logged-in desktop"]</option><option value="CoreAccount">@Ui["Core account and session"]</option></select></label>
                 <label>@Ui["Application window mode"]<select @bind="draft.WindowMode"><option value="Default">@Ui["Default window display"]</option><option value="NoWindow">@Ui["No window"]</option></select></label>
                 <p class="small muted wide">@Ui["Windows services need the logged-in desktop to show an application. If no user is logged in, startup is rejected. No window suppresses the console and requests a hidden initial window; the application can create its own windows later."]</p>
             }
@@ -95,8 +95,7 @@
             <label>@Ui["Existing process PID (optional)"]<input type="number" min="1" @bind="draft.Pid" @bind:event="oninput" /></label>
             <label>@Ui["OS start time (include time zone and original precision)"]<input @bind="draft.StartedAt" @bind:event="oninput" placeholder="2026-10-12T09:00:00.0000000+09:00" /></label>
         </details>
-        <div class="toolbar section"><button type="button" @onclick="()=>SaveAsync(UiCancellation)">@Ui["Save registration"]</button><button type="button" class="quiet" @onclick="Cancel">@Ui["Cancel"]</button></div>
-    </fieldset>
+    </fieldset></form>
 </div>
 @if(browsing)
 {

@@ -5,6 +5,7 @@
         <button type="submit" disabled="@(searching||string.IsNullOrWhiteSpace(query))">@Ui["Search"]</button>
     </form>
     @if(Kind == EScriptPackageKind.Pip){<p class="footer-note">@Ui["PyPI searches package names. The first search downloads the public name index."]</p>}
+    @if(Kind == EScriptPackageKind.Npm){<p class="footer-note">@Ui["Search npm by package name or keyword."]</p>}
     @if(searching){<p role="status">@Ui["Searching packages…"]</p>}
     @if(results?.Problem is {} problem){<p class="notice error" role="alert">@Ui[problem]</p>}
     @if(results?.Notice is {} notice){<p class="footer-note">@Ui[notice]</p>}

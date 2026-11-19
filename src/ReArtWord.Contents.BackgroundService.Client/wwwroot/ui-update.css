@@ -73,12 +73,12 @@ progress {
     border: 0;
     border-radius: var(--radius-chart);
     overflow: hidden;
-    background: var(--nested);
+    background: var(--control);
     accent-color: var(--accent);
 }
 
 progress::-webkit-progress-bar {
-    background: var(--nested);
+    background: var(--control);
     border-radius: var(--radius-chart);
 }
 
@@ -102,7 +102,8 @@ progress::-moz-progress-bar {
 }
 
 .manual {
-    max-width: 46rem;
+    box-sizing: border-box;
+    width: min(30rem, calc(100% - 32px));
     margin: 16px;
     padding: clamp(16px, 4vw, 32px);
     border-radius: var(--radius-panel);
@@ -144,4 +145,22 @@ button:disabled {
     progress::-webkit-progress-value {
         transition: none;
     }
+}
+
+.manual > a {
+    display: inline-block;
+    margin: 10px;
+}
+
+.manual-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 18px;
+    font-weight: 650;
+}
+
+.save-reminder {
+    padding-inline-start: 10px;
+    border-inline-start: 3px solid var(--warn);
 }

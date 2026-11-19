@@ -1,6 +1,6 @@
 .dashboard-workspace {
     display: grid;
-    grid-template-columns: 12rem minmax(0, 1fr);
+    grid-template-columns: 13.75rem minmax(0, 1fr);
     gap: clamp(20px, 3vw, 48px);
     align-items: start;
 }
@@ -122,4 +122,44 @@
 
 .dashboard-operations[hidden] + .dashboard-operations {
     margin-top: 0;
+}
+
+.settings-picker .choice-strip input:checked + span {
+    border-bottom: 2px solid var(--accent);
+}
+
+.dashboard-operations ::deep .review-heading {
+    display: block;
+}
+
+.dashboard-operations ::deep section > button {
+    justify-self: start;
+}
+
+.dashboard-operations ::deep label:has(input[type="checkbox"]) {
+    align-items: start;
+}
+
+.dashboard-operations ::deep .field-actions {
+    align-items: end;
+    gap: 12px;
+}
+
+.dashboard-operations ::deep .field-actions select {
+    min-width: min(14rem, 100%);
+}
+
+@media (max-width: 680px) {
+    .dashboard-operations ::deep button,
+    .dashboard-operations ::deep select {
+        min-height: 44px;
+    }
+}
+
+.dashboard-operations > details.secondary-details:not([open]) {
+    padding: 10px 16px;
+}
+
+.dashboard-operations > details.secondary-details > summary {
+    margin: 0;
 }

@@ -2,7 +2,7 @@
 <section class="section script-packages">
     <div class="section-heading">
         <h2>@Ui["Script packages"]</h2>
-        <button disabled="@loading" @onclick="()=>RefreshAsync(UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh"]</button>
+        <button disabled="@loading" @onclick="()=>RefreshAsync(UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh package information"]</button>
     </div>
     <p class="footer-note">@Ui.Format("Package destination: {0} / {1}", cluster, peer)</p>
     <p>@Ui["Packages are installed on this peer. Analyze and save a script to adopt the current package configuration. Existing saved scripts keep their previous configuration."]</p>
@@ -21,7 +21,7 @@
                     <span><strong>@choice.Language</strong><small>@choice.Registry</small></span></label>
             }
         </fieldset>
-        <div class="package-workspace">
+        <clutch-card-rows><div class="package-workspace">
         @if (kind != EScriptPackageKind.Nuget)
         {
             <aside class="package-pane"><h3>@Ui["Script runtime"]</h3>
@@ -58,7 +58,7 @@
             <h3>@Ui["Installed packages"]</h3>
             @if (environment is null || environment.Requested.Count == 0)
             {
-                <p class="muted">@Ui["No packages selected for new analysis."]</p>
+                <p class="empty">@Ui["No packages selected for new analysis."]</p>
             }
             @if (environment is not null)
             {
@@ -81,13 +81,13 @@
                     </tbody>
                 </table></div>
                 <details class="secondary-details"><summary>@Ui["Resolved dependencies"] (@environment.Installed.Count)</summary>
+                    <p class="footer-note">@Ui["Removing a package changes new analyses only. Previous environments are retained for saved workflows. Install the same dependencies on every execution peer."]</p>
                     <div class="package-dependencies">@foreach (var package in environment.Installed){<div><span>@package.Id</span><span class="mono">@package.Version</span></div>}</div>
                 </details>
             }
         </section>
         </div>
-        </div>
-        <p class="footer-note">@Ui["Removing a package changes new analyses only. Previous environments are retained for saved workflows. Install the same dependencies on every execution peer."]</p>
+        </div></clutch-card-rows>
         <details class="secondary-details"><summary>@Ui["Recent package operations"]</summary>
         <div class="table-wrap"><table>
             <thead><tr><th>@Ui["Operation ID"]</th><th>@Ui["Package name"]</th><th>@Ui["Operation"]</th><th>@Ui["State"]</th><th>@Ui["Reason"]</th></tr></thead>

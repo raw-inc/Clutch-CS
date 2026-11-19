@@ -41,7 +41,7 @@
                 <footer>@Ui.Format("Latest poll: {0}/{1} peers",telemetry.Observations.Sum(pair=>pair.Value.ActivityPeers),telemetry.KnownPeers) · @Ui["Partial range, not a cluster total"] @if(activity.Length>8){<span> · @Ui.Format("Showing 8/{0} workflows",activity.Length)</span>}</footer>
                 </div>
             </section>
-            <section><div class="panel-heading"><h2>@Ui["Recent logs"]</h2><span>@Ui["Last 15 minutes"]</span></div>
+            <section><div class="panel-heading"><h2>@Ui["Recent logs"]</h2><a href="/logs">LogViewer <UiIcon Name="chevron" /></a><span>@Ui["Last 15 minutes"]</span></div>
                 <div class="health-card panel-content">
                 @{var logs=telemetry.Observations.SelectMany(pair=>(pair.Value.Logs?.Entries??[]).Select(row=>(Cluster:pair.Key,Row:row))).OrderByDescending(item=>item.Row.Time).Take(8).ToArray();}
                 @if(logs.Length==0){<p class="empty">@Ui["No logs in the retrieved range."]</p>}

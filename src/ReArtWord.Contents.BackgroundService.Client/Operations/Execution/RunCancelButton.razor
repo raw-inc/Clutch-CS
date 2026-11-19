@@ -1,2 +1,7 @@
-<button class="quiet" disabled="@(busy||submitted||OwnerInstanceId==Guid.Empty||PeerId is null||ClusterId is null)" @onclick="()=>CancelAsync(UiCancellation)">@Ui[submitted?"Cancellation requested":"Cancel this execution"]</button>
+<button class="danger" disabled="@(busy||submitted||OwnerInstanceId==Guid.Empty||PeerId is null||ClusterId is null)" @onclick="()=>confirming=true"><UiIcon Name="stop" />@Ui[submitted?"Cancellation requested":"Cancel this execution"]</button>
 @if(message is not null){<p class="small notice">@message()</p>}
+
+<Modal Open="confirming" Title='@Ui["Cancel this execution"]' Close="()=>confirming=false">
+    <ChildContent><p>@Ui["Completed effects cannot be undone."]</p><code>@RunId</code></ChildContent>
+    <Actions><button class="danger" disabled="@(busy||submitted)" @onclick="()=>{confirming=false;return CancelAsync(UiCancellation);}"><UiIcon Name="stop" />@Ui["Cancel this execution"]</button></Actions>
+</Modal>

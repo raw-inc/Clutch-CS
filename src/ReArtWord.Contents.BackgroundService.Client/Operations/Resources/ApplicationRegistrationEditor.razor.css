@@ -4,15 +4,17 @@
 
 .application-owner {
     padding: 12px 14px;
-    background: var(--panel);
     border-radius: var(--radius-panel);
     overflow-wrap: anywhere;
+    padding-inline: 0;
+    background: transparent;
 }
 
 .application-fields {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px 18px;
+    align-items: end;
 }
 
 .application-fields .wide {
@@ -79,4 +81,8 @@
     .application-fields {
         grid-template-columns: minmax(0, 1fr);
     }
+}
+
+.application-fields label:has(input[type="checkbox"]) {
+    align-self: start;
 }

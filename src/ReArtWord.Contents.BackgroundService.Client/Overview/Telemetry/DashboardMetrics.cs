@@ -100,6 +100,19 @@ internal static class DashboardMetrics
     internal static string Trend(IReadOnlyList<ResourceSample> samples, string metric, string target, double maximum = 100)
         => TrendPaths(samples, metric, target, maximum).Series;
 
+    /// <summary>カードで表示するCPU・メモリーと代表GPU・VRAMの最新の使用率を数えます。</summary>
+    /// <returns>80%を超えている指標の件数です。</returns>
+    internal static int AboveThreshold(ResourceSample? sample)
+    {
+        string gpu = LargestDedicatedGpu(sample)?.Target ?? string.Empty;
+        return Convert.ToInt32(80 < Value(sample, "cpu.usage")) + Convert.ToInt32(80 < Value(sample, "memory.usage"))
+               + Convert.ToInt32(80 < Value(sample, "gpu.usage", gpu)) + Convert.ToInt32(80 < Value(sample, "gpu.memory.usage", gpu));
+    }
+
+    /// <summary>固定の百分率で表示する指標かを判定します。</summary>
+    /// <returns>使用率の基準線を適用する場合はtrueです。</returns>
+    internal static bool IsUsage(string metric) => metric is "cpu.usage" or "memory.usage" or "gpu.usage" or "gpu.memory.usage";
+
     /// <summary>使用率は80%との交点で線を分け、超えた区間だけを重ね描きします。</summary>
     /// <returns>全実測点の折れ線と、強調する区間の折れ線です。</returns>
     internal static (string Series, string Highlight) TrendPaths(IReadOnlyList<ResourceSample> samples, string metric, string target, double maximum)
@@ -113,7 +126,7 @@ internal static class DashboardMetrics
         long startMilliseconds = last.ObservedAt.ToUnixTimeMilliseconds() - 300000;
         StringBuilder result = new();
         DateTimeOffset? previous = null;
-        bool usage = metric is "cpu.usage" or "memory.usage" or "gpu.usage" or "gpu.memory.usage";
+        bool usage = IsUsage(metric);
         StringBuilder? highlight = null;
         double lastX = 0, lastValue = 0;
         int count = 0;

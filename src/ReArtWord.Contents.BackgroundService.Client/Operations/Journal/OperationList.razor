@@ -1,7 +1,7 @@
 @using ReArtWord.Contents.BackgroundService.Client.Components
 @using ReArtWord.Contents.BackgroundService.Client.Operations.Execution
 <section class="section">
-<h2>@Ui["Recorded operations and status queries"]</h2>
+<h2>@Ui["Operations recorded in this browser"]</h2>
 <div class="toolbar field-actions"><label>@Ui["Operation type"]<select @bind="kind"><option value="capture">@Ui["Capture snapshot"]</option><option value="restore">@Ui["Restore snapshot"]</option><option value="file">@Ui["File operation across all targets"]</option><option value="update">@Ui["Release update"]</option><option value="run">@Ui["Manual run"]</option><option value="cancel">@Ui["Cancel execution"]</option><option value="save">@Ui["Save operation"]</option><option value="conflict">@Ui["Resolve shared state conflicts"]</option><option value="script-package">@Ui["script-package"]</option><option value="script-runtime">@Ui["script-runtime"]</option></select></label><label>@Ui["Known operation ID"]<input @bind="identity" @bind:event="oninput" placeholder="@Ui["Operation GUID"]" /></label><button @onclick="LookupAsync">@Ui["Query known ID"]</button></div>
 @if(problem is not null){<p class="notice error">@(problem?.Invoke())</p>}
 @if(Journal.Items.Count==0)

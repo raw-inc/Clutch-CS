@@ -569,7 +569,8 @@ details[open] > summary {
 
 .conflict-candidates {
     display: grid;
-    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+    gap: 16px;
 }
 
 .conflict-candidates summary > span {
@@ -841,4 +842,188 @@ details[open] > summary {
 .dialog-content .action-list button {
     white-space: normal;
     text-align: start;
+}
+
+.record-table tbody tr:last-child > * {
+    border-bottom: 0;
+}
+
+@media (max-width: 680px) {
+    .record-table,
+    .record-table tbody {
+        display: block;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .record-table thead {
+        position: absolute;
+        clip-path: inset(50%);
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+    }
+
+    .record-table tbody tr {
+        display: grid;
+        gap: 6px;
+        margin: 8px 0;
+        padding: 12px;
+        background: var(--nested);
+        border-radius: var(--radius-control);
+    }
+
+    .record-table tbody [data-field] {
+        display: grid;
+        grid-template-columns: minmax(6rem, 35%) minmax(0, 1fr);
+        align-items: start;
+        gap: 4px 12px;
+        border: 0;
+        padding: 3px 0;
+        width: auto;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .record-table [data-field]::before {
+        content: attr(data-field);
+        font: 500 12px/1.5 var(--font-body, sans-serif);
+        color: var(--muted);
+        grid-row: 1 / span 2;
+    }
+
+    .record-table [data-field] > * {
+        min-width: 0;
+    }
+
+    .record-table [data-field] button {
+        min-height: 44px;
+    }
+
+    .record-table [data-field] > :nth-child(n+2) {
+        grid-column: 2;
+    }
+}
+
+.candidate-option {
+    min-width: 0;
+    padding: 14px;
+    border-radius: var(--radius-control);
+    background: var(--nested);
+}
+
+.candidate-option.chosen {
+    box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.candidate-option code,
+.candidate-option pre {
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.discovery-binding {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.discovery-binding .toolbar {
+    gap: 10px;
+}
+
+.candidate-option > label {
+    display: flex;
+    flex-flow: row wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.candidate-option > label > input[type="radio"] {
+    width: auto;
+    margin: 0;
+}
+
+.candidate-option > label > span {
+    color: var(--accent);
+}
+
+.candidate-option pre {
+    font: 14px/1.5 Consolas, monospace;
+}
+
+.record-table td.numeric,
+.record-table th.numeric {
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 681px) {
+    .persistence-counts :is(td,th):not(:first-child) {
+        text-align: end;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+.update-settings > p {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--muted);
+}
+
+.update-settings > label {
+    margin-block: 18px;
+}
+
+.update-settings > label:has(input[type="checkbox"]) {
+    display: flex;
+    align-items: start;
+    gap: 8px;
+}
+
+.update-settings > label :is(input,select):not([type="checkbox"]) {
+    min-height: 44px;
+}
+
+.update-settings > button {
+    width: fit-content;
+}
+
+.dialog-content fieldset > label + label {
+    margin-top: 18px;
+}
+
+.schedule-list-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+}
+
+.dialog-content > p {
+    max-inline-size: 65ch;
+    text-wrap: pretty;
+}
+
+.dialog-content label:has(>input[type="checkbox"]) {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.operational-fields {
+    display: grid;
+    gap: 16px;
+}
+
+.operational-fields :is(h3,p) {
+    margin-block: 0;
+}
+
+.operational-fields input,
+.operational-fields select {
+    min-width: 0;
 }

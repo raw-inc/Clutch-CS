@@ -216,6 +216,21 @@ window.contentsBrowser.pwaStatus = async() =>
 
 // 最前面の表示領域を使い、SVG内のノードやスクロール領域で切り取られないようにする。
 const contentsDialogFocus = new Map();
+
+// ダイアログごとに編集開始時の値を保持し、開閉やフォーカス移動だけでは破棄確認を出さない。
+const dialogValues = new WeakMap();
+
+/** 編集できる項目の値と並びを取得します。
+ * @returns 現在の編集内容を比較するための文字列です。
+ */
+function editableValues(element)
+{
+    return JSON.stringify(Array.from(element.querySelectorAll('input,select,textarea,[data-member-id]')).filter(item => item.closest('dialog') === element).map(item =>
+        [item.dataset.memberId ?? '', item.value ?? '', item.checked ?? false]));
+}
+
+window.contentsBrowser.mayDiscardDialog = (element, message) => dialogValues.get(element) === editableValues(element) || window.confirm(message);
+
 window.contentsBrowser.openDialog = (element, id) =>
 {
     if (!element?.isConnected)
@@ -223,6 +238,10 @@ window.contentsBrowser.openDialog = (element, id) =>
         return;
     }
     const previous = document.activeElement;
+    if (element.hasAttribute('data-confirm-discard'))
+    {
+        dialogValues.set(element, editableValues(element));
+    }
     if (element instanceof HTMLDialogElement && !element.open)
     {
         element.showModal();
@@ -312,3 +331,15 @@ document.addEventListener('keydown', event =>
     tabs[index].focus();
     tabs[index].click();
 });
+
+window.contentsBrowser.narrowEditor = () => window.matchMedia('(max-width: 760px)').matches;
+
+window.contentsBrowser.revealTab = strip =>
+{
+    const active = strip?.querySelector('[aria-pressed="true"]');
+    if (active)
+    {
+        const tab = active.getBoundingClientRect(), bounds = strip.getBoundingClientRect();
+        strip.scrollLeft += Math.min(0, tab.left - bounds.left) + Math.max(0, tab.right - bounds.right);
+    }
+};

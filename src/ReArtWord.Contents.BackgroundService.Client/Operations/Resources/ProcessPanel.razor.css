@@ -92,6 +92,7 @@
     padding: 10px 12px;
     background: var(--card);
     border-radius: var(--radius-control);
+    min-height: 0;
 }
 
 .application-state dt {
@@ -121,4 +122,9 @@
 .recovery-controls {
     margin-block: 16px;
     background: var(--panel);
+}
+
+.application-summary,
+.application-target {
+    background: var(--nested);
 }

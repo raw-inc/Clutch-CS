@@ -11,3 +11,7 @@
 .app-statusbar .statusbar-action.warn {
     color: var(--warn);
 }
+
+.statusbar-action {
+    font-size: 12px;
+}

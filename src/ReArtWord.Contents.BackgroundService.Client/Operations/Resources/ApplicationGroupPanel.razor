@@ -21,7 +21,8 @@
     }
     </tbody></table>@if(groups.Count==0){<div class="empty">@Ui["No application groups registered."]</div>}</div></clutch-status-labels>
 </section>
-<Modal Wide="true" Open="@(draft is not null)" Title='@Ui["Application group settings"]' Close="CloseEditor">
+<Modal Open="@(draft is not null)" Title='@Ui["Application group settings"]' Close="CloseEditor" ConfirmDiscard="true">
+    <ChildContent>
     @if(draft is {} form)
     {
         <p class="small muted">@Owner</p>
@@ -30,24 +31,28 @@
             <label>@Ui["Application group name"]<input maxlength="160" @bind="form.Name" @bind:event="oninput" /></label>
             <label><input type="checkbox" @bind="form.Automatic" />@Ui["Automatically recover this application group"]</label>
             <label>@Ui["Group recovery policy"]<select @bind="form.Mode"><option value="@EProcessGroupRecoveryMode.FailedApplications">@Ui[Policy(EProcessGroupRecoveryMode.FailedApplications)]</option><option value="@EProcessGroupRecoveryMode.EntireGroup">@Ui[Policy(EProcessGroupRecoveryMode.EntireGroup)]</option></select></label>
-            @if(form.Mode==EProcessGroupRecoveryMode.EntireGroup){<label>@Ui["Group recovery delay (ms)"]<input type="number" min="0" max="3600000" @bind="form.RecoveryDelay" @bind:event="oninput" /></label>}
+            @if(form.Mode==EProcessGroupRecoveryMode.EntireGroup){<label>@Ui["Group recovery delay (ms)"]<input type="number" min="0" max="3600000" @bind="form.RecoveryDelay" @bind:event="oninput" /><small>@Seconds(form.RecoveryDelay)</small></label>}
             <p class="small muted">@Ui["Recovery conditions and attempt limits follow each application's settings."]</p>
             <h3>@Ui["Group startup order"]</h3>
             <p class="small muted">@Ui["The first delay starts when group startup begins. Each later delay starts after the preceding application has started."]</p>
             @foreach(var member in form.Members)
             {
-                <div class="card toolbar" @key="member.Id"><strong>@Name(member.Id)</strong><label>@Ui["Delay before this application starts (ms)"]<input type="number" min="0" max="3600000" @bind="member.Delay" @bind:event="oninput" /></label>
+                <div class="card toolbar" @key="member.Id" data-member-id="@member.Id"><strong>@Name(member.Id)</strong><label>@Ui["Delay before this application starts (ms)"]<input type="number" min="0" max="3600000" @bind="member.Delay" @bind:event="oninput" /><small>@Seconds(member.Delay)</small></label>
                     <button class="quiet" aria-label='@Ui["Move application up"]' disabled="@(form.Members.IndexOf(member)==0)" @onclick="()=>form.Move(member,-1)">↑</button>
                     <button class="quiet" aria-label='@Ui["Move application down"]' disabled="@(form.Members.IndexOf(member)==form.Members.Count-1)" @onclick="()=>form.Move(member,1)">↓</button>
                     <button class="quiet" @onclick="()=>form.Members.Remove(member)">@Ui["Remove from group"]</button>
                 </div>
             }
             <label>@Ui["Add a registered application"]<select value="" @onchange="Add"><option value="">@Ui["Select an application"]</option>@foreach(var application in Candidates()){<option value="@application.Id">@application.DisplayName</option>}</select></label>
-            <label>@Ui["Group graceful stop timeout (ms)"]<input type="number" min="1" max="3600000" @bind="form.StopTimeout" @bind:event="oninput" /></label>
+            <label>@Ui["Group graceful stop timeout (ms)"]<input type="number" min="1" max="3600000" @bind="form.StopTimeout" @bind:event="oninput" /><small>@Seconds(form.StopTimeout)</small></label>
             <label>@Ui["If an application does not exit"]<select @bind="form.StopPolicy"><option value="@EProcessStopPolicy.WaitForManual">@Ui["Wait for manual action if it does not exit"]</option><option value="@EProcessStopPolicy.Force">@Ui["Force termination if it does not exit"]</option></select></label>
-            <div class="toolbar"><button @onclick="()=>SaveAsync(UiCancellation)">@Ui["Save"]</button><button class="quiet" @onclick="CloseEditor">@Ui["Cancel"]</button></div>
+
         </fieldset>
     }
+    </ChildContent>
+    <Actions>
+        <button class="primary" disabled="@(busy||!Available||draft is null)" @onclick="()=>SaveAsync(UiCancellation)">@Ui["Save"]</button>
+    </Actions>
 </Modal>
 <Modal Open="@(confirming is not null)" Title='@Ui[command==EProcessGroupCommand.Stop?"Stop group":"Restart group"]' Close="CloseConfirmation">
     <p>@Owner · <strong>@confirming?.Definition.Name</strong></p>

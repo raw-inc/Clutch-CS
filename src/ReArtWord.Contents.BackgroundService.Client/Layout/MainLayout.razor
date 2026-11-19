@@ -14,18 +14,17 @@
     <nav class="navigation" aria-label="@Ui["Main navigation"]">
         @foreach (var item in navigationItems)
         {
-            <NavLink href="@item.Route"><UiIcon Name="@item.Icon" />@item.Name</NavLink>
+            <a href="@item.Route" class="@(NavigationRoute == item.Route ? "active" : null)" aria-current="@(NavigationRoute == item.Route ? "page" : null)"><UiIcon Name="@item.Icon" />@item.Name</a>
         }
-        <label class="route-picker">
-            <span>@Ui["Main navigation"]</span>
-            <select value="@NavigationRoute" @onchange="e=>Navigation.NavigateTo(e.Value?.ToString() ?? NavigationRoute)">
+        <details class="route-menu" @key="Navigation.Uri">
+            <summary aria-label='@Ui["Main navigation"]'><UiIcon Name="menu" /><span>@Ui["Menu"]</span></summary>
+            <div>
                 @foreach (var item in navigationItems)
                 {
-                    <option value="@item.Route">@item.Name</option>
+                    <a href="@item.Route" aria-current="@(NavigationRoute == item.Route ? "page" : null)"><UiIcon Name="@item.Icon" />@item.Name</a>
                 }
-                @if (NavigationRoute == "licenses"){<option value="licenses">OSS License</option>}
-            </select>
-        </label>
+            </div>
+        </details>
     </nav>
     <LanguageSelector />
     <div class="connection"><ConnectionPicker TargetChanged="StateHasChanged" ClusterId="@Api.SelectedClusterId" PeerId="@Api.SelectedPeerId" Connected="Connection.Connected" /></div>

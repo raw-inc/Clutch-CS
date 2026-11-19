@@ -1,7 +1,7 @@
 @using ReArtWord.Contents.BackgroundService.Client.Components
 @using ReArtWord.Contents.BackgroundService.Contracts.Updates.Scheduling
 @using ReArtWord.Contents.BackgroundService.Contracts.Updates
-<button type="button" @onclick="()=>OpenAsync(UiCancellation)">@Ui["Update reservations"]</button>
+<button class="schedule-list-action" type="button" @onclick="()=>OpenAsync(UiCancellation)">@Ui["Update reservations"] <UiIcon Name="chevron" /></button>
 <Modal Open="open" Title="@Ui["Update reservations"]" Close="()=>open=false">
     <p>@Ui["Owning peer"]: @peer</p>
     <button type="button" disabled="@busy" @onclick="()=>RefreshAsync(UiCancellation)">@Ui["Refresh"]</button>

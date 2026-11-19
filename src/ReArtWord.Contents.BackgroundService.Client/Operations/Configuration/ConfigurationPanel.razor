@@ -13,8 +13,9 @@
     <p class="notice" role="status">@(message?.Invoke())</p>
 </section>
 <Modal Open="open" Title="@Ui["Operational settings"]" Close="()=>open=false">
+    <ChildContent>
     @if(open){<EditorRestoreProtection IsConfigurationParticipant="true" WorkflowId="cluster-operational" ReadOnlyChanged="value=>restoreReadOnly=value" />}
-    <fieldset disabled="@restoreReadOnly">
+    <fieldset class="operational-fields" disabled="@restoreReadOnly">
     <p>@Ui["NIC, IP, storage paths and allowed roots are peer-specific. These shared settings apply to new inputs."]</p>
     <dl class="revision-facts"><div><dt>@Ui["Saved revision"]</dt><dd>@(state?.Saved?.Revision??Ui["None"])</dd></div>
     <div><dt>@Ui["Effective revision on this peer"]</dt><dd>@(state?.Effective?.Revision??Ui["Unconfirmed"])</dd></div></dl>
@@ -29,6 +30,7 @@
     <label>@Ui["Confirm temporary safety actions"]<select @bind="confirmation"><option value="@ESafetyConfirmation.None">@Ui["No additional confirmation"]</option><option value="@ESafetyConfirmation.Continue">@Ui["Confirm temporary continuation only"]</option><option value="@ESafetyConfirmation.Always">@Ui["Confirm temporary stop and continuation"]</option></select></label>
     </div>
     <h3>@Ui["Host groups (flat sets of host IDs)"]</h3>
+    <p class="small muted">@Ui["Each group contains host IDs and has no subgroups."]</p>
     <p class="small muted">@Ui["Observed host IDs"]: @string.Join(", ",Connection.Current?.Peers.Select(peer=>peer.HostId).Distinct()??[])</p>
     @foreach(var group in groups)
     {
@@ -36,7 +38,7 @@
     }
     <button @onclick="()=>groups.Add(new())">@Ui["Add group"]</button>
     <label>@Ui["Apply after saving"]<select @bind="policy"><option value="@EActivationPolicy.Auto">@Ui["Apply automatically after a successful snapshot"]</option><option value="@EActivationPolicy.Explicit">@Ui["Save only"]</option><option value="@EActivationPolicy.ConfirmImpact">@Ui["Apply after impact confirmation"]</option></select></label>
-    <button @onclick="SaveAsync">@Ui["Save and share this candidate"]</button>
+
     @if(state?.Saved is not null&&state.Saved.Revision!=state.Effective?.Revision)
     {
         <ConfigurationImpactPanel @key="(state.Saved.Revision,Api.SelectedClusterId,Api.SelectedPeerId)" WorkflowId="cluster-operational" Revision="@state.Saved.Revision" Operational="true" Changed="value=>activationImpact=value" />
@@ -45,4 +47,8 @@
     <p class="notice">@(message?.Invoke())</p>
     <JsonDetails Value="state" Title="@Ui["Exact saved and effective settings"]" />
     </fieldset>
+    </ChildContent>
+    <Actions>
+        <button class="primary" disabled="@restoreReadOnly" @onclick="SaveAsync">@Ui["Save and share this candidate"]</button>
+    </Actions>
 </Modal>

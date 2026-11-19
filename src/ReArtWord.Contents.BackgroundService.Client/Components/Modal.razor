@@ -1,8 +1,11 @@
 @if(Open)
 {
-    <dialog @ref="dialog" class="@(Wide?"dialog dialog-wide":"dialog")" aria-modal="true" aria-label="@Ui[Title]" tabindex="-1" @onkeydown="KeyAsync">
-        <div class="dialog-heading"><h2>@Ui[Title]</h2><button class="quiet icon-button" aria-label="@Ui["Close dialog"]" @onclick="Close"><UiIcon Name="close" /></button></div>
+    <dialog @ref="dialog" class="@(Wide?"dialog dialog-wide":"dialog")" aria-modal="true" data-confirm-discard="@(ConfirmDiscard ? string.Empty : null)" aria-label="@Ui[Title]" tabindex="-1" @onkeydown="KeyAsync" @onkeydown:stopPropagation="true">
+        <div class="dialog-heading"><h2>@Ui[Title]</h2><button class="quiet icon-button" aria-label="@Ui["Close dialog"]" @onclick="()=>RequestCloseAsync(UiCancellation)"><UiIcon Name="close" /></button></div>
         <div class="dialog-content">@ChildContent</div>
-        <div class="toolbar"><button @onclick="Close">@Ui["Close"]</button></div>
+        @if (Actions is not null)
+        {
+            <footer class="toolbar"><button type="button" class="quiet" @onclick="()=>RequestCloseAsync(UiCancellation)">@Ui["Cancel"]</button>@Actions</footer>
+        }
     </dialog>
 }

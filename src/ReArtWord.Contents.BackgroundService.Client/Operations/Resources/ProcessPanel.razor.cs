@@ -288,7 +288,7 @@ public sealed partial class ProcessPanel
         {
             return "Unknown";
         }
-        return item.Observed.Status?.Running switch { true => "Running", false => "Stopped", _ => "Unknown" };
+        return item.Observed.Status?.Running switch { true => "Running", false => "Process stopped", _ => "Unknown" };
     }
 
     /// <summary>登録操作の公開応答です。</summary>

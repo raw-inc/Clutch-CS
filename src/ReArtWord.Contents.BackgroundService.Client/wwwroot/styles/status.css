@@ -30,30 +30,15 @@
 }
 
 .health-label {
-    max-width: 0;
-    opacity: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    transform: translateX(-6px);
-    font-size: 11px;
-    transition: max-width 0.24s ease, opacity 0.18s ease, transform 0.24s ease, margin 0.24s ease;
-}
-
-.health-indicator:hover .health-label,
-.health-indicator:focus .health-label {
-    max-width: 230px;
-    opacity: 1;
-    transform: translateX(0);
-    margin-left: 8px;
+    min-width: 0;
+    padding-inline-start: 6px;
+    overflow-wrap: anywhere;
+    font-size: 12px;
 }
 
 .health-indicator:focus-visible {
     outline: 1px solid var(--accent);
     outline-offset: 3px;
-}
-
-.health-indicator.good:not(:hover, :focus) .health-label {
-    transition-delay: 0.25s;
 }
 
 .health-indicator:not(.good) .health-label {
@@ -98,4 +83,12 @@ clutch-status-labels {
 .badge:not([data-status-label]) {
     white-space: normal;
     overflow-wrap: anywhere;
+}
+
+.process-status::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentcolor;
 }

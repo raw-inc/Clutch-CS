@@ -4,7 +4,7 @@
   "Select least busy PC": "低負荷PC選択",
   "Highest priority / connected PC selection": "最優先PC／接続したPC選択",
   "Execution count": "実行台数",
-  "Run on one PC": "1台で実行",
+  "Run on one PC": "1 台で実行",
   "Run on every selected PC": "全候補PCで実行",
   "Connect PC selection nodes to the execution PC input. All-PC execution requires an explicit selection.": "実行PC入力へ選択ノードを接続します。全候補PCでの実行には、候補の明示が必要です。",
   "Connect PC selection nodes; multiple connections are allowed.": "PC選択ノードを接続します。複数接続できます。",

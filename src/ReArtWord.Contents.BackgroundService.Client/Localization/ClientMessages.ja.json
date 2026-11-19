@@ -67,7 +67,7 @@
   "Save & apply": "保存・反映",
   "Live apply · cluster": "自動反映中（クラスタ共通）",
   "Glow around running nodes": "処理中のノードを枠発光で表示",
-  "Live pointer sharing (up to 7 Hz)": "ポインタをリアルタイム共有（最大約7Hz）",
+  "Live pointer sharing (up to 7 Hz)": "ポインタをリアルタイム共有（最大約 7 Hz）",
   "Automatically save and apply edits · cluster setting": "編集内容を自動で保存・反映（クラスタ共通）",
   "Apply or resolve pending cluster settings before changing live workflow updates.": "未反映の共通設定がある場合は、先にその設定を反映・解消してください。",
   "Running · saved workflow version": "処理中（保存されたワークフローの版）",

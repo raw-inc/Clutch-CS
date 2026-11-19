@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -56,12 +57,17 @@ public sealed partial class Dashboard : IAsyncDisposable
     private string message = string.Empty, secretName = string.Empty, secretValue = string.Empty;
     private JsonElement? result;
     private WorkflowListSummary? activation;
-    private bool secretOpen, membershipOpen;
+    private bool secretOpen, membershipOpen, confirmDetach;
+    private int conflictCount;
+    private Guid? conflictTarget;
+
+    private EPeerStatus? MembershipStatus => Connection.Connected ? Connection.Current?.Status
+                                                                  : null;
     private static readonly (string Name, string Icon)[] views =
     [
         ("All clusters", "dashboard"), ("Peer list", "monitor"), ("Selected cluster", "nodes"),
-        ("Execution & processes", "play"), ("Applications", "monitor"), ("Script packages", "terminal"),
-        ("Snapshots", "folder"), ("Resolve conflicts", "nodes"), ("Safety", "settings"),
+        ("Execution & processes", "play"), ("Applications", "windows"), ("Script packages", "terminal"),
+        ("Snapshots", "save"), ("Resolve conflicts", "subworkflow"), ("Safety", "shield"),
         ("Settings & maintenance", "settings"), ("Operations", "logs")
     ];
 

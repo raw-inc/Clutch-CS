@@ -5,6 +5,9 @@
 
 .health-indicator {
     cursor: pointer;
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
+    padding: 4px 8px;
 }
 
 .health-indicator:hover {

@@ -93,3 +93,32 @@
     color: var(--muted);
     font-size: 13px;
 }
+
+.package-pane h3 {
+    font-size: 18px;
+}
+
+.package-pane label {
+    font-size: 13px;
+}
+
+.package-pane button {
+    width: fit-content;
+    max-width: 100%;
+}
+
+.package-pane .empty {
+    font-size: 16px;
+    font-weight: 400;
+}
+
+@media (max-width: 680px) {
+    .package-choices {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .package-choices label {
+        margin: 0;
+    }
+}

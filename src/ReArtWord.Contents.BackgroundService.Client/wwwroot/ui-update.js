@@ -93,6 +93,10 @@ function updateProgress(data)
     }
     progress.max = data.total;
     progress.value = Math.max(progress.value, Math.min(data.completed, data.total));
+    const percent = Math.round(progress.value / progress.max * 100);
+    status.textContent = navigator.language.startsWith('ja')
+        ? `画面を読み込んでいます ${progress.value} / ${progress.max} ファイル（${percent}%）`
+        : `Loading UI files: ${progress.value} / ${progress.max} (${percent}%)`;
 }
 
 /** 受信データを検証し、現在の状態へ取り込みます。 */

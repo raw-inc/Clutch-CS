@@ -2,7 +2,7 @@
   "experimental.settings.title": "試験的な機能",
   "experimental.settings.enabled": "このブラウザーで試験的な機能を常に有効にする",
   "experimental.settings.help": "すべての画面で有効になります。別のタブで開いている画面には、再読み込みすると反映されます。",
-  "experimental.settings.save": "保存",
+  "experimental.settings.save": "試験機能の設定を保存",
   "experimental.settings.saved": "このブラウザーの設定を保存しました。",
   "experimental.settings.readFailed": "設定を読み込めませんでした。",
   "experimental.settings.writeFailed": "設定を保存できませんでした。"
