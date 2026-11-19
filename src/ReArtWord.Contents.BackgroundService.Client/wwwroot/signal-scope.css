@@ -418,6 +418,7 @@
 
     .scope-filters .scope-column-choice {
         grid-column: 1 / -1;
+        flex: none;
         min-height: 40px;
         white-space: nowrap;
     }

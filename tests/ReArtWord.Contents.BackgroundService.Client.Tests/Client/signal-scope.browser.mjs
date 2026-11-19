@@ -246,6 +246,8 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         const columnToggle = page.getByRole('checkbox', { name: 'All columns', exact: true });
         const toggleBox = await columnToggle.boundingBox();
         assert(toggleBox.height < 24 && Math.abs(toggleBox.width - toggleBox.height) <= 1);
+        assert.ok(await columnChoice.evaluate(label => label.scrollWidth <= label.clientWidth + 1
+            && label.getBoundingClientRect().right <= label.parentElement.getBoundingClientRect().right));
         await columnChoice.click();
         assert.equal(await columnToggle.isChecked(), true);
         await page.evaluate(async () =>
