@@ -137,6 +137,8 @@ for (const theme of ['light', 'dark'])
             assert.ok((16) <= (parseFloat(actual[key].width)), key);
             assert.equal(actual[key].width, actual[key].height, key);
         }
+        assert.equal(actual['candidate-checked'].borderRadius, '50%');
+        assert.equal(actual['candidate-unchecked'].borderRadius, '50%');
     });
 
     test(`${theme}のカード・主操作・状態ラベルで文字のコントラストを確保する`, async () =>

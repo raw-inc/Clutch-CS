@@ -627,7 +627,7 @@ summary {
         cursor: pointer;
     }
 
-    input[type="radio"] {
+    input[type="radio"]:not([role="switch"]) {
         border-radius: 50%;
     }
 
