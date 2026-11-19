@@ -2,7 +2,7 @@
   "node.database.sqlite.name": "SQLite 読取り・書込み",
   "node.database.sqlite.description": "業務DBファイルへ、値をパラメーター化したSQLを一つのトランザクションで実行します。内部状態保存とは独立しています。",
   "node.database.postgresql.name": "PostgreSQL 読取り・書込み",
-  "node.database.postgresql.description": "秘密値から接続文字列を解決し、指定PeerでSQLを実行します。commit応答を確認できない場合は結果不明となります。",
+  "node.database.postgresql.description": "秘密値から接続文字列を解決し、指定ピアでSQLを実行します。commit応答を確認できない場合は結果不明となります。",
   "node.database.redis.name": "Redis キー操作",
   "node.database.redis.description": "指定NICから、一つのキーの取得・保存・削除・存在確認を行います。応答不明の操作を暗黙に再実行しません。",
   "setting.sql": "SQL（@nameでパラメーターを指定）",

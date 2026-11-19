@@ -70,7 +70,7 @@
   "Live pointer sharing (up to 7 Hz)": "ポインタをリアルタイム共有（最大約7Hz）",
   "Automatically save and apply edits · cluster setting": "編集内容を自動で保存・反映（クラスタ共通）",
   "Apply or resolve pending cluster settings before changing live workflow updates.": "未反映の共通設定がある場合は、先にその設定を反映・解消してください。",
-  "Running · saved workflow version": "処理中（保存されたWFの版）",
+  "Running · saved workflow version": "処理中（保存されたワークフローの版）",
   "Offline": "オフライン",
   "Restart": "再起動",
   "Shut down": "シャットダウン",

@@ -25,7 +25,7 @@ export async function browserFilesView(root, ctx)
     const summary = document.createElement('summary');
     summary.textContent = ctx.t('Transfer help', '転送の使い方');
     const explanation = document.createElement('p');
-    explanation.textContent = ctx.t('Choose a local folder and grant browser access for two-pane file and folder copying. Click to select; double-click or Enter to open folders. Drag onto a destination folder or copy selected items. Keep this page open. Interrupted folder copies may leave completed or empty entries. Without folder access, use file selection and Download links.', 'ローカルフォルダーを選び、ブラウザーでアクセスを許可すると、左右のペインでファイル・フォルダーをコピーできます。クリックで選択、ダブルクリックまたはEnterで開きます。フォルダーへのドラッグ、または選択項目のコピーを使えます。転送中は画面を開いたままにしてください。同名項目は上書きせず、中断時は完了済み・空の項目が残る場合があります。フォルダーを許可しない場合はファイル選択とダウンロードを使えます。');
+    explanation.textContent = ctx.t('Choose a local folder and grant browser access for two-pane file and folder copying. Click to select; double-click or Enter to open folders. Drag onto a destination folder or copy selected items. Keep this page open. Interrupted folder copies may leave completed or empty entries. Without folder access, use file selection and Download links.', 'ローカルフォルダーを選び、ブラウザーでアクセスを許可すると、この端末と接続先の間でファイルやフォルダーをコピーできます。クリックで選択、ダブルクリックまたはEnterで開きます。フォルダーへのドラッグ、または選択項目のコピーを使えます。転送中は画面を開いたままにしてください。同名項目は上書きせず、中断時は完了済み・空の項目が残る場合があります。フォルダーを許可しない場合はファイル選択とダウンロードを使えます。');
     help.append(summary, explanation);
     const split = document.createElement('div');
     split.className = 'file-workspace';

@@ -1,7 +1,7 @@
 {
   "Debug next input": "次回発火デバッグ",
-  "Workflow next-input debug": "WFの次回発火デバッグ",
-  "Capture the next workflow input once, including merged and repeated downstream work. Arming does not run the workflow.": "次の入力1回だけを、合流後・反復内の処理も含めて記録します。予約操作ではWFを実行しません。",
+  "Workflow next-input debug": "ワークフローの次回発火デバッグ",
+  "Capture the next workflow input once, including merged and repeated downstream work. Arming does not run the workflow.": "次の入力1回だけを、合流後・反復内の処理も含めて記録します。予約操作ではワークフローを実行しません。",
   "Disabled by default. The reservation expires after 10 minutes; temporary records expire 30 minutes after arming or when their owner restarts. Binary bodies are omitted and recognized authentication fields are redacted.": "既定では無効です。予約は10分、記録は予約から30分または所有Coreの再起動まで保持します。バイナリ本体は記録せず、認証情報として識別できる項目は伏せ字にします。",
   "Capture next input": "次の1回を記録",
   "Stop capture only": "記録だけ停止",

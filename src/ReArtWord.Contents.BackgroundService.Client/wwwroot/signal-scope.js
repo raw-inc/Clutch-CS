@@ -14,7 +14,7 @@ export async function signalScopeViewAsync(container, ctx)
     const workspace = document.createElement('div'), results = document.createElement('section');
     workspace.className = 'scope-workspace';
     selection.className = 'scope-sidebar';
-    selection.setAttribute('aria-label', ctx.t('Capture hosts and interfaces', '取得するHostとインターフェース'));
+    selection.setAttribute('aria-label', ctx.t('Capture hosts and interfaces', '取得元のホストとインターフェース'));
     results.className = 'scope-results';
     let disposed = false, pendingView = 0, disposeResolve = null;
     toolbar.className = 'scope-toolbar';
@@ -64,7 +64,7 @@ export async function signalScopeViewAsync(container, ctx)
         table.clear();
     });
     const latest = ctx.button(ctx.t('Follow latest', '最新に追従'), () => table.latest());
-    const reload = ctx.button(ctx.t('Refresh hosts', 'Host再取得'), () => sources.loadAsync());
+    const reload = ctx.button(ctx.t('Refresh hosts', 'ホスト一覧を更新'), () => sources.loadAsync());
     display.setAttribute('aria-label', ctx.t('Endpoint display', '送受信先の表示'));
     display.append(new Option('IP:Port', 'ip'), new Option('Host:Port', 'host'));
     start.className = 'primary';

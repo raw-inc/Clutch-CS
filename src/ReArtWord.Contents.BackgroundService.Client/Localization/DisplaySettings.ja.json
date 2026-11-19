@@ -8,7 +8,7 @@
   "display.theme.dark": "ダーク",
   "display.theme.writeFailed": "このタブに配色を適用しましたが、設定を保存できませんでした。",
   "display.timezone.label": "表示用タイムゾーン",
-  "display.timezone.help": "このブラウザーのWorkflowEditor・LogViewer・Dashboard等の日時表示と日時検索に適用します。既定はUTCです。WFの実行スケジュール、記録済みの日時、PCの時計は変更しません。",
+  "display.timezone.help": "このブラウザーで日時の表示とログ検索に使うタイムゾーンです。既定はUTCです。",
   "display.timezone.current": "現在の設定: {0} · {1}",
   "display.timezone.readFailed": "保存した表示用タイムゾーンを読み取れませんでした。UTCを使用しています。",
   "display.timezone.writeFailed": "この画面の表示用タイムゾーンを変更しましたが、設定を保存できませんでした。",

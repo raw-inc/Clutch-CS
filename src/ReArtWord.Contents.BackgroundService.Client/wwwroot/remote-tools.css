@@ -470,7 +470,7 @@
 
 .file-navigation button {
     font-size: 12px;
-    padding: 5px 9px;
+    padding: 6px 9px 4px;
     background: transparent;
     border-color: transparent;
     color: var(--muted);

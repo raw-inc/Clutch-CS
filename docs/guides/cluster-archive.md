@@ -19,7 +19,7 @@ PC固有の `contents.toml`、ネットワーク設定、サービス登録、Cl
 ## WebUIから書き出す
 
 1. 書き出し元のクラスターと、使用可能なCoreを選択してください。
-2. Dashboardの **Settings & maintenance** を開いてください。
+2. Dashboardの **Settings & maintenance → Cluster configuration** を開いてください。
 3. 「クラスターのアーカイブ」で、必要に応じて「保持中のログ本文・履歴を含める」を選択してください。
 4. 「アーカイブを書き出す」を押し、ZIPファイルをダウンロードしてください。
 

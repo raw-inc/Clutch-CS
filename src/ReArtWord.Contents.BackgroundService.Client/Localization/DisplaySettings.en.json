@@ -8,7 +8,7 @@
   "display.theme.dark": "Dark",
   "display.theme.writeFailed": "The theme was applied to this tab but could not be saved.",
   "display.timezone.label": "Display time zone",
-  "display.timezone.help": "Applies to dates and time filters in WorkflowEditor, LogViewer and Dashboard for this browser. The default is UTC. Workflow schedules, recorded timestamps and PC clocks are unchanged.",
+  "display.timezone.help": "Used for displayed times and log searches in this browser. Defaults to UTC.",
   "display.timezone.current": "Current: {0} · {1}",
   "display.timezone.readFailed": "The saved display time zone could not be read. UTC is being used.",
   "display.timezone.writeFailed": "The display time zone was changed for this session, but could not be saved.",

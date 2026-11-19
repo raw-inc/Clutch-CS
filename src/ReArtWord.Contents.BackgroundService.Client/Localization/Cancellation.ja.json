@@ -1,10 +1,10 @@
 {
   "Cancelled": "取消済み",
   "Running workflows": "実行中のワークフロー",
-  "Executions accepted by the selected peer. Cancellation targets the original execution; it does not undo completed effects.": "選択中のPeerが受け付けた実行を表示します。取消は元の実行だけを対象とし、完了済みの処理の効果は元に戻しません。",
+  "Executions accepted by the selected peer. Cancellation targets the original execution; it does not undo completed effects.": "選択中のピアが受け付けた実行を表示します。取消は元の実行だけを対象とし、完了済みの処理の効果は元に戻しません。",
   "Check execution result": "実行結果を確認",
   "Original execution result": "元の実行の結果",
-  "No running workflows were found on this peer.": "このPeerで実行中のワークフローはありません。",
+  "No running workflows were found on this peer.": "このピアで実行中のワークフローはありません。",
   "The running workflow list could not be retrieved.": "実行中のワークフローを取得できません。",
   "The original execution result could not be confirmed.": "元の実行結果を確認できません。",
   "Cancellation request: {0}. {1}": "取消要求の結果: {0}。{1}",

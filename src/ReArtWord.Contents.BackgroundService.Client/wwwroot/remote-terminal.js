@@ -33,7 +33,7 @@ export async function terminalView(root, ctx)
     let peers = [], listTimer, listing, sessionSignature = '', peerSignature = '';
     const shellSelect = document.createElement('select');
     shellSelect.className = 'terminal-shell';
-    shellSelect.setAttribute('aria-label', ctx.t('New session shell', '新規セッションのShell'));
+    shellSelect.setAttribute('aria-label', ctx.t('New session shell', '新しいセッションのシェル'));
     const shellLabel = document.createElement('label');
     shellLabel.textContent = 'Shell';
     shellLabel.append(shellSelect);
@@ -518,7 +518,7 @@ export async function terminalView(root, ctx)
         shellTarget = key;
         shells = [];
         shellLoading = !!selected;
-        showShells(selected ? ctx.t('Loading shells…', 'Shellを取得中…') : ctx.t('Select a peer', 'ピアを選択'));
+        showShells(selected ? ctx.t('Loading shells…', 'シェルを取得中…') : ctx.t('Select a peer', 'ピアを選択'));
         updateControls();
         if (!selected)
         {

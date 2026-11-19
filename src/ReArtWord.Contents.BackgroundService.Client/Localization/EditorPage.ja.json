@@ -72,7 +72,7 @@
   "Export YAML": "YAML を書き出す",
   "The workflow could not be exported.": "ワークフローを書き出せませんでした。",
   "Connect to a Core to export YAML.": "YAMLを書き出すにはCoreに接続してください。",
-  "History and result lookup": "操作履歴・再照会",
+  "History and result lookup": "操作履歴・結果の確認",
   "Activate after saving": "保存後に自動反映",
   "Save without activation": "保存のみ",
   "Confirm impact before activation": "影響確認後に反映",

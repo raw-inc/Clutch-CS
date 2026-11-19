@@ -14,7 +14,7 @@
 
 ## 日時を指定して更新する
 
-Dashboardの **Settings & maintenance → Application updates** で、通常と同じリリース・配布元・対象・失敗方針を指定し、「日時を指定して更新を予約」を選択してください。日時は `2027-01-01T02:00:00+09:00` のように UTC オフセットを含めて指定してください。開始遅延の許容秒数は既定300秒です。保存は予約の確定であり、更新完了ではありません。
+Dashboardの **Settings & maintenance → Software updates → Application updates** で、通常と同じリリース・配布元・対象・失敗方針を指定し、「日時を指定して更新を予約」を選択してください。日時は `2027-01-01T02:00:00+09:00` のように UTC オフセットを含めて指定してください。開始遅延の許容秒数は既定300秒です。保存は予約の確定であり、更新完了ではありません。
 
 「更新予約一覧」から、起点ピアに保存された予約・更新結果を再取得し、未開始の予約を変更・取消できます。変更と開始前取消には表示した保存版を使います。開始意図が確定した後は取消を受け付けず、元更新IDで状態を確認します。
 
@@ -115,7 +115,7 @@ contents-cli --url http://127.0.0.1:5081 fleet list
 
 ### 画面から全クラスターを更新する
 
-Dashboardの **Settings & maintenance → Update all discovered peers** を使用してください。
+Dashboardの **Settings & maintenance → Software updates → Update all discovered peers** を使用してください。
 
 1. 配布物の `fleet-release.json` を選び、配布元にパッケージのルート（`core` と `client` の親フォルダー）を指定してください。パスは、画面を配信する **ClientHostのPC上** の絶対パスです。CoreServiceだけを更新する場合は、`release-manifest.json` または `release-bundle.json` も使用できます。
 2. 処理中の更新を許可するか選択し、最大試行回数（既定3回、初回を含む）、同時更新数（1〜3、既定1）、対象ごとの確認期限を設定してください。
