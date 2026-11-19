@@ -30,7 +30,7 @@ function instant(value)
 function hostPanel(root, ctx, host, signal, actionArea)
 {
     const section = node('section', '', 'hm-section'), title = heading(host.target.hostId), status = node('div', '', 'hm-muted');
-    const cluster = select([]), controls = node('div', '', 'hm-actions'), resultStatus = node('p', '', 'hm-message');
+    const cluster = select([]), controls = node('div', '', 'hm-selection-bar'), resultStatus = node('p', '', 'hm-message');
     resultStatus.setAttribute('role', 'status');
     let view = null, dirty = false, generation = 0, uncertain = false, selectedCluster = '', loading = false, busy = false, held = false;
     const form = powerScheduleForm(ctx, [], () =>
@@ -167,7 +167,7 @@ function hostPanel(root, ctx, host, signal, actionArea)
         ctx.say(ctx.t(result.outcome === succeeded && result.view ? 'powerSchedule.saved' : result.reason ?? 'powerSchedule.saveUnconfirmed'));
     }, true);
     const refresh = action(ctx, 'Refresh settings', 'refresh', () => ctx.discard(loadAsync));
-    controls.append(node('strong', host.target.hostId), save);
+    controls.append(node('strong', ctx.t('Target hosts') + ': ' + host.target.hostId), save);
     actionArea.append(controls);
     title.append(refresh);
     section.append(title, field(ctx.t('powerSchedule.cluster'), cluster), status, form.root, resultStatus);
