@@ -386,6 +386,100 @@ clutch-card-rows:not([data-measuring]) > :first-child > * > [data-card-inset] {
     margin-block-start: calc(var(--card-inset-margin, 0px) + var(--card-inset-offset, 0px));
 }
 
+@media (prefers-reduced-motion: no-preference) {
+    button {
+        transition: transform var(--motion-fast) var(--ease-action);
+    }
+
+    button:enabled:active {
+        transform: translateY(1px);
+    }
+
+    :is(.dialog, .hm-dialog, .file-action-dialog)[open] {
+        animation: show-dialog var(--motion-base) var(--ease-panel);
+    }
+
+    :where(.secondary-details, .resource-detail, .license-list details) > summary::before {
+        transition: transform var(--motion-fast) var(--ease-action);
+    }
+
+    @supports (interpolate-size: allow-keywords) and (interactivity: inert) and selector(details::details-content) {
+        :where(.page, .dialog-content) details:not(.desktop-menu, .graph-legend)::details-content {
+            interpolate-size: allow-keywords;
+            content-visibility: visible;
+            interactivity: inert;
+            block-size: 0;
+            overflow: clip;
+            opacity: 0;
+            transition: block-size var(--motion-close) var(--ease-panel), opacity var(--motion-close) var(--ease-panel);
+        }
+
+        :where(.page, .dialog-content) details[open]:not(.desktop-menu, .graph-legend)::details-content {
+            block-size: auto;
+            interactivity: auto;
+            opacity: 1;
+            transition-duration: var(--motion-base);
+        }
+    }
+}
+
+@keyframes show-dialog {
+    from {
+        opacity: 0;
+        translate: 0 4px;
+    }
+
+    to {
+        opacity: 1;
+        translate: 0 0;
+    }
+}
+
+/* 進捗値が未確定のときは、ブラウザーの不定進捗表示を使う。 */
+progress[value] {
+    appearance: none;
+    overflow: hidden;
+    border: 0;
+    border-radius: var(--radius-chart);
+    background-color: var(--raised);
+    accent-color: var(--accent);
+}
+
+progress[value]::-webkit-progress-bar {
+    background-color: var(--raised);
+    border-radius: inherit;
+}
+
+progress[value]::-webkit-progress-value {
+    border-radius: inherit;
+    background-color: var(--accent);
+}
+
+progress[value]::-moz-progress-bar {
+    border-radius: inherit;
+    background-color: var(--accent);
+}
+
+input[type="range"] {
+    accent-color: var(--accent);
+}
+
+input[type="file"]::file-selector-button {
+    margin-inline-end: 8px;
+    padding: 5px 10px;
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
+    background: var(--panel);
+    color: var(--ink);
+    font: inherit;
+}
+
+@media (forced-colors: active) {
+    progress[value] {
+        appearance: auto;
+    }
+}
+
 .field-actions {
     align-items: end;
     margin-block: 12px;

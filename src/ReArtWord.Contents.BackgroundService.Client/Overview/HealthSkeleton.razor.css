@@ -87,3 +87,8 @@
         background: var(--raised);
     }
 }
+
+.skeleton-caption {
+    color: var(--muted);
+    font-size: 12px;
+}

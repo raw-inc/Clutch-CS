@@ -5,13 +5,13 @@
     border: 1px solid var(--line);
     border-inline-start: 3px solid var(--accent);
     border-radius: var(--radius-panel);
-    background: var(--editor-overlay-background);
+    background: var(--panel);
     color: var(--ink);
     box-shadow: 0 5px 18px #0005;
     pointer-events: auto;
     opacity: 1;
     transform: translateX(0);
-    transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 220ms ease-out;
+    transition: transform var(--motion-base) var(--ease-panel), opacity var(--motion-base) var(--ease-panel);
 }
 
 @starting-style {
@@ -24,7 +24,7 @@
 .editor-result-notice.leaving {
     opacity: 0;
     transform: translateX(calc(100% + 24px));
-    transition-duration: 220ms;
+    transition-duration: var(--motion-base);
     transition-timing-function: ease-in;
     pointer-events: none;
 }
@@ -76,5 +76,17 @@
 @media (prefers-reduced-motion: reduce) {
     .editor-result-notice {
         transition: none;
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .editor-result-notice:not(.compact, .persistent, .leaving, :hover, :focus-within) {
+        animation: notice-surface var(--motion-base) var(--ease-panel) 3s forwards;
+    }
+}
+
+@keyframes notice-surface {
+    to {
+        background-color: color-mix(in srgb, var(--panel) 94%, transparent);
     }
 }

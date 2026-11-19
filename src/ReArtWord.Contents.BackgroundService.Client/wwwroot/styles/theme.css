@@ -25,12 +25,17 @@
     --disabled-face: light-dark(#d1d6de, #25272d);
     --disabled-line: light-dark(#a4acb9, #4a505c);
     --backdrop: rgb(13 16 22 / 58%);
+    --motion-fast: 140ms;
+    --motion-base: 240ms;
+    --motion-close: 320ms;
+    --ease-action: cubic-bezier(0.2, 0, 0, 1);
+    --ease-panel: cubic-bezier(0.22, 0.69, 0.4, 1);
     --radius-control: 6px;
     --radius-panel: 12px;
     --panel-inset: 8px;
     --radius-inset: max(0px, calc(var(--radius-panel) - var(--panel-inset)));
     --radius-chart: 3px;
-    --focus-face: color-mix(in srgb, var(--accent) 8%, var(--panel));
+    --focus-face: color-mix(in srgb, var(--accent) 20%, var(--panel));
     --radius-pill: 999px;
     --font-title: roboto, "Zen Kaku Gothic New", "M PLUS 2", meiryo, system-ui, sans-serif;
     --font-ui: roboto, "M PLUS 2", "Yu Gothic UI", meiryo, system-ui, sans-serif;
