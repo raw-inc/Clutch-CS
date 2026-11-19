@@ -257,7 +257,21 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
                 return (0) < (image.width) && (0) < (image.height) &&
                     Boolean(document.elementFromPoint(image.left + image.width / 2, image.top + image.height / 2)?.closest('.desktop-monitor'));
             });
+
+            if (width <= 844)
+            {
+                const tools = page.locator('.desktop-deck > details'), toolbar = tools.locator('.desktop-toolbar');
+                await tools.locator('summary').click();
+                assert.ok(await toolbar.isVisible());
+                assert.ok(await toolbar.evaluate(element => element.scrollWidth <= element.clientWidth + 1));
+                const canvas = page.locator('.desktop-monitor canvas');
+                const whileOpen = await canvas.boundingBox();
+                await page.keyboard.press('Escape');
+                assert.equal(await toolbar.isVisible(), false);
+                assert.deepEqual(await canvas.boundingBox(), whileOpen);
+            }
         }
+        await page.locator('.desktop-deck > details > summary').click();
         await page.getByRole('button', { name: 'Video fullscreen', exact: true }).click();
         await page.waitForFunction(() => document.fullscreenElement?.className === 'desktop-viewport');
         await page.evaluate(() => window.desktop.dispose());

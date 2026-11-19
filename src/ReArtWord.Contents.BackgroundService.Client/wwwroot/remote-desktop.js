@@ -417,7 +417,18 @@ export async function desktopView(root, ctx)
     deck.className = 'desktop-deck';
     const controls = document.createElement('details'), controlsLabel = document.createElement('summary');
     controlsLabel.textContent = ctx.t('Display and input', '表示・入力');
-    controls.open = 650 < window.innerWidth;
+    const compactControlsWidth = 1000, connectedState = 'connected';
+    let compactControls = window.innerWidth <= compactControlsWidth;
+    controls.open = !compactControls;
+    window.addEventListener('resize', () =>
+    {
+        const compact = window.innerWidth <= compactControlsWidth;
+        if (compact !== compactControls)
+        {
+            compactControls = compact;
+            controls.open = !compact;
+        }
+    }, { signal: ctx.signal });
     controls.append(controlsLabel, toolbar);
     deck.append(targets, controls);
     root.append(deck, rail, viewport);
@@ -2274,6 +2285,10 @@ export async function desktopView(root, ctx)
     rail.append(statistics, detailsMenu.element);
     document.addEventListener('pointerdown', event =>
     {
+        if (compactControls && controls.open && root.dataset.state === connectedState && !controls.contains(event.target))
+        {
+            controls.open = false;
+        }
         if (!rail.contains(event.target))
         {
             for (const item of menus)
@@ -2298,6 +2313,14 @@ export async function desktopView(root, ctx)
                     item.querySelector('summary').focus();
                 }
             }
+            return;
+        }
+        if (event.key === expectedEscape && compactControls && controls.open && root.dataset.state === connectedState)
+        {
+            event.preventDefault();
+            event.stopPropagation();
+            controls.open = false;
+            controlsLabel.focus();
             return;
         }
         if (event.key !== expectedEscape || !fullscreenEscape && document.fullscreenElement !== viewport)
