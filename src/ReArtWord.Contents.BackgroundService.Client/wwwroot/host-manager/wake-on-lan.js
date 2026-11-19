@@ -24,7 +24,7 @@ export function wakePreview(item, t = key => key)
 }
 
 /** 読取り時の版へ変更案を固定し、NIC設定自体は書き換えません。 */
-function renderHost(root, ctx, state, draft)
+function renderHost(root, ctx, state, draft, actionArea)
 {
     const section = node('section', '', 'hm-section'), selected = new Set(selectedWakeInterfaces(state.snapshot.data.inventory, draft.selection).map(item => item.id));
     const automatic = checkbox(ctx.t('wake.defaults'), draft.selection.usePhysicalDefaults);
@@ -79,14 +79,16 @@ function renderHost(root, ctx, state, draft)
     const save = action(ctx, 'wake.review', 'settings', () => ctx.preview([{ host: state.host, query: { area: 'wakeOnLan' }, action: 'wakeOnLan',
         baseRevision: draft.revision, change: structuredClone(draft.selection), label: ctx.t('wake.title') }]));
     save.disabled = !editable;
-    section.append(save);
+    const row = node('div', '', 'hm-selection-bar');
+    row.append(node('strong', state.host.target.hostId), save);
+    actionArea.append(row);
     root.append(section);
 }
 
 /** PCが停止する前に対象NICを保存する、ホスト単位の設定画面を構成します。
  * @returns 読取りの寿命制御です。
  */
-export function wakeOnLanView(root, ctx)
+export function wakeOnLanView(root, ctx, actionArea)
 {
     const hosts = structuredClone(ctx.hosts());
     if (!hosts.length)
@@ -113,6 +115,7 @@ export function wakeOnLanView(root, ctx)
     {
         readStatus(status, ctx, reader.states);
         listing.replaceChildren();
+        actionArea.replaceChildren();
         for (const state of [...reader.states.values()].filter(value => value.snapshot))
         {
             const key = state.host.target.hostId;
@@ -120,7 +123,7 @@ export function wakeOnLanView(root, ctx)
             {
                 drafts.set(key, { revision: state.snapshot.revision, selection: structuredClone(state.snapshot.data.selection) });
             }
-            renderHost(listing, ctx, state, drafts.get(key));
+            renderHost(listing, ctx, state, drafts.get(key), actionArea);
         }
     }
 

@@ -1,5 +1,5 @@
 import { keys } from './labels.js';
-import { node, input, checkbox, icon, action, badge, empty } from './dom.js';
+import { node, input, field, checkbox, icon, action, empty } from './dom.js';
 import { networkView } from './network.js';
 import { hostsView } from './hosts.js';
 import { firewallView } from './firewall.js';
@@ -65,7 +65,9 @@ export async function mount(element, labels)
     title.append(titleCopy, titleTools);
     const workspace = node('div', '', 'hm-workspace'), sidebar = node('aside', '', 'hm-sidebar'), main = node('div', '', 'hm-main');
     const tabs = node('div', '', 'hm-tabs');
+    tabs.classList.add('workspace-index');
     tabs.setAttribute('role', 'tablist');
+    tabs.setAttribute('aria-orientation', 'vertical');
     tabs.setAttribute('aria-label', 'HostManager');
     const message = node('div', '', 'hm-message');
     message.setAttribute('role', 'status');
@@ -75,17 +77,22 @@ export async function mount(element, labels)
     const areaPicker = node('select', '', 'hm-area-picker');
     areaPicker.setAttribute('aria-label', labels['Settings category'] ?? 'Settings category');
     areaPicker.addEventListener('change', () => tabs.querySelector('#hm-tab-' + areaPicker.value)?.click(), { signal: screen.abort.signal });
-    main.append(tabs, areaPicker, message, content, activity);
-    workspace.append(sidebar, main);
+    const navigation = node('nav', '', 'hm-navigation');
+    navigation.setAttribute('aria-label', labels['Settings category'] ?? 'Settings category');
+    const pickerLabel = field(labels['Settings category'] ?? 'Settings category', areaPicker);
+    pickerLabel.className = 'hm-compact-navigation';
+    navigation.append(tabs, pickerLabel);
+    const targets = node('details', '', 'hm-target-picker'), summary = node('summary');
+    targets.open = true;
+    targets.append(summary, sidebar);
+    main.append(targets, message, content, activity);
+    workspace.append(navigation, main);
     element.append(title, workspace);
     const search = input('', 'search');
     search.placeholder = labels['Search hosts'];
     search.setAttribute('aria-label', labels['Search hosts']);
-    const hostList = node('div', '', 'hm-host-list'), selection = node('span', '', 'hm-selection-count'), total = badge('0');
-    const sidebarHeading = node('div', '', 'hm-sidebar-heading');
-    sidebarHeading.append(node('h2', labels['Hosts']), total);
-    const selectionTools = node('div', '', 'hm-selection-tools');
-    sidebar.append(sidebarHeading, search, selectionTools, hostList, selection);
+    const hostList = node('div', '', 'hm-host-list'), selectionTools = node('div', '', 'hm-selection-tools');
+    sidebar.append(search, selectionTools, hostList);
     sidebar.setAttribute('aria-label', labels['Target hosts']);
 
     /** 未適用の編集内容が残っているか確認します。
@@ -324,13 +331,14 @@ export async function mount(element, labels)
         }
         if (!screen.views.has(screen.area))
         {
-            const root = node('section', '', 'hm-area');
+            const root = node('section', '', 'hm-view'), body = node('div', '', 'hm-area'), actions = node('div', '', 'hm-view-actions');
+            root.append(body, actions);
             root.id = 'hm-panel-' + screen.area;
             root.setAttribute('role', 'tabpanel');
             root.setAttribute('aria-labelledby', 'hm-tab-' + screen.area);
             content.append(root);
             const build = areas.find(item => item[0] === screen.area)[3];
-            screen.views.set(screen.area, { root, view: build(root, ctx) });
+            screen.views.set(screen.area, { root, view: build(body, ctx, actions) });
         }
         const active = screen.views.get(screen.area);
         if (active.stale && !active.view.hasChanges?.())
@@ -382,7 +390,6 @@ export async function mount(element, labels)
         const left = hostList.scrollLeft, top = hostList.scrollTop;
         let focusedPick;
         hostList.replaceChildren();
-        total.textContent = String(screen.hosts.length);
         const visible = visibleHosts();
         for (const host of visible)
         {
@@ -439,7 +446,9 @@ export async function mount(element, labels)
                 }
             }
         }
-        selection.textContent = `${ctx.t('Selected hosts')}: ${ctx.hosts().length}`;
+        const targets = ctx.hosts();
+        const count = targets.length + ' / ' + screen.hosts.length;
+        summary.textContent = ctx.t('Target hosts') + ' · ' + (targets.length === 1 ? targets[0].target.hostId : count);
     }
 
     for (const [area, label, glyph] of areas)
@@ -471,15 +480,15 @@ export async function mount(element, labels)
     {
         const expectedHome = 'Home';
         const expectedEnd = 'End';
-        const expectedArrowright = 'ArrowRight';
+        const nextKeys = ['ArrowDown', 'ArrowRight'];
 
-        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key))
+        if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key))
         {
             return;
         }
         event.preventDefault();
         const buttons = [...tabs.children], index = buttons.indexOf(document.activeElement);
-        const next = event.key === expectedHome ? 0 : event.key === expectedEnd ? buttons.length - 1 : (index + (event.key === expectedArrowright ? 1 : -1) + buttons.length) % buttons.length;
+        const next = event.key === expectedHome ? 0 : event.key === expectedEnd ? buttons.length - 1 : (index + (nextKeys.includes(event.key) ? 1 : -1) + buttons.length) % buttons.length;
         buttons[next].click();
         buttons[next].focus();
     });

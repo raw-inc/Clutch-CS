@@ -1,6 +1,9 @@
 .page.host-manager {
-    max-width: 1920px;
-    padding: 18px 24px 34px;
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - var(--topbar-height) - var(--statusbar-height));
+    padding-bottom: 12px;
+    max-width: 1600px;
     margin: 0 auto;
     color: var(--ink);
 }
@@ -103,10 +106,10 @@
 
 .hm-workspace {
     display: grid;
-    grid-template-columns: 236px minmax(0, 1fr);
-    gap: 16px;
-    height: calc(100dvh - var(--topbar-height) - 110px - var(--statusbar-height));
-    min-height: 430px;
+    grid-template-columns: 12rem minmax(0, 1fr);
+    gap: clamp(20px, 3vw, 48px);
+    flex: 1;
+    min-height: 0;
     border: 0;
     border-radius: var(--radius-control);
     overflow: hidden;
@@ -121,19 +124,6 @@
     background: var(--panel);
     border-right: 1px solid var(--line);
     padding: 14px 12px 0;
-}
-
-.hm-sidebar-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 4px;
-}
-
-.hm-sidebar-heading h2 {
-    font-size: 13px;
-    font-weight: 600;
-    margin: 0;
 }
 
 .hm-sidebar > input {
@@ -156,7 +146,7 @@
     background: transparent;
     border: 0;
     min-height: 24px;
-    padding: 2px 4px;
+    padding: 3px 4px 1px;
     font-size: 11px;
     color: var(--muted);
 }
@@ -234,13 +224,6 @@
     text-overflow: ellipsis;
 }
 
-.hm-selection-count {
-    padding: 11px 4px;
-    border-top: 1px solid var(--line);
-    font-size: 11px;
-    color: var(--muted);
-}
-
 .hm-main {
     min-width: 0;
     min-height: 0;
@@ -288,7 +271,7 @@
 .hm-content {
     min-height: 0;
     flex: 1;
-    overflow: auto;
+    overflow: hidden;
     scrollbar-width: thin;
     margin: 8px;
     background: var(--nested);
@@ -296,7 +279,9 @@
 }
 
 .hm-area {
-    min-height: 100%;
+    min-height: 0;
+    flex: 1;
+    overflow: auto;
     padding: 20px 22px;
     display: flex;
     flex-direction: column;
@@ -747,8 +732,7 @@
 }
 
 .hm-selection-bar {
-    position: sticky;
-    bottom: -20px;
+    position: static;
     z-index: 2;
     display: flex;
     align-items: center;
@@ -759,7 +743,7 @@
     border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
     border-radius: var(--radius-control);
     background: var(--panel);
-    box-shadow: 0 -8px 20px #0002;
+    box-shadow: none;
     font-size: 12px;
     margin-top: auto;
 }
@@ -866,7 +850,7 @@
     background: var(--paper);
     border: 1px solid var(--line);
     border-radius: var(--radius-panel);
-    box-shadow: 0 20px 80px #0008;
+    box-shadow: none;
     overflow: hidden;
 }
 
@@ -1303,10 +1287,6 @@
 }
 
 @media (max-width: 1100px) {
-    .hm-workspace {
-        grid-template-columns: 212px minmax(0, 1fr);
-    }
-
     .hm-area {
         padding: 18px 16px;
     }
@@ -1339,6 +1319,8 @@
 
 @media (max-width: 760px) {
     .page.host-manager {
+        display: block;
+        height: auto;
         padding: 14px 10px 32px;
     }
 
@@ -1346,10 +1328,6 @@
         gap: 10px;
         align-items: flex-start;
         flex-wrap: wrap;
-    }
-
-    .hm-page-heading h1 {
-        font-size: 19px;
     }
 
     .hm-page-heading p {
@@ -1371,25 +1349,13 @@
         gap: 9px;
     }
 
-    .hm-sidebar-heading {
-        grid-column: 1;
-    }
-
     .hm-sidebar > input {
-        grid-column: 2;
-        grid-row: 1;
+        grid-column: 1 / -1;
     }
 
     .hm-selection-tools {
-        grid-column: 1;
-    }
-
-    .hm-selection-count {
-        grid-column: 2;
-        grid-row: 2;
-        padding: 4px;
-        border: 0;
-        text-align: right;
+        grid-column: 1 / -1;
+        justify-content: start;
     }
 
     .hm-host-list {
@@ -1409,7 +1375,7 @@
     }
 
     .hm-area {
-        min-height: 440px;
+        min-height: 0;
         padding: 16px 12px;
     }
 
@@ -1515,7 +1481,7 @@
     position: sticky;
     bottom: 0;
     background: var(--panel);
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--line);
     z-index: 2;
 }
 
@@ -1570,4 +1536,119 @@
     .hm-tabs {
         display: none;
     }
+}
+
+.hm-navigation {
+    min-width: 0;
+    overflow-y: auto;
+}
+
+.hm-compact-navigation {
+    display: none;
+}
+
+.hm-target-picker {
+    flex: none;
+    margin: 0 8px 8px;
+    padding-inline: 12px;
+    border-radius: var(--radius-control);
+    background: var(--panel);
+}
+
+.hm-target-picker > summary {
+    font-weight: 600;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+    max-height: 4.5rem;
+    overflow-y: auto;
+}
+
+.hm-target-picker .hm-sidebar {
+    display: grid;
+    grid-template-columns: minmax(8rem, 1fr) auto;
+    align-items: center;
+    padding: 0 0 8px;
+    background: transparent;
+}
+
+.hm-target-picker .hm-host-list {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr));
+    max-height: 8rem;
+    margin: 0;
+    padding: 0;
+}
+
+.hm-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.hm-view-actions {
+    flex: none;
+    max-height: 36%;
+    overflow: auto;
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+    padding: 8px 12px;
+}
+
+.hm-view-actions:empty,
+.hm-view-actions:not(:has(> :not([hidden]))) {
+    display: none;
+}
+
+.hm-view-actions .hm-selection-bar {
+    border: 0;
+    padding: 6px;
+}
+
+.hm-view-actions > .hm-actions {
+    flex-wrap: wrap;
+    padding: 4px;
+}
+
+@media (max-width: 900px) {
+    .hm-workspace {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+        gap: 12px;
+    }
+
+    .hm-compact-navigation {
+        display: grid;
+        margin: 0;
+    }
+
+    .hm-compact-navigation select {
+        margin: 0;
+    }
+}
+
+@media (max-width: 760px) {
+    .hm-target-picker .hm-sidebar {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hm-workspace,
+    .hm-main,
+    .hm-content,
+    .hm-view,
+    .hm-area {
+        overflow: visible;
+    }
+
+    .hm-view-actions {
+        position: sticky;
+        bottom: var(--statusbar-height);
+        z-index: 2;
+        max-height: 32dvh;
+    }
+}
+
+.hm-tabs.workspace-index[role="tablist"] > button {
+    padding-block: 9px;
 }

@@ -6,7 +6,7 @@ import { firewallBulkView } from './firewall-bulk.js';
 /** ファイアウォール設定の照会と編集を構成します。
  * @returns reload・disposeを含む結果です。
  */
-export function firewallView(root, ctx)
+export function firewallView(root, ctx, actionArea)
 {
     const hosts = structuredClone(ctx.hosts());
     if (!hosts.length)
@@ -15,7 +15,7 @@ export function firewallView(root, ctx)
     }
     if ((1) < (hosts.length))
     {
-        return firewallBulkView(root, ctx, hosts);
+        return firewallBulkView(root, ctx, hosts, actionArea);
     }
     let disposed = false;
     const pages = new Map(), requests = new Map();

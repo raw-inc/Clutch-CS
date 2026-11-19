@@ -76,7 +76,7 @@ function renderState(root, ctx, state)
 /** 自動更新の制限を、Hostごとの確認済みポリシーに適用します。
  * @returns 読取りの寿命制御です。
  */
-export function windowsUpdateView(root, ctx)
+export function windowsUpdateView(root, ctx, actionArea)
 {
     const hosts = structuredClone(ctx.hosts());
     if (!hosts.length)
@@ -87,7 +87,8 @@ export function windowsUpdateView(root, ctx)
     const reader = createReader(ctx, hosts, () => ({ area: 'windowsUpdate' }), render);
     const manual = action(ctx, 'Require manual updates for selected hosts', 'settings', () => previewUpdate(ctx, [...reader.states.values()], true));
     manual.disabled = true;
-    title.append(action(ctx, 'Refresh settings', 'refresh', () => reader.load()), manual);
+    title.append(action(ctx, 'Refresh settings', 'refresh', () => reader.load()));
+    actionArea.append(manual);
     root.append(title, node('p', ctx.t('Manual mode disables automatic Windows updates without an expiry. Install updates explicitly from Windows Settings. Existing installations or pending restarts are not canceled.'), 'hm-muted'),
         node('p', ctx.t('This controls Windows Update. Microsoft Store, Defender intelligence and other applications have separate update settings.'), 'hm-muted'), status, listing);
 

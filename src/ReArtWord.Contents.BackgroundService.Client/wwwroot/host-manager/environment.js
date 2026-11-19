@@ -6,7 +6,7 @@ import { environmentBulk } from './environment-bulk.js';
 /** 環境変数の取得・表示・変更を構成します。
  * @returns reload・hasChanges・disposeを含む結果です。
  */
-export function environmentView(root, ctx)
+export function environmentView(root, ctx, actionArea)
 {
     const hosts = structuredClone(ctx.hosts());
     if (!hosts.length)
@@ -14,7 +14,7 @@ export function environmentView(root, ctx)
         return noSelection(root, ctx);
     }
     let scope = 'Machine', userSids = new Map(), reader = null;
-    const bulk = (1) < (hosts.length) ? environmentBulk(ctx, hosts, query) : null;
+    const bulk = (1) < (hosts.length) ? environmentBulk(ctx, hosts, query, actionArea) : null;
     const title = heading(ctx.t('PATH and environment variables'), `${ctx.t('Selected hosts')}: ${hosts.length}`), status = node('div'), listing = node('div');
     const tools = node('div', '', 'hm-toolbar'), hostPick = select(hosts.map(host => [host.target.hostId, host.target.hostId]), hosts[0].target.hostId);
     const search = input('', 'search');

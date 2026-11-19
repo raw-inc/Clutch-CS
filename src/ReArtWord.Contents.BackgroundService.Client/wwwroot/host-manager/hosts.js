@@ -7,7 +7,7 @@ import { hostsBulkView } from './hosts-bulk.js';
 /** hosts設定の取得・編集・確認を構成します。
  * @returns dispose・hasChanges・reloadを含む結果です。
  */
-export function hostsView(root, ctx)
+export function hostsView(root, ctx, actions)
 {
     const hosts = structuredClone(ctx.hosts());
     if (!hosts.length)
@@ -16,7 +16,7 @@ export function hostsView(root, ctx)
     }
     if ((1) < (hosts.length))
     {
-        return hostsBulkView(root, ctx, hosts);
+        return hostsBulkView(root, ctx, hosts, actions);
     }
     let original = '', edited = false, loaded = false;
     const title = heading(ctx.t('Hosts file'), ctx.t('Review a host’s current content, then edit the shared replacement.'));
@@ -58,7 +58,8 @@ export function hostsView(root, ctx)
         edited = false;
         return reader.load();
     }, edited)));
-    root.append(title, node('p', ctx.t('The complete hosts content will replace each selected host’s file. Review every difference below.'), 'hm-muted'), status, grid, bar);
+    root.append(title, node('p', ctx.t('The complete hosts content will replace each selected host’s file. Review every difference below.'), 'hm-muted'), status, grid);
+    actions.append(bar);
 
     /** 現在の設定と状態から表示を更新します。 */
     function update()

@@ -10,7 +10,7 @@ import { windowsDnsDefaults } from './dns.js';
 /** ネットワーク一覧と変更確認の画面を構成します。
  * @returns hasChanges・dispose・reloadを含む結果です。
  */
-export function networkView(root, ctx)
+export function networkView(root, ctx, actions)
 {
     const hosts = structuredClone(ctx.hosts());
     if (!hosts.length)
@@ -68,7 +68,8 @@ export function networkView(root, ctx)
         visibleRecords().filter(record => configuration(record)).forEach(record => selected.add(record.key));
         renderList();
     }), count);
-    root.append(title, views, status, filters, listing, virtual, switches, staged);
+    root.append(title, views, status, filters, listing, virtual, switches);
+    actions.append(staged);
 
     /** 保存前の変更予定を確認欄へ表示します。 */
     function renderPending()

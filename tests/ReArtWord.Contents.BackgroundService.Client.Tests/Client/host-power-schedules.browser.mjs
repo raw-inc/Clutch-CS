@@ -16,7 +16,7 @@ async function serveAsync(context)
         if (request.url === '/')
         {
             response.setHeader('Content-Type', 'text/html');
-            response.end('<!doctype html><html lang="ja"><meta charset="utf-8"><link rel="stylesheet" href="/styles/fonts.css"><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><main class="page host-manager"></main></html>');
+            response.end('<!doctype html><html lang="ja"><meta charset="utf-8"><link rel="stylesheet" href="/styles/fonts.css"><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/styles/controls.css"><main class="page host-manager"></main></html>');
             return;
         }
         const file = new URL('.' + request.url, root);
@@ -108,6 +108,14 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         await page.getByRole('checkbox', { name: 'host-a', exact: true }).check();
         await page.getByRole('checkbox', { name: 'host-b', exact: true }).check();
         await page.waitForFunction(label => [...document.querySelectorAll('#hm-panel-powerSchedules button')].filter(button => button.textContent === label && !button.disabled).length === 2, labels['powerSchedule.save']);
+        const panel = page.locator('#hm-panel-powerSchedules');
+        const actions = panel.locator('.hm-view-actions');
+        const before = await actions.boundingBox();
+        await panel.locator('.hm-area').evaluate(area => area.scrollTo(0, area.scrollHeight));
+        const after = await actions.boundingBox();
+        assert.equal(before.y, after.y);
+        assert.ok(after.y + after.height <= page.viewportSize().height);
+        assert.equal(await actions.getByRole('button', { name: labels['powerSchedule.save'], exact: true }).count(), 2);
         await page.getByRole('button', { name: labels['powerSchedule.bulk'], exact: true }).click();
         const dialog = page.getByRole('dialog');
         await dialog.getByLabel(labels['powerSchedule.time'], { exact: true }).fill('22:30:00');

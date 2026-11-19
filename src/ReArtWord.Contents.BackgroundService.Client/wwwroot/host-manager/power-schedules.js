@@ -27,7 +27,7 @@ function instant(value)
 /** 一Hostの予定と、共有するクラスタを明示した編集パネルを構成します。
  * @returns 個別編集と一括保存で共有する状態です。
  */
-function hostPanel(root, ctx, host, signal)
+function hostPanel(root, ctx, host, signal, actionArea)
 {
     const section = node('section', '', 'hm-section'), title = heading(host.target.hostId), status = node('div', '', 'hm-muted');
     const cluster = select([]), controls = node('div', '', 'hm-actions'), resultStatus = node('p', '', 'hm-message');
@@ -167,8 +167,10 @@ function hostPanel(root, ctx, host, signal)
         ctx.say(ctx.t(result.outcome === succeeded && result.view ? 'powerSchedule.saved' : result.reason ?? 'powerSchedule.saveUnconfirmed'));
     }, true);
     const refresh = action(ctx, 'Refresh settings', 'refresh', () => ctx.discard(loadAsync));
-    controls.append(save, refresh);
-    section.append(title, field(ctx.t('powerSchedule.cluster'), cluster), status, form.root, controls, resultStatus);
+    controls.append(node('strong', host.target.hostId), save);
+    actionArea.append(controls);
+    title.append(refresh);
+    section.append(title, field(ctx.t('powerSchedule.cluster'), cluster), status, form.root, resultStatus);
     root.append(section);
     updateControls();
     cluster.onchange = () =>
@@ -244,7 +246,7 @@ function hostPanel(root, ctx, host, signal)
 /** 選択Hostの予定をクラスタ別に管理し、ブラウザーは予定の実行主体にしません。
  * @returns この画面が所有する通信と未保存編集の寿命です。
  */
-export function powerSchedulesView(root, ctx)
+export function powerSchedulesView(root, ctx, actionArea = root)
 {
     const hosts = structuredClone(ctx.hosts());
     if (!hosts.length)
@@ -252,8 +254,9 @@ export function powerSchedulesView(root, ctx)
         return noSelection(root, ctx);
     }
     const abort = new AbortController(), signal = AbortSignal.any([ctx.signal, abort.signal]), toolbar = node('div', '', 'hm-toolbar');
-    root.append(heading(ctx.t('powerSchedule.title'), ctx.t('powerSchedule.help')), toolbar);
-    const panels = hosts.map(host => hostPanel(root, ctx, host, signal));
+    root.append(heading(ctx.t('powerSchedule.title'), ctx.t('powerSchedule.help')));
+    actionArea.append(toolbar);
+    const panels = hosts.map(host => hostPanel(root, ctx, host, signal, actionArea));
     powerScheduleBulk(toolbar, ctx, panels, signal);
     ctx.guard(async () =>
     {
