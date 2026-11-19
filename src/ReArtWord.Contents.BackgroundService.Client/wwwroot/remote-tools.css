@@ -27,9 +27,10 @@
 
 .remote-empty {
     padding: 24px 12px;
-    color: var(--muted);
-    font-size: 12px;
     line-height: 1.8;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--muted);
 }
 
 /* Shared quiet surfaces and compact controls match the desktop and dashboard. */
@@ -61,6 +62,7 @@
     margin: 0;
     color: var(--muted);
     font-size: 11px;
+    white-space: nowrap;
 }
 
 .tool-toolbar button {
@@ -263,6 +265,7 @@
 .terminal-session.selected {
     border-left: 2px solid var(--accent);
     padding-left: 10px;
+    background: var(--accent-soft);
 }
 
 .terminal-session span {
@@ -315,15 +318,19 @@
 }
 
 .terminal-screen:empty::after {
-    content: '>_';
     font: 36px Consolas, monospace;
-    color: var(--line);
+    content: attr(data-empty-hint);
+    display: block;
+    margin: 16px;
+    color: var(--muted);
+    font-size: 14px;
 }
 
 .terminal-surface {
     flex: 1;
     min-width: 0;
     min-height: 0;
+    scrollbar-color: var(--control) var(--panel);
 }
 
 .terminal-surface > .xterm {
@@ -409,8 +416,8 @@
 }
 
 .transfer-modes a[aria-current="page"] {
-    background: var(--accent);
-    color: var(--on-accent);
+    background: var(--accent-soft);
+    color: var(--accent);
 }
 
 .file-workspace {
@@ -418,7 +425,7 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 14px;
     margin: 12px 0 20px;
-    align-items: start;
+    align-items: stretch;
 }
 
 .file-pane {
@@ -427,6 +434,8 @@
     border: 1px solid var(--line);
     border-radius: var(--radius-control);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .file-pane > label,
@@ -485,12 +494,12 @@
     width: min(480px, calc(100vw - 48px));
     max-height: calc(100vh - 48px);
     box-sizing: border-box;
-    padding: 24px;
     border: 1px solid var(--line);
     border-radius: var(--radius-panel);
     background: var(--paper);
     color: var(--ink);
     overflow: auto;
+    padding: 0;
 }
 
 .file-action-dialog::backdrop {
@@ -504,7 +513,8 @@
 }
 
 .file-action-dialog h2 {
-    margin-top: 0;
+    margin: 0;
+    font-size: 19px;
 }
 
 .file-action-location {
@@ -616,6 +626,7 @@
     background: var(--panel);
     min-height: 52px;
     box-sizing: border-box;
+    margin-top: auto;
 }
 
 .file-pane-footer button {
@@ -706,6 +717,8 @@
 .license-list {
     display: grid;
     gap: 16px;
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
 }
 
 .license-cards {
@@ -892,4 +905,191 @@
     grid-column: 1 / -1;
     margin: 0;
     font-weight: 600;
+}
+
+.file-action-dialog form > :not(header, .toolbar) {
+    margin-inline: clamp(16px, 3vw, 28px);
+}
+
+.file-action-dialog header,
+.file-action-dialog .toolbar {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    background: var(--card);
+}
+
+.file-action-dialog header {
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.file-name-error,
+.file-action-location {
+    font-size: 14px;
+}
+
+.file-name-error:not([hidden])::before {
+    content: "⚠ ";
+}
+
+.transfer-jobs:empty {
+    display: none;
+}
+
+@media (max-width: 680px) {
+    .file-tree {
+        min-height: 6rem;
+    }
+
+    .file-row a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+    }
+}
+
+.terminal-state {
+    align-self: start;
+}
+
+.terminal-sidebar {
+    min-height: 0;
+    overflow: auto;
+    padding-bottom: 20px;
+    overflow-y: auto;
+}
+
+.terminal-keybar button:disabled {
+    background: var(--disabled-face);
+    color: var(--disabled-ink);
+}
+
+.license-list .license-cards {
+    display: block;
+}
+
+.license-cards > section {
+    margin-block: 8px;
+    display: grid;
+    grid-template-columns: minmax(12rem, 1fr) minmax(12rem, 2fr) auto;
+    align-items: baseline;
+    gap: 6px 16px;
+    padding: 12px 16px;
+}
+
+.license-cards > section > :is(details,p:not(.muted)) {
+    grid-column: 1 / -1;
+}
+
+.license-cards summary {
+    overflow-wrap: anywhere;
+}
+
+.license-cards pre {
+    font: 13px/1.6 Consolas, monospace;
+    white-space: pre;
+    max-width: 100%;
+    overflow: auto;
+}
+
+@media (max-width: 680px) {
+    .license-cards > section {
+        display: block;
+    }
+}
+
+.terminal-keys button:disabled,
+.terminal-toolbar button:disabled,
+.file-pane .danger:disabled {
+    color: var(--disabled-ink);
+    background: var(--disabled-face);
+    border-color: var(--line);
+    opacity: 1;
+}
+
+.terminal-session .danger {
+    margin-inline-start: 10px;
+    color: var(--danger);
+}
+
+@media (max-width: 680px) {
+    .terminal-keys > div {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        min-width: 0;
+        gap: 4px;
+    }
+
+    .terminal-keys button {
+        min-height: 40px;
+    }
+}
+
+.file-pane-title,
+.transfer-jobs h2 {
+    font-size: 18px;
+}
+
+.file-mode-header label {
+    white-space: nowrap;
+}
+
+.terminal-sidebar h2,
+.file-pane-title {
+    align-self: start;
+}
+
+.file-row a[download] {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
+    padding: 4px 8px;
+}
+
+@media (max-width: 680px) {
+    .file-row a[download] {
+        min-height: 44px;
+    }
+}
+
+.file-transfer-scope label,
+.files-tool .tool-toolbar > label {
+    white-space: nowrap;
+}
+
+.files-tool .tool-toolbar select {
+    align-self: center;
+    line-height: 1.35;
+}
+
+.terminal-keys .terminal-navigation-key {
+    font: 700 16px/1.2 system-ui, sans-serif;
+}
+
+.terminal-surface .xterm-viewport {
+    scrollbar-color: var(--control) var(--paper);
+}
+
+.license-list .license-cards,
+.license-list .license-filter {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.license-filter > :is(select,input) {
+    max-width: 100%;
+}
+
+.files-tool > .tool-toolbar {
+    display: flex;
+    align-items: end;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+}
+
+.files-tool > .tool-toolbar > button {
+    margin-inline-start: auto;
 }

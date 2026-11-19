@@ -102,7 +102,15 @@ export function fileActionControls(root, ctx, actions)
             dialog.setAttribute('aria-labelledby', title.id);
             location.className = 'file-action-location';
             location.textContent = snapshot.label + ' · ' + (snapshot.directory || '/');
-            form.append(title, location);
+            form.noValidate = true;
+            const heading = document.createElement('header');
+            const close = ctx.button(ctx.t('Close dialog', '閉じる'), () => dialog.close());
+            close.type = 'button';
+            close.className = 'quiet icon-button';
+            close.setAttribute('aria-label', close.textContent);
+            close.replaceChildren(ctx.icon('close'));
+            heading.append(title, close);
+            form.append(heading, location);
             const name = document.createElement('input');
             if (creating)
             {
@@ -160,7 +168,8 @@ export function fileActionControls(root, ctx, actions)
                 if (creating && !validFolderName(name.value))
                 {
                     name.setCustomValidity(ctx.t('Enter one folder name without path separators or reserved characters.', 'パス区切りや予約文字を含まないフォルダー名を入力してください。'));
-                    name.reportValidity();
+                    name.checkValidity();
+                    name.focus();
                     return;
                 }
                 dialog.close('apply');

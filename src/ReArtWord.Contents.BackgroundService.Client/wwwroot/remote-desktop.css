@@ -8,10 +8,6 @@
     margin-bottom: 12px;
 }
 
-.page:has(.desktop-workspace) .page-title h1 {
-    font-size: 20px;
-}
-
 .desktop-workspace {
     position: relative;
     display: grid;
@@ -63,8 +59,11 @@
     gap: 6px;
     min-width: 0;
     margin: 0 6px;
-    font-size: 10px;
     color: var(--muted);
+    align-self: center;
+    border-radius: var(--radius-control);
+    padding: 4px 8px;
+    font-size: 13px;
 }
 
 .desktop-connection::before {
@@ -194,10 +193,11 @@
     max-height: calc(100% - 8px);
     overflow: auto;
     padding: 16px;
-    background: var(--panel);
     border: 1px solid var(--line);
     border-radius: var(--radius-control);
     box-shadow: 0 8px 26px #0006;
+    background: var(--panel);
+    overscroll-behavior: contain;
 }
 
 .desktop-popover h2 {
@@ -374,12 +374,13 @@
     padding: 10px 12px;
     min-width: 190px;
     max-width: calc(100% - 20px);
-    background: color-mix(in srgb, var(--panel) 60%, transparent);
     border: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
     border-radius: var(--radius-control);
     pointer-events: none;
     font-size: 11px;
     font-variant-numeric: tabular-nums;
+    background: var(--panel);
+    color: var(--ink);
 }
 
 .desktop-stats > div {
@@ -603,4 +604,92 @@
         grid-column: 1 / -1;
         display: inline-flex;
     }
+}
+
+.desktop-popover > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.desktop-deck button:disabled,
+.desktop-key:disabled {
+    color: var(--disabled-ink);
+    background: var(--disabled-face);
+}
+
+@media (max-width: 680px) {
+    .desktop-workspace[data-state="connected"] .desktop-targets > label:has(:disabled) {
+        display: none;
+    }
+}
+
+.desktop-popover > p {
+    white-space: pre-line;
+}
+
+.desktop-permission.warn {
+    border-inline-start: 3px solid var(--warn);
+    padding-inline-start: 10px;
+}
+
+.desktop-popover button:last-child.primary {
+    position: sticky;
+    bottom: 0;
+}
+
+.desktop-action .ui-icon {
+    order: -1;
+}
+
+.desktop-bitrate-mode[data-quality="false"][aria-pressed="false"] span:first-child::before,
+.desktop-bitrate-mode[data-quality="false"][aria-pressed="true"] span:last-child::before {
+    content: "✓ ";
+}
+
+.desktop-workspace .desktop-keybar .desktop-key:disabled {
+    color: var(--disabled-ink);
+    background: var(--disabled-face);
+    border-color: var(--line);
+    opacity: 1;
+}
+
+.desktop-workspace .desktop-labeled {
+    width: auto;
+    min-width: max-content;
+    font-size: 13px;
+}
+
+.desktop-popover header {
+    position: sticky;
+    top: 0;
+    background: var(--panel);
+    z-index: 1;
+}
+
+.desktop-popover .codec-apply {
+    position: sticky;
+    bottom: 0;
+    width: fit-content;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-targets {
+    padding-block: 4px;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-targets label:has(:disabled) {
+    display: none;
+}
+
+.desktop-popover > header h2,
+.desktop-popover > header .icon-button {
+    margin: 0;
+    align-self: center;
+}
+
+.desktop-toolbar .desktop-action[aria-pressed="true"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+    box-shadow: inset 0 -2px var(--accent);
 }

@@ -36,7 +36,12 @@ export async function browserFilesView(root, ctx)
     const jobs = [], panes = [];
     const reload = ctx.button(ctx.t('Refresh hosts', 'ホスト一覧を更新'), loadAsync);
     reload.prepend(ctx.icon('refresh'));
-    toolbar.append(cluster, host, reload, status);
+    const clusterLabel = document.createElement('label'), hostLabel = document.createElement('label');
+    clusterLabel.textContent = ctx.t('Cluster', 'クラスタ');
+    hostLabel.textContent = ctx.t('Host', 'ホスト');
+    clusterLabel.append(cluster);
+    hostLabel.append(host);
+    toolbar.append(clusterLabel, hostLabel, status, reload);
 
     /** 現在の接続・選択・処理中の状態を操作欄へ反映します。 */
     function updateControls()
@@ -189,6 +194,7 @@ export async function browserFilesView(root, ctx)
                     }
                     localRoot = handle;
                     chooser.value = '';
+                    fileNames.textContent = ctx.t('No file selected', '未選択');
                     title.textContent = ctx.t('This device · ', 'この端末 · ') + handle.name;
                     title.prepend(ctx.icon('monitor'));
                     await openAsync('');
@@ -211,7 +217,8 @@ export async function browserFilesView(root, ctx)
             chooser = document.createElement('input');
             chooser.type = 'file';
             chooser.multiple = true;
-            chooser.setAttribute('aria-label', ctx.t('Choose local files', '端末のファイルを選択'));
+            const chooseFilesLabel = ctx.t('Choose local files', '端末のファイルを選択');
+            chooser.setAttribute('aria-label', chooseFilesLabel);
             chooser.onchange = () =>
             {
                 if (busy || choosing || panes.some(pane => pane.actions?.busy))
@@ -227,9 +234,11 @@ export async function browserFilesView(root, ctx)
                 state.selected.clear();
                 state.entries.clear();
                 const files = [...chooser.files];
+                fileNames.textContent = files.length ? files.map(file => file.name).join(', ') : ctx.t('No file selected', '未選択');
                 if ((4096) < (files.length) || new Set(files.map(file => file.name)).size !== files.length)
                 {
                     chooser.value = '';
+                    fileNames.textContent = ctx.t('No file selected', '未選択');
                     ctx.say(ctx.t('Select at most 4096 files with distinct names.', '重複しない名前のファイルを4096件以内で選択してください。'));
                     render([]);
                     updateControls();
@@ -247,7 +256,12 @@ export async function browserFilesView(root, ctx)
             permission.textContent = typeof globalThis.showDirectoryPicker === 'function'
                 ? ctx.t('Only the folder you allow is accessible.', '許可したフォルダーの範囲だけにアクセスします。')
                 : ctx.t('Folder access is unavailable in this browser. File selection and downloads remain available.', 'このブラウザーではフォルダーへのアクセスを利用できません。ファイル選択とダウンロードを利用できます。');
-            access.append(picker, chooser, permission);
+            const filesLabel = document.createElement('label'), filesCaption = document.createElement('span'), fileNames = document.createElement('span');
+            filesLabel.className = 'file-picker-control';
+            filesCaption.textContent = chooseFilesLabel;
+            fileNames.textContent = ctx.t('No file selected', '未選択');
+            filesLabel.append(filesCaption, fileNames, chooser);
+            access.append(picker, filesLabel, permission);
             section.insertBefore(access, navigation);
         }
 
@@ -317,6 +331,7 @@ export async function browserFilesView(root, ctx)
                         link.textContent = ctx.t('Download', 'ダウンロード');
                         link.href = browserDownloadUrl(target, entry.path);
                         link.download = entry.name;
+                        link.prepend(ctx.icon('download'));
                         row.append(link);
                     }
                 }
@@ -391,7 +406,7 @@ export async function browserFilesView(root, ctx)
                         }
                         state.directory = path || '';
                         state.parent = path ? path.split('/').slice(0, -1).join('/') : null;
-                        address.value = path || '';
+                        address.value = path ? '/' + path : '/';
                         render(result.entries);
                     }
                     else
@@ -472,6 +487,7 @@ export async function browserFilesView(root, ctx)
     }
 
     panes.push(pane(true), pane(false));
+    renderJobs();
 
     /** 転送ジョブの状態と進捗を一覧へ表示します。 */
     function renderJobs()
@@ -480,6 +496,13 @@ export async function browserFilesView(root, ctx)
         const heading = document.createElement('h2');
         heading.textContent = ctx.t('Browser transfers · keep this page open', '端末との転送 · この画面を開いたままにしてください');
         queue.append(heading);
+        if (!jobs.length)
+        {
+            const empty = document.createElement('p');
+            empty.className = 'remote-empty';
+            empty.textContent = ctx.t('No transfers.', '転送はありません。');
+            queue.append(empty);
+        }
         for (const job of jobs)
         {
             const row = document.createElement('div');

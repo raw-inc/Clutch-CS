@@ -106,7 +106,7 @@ export function scopeTable(container, ctx, send, report)
                 programmedScroll = viewport.scrollTop;
             }
         }
-        report(view);
+        report(view, follow);
     }
 
     viewport.addEventListener('scroll', () =>
@@ -164,10 +164,15 @@ export function scopeTable(container, ctx, send, report)
             refresh();
         },
 
-        /** 最新行への追従を再開します。 */
-        latest()
+        get following()
         {
-            follow = true;
+            return follow;
+        },
+
+        /** 一覧の追従状態を切り替えます。 */
+        latest(enabled = true)
+        {
+            follow = enabled;
             anchor = null;
             selected = null;
             refresh();

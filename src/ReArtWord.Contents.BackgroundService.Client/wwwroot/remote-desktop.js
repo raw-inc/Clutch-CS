@@ -77,7 +77,17 @@ export async function desktopView(root, ctx)
         body.className = 'desktop-popover';
         const heading = document.createElement('h2');
         heading.textContent = label;
-        body.append(heading);
+        const close = ctx.button(ctx.t('Close panel', 'パネルを閉じる'), () =>
+        {
+            element.open = false;
+            trigger.focus();
+        });
+        close.className = 'quiet icon-button';
+        close.setAttribute('aria-label', close.textContent);
+        close.replaceChildren(ctx.icon('close'));
+        const header = document.createElement('header');
+        header.append(heading, close);
+        body.append(header);
         element.append(trigger, body);
         rail.append(element);
         menus.push(element);
@@ -119,7 +129,7 @@ export async function desktopView(root, ctx)
     }
 
     const settingsMenu = menu(ctx.t('Connection settings', '接続設定'), 'settings');
-    const codecMenu = experimental ? menu(ctx.t('Codec details', 'コーデック詳細設定'), 'settings') : null;
+    const codecMenu = experimental ? menu(ctx.t('Codec details', 'コーデック詳細設定'), 'video-fullscreen') : null;
     const detailsMenu = menu(ctx.t('Connection details', '接続の詳細'), 'info');
     const cluster = document.createElement('select'), host = document.createElement('select');
     const transmissionPreset = document.createElement('select');
@@ -381,8 +391,16 @@ export async function desktopView(root, ctx)
         return value;
     }
 
-    detailsMenu.body.append(status, audioStatus, codecNote);
-    const deck = document.createElement('header'), targets = document.createElement('div');
+    const settingsNotice = document.createElement('p');
+    settingsNotice.className = 'small muted';
+    settingsNotice.textContent = ctx.t('Disconnect to change connection settings.', '接続設定を変更するときは、いったん切断してください。');
+    settingsNotice.hidden = true;
+    settingsMenu.body.append(settingsNotice);
+    const permission = document.createElement('p');
+    permission.className = 'desktop-permission';
+    detailsMenu.body.append(status, permission, audioStatus, codecNote);
+    const deck = document.createElement('header'), targets = document.createElement('div'), connectedTarget = document.createElement('strong');
+    connectedTarget.hidden = true;
     targets.className = 'desktop-targets';
     deck.className = 'desktop-deck';
     const controls = document.createElement('details'), controlsLabel = document.createElement('summary');
@@ -474,6 +492,10 @@ export async function desktopView(root, ctx)
     {
         connection.textContent = label;
         connection.dataset.state = state;
+        root.dataset.state = state;
+        connectedTarget.textContent = targetLabel;
+        connectedTarget.hidden = state !== 'connected';
+        settingsNotice.hidden = state !== 'connected';
     }
 
     connectionState(ctx.t('Disconnected', '未接続'));
@@ -1515,12 +1537,18 @@ export async function desktopView(root, ctx)
         {
             return;
         }
-        status.textContent = targetLabel + ' · ' + encoders.map(value => `${monitors[value.id]?.name}: ${value.encoder}`).join(' · ') +
-                    ` · ${videoSettings.fps} fps` + (appliedCodecSettings?.quality != null ? ctx.t(' · Quality target (no bitrate cap)', ' · 品質指定（ビットレート上限なし）') : ` · ${videoSettings.bitrate} kbps`) +
-                    (encoders.every(value => value.administratorInput) ? ctx.t(' · Administrator input', ' · 管理者権限で操作') : ctx.t(' · User input: elevated apps require an administrator Core', ' · 通常権限で操作：昇格アプリの操作には管理者権限のCoreが必要です'));
+        status.textContent = [
+            targetLabel,
+            ...encoders.map(value => `${monitors[value.id]?.name ?? '—'}: ${value.encoder ?? '—'}`),
+            `${videoSettings.fps} fps · ` + (appliedCodecSettings?.quality != null ? ctx.t('Quality target (no bitrate cap)', '品質指定（ビットレート上限なし）') : `${videoSettings.bitrate} kbps`)
+        ].join('\n');
+        const elevated = (0) < (encoders.length) && encoders.every(value => value.administratorInput);
+        permission.className = elevated ? 'desktop-permission' : 'desktop-permission warn';
+        permission.textContent = elevated ? ctx.t('Administrator input', '管理者権限で操作')
+            : ctx.t('Elevated apps require an administrator Core.', '昇格したアプリを操作するには、Core を管理者権限で起動してください。');
         if (appliedCodecSettings)
         {
-            status.textContent += ` · GOP ≤ ${encoders[0]?.effectiveKeyFrameInterval} · B ≤ ${appliedCodecSettings.maximumBFrames}` + (appliedCodecSettings.quality == null ? '' : ` · CRF/CQ ${appliedCodecSettings.quality}`);
+            status.textContent += `\nGOP ≤ ${encoders[0]?.effectiveKeyFrameInterval ?? '—'} · B ≤ ${appliedCodecSettings.maximumBFrames ?? '—'}` + (appliedCodecSettings.quality == null ? '' : ` · CRF/CQ ${appliedCodecSettings.quality}`);
         }
         if (videoSettings.variableBitrate)
         {
@@ -2216,7 +2244,7 @@ export async function desktopView(root, ctx)
     {
         targets.append(labeled(ctx.t('Cluster', 'クラスタ'), cluster));
     }
-    targets.append(labeled(ctx.t('Transmission preset', '伝送プリセット'), transmissionPreset), labeled(ctx.t('Host', '接続先'), host), start, stop, connection);
+    targets.append(connectedTarget, labeled(ctx.t('Transmission preset', '伝送プリセット'), transmissionPreset), labeled(ctx.t('Host', '接続先'), host), start, stop, connection);
     toolbar.append(sound, fullscreen, videoFullscreen, cursorSync, clipboardSync, sizing, follow);
     toolbar.append(screens, keyboardSeparator, reconnectButton, viewOnlyButton, keyboardButton, displaySeparator, keybar, keySeparator, reload);
     cluster.onchange = hosts;

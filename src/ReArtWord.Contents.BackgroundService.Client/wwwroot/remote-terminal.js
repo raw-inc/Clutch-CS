@@ -25,8 +25,12 @@ export async function terminalView(root, ctx)
     const note = document.createElement('p');
     note.className = 'tool-status terminal-target';
     note.textContent = ctx.t('Select a peer to start a shell, or take over a shared session.', 'ピアを選んでシェルを開始、または共有セッションへ接続します。');
-    sidebar.append(sessions, peersTree);
-    panel.append(note, host);
+    sidebar.append(peersTree, sessions);
+    const connectionState = document.createElement('span');
+    connectionState.className = 'badge terminal-state';
+    connectionState.setAttribute('role', 'status');
+    host.dataset.emptyHint = ctx.t('Select a peer and start a user session.', 'ピアを選び、「ユーザー実行」で端末を開きます。');
+    panel.append(connectionState, note, host);
     root.append(toolbar, sidebar, panel);
     let peer, session, term, fit, stream, generation = 0, owner;
     let disposed = false;
@@ -159,8 +163,12 @@ export async function terminalView(root, ctx)
                 name.textContent = summary(value);
                 row.append(name);
                 const claim = ctx.button(ctx.t('Take over', '接続を引き継ぐ'), () => connectAsync(value, false, selected));
-                const terminate = ctx.button(ctx.t('Terminate', '明示終了'), async () =>
+                const terminate = ctx.button(ctx.t('Terminate', 'セッションを終了'), async () =>
                 {
+                    if (!window.confirm(ctx.t('Terminate this session?', 'このセッションを終了しますか？') + '\n' + value.sessionId))
+                    {
+                        return;
+                    }
                     if (samePeer(peer, selected) && session?.sessionId === value.sessionId)
                     {
                         disconnect();
@@ -168,6 +176,8 @@ export async function terminalView(root, ctx)
                     await ctx.api('/api/v2/terminal/close', selected, { sessionId: value.sessionId });
                     await list();
                 });
+                terminate.className = 'danger';
+                terminate.prepend(ctx.icon('stop'));
                 claim.disabled = terminate.disabled = item.failed;
                 row.append(claim, terminate);
                 sessions.append(row);
@@ -259,7 +269,7 @@ export async function terminalView(root, ctx)
             return;
         }
         session = claimed;
-        term = new window.Terminal({ cursorBlink: true, scrollback: 3000, fontSize: 14, minimumContrastRatio: 4.5, theme: terminalTheme() });
+        term = new window.Terminal({ cursorBlink: true, scrollback: 3000, fontSize: 14, fontFamily: 'Consolas, "Liberation Mono", monospace', minimumContrastRatio: 4.5, theme: terminalTheme() });
         const surface = document.createElement('div');
         surface.className = 'terminal-surface';
         host.append(surface);
@@ -622,7 +632,7 @@ export async function terminalView(root, ctx)
     /** 入力された条件から新しい対象を作成します。
      * @returns 呼出し元が使用する値です。
      */
-    const create = elevated => ctx.button(elevated ? ctx.t('＋ Administrator', '＋ 管理者実行') : ctx.t('＋ User session', '＋ ユーザー実行'), async () =>
+    const create = elevated => ctx.button(elevated ? ctx.t('Administrator', '管理者実行') : ctx.t('User session', 'ユーザー実行'), async () =>
     {
         const selected = peer, run = generation, shell = shellSelect.value;
         if (disposed || ctx.signal.aborted || !selected || shellLoading || !shells.some(item => item.path === shell) || (elevated ? capabilities?.administratorAvailable !== true : capabilities?.userAvailable !== true))
@@ -686,8 +696,8 @@ export async function terminalView(root, ctx)
         const unavailable = !peer || shellLoading || !shells.length || !peers.some(item => samePeer(item, peer));
         user.disabled = unavailable || capabilities?.userAvailable !== true;
         admin.disabled = unavailable || capabilities?.administratorAvailable !== true;
-        admin.textContent = capabilities?.administratorUsesSystem ? ctx.t('＋ SYSTEM session', '＋ SYSTEM実行') : ctx.t('＋ Administrator', '＋ 管理者実行');
-        admin.prepend(ctx.icon('settings'));
+        admin.textContent = capabilities?.administratorUsesSystem ? ctx.t('SYSTEM session', 'SYSTEM 実行') : ctx.t('Administrator', '管理者実行');
+        admin.prepend(ctx.icon('shield'));
         user.title = capabilities?.userAvailable ? '' : ctx.t('No non-elevated user token is available.', '通常ユーザーのトークンを取得できません。');
         admin.title = capabilities?.administratorUsesSystem ? ctx.t('No user is logged on. Start as SYSTEM.', '未ログオンのためSYSTEMとして起動します。') :
             capabilities?.administratorAvailable ? ctx.t('Start as this user with administrator privileges', 'ユーザー本人の管理者権限で起動') :
@@ -703,6 +713,9 @@ export async function terminalView(root, ctx)
         refreshSessions.disabled = disposed;
         copy.disabled = leave.disabled = !term;
         paste.disabled = !stream?.ready || !session || session.exited;
+        const connected = !!stream?.ready && !!session && !session.exited;
+        connectionState.textContent = connected ? ctx.t('Connected', '接続中') : ctx.t('Disconnected', '未接続');
+        connectionState.classList.toggle('good', connected);
         keys.refresh();
         fullscreen.update();
         if (tokenPolicy)

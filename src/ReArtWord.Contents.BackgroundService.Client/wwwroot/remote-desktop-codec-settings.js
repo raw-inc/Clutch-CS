@@ -41,6 +41,7 @@ export function createDesktopCodecSettings(body, ctx, numberSetting, apply, mode
     const capability = document.createElement('p');
     capability.setAttribute('role', 'status');
     const commit = ctx.button(ctx.t('Apply codec settings', 'コーデック設定を反映'), apply);
+    commit.className = 'primary codec-apply';
     body.append(custom, interval.wrapper, pMode, p.wrapper, bMode, b.wrapper, mode, quality.wrapper, explanation, capability, commit);
     for (const field of [interval.field, p.field, b.field, quality.field])
     {
@@ -54,22 +55,21 @@ export function createDesktopCodecSettings(body, ctx, numberSetting, apply, mode
 
         const unavailable = busy || connected && !supported;
         custom.disabled = unavailable;
-        custom.setAttribute('aria-pressed', String(enabled));
+        showSwitch(custom, ctx.t('Custom settings', 'コーデック詳細設定'), enabled);
         for (const field of [interval.field, p.field, b.field, quality.field])
         {
             field.disabled = unavailable || !enabled;
         }
         p.field.disabled ||= automaticP;
         pMode.disabled = unavailable || !enabled;
-        pMode.setAttribute('aria-pressed', String(automaticP));
+        showSwitch(pMode, ctx.t('Automatic P frames', 'Pフレームの自動設定'), automaticP);
         bMode.disabled = unavailable || !enabled || codec === 'vp9';
-        bMode.setAttribute('aria-pressed', String(bEnabled && codec !== 'vp9'));
+        showSwitch(bMode, ctx.t('B frames', 'Bフレーム'), bEnabled && codec !== 'vp9');
         b.field.disabled ||= codec === 'vp9' || !bEnabled;
         quality.field.disabled ||= !qualityMode;
         quality.field.max = codec === expectedVp9 ? '63' : '51';
         mode.disabled = unavailable || !enabled;
-        mode.textContent = qualityMode ? ctx.t('Use bitrate target', 'ビットレート指定に変更') : ctx.t('Use quality target', '品質指定に変更');
-        mode.setAttribute('aria-pressed', String(qualityMode));
+        showSwitch(mode, ctx.t('Quality target', '品質指定'), qualityMode);
         commit.disabled = unavailable;
         explanation.textContent = (codec === expectedVp9 ? ctx.t('VP9: B-frame control is unavailable; P is the inter-frame limit. ', 'VP9ではBフレーム指定は使用しません。Pは非キーフレーム数の上限です。') :
             ctx.t('B frames add delay and keep capturing even when the desktop is static. ', 'Bフレームは遅延を増やし、静止中も映像取得を続けるため負荷・通信量が増えます。')) +
@@ -167,4 +167,11 @@ export function sameDesktopCodecSettings(expected, actual)
     }
     return actual != null && expected.maximumKeyFrameInterval === actual.maximumKeyFrameInterval && expected.maximumPFrames === (actual.maximumPFrames ?? null) &&
         expected.maximumBFrames === actual.maximumBFrames && expected.quality === (actual.quality ?? null);
+}
+
+/** ボタンに現在の設定値を表示し、読み上げにも同じ状態を伝えます。 */
+function showSwitch(button, label, enabled)
+{
+    button.setAttribute('aria-pressed', String(enabled));
+    button.textContent = label + ' · ' + (enabled ? 'ON' : 'OFF');
 }

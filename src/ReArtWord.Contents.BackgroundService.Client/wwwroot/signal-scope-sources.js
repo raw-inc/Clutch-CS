@@ -131,6 +131,7 @@ export function scopeSources(container, ctx, send, changed)
                     check.checked = false;
                     ctx.say(ctx.t('Select up to 16 capture sources per host.', 'hostごとに選択できる取得元は最大16件です。'));
                 }
+                host.status.textContent = host.inputs.some(item => item.check.checked) ? ctx.t('Ready', '取得準備完了') : ctx.t('Ready to select', '取得元を選択してください');
                 update();
             };
             label.title = adapter.details + '\n' + (adapter.addresses ?? []).join(', ');
@@ -145,7 +146,7 @@ export function scopeSources(container, ctx, send, changed)
             note.textContent = error.backend + ': ' + error.message;
             host.interfaces.append(note);
         }
-        host.status.textContent = ctx.t('Ready to select', '取得元を選択してください');
+        host.status.textContent = host.inputs.some(item => item.check.checked) ? ctx.t('Ready', '取得準備完了') : ctx.t('Ready to select', '取得元を選択してください');
         update();
     }
 

@@ -23,12 +23,19 @@ export async function licensesView(root, ctx)
     label.htmlFor = search.id = 'license-query';
     label.textContent = ctx.t('Find a component', 'ライブラリーを検索');
     search.type = 'search';
-    filter.append(label, search, count);
+    const licenseLabel = document.createElement('label'), license = document.createElement('select');
+    licenseLabel.htmlFor = license.id = 'license-type';
+    licenseLabel.textContent = ctx.t('License', 'ライセンス');
+    license.add(new Option(ctx.t('All licenses', 'すべてのライセンス'), ''));
+    for (const kind of [...new Set(entries.map(entry => entry.license).filter(Boolean))].sort())
+    {
+        license.add(new Option(kind, kind));
+    }
+    filter.append(label, search, licenseLabel, license, count);
     root.append(filter);
-    const rows = document.createElement('clutch-card-rows'), cards = document.createElement('div');
+    const cards = document.createElement('div');
     cards.className = 'license-cards';
-    rows.append(cards);
-    root.append(rows);
+    root.append(cards);
     const components = [];
 
     /** 絞り込み後の表示件数を読み上げの対象にも反映します。 */
@@ -38,24 +45,37 @@ export async function licensesView(root, ctx)
     }
 
     showCount(entries.length);
-    search.addEventListener('input', () =>
+
+    /** 名前とライセンスの両方に一致する項目を表示します。 */
+    function applyFilter()
     {
         const query = search.value.trim().toLowerCase();
         let visible = 0;
         for (const component of components)
         {
-            component.section.hidden = !component.name.includes(query);
+            component.section.hidden = !component.name.includes(query) || (!!license.value && component.license !== license.value);
             if (!component.section.hidden)
             {
                 visible++;
             }
         }
         showCount(visible);
-    }, { signal: ctx.signal });
+    }
+
+    search.addEventListener('input', applyFilter, { signal: ctx.signal });
+    license.addEventListener('change', applyFilter, { signal: ctx.signal });
     for (const entry of entries)
     {
         const section = document.createElement('section'), title = document.createElement('h2'), meta = document.createElement('p');
-        title.textContent = entry.name;
+        const pieces = entry.name.split('.');
+        pieces.forEach((piece, index) =>
+        {
+            if (index)
+            {
+                title.append('.', document.createElement('wbr'));
+            }
+            title.append(piece);
+        });
         meta.className = 'small muted';
         meta.setAttribute('data-card-caption', '');
         meta.textContent = `${entry.version} · ${entry.license} · ${entry.authors}`;
@@ -78,7 +98,8 @@ export async function licensesView(root, ctx)
         {
             const link = document.createElement('a');
             link.href = entry.project;
-            link.textContent = ctx.t('Project website (opens in a new tab)', 'プロジェクトサイトを新しいタブで開く');
+            link.textContent = ctx.t('Website ↗', 'サイト ↗');
+            link.setAttribute('aria-label', entry.name + ' · ' + ctx.t('Project website (opens in a new tab)', 'プロジェクトサイトを新しいタブで開く'));
             link.target = '_blank';
             link.rel = 'noopener noreferrer';
             section.append(link);
@@ -86,7 +107,7 @@ export async function licensesView(root, ctx)
         for (const notice of entry.notices)
         {
             const details = document.createElement('details'), summary = document.createElement('summary'), text = document.createElement('pre');
-            summary.textContent = notice.label;
+            summary.textContent = notice.label + ' · ' + entry.name;
             details.append(summary, text);
             if (!section.querySelector('details'))
             {
@@ -135,7 +156,7 @@ export async function licensesView(root, ctx)
                 });
             }, { signal: ctx.signal });
         }
-        components.push({ name: entry.name.toLowerCase(), section });
+        components.push({ name: entry.name.toLowerCase(), license: entry.license, section });
         cards.append(section);
     }
     return {

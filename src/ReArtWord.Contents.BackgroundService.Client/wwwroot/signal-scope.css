@@ -34,7 +34,7 @@
     font-variant-numeric: tabular-nums;
 }
 
-.capturing .scope-status {
+.scope-status.warn {
     color: var(--warn);
 }
 
@@ -55,6 +55,7 @@
     overflow: hidden;
     background: transparent;
     gap: 12px;
+    align-items: stretch;
 }
 
 .scope-sidebar {
@@ -88,8 +89,8 @@
     display: grid;
     align-content: start;
     gap: 8px;
-    min-width: 0;
     padding: 10px;
+    min-width: 0;
 }
 
 .scope-advanced .scope-toolbar {
@@ -123,6 +124,9 @@
     padding: 9px 0;
     cursor: pointer;
     font-size: 11px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
 }
 
 .scope-host-heading label {
@@ -270,7 +274,8 @@
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: var(--radius-control);
-    font-size: 11px;
+    font-size: 13px;
+    font-family: Consolas, monospace;
     line-height: 1.55;
     tab-size: 4;
 }
@@ -324,4 +329,138 @@
 
 .scope-filters .scope-search {
     min-width: min(100%, 12rem);
+}
+
+.scope-filters label {
+    min-width: 0;
+    flex: 1;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.scope-filters label input {
+    width: 100%;
+}
+
+.scope-filters select,
+.scope-filters button {
+    align-self: end;
+    min-height: 36px;
+}
+
+.scope-workspace pre {
+    font: 13px/1.55 Consolas, monospace;
+}
+
+.scope-packets :is(th,td):is(:first-child,:nth-child(7)) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.scope-host-heading::before {
+    content: "▸";
+}
+
+.scope-host[open] > .scope-host-heading::before {
+    content: "▾";
+}
+
+@media (max-width: 680px) {
+    .scope-list {
+        overflow-x: auto;
+        scrollbar-gutter: stable;
+    }
+
+    .scope-packets {
+        min-width: 42rem;
+    }
+
+    .scope-sidebar {
+        max-height: none;
+        height: auto;
+        overflow: visible;
+    }
+}
+
+.scope-filters .scope-column-choice {
+    display: none;
+}
+
+@media (max-width: 680px) {
+    .scope-filters .scope-column-choice {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .scope-column-choice input {
+        width: auto;
+    }
+
+    .signal-scope:not(.all-columns) .scope-packets {
+        min-width: 0;
+    }
+
+    .signal-scope:not(.all-columns) .scope-packets tr > :is(:nth-child(1),:nth-child(4),:nth-child(5),:nth-child(7)):not(.scope-spacer) {
+        display: none;
+    }
+
+    .signal-scope:not(.all-columns) .scope-packets th:nth-child(6) {
+        width: auto;
+    }
+}
+
+@media (max-width: 680px) {
+    .scope-filters {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+    }
+
+    .scope-filters > label:first-child {
+        grid-column: 1 / -1;
+    }
+
+    .scope-filters .scope-search {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .scope-filters .scope-column-choice {
+        grid-column: 1 / -1;
+        white-space: nowrap;
+    }
+
+    .scope-filters .scope-column-choice input {
+        width: 16px;
+        flex: none;
+    }
+
+    .signal-scope:not(.all-columns) .scope-packets,
+    .signal-scope:not(.all-columns) .scope-packets :is(thead,tbody) {
+        display: block;
+    }
+
+    .signal-scope:not(.all-columns) .scope-packets tr {
+        display: grid;
+        grid-template-columns: 6rem 3.25rem minmax(0, 1fr);
+    }
+
+    .signal-scope:not(.all-columns) .scope-packets tr > :is(td,th) {
+        width: auto;
+        min-width: 0;
+    }
+
+    .signal-scope:not(.all-columns) .scope-packets .scope-spacer {
+        grid-column: 1/-1;
+    }
+
+    .scope-hosts label {
+        display: flex;
+        align-items: center;
+        margin: 0;
+        gap: 6px;
+        padding: 4px 0;
+        min-height: 36px;
+    }
 }

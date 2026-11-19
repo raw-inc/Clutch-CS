@@ -50,35 +50,53 @@ export async function signalScopeViewAsync(container, ctx)
         }
     }
 
+    const emptyPackets = document.createElement('p');
+    emptyPackets.className = 'scope-empty';
+    emptyPackets.textContent = ctx.t('Select a source and start capturing packets.', '取得元を選び、「取得開始」を押してください。');
     const sources = scopeSources(selection, ctx, send, updateControls);
-    const start = ctx.button(ctx.t('Start', 'Start'), () =>
+    const start = ctx.button(ctx.t('Start', '取得開始'), () =>
     {
         ctx.say('');
         send({ type: 'start', sources: sources.selected() });
         sources.pending();
     });
-    const stop = ctx.button(ctx.t('Stop', 'Stop'), () => send({ type: 'stop' }));
+    const stop = ctx.button(ctx.t('Stop', '取得停止'), () => send({ type: 'stop' }));
     const clear = ctx.button(ctx.t('Clear', 'クリア'), () =>
     {
         send({ type: 'clear' });
         table.clear();
     });
-    const latest = ctx.button(ctx.t('Follow latest', '最新に追従'), () => table.latest());
+    const latest = ctx.button(ctx.t('Follow latest', '最新に追従'), () => table.latest(!table.following));
     const reload = ctx.button(ctx.t('Refresh hosts', 'ホスト一覧を更新'), () => sources.loadAsync());
     display.setAttribute('aria-label', ctx.t('Endpoint display', '送受信先の表示'));
     display.append(new Option('IP:Port', 'ip'), new Option('Host:Port', 'host'));
     start.className = 'primary';
     const filters = document.createElement('div');
     filters.className = 'scope-filters';
-    filters.append(search, latest, display);
+    const filterLabel = document.createElement('label');
+    filterLabel.textContent = ctx.t('Display filter', '表示フィルター');
+    filterLabel.append(search);
+    const captureState = document.createElement('span');
+    captureState.className = 'badge';
+    captureState.setAttribute('role', 'status');
+    toolbar.append(captureState);
+    const columns = document.createElement('label'), showColumns = document.createElement('input');
+    columns.className = 'scope-column-choice';
+    showColumns.type = 'checkbox';
+    showColumns.onchange = () => container.classList.toggle('all-columns', showColumns.checked);
+    columns.append(showColumns, document.createTextNode(ctx.t('All columns', 'すべての列')));
+    filters.append(filterLabel, latest, display, columns);
     toolbar.append(start, stop, clear);
     selection.prepend(reload);
-    results.append(filters, searchError, status);
+    results.append(filters, searchError, status, emptyPackets);
     workspace.append(selection, results);
     selection.prepend(toolbar);
     container.append(workspace);
-    const table = scopeTable(results, ctx, send, view =>
+    const table = scopeTable(results, ctx, send, (view, following) =>
     {
+        latest.setAttribute('aria-pressed', String(following));
+        emptyPackets.hidden = (0) < (view.retained) || sources.running;
+        status.classList.toggle('warn', (0) < (view.backendDropped) || (0) < (view.deliveryDropped));
         status.textContent = ctx.t('Matched', '一致') + ': ' + view.total.toLocaleString() + ' / ' + view.retained.toLocaleString() + ' · '
             + ctx.t('Observations', '受信') + ': ' + view.received.toLocaleString() + ' · ' + ctx.t('Merged', '重複統合') + ': ' + view.duplicates.toLocaleString() + ' · '
             + ctx.t('Rolled out', '保持上限除外') + ': ' + view.rolled.toLocaleString() + ' · ' + ctx.t('Capture drops', '取得欠落') + ': ' + view.backendDropped.toLocaleString()
@@ -95,6 +113,12 @@ export async function signalScopeViewAsync(container, ctx)
         start.disabled = sources.running || !sources.selected().length;
         stop.disabled = !sources.running;
         reload.disabled = sources.running;
+        if (sources.running)
+        {
+            emptyPackets.hidden = true;
+        }
+        captureState.textContent = sources.running ? ctx.t('Capturing', '取得中') : ctx.t('Stopped', '停止中');
+        captureState.classList.toggle('good', sources.running);
         container.classList.toggle('capturing', sources.running);
     }
 

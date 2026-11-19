@@ -164,7 +164,8 @@ export function createTerminalKeys(ctx, options)
     }
     for (const [label, code, description] of [['←', 'D', 'Left'], ['↑', 'A', 'Up'], ['↓', 'B', 'Down'], ['→', 'C', 'Right'], ['Home', 'H', 'Home'], ['End', 'F', 'End']])
     {
-        add(navigationRow, label, description, () => options.send(transform('\x1b' + (options.applicationCursor() ? 'O' : '[') + code)));
+        const button = add(navigationRow, label, description, () => options.send(transform('\x1b' + (options.applicationCursor() ? 'O' : '[') + code)));
+        button.className = 'terminal-navigation-key';
     }
     for (const [label, code] of [['PgUp', '5'], ['PgDn', '6']])
     {
