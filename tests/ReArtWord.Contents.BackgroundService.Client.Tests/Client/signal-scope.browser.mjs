@@ -19,7 +19,7 @@ before(async () =>
             if (pathname === '/')
             {
                 response.setHeader('Content-Type', 'text/html; charset=utf-8');
-                response.end('<!doctype html><link rel="stylesheet" href="/styles/fonts.css"><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/signal-scope.css"><main id="scope" class="page"></main>');
+                response.end('<!doctype html><link rel="stylesheet" href="/styles/fonts.css"><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/styles/controls.css"><link rel="stylesheet" href="/signal-scope.css"><main id="scope" class="page"></main>');
                 return;
             }
             const file = path.resolve(root, '.' + decodeURIComponent(pathname));
@@ -149,11 +149,14 @@ async function mountAsync(page, experimental)
     await page.evaluate(async () =>
     {
         const { signalScopeViewAsync } = await import('/signal-scope.js');
+        const { uiIcon } = await import('/ui-icons.js');
         window.scopeErrors = [];
         window.scopeLifetime = new AbortController();
         window.scope = await signalScopeViewAsync(document.querySelector('#scope'), { signal: window.scopeLifetime.signal, timeZone: 'UTC',
 
             t: en => en,
+
+            icon: uiIcon,
 
             say: message => window.scopeErrors.push(message),
 
