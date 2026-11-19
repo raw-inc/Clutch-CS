@@ -164,6 +164,10 @@ test('published Desktop PWA is installable from the current origin and reopens i
         const picker = page.locator('.route-picker select');
         await picker.selectOption('logs');
         await page.waitForURL('**/logs');
+        const recent = page.getByRole('switch', { name: 'Search recent history only' });
+        assert.ok(await recent.isChecked());
+        await recent.uncheck();
+        assert.equal(await recent.isChecked(), false);
         await picker.selectOption('dashboard');
         await page.waitForURL('**/dashboard');
         await page.locator('.compact-view select').selectOption('Settings & maintenance');

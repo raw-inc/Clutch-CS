@@ -154,8 +154,7 @@ public sealed class LogViewerAccessTests
                 builder.CloseComponent();
             };
             ParameterView parameters = ParameterView.FromDictionary(new Dictionary<string, object?> { [nameof(MainLayout.Body)] = body });
-            Microsoft.AspNetCore.Components.Web.HtmlRendering.HtmlRootComponent output = await renderer.RenderComponentAsync<MainLayout>(parameters).ConfigureAwait(true);
-            Assert.Contains("type=\"checkbox\" checked", output.ToHtmlString(), StringComparison.Ordinal);
+            await renderer.RenderComponentAsync<MainLayout>(parameters).ConfigureAwait(true);
             await SearchAsync(activator.Viewer!).ConfigureAwait(true);
             Assert.Equal(["a", "b"], queries.Select(item => item.Cluster).Order(StringComparer.Ordinal));
             Assert.All(queries, item => Assert.True(item.Query.UncompressedOnly));
