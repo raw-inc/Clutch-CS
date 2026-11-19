@@ -3424,7 +3424,7 @@ test('codec details apply draft values, keep P automatic and B disabled by defau
     const element = name => descendants(f.root).find(e => e.getAttribute('aria-label') === name);
 
     const p = element('Maximum P frames per keyframe interval'), b = element('Maximum consecutive B frames'), q = element('Quality value (lower is better)');
-    assert.equal(element('Custom codec settings').getAttribute('aria-pressed'), 'true');
+    assert.equal(element('Custom codec settings').getAttribute('aria-checked'), 'true');
     assert.equal(p.disabled, true);
     assert.equal(b.disabled, true);
     assert.equal(q.disabled, true);
@@ -3850,9 +3850,9 @@ test('advanced codec edits become Custom and choosing a preset restores all tran
     assert.equal(codec.value, 'vp9');
     assert.equal(all.find(item => item.getAttribute('aria-label') === 'Enable B frames').disabled, true);
     assert.equal(interval.value, '30');
-    assert.equal(all.find(item => item.getAttribute('aria-label') === 'Automatic P frames').getAttribute('aria-pressed'), 'true');
-    assert.equal(all.find(item => item.getAttribute('aria-label') === 'Enable B frames').getAttribute('aria-pressed'), 'false');
-    assert.equal(all.find(item => item.getAttribute('aria-label') === 'Quality target mode').getAttribute('aria-pressed'), 'false');
+    assert.equal(all.find(item => item.getAttribute('aria-label') === 'Automatic P frames').getAttribute('aria-checked'), 'true');
+    assert.equal(all.find(item => item.getAttribute('aria-label') === 'Enable B frames').getAttribute('aria-checked'), 'false');
+    assert.equal(all.find(item => item.getAttribute('aria-label') === 'Quality target mode').getAttribute('aria-checked'), 'false');
     assert.equal(all.find(item => item.getAttribute('aria-label') === 'Variable bitrate (VBR)').getAttribute('aria-pressed'), 'true');
     const audioRate = all.find(item => item.getAttribute('aria-label') === 'Audio bitrate');
     assert.equal(audioRate.disabled, true);

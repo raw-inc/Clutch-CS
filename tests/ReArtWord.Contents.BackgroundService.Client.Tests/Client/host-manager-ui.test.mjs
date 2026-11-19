@@ -274,7 +274,9 @@ test('NetworkIF direct IPv4 switch changes only that protocol and DNS-none allow
     const f = await fixtureAsync(t);
     f.network.interfaces[0].ipv4 = { ...f.network.interfaces[0].ipv4, dhcp: false, dns: [] };
     await f.pick('host-a');
+    assert.equal(f.button('IPv4 · Ethernet 0 · host-a').textContent, 'IPv4 · Enabled');
     await f.button('IPv4 · Ethernet 0 · host-a').click();
+    assert.equal(f.button('IPv4 · Ethernet 0 · host-a').textContent, 'IPv4 · Disabled');
     await tick();
     assert.equal(f.dialogs().length, 0);
     assert.equal(f.button('Apply').disabled, false);
@@ -483,7 +485,7 @@ test('PATH entry reordering keeps variable references and the selected Machine s
     const f = await fixtureAsync(t);
     await f.pick('host-a');
     await f.click('PATH');
-    await f.click('Path');
+    await f.click('Edit');
     assert.equal(f.find('input', 'Variable name').readOnly, true);
     await f.click('Move up 2');
     await f.click('Preview changes');

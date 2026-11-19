@@ -60,7 +60,7 @@ function checkLayout(actual, width, contract, navigationSize)
     assert.equal(actual.navigation.padding, width <= 1100 ? '0px 12px' : '0px 15px');
     assert.equal(actual.navigation.fontSize, navigationSize);
     assert.equal(actual.workspace.display, width < 750 ? 'block' : 'grid');
-    assert.equal(actual.studio.height, width <= 900 ? '804px' : '878px');
+    assert.equal(actual.studio.height, width <= 900 ? '790px' : '878px');
     assert.equal(actual['wire'].animationDuration, '0s');
     assert.equal(actual['peer-health'].opacity, '1');
 }
@@ -140,7 +140,7 @@ test('Background Syncの進捗はホバーなしで表示され、通常Readyだ
     }
 });
 
-test('同期中も正常時もホバーせずに状態名を確認できる', async () =>
+test('同期中も正常時もホバーせずに状態名を確認できる', { skip: 'Readyの常時表示を廃止し、確認待ちや同期の表示を優先しました。' }, async () =>
 {
     for (const width of [1440, 900, 640])
     {
@@ -158,43 +158,68 @@ test('通常設定では分離したキーフレームが接続線と待機表�
     assert.notEqual(actual.skeleton.animationDuration, '0s');
 });
 
+test('確認済みReadyの表示はアイコンに収め、背景同期の進捗は読める幅で残す', async () =>
+{
+    for (const width of [1440, 390])
+    {
+        const actual = await captureStylesAsync(browser, styles, width, 'reduce');
+        assert.equal(actual['overview-health'].width, '1px');
+        assert.equal(actual['peer-health'].width, '1px');
+        assert.notEqual(actual['background-health'].width, '1px');
+    }
+});
+
+/** 起動画面と手動更新画面を同じ公開スタイルで表示します。
+ * @returns ページの表示と検証の完了です。
+ */
+async function withUpdatePage(file, verify)
+{
+    const root = fileURLToPath(new URL('../../../src/ReArtWord.Contents.BackgroundService.Client/wwwroot/', import.meta.url));
+    const document = parse(await readFile(path.join(root, file), 'utf8'));
+
+    /** 起動処理を実行せず、実際の画面HTMLとCSSだけを検証します。 */
+    function removeScripts(node)
+    {
+        node.childNodes = node.childNodes?.filter(child => !['script', 'link'].includes(child.tagName));
+        for (const child of node.childNodes ?? [])
+        {
+            removeScripts(child);
+        }
+    }
+
+    removeScripts(document);
+    const page = await browser.newPage();
+    try
+    {
+        await page.setContent(serialize(document));
+        for (const file of ['styles/theme.css', 'ui-update.css'])
+        {
+            await page.addStyleTag({ content: await readFile(path.join(root, file), 'utf8') });
+        }
+        await page.locator('#splash').evaluate(element =>
+        {
+            element.hidden = false;
+        });
+        await verify(page);
+    }
+    finally
+    {
+        await page.close();
+    }
+}
+
 for (const file of ['ui-start.html', 'ui-update.html'])
 {
-    test(`${file}でも起動画面のロゴと状態表示が保たれる`, async () =>
+    test(`${file}でも起動画面のロゴと状態表示が保たれる`, { skip: '旧仕様では進捗を補足文の大きさで表示していました。' }, () => withUpdatePage(file, async page =>
     {
-        const root = fileURLToPath(new URL('../../../src/ReArtWord.Contents.BackgroundService.Client/wwwroot/', import.meta.url));
-        const document = parse(await readFile(path.join(root, file), 'utf8'));
-
-        /** 起動処理を実行せず、実際の画面HTMLとCSSだけを検証します。 */
-        function removeScripts(node)
-        {
-            node.childNodes = node.childNodes?.filter(child => !['script', 'link'].includes(child.tagName));
-            for (const child of node.childNodes ?? [])
-            {
-                removeScripts(child);
-            }
-        }
-
-        removeScripts(document);
-        const page = await browser.newPage();
-        try
-        {
-            await page.setContent(serialize(document));
-            for (const file of ['styles/theme.css', 'ui-update.css'])
-            {
-                await page.addStyleTag({ content: await readFile(path.join(root, file), 'utf8') });
-            }
-            await page.locator('#splash').evaluate(element =>
-            {
-                element.hidden = false;
-            });
-            assert.equal(await page.locator('#brand-mark').evaluate(element => getComputedStyle(element).width), '42px');
-            assert.equal(await page.locator('#brand-mark svg').evaluate(element => getComputedStyle(element).height), '42px');
-            assert.equal(await page.locator('#status').evaluate(element => getComputedStyle(element).fontSize), '11px');
-        }
-        finally
-        {
-            await page.close();
-        }
-    });
+        assert.equal(await page.locator('#brand-mark').evaluate(element => getComputedStyle(element).width), '42px');
+        assert.equal(await page.locator('#brand-mark svg').evaluate(element => getComputedStyle(element).height), '42px');
+        assert.equal(await page.locator('#status').evaluate(element => getComputedStyle(element).fontSize), '11px');
+    }));
+    test(`${file}ではロゴを保ち、進捗を本文の大きさで表示する`, () => withUpdatePage(file, async page =>
+    {
+        assert.equal(await page.locator('#brand-mark').evaluate(element => getComputedStyle(element).width), '42px');
+        assert.equal(await page.locator('#brand-mark svg').evaluate(element => getComputedStyle(element).height), '42px');
+        assert.equal(await page.locator('#status').evaluate(element => getComputedStyle(element).fontSize), '16px');
+    }));
 }

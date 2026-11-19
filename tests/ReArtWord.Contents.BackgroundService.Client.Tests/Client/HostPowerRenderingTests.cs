@@ -45,6 +45,8 @@ public sealed class HostPowerRenderingTests
             Microsoft.AspNetCore.Components.Web.HtmlRendering.HtmlRootComponent output = await renderer.RenderComponentAsync<HostPowerControl>(ParameterView.FromDictionary(parameters)).ConfigureAwait(true);
             return WebUtility.HtmlDecode(output.ToHtmlString());
         }).ConfigureAwait(true);
+        Assert.Matches("<button[^>]*aria-label=\"[^\"]*test-PC[^\"]*\"[^>]*data-power-trigger", html);
+        Assert.DoesNotContain("test-PC: " + label, html, StringComparison.Ordinal);
         Assert.Contains("class=\"health-indicator " + css + "\"", html, StringComparison.Ordinal);
         Assert.Matches("class=\"health-label\"[^>]*>" + label + "</span>", html);
         System.Text.RegularExpressions.Match wake = System.Text.RegularExpressions.Regex.Match(html, "<button[^>]*data-power-action=\"wake\"[^>]*>Send Wake-on-LAN</button>");

@@ -120,7 +120,7 @@ test('toggles persist independently, buttons share modifiers, and disconnection 
     ready = false;
     keys.refresh();
     click('Ctrl');
-    click('↵');
+    click('Enter');
     assert.equal(sent.length, 2);
     assert.ok(buttons.every(button => button.disabled));
     ready = true;
