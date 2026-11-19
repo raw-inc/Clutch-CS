@@ -58,7 +58,7 @@ export function hostsView(root, ctx, actions)
         edited = false;
         return reader.load();
     }, edited)));
-    const warning = node('p', `${ctx.t('The complete hosts content will replace each selected host’s file. Review every difference below.')} · ${ctx.t('Target hosts')}: ${hosts.length}`, 'hm-warning');
+    const warning = node('p', `${ctx.t('The complete hosts content will replace each selected host’s file. Review every difference below.')} · ${ctx.t('Target hosts')}: ${hosts.length} ${ctx.t('hostCountUnit')}`, 'hm-warning');
     warning.prepend(icon('info'));
     root.append(title, warning, status, grid);
     actions.append(bar);

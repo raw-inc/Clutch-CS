@@ -47,7 +47,7 @@ export function virtualNics(root, ctx, entries, showSwitches)
             rows.add([ctx.button(adapter.name, () => previewNic(entry, null, adapter), 'hm-link'), host.target.hostId, badge(ctx.t('Unconfirmed'), 'warn'), badge(ctx.t('Read only'))]);
         }
     }
-    root.append(count ? rows.root : empty(ctx.t('No virtual interfaces'), ctx.t('Create a management OS adapter on an existing virtual switch.'), 'network'));
+    root.append(count ? rows.root : empty(ctx.t('No virtual interfaces'), ctx.t(available.length ? 'Create a management OS adapter on an existing virtual switch.' : 'Select a virtual switch before adding an adapter.'), 'network'));
     const switches = table(['Host', 'Virtual switch', 'Physical interface'].map(ctx.t));
     for (const { host, state } of entries)
     {

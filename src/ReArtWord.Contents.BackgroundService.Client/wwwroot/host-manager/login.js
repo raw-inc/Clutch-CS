@@ -120,7 +120,7 @@ function renderState(root, ctx, state)
     header.append(node('h3', state.host.target.hostId), badge(ctx.t(loginStatus(value))));
     section.append(header);
     const facts = table([ctx.t('Setting'), ctx.t('Value')]);
-    facts.root.classList.add('hm-comparison');
+    facts.root.classList.add('hm-facts');
     facts.add([ctx.t('Configured account'), loginAccount(value, ctx.t)]);
     section.append(facts.root);
     if (value.remainingLogons != null)

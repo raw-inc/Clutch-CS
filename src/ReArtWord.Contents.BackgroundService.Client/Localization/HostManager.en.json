@@ -311,5 +311,7 @@
   "Pending protocol changes": "Pending protocol changes",
   "Clear all pending changes": "Clear all pending changes",
   "Review pending changes": "Review pending changes",
-  "Changed interfaces": "Changed interfaces"
+  "Changed interfaces": "Changed interfaces",
+  "hostCountUnit": "hosts",
+  "ruleCountUnit": "shown"
 }

@@ -137,7 +137,9 @@ export function firewallView(root, ctx, actionArea)
         ruleLabels.append(rows.root);
         listing.append(ruleLabels);
         const start = page?.offset ?? 0;
-        range.textContent = (data.rules.length ? `${ctx.t('Rules')} ${start + 1}–${start + data.rules.length}` : `0 ${ctx.t('Rules')}`) + (page?.filter ? ` · ${page.filter}` : '');
+        const end = start + data.rules.length;
+        const position = start || data.nextOffset != null ? ` · ${start + 1}–${end}` : '';
+        range.textContent = `${ctx.t('Rules')} · ${data.rules.length} ${ctx.t('ruleCountUnit')}${position}`;
     }
 
     /** 指定位置にある一覧のページを取得します。

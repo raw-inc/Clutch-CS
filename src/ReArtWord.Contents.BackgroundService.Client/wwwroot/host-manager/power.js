@@ -115,7 +115,7 @@ function renderPowerState(root, ctx, state)
     header.append(node('h3', state.host.target.hostId), badge(ctx.t(stateLabel), stateLabel === unconfirmed ? 'warn' : ''));
     section.append(header, node('p', `${ctx.t('Active power plan')}: ${value.schemeName}`));
     const list = table([ctx.t('Setting'), ctx.t('AC power'), ctx.t('Battery power')]);
-    list.root.classList.add('hm-comparison');
+    list.root.classList.add('hm-facts');
     for (const [key, label] of Object.entries(powerTimers))
     {
         list.add([ctx.t(label), powerTime(value.ac[key], ctx.t), powerTime(value.dc[key], ctx.t)]);
@@ -147,12 +147,12 @@ export function powerView(root, ctx)
     {
         return noSelection(root, ctx);
     }
-    const title = heading(ctx.t('Power settings'), `${ctx.t('Selected hosts')}: ${hosts.length}`), status = node('div'), listing = node('div');
+    const title = heading(ctx.t('Power settings'), `${ctx.t('Selected hosts')}: ${hosts.length} ${ctx.t('hostCountUnit')}`), status = node('div'), listing = node('div');
     const reader = createReader(ctx, hosts, () => ({ area: 'power' }), render);
     const edit = action(ctx, 'Edit selected hosts', 'settings', () => editPower(ctx, [...reader.states.values()], false));
     const preset = action(ctx, 'Prepare continuous operation settings', 'check', () => editPower(ctx, [...reader.states.values()], true));
-    edit.append(document.createTextNode(` · ${ctx.t('Target hosts')}: ${hosts.length}`));
-    preset.append(document.createTextNode(` · ${ctx.t('Target hosts')}: ${hosts.length}`));
+    edit.append(document.createTextNode(` · ${ctx.t('Target hosts')}: ${hosts.length} ${ctx.t('hostCountUnit')}`));
+    preset.append(document.createTextNode(` · ${ctx.t('Target hosts')}: ${hosts.length} ${ctx.t('hostCountUnit')}`));
     edit.disabled = true;
     preset.disabled = true;
     const buttons = node('div', '', 'hm-actions');

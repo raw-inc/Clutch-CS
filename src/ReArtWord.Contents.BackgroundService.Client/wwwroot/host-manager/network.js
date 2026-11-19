@@ -257,7 +257,7 @@ export function networkView(root, ctx, actions)
     {
         listing.replaceChildren();
         const visible = visibleRecords();
-        count.textContent = awaitingRead || unavailable ? '—' : `${visible.length} ${ctx.t('interfaces')}`;
+        count.textContent = awaitingRead ? ctx.t('Loading') : unavailable ? ctx.t('Unknown') : `${visible.length} ${ctx.t('interfaces')}`;
         for (const control of filters.querySelectorAll('input, select, button'))
         {
             control.disabled = awaitingRead || unavailable;
@@ -265,11 +265,11 @@ export function networkView(root, ctx, actions)
         refresh.disabled = awaitingRead;
         if (!records.length)
         {
-            if (awaitingRead || unavailable)
+            if (awaitingRead)
             {
-                listing.append(node('p', ctx.t(awaitingRead ? 'Reading interfaces…' : 'Interface data unavailable'), 'hm-read-state'));
+                listing.append(node('p', ctx.t('Reading interfaces…'), 'hm-read-state'));
             }
-            else
+            else if (!unavailable)
             {
                 listing.append(node('p', ctx.t('No network interfaces were reported.'), 'hm-muted'));
             }

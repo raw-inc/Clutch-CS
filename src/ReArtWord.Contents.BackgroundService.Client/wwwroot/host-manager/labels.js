@@ -461,5 +461,6 @@ export const keys = [
     "Review pending changes",
     "Changed interfaces",
     "wake.title", "wake.description", "wake.requirements", "wake.inventoryCache", "wake.defaults", "wake.explicit", "wake.none", "wake.selected", "wake.kind", "wake.physical", "wake.virtual",
-    "Device.InvalidWakeSelection", "Device.WakeInterfaceChanged", "wake.selection.saved", "wake.review"
+    "Device.InvalidWakeSelection", "Device.WakeInterfaceChanged", "wake.selection.saved", "wake.review",
+    "Reading interfaces…", "Interface data unavailable", "Choose a different mode to preview the change.", "Firewall rules", "Filter", "Loading", "ruleCountUnit", "Use", "Select a virtual switch before adding an adapter.", "hostCountUnit", "wake.overrideHint"
 ];

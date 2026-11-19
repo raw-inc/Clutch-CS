@@ -57,6 +57,7 @@ function renderState(root, ctx, state)
     header.append(node('h3', state.host.target.hostId), badge(ctx.t(windowsUpdateStatus(value))));
     section.append(header, node('p', `Windows · ${value.edition}`));
     const list = table([ctx.t('Setting'), ctx.t('Status')]);
+    list.root.classList.add('hm-facts');
     list.add([ctx.t('Update installation in progress'), ctx.t(value.installInProgress == null ? 'Unconfirmed' : value.installInProgress ? 'Yes' : 'No')]);
     list.add([ctx.t('Windows update restart pending'), ctx.t(value.rebootRequired ? 'Yes' : 'No')]);
     section.append(list.root);
@@ -67,7 +68,7 @@ function renderState(root, ctx, state)
     const buttons = node('div', '', 'hm-actions');
     for (const [label, manualOnly] of [['Require manual updates', true], ['Release automatic update restriction', false]])
     {
-        const button = action(ctx, label, 'settings', () => previewUpdate(ctx, [state], manualOnly));
+        const button = action(ctx, label, manualOnly ? 'settings' : 'undo', () => previewUpdate(ctx, [state], manualOnly));
         button.disabled = !editable(state);
         buttons.append(button);
     }
@@ -85,10 +86,10 @@ export function windowsUpdateView(root, ctx, actionArea)
     {
         return noSelection(root, ctx);
     }
-    const title = heading(ctx.t('Windows Update'), `${ctx.t('Selected hosts')}: ${hosts.length}`), status = node('div'), listing = node('div');
+    const title = heading(ctx.t('Windows Update'), `${ctx.t('Selected hosts')}: ${hosts.length} ${ctx.t('hostCountUnit')}`), status = node('div'), listing = node('div');
     const reader = createReader(ctx, hosts, () => ({ area: 'windowsUpdate' }), render);
     const manual = action(ctx, 'Require manual updates for selected hosts', 'settings', () => previewUpdate(ctx, [...reader.states.values()], true));
-    manual.append(document.createTextNode(` · ${ctx.t('Target hosts')}: ${hosts.length}`));
+    manual.append(document.createTextNode(` · ${ctx.t('Target hosts')}: ${hosts.length} ${ctx.t('hostCountUnit')}`));
     manual.disabled = true;
     title.append(action(ctx, 'Refresh settings', 'refresh', () => reader.load()));
     actionArea.append(manual);
