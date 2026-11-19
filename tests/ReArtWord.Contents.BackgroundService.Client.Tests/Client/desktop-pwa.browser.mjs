@@ -310,7 +310,7 @@ test('conflict actions follow the explanation at desktop and mobile widths', asy
     }
 });
 
-test('keyboard focus stays visible inside a field without shifting it; forced colors retain a focus indicator', async context =>
+test('keyboard focus stays visible inside a field without shifting it; forced colors retain a focus indicator', { skip: 'The license search icon and input now share the focusable search frame.' }, async context =>
 {
     const browser = await chromium.launch();
     context.after(() => browser.close());
@@ -332,6 +332,37 @@ test('keyboard focus stays visible inside a field without shifting it; forced co
         assert.equal(mark[0], 'none');
         assert.ok(mark[1].includes('inset') && mark[1].includes(mark[2]));
         assert.deepEqual(await field.boundingBox(), before);
+    }
+    await page.emulateMedia({ forcedColors: 'active' });
+    assert.notEqual(await field.evaluate(e => getComputedStyle(e).outlineStyle), 'none');
+});
+
+test('focus marks the frame around the license search without shifting it', async context =>
+{
+    const browser = await chromium.launch();
+    context.after(() => browser.close());
+    const page = await browser.newPage({ serviceWorkers: 'block' });
+    await page.goto(origin + '/licenses');
+    const field = page.getByRole('searchbox');
+    const frame = page.locator('.search-field').filter({ has: field });
+    await frame.waitFor();
+    for (const colorScheme of ['light', 'dark'])
+    {
+        await page.emulateMedia({ colorScheme });
+        await field.evaluate(e => e.blur());
+        const before = await frame.boundingBox();
+        const unfocused = await frame.evaluate(e => getComputedStyle(e).borderBottomColor);
+        await field.focus();
+        const mark = await frame.evaluate(e =>
+        {
+            const s = getComputedStyle(e);
+            return [s.outlineStyle, s.boxShadow, s.borderBottomColor];
+        });
+        assert.equal(mark[0], 'none');
+        assert.notEqual(mark[2], unfocused);
+        assert.ok(mark[1].includes('inset') && mark[1].includes(mark[2]));
+        assert.equal(await field.evaluate(e => getComputedStyle(e).outlineStyle), 'none');
+        assert.deepEqual(await frame.boundingBox(), before);
     }
     await page.emulateMedia({ forcedColors: 'active' });
     assert.notEqual(await field.evaluate(e => getComputedStyle(e).outlineStyle), 'none');
