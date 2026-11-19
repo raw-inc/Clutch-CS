@@ -869,6 +869,7 @@ export async function desktopView(root, ctx)
         viewport.append(empty);
         screens.replaceChildren();
         monitors = [];
+        delete viewport.dataset.singleMonitor;
         audioReady = false;
         audioStatus.textContent = '';
         if (audio)
@@ -1460,6 +1461,7 @@ export async function desktopView(root, ctx)
         const expectedOpus2 = 'opus';
 
         monitors = JSON.parse(text.decode(payload));
+        viewport.dataset.singleMonitor = String(monitors.length === 1);
         cursorEnabled = hideCursor = reconnectSelection?.hideCursor ?? (cursorRelay && monitors.length !== 0 && monitors.every(monitor => monitor.mousePresent === true));
         screens.replaceChildren();
         for (const monitor of monitors)

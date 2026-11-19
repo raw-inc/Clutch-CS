@@ -241,6 +241,23 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         await page.waitForFunction(() => document.fullscreenElement === null);
         await page.getByRole('button', { name: 'Connect', exact: true }).click();
         await page.waitForFunction(() => document.querySelector('button[aria-label="Show software keyboard"]')?.disabled === false);
+        for (const [width, height] of [[1280, 720], [844, 390], [390, 844]])
+        {
+            await page.setViewportSize({ width, height });
+            await page.waitForFunction(() =>
+            {
+                const workspace = document.querySelector('#desktop');
+                const viewport = workspace.querySelector('.desktop-viewport');
+                const canvas = viewport.querySelector('canvas');
+                if (!canvas || viewport.clientWidth !== workspace.clientWidth)
+                {
+                    return false;
+                }
+                const image = canvas.getBoundingClientRect();
+                return (0) < (image.width) && (0) < (image.height) &&
+                    Boolean(document.elementFromPoint(image.left + image.width / 2, image.top + image.height / 2)?.closest('.desktop-monitor'));
+            });
+        }
         await page.getByRole('button', { name: 'Video fullscreen', exact: true }).click();
         await page.waitForFunction(() => document.fullscreenElement?.className === 'desktop-viewport');
         await page.evaluate(() => window.desktop.dispose());

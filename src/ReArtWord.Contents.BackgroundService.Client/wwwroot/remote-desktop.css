@@ -812,9 +812,7 @@
     .desktop-workspace[data-state="connected"] .desktop-targets {
         padding-block: 2px;
     }
-}
 
-@media (min-width: 651px) {
     .desktop-toolbar > *,
     .desktop-toolbar .desktop-keybar {
         flex-shrink: 0;
@@ -825,9 +823,7 @@
     .desktop-toolbar .desktop-action {
         white-space: nowrap;
     }
-}
 
-@media (min-width: 901px) {
     .desktop-workspace[data-state="connected"] .desktop-deck {
         display: grid;
         grid-template-columns: max-content minmax(0, 1fr);
@@ -846,5 +842,144 @@
 
     .desktop-workspace[data-state="connected"] .desktop-deck > details[open]::details-content {
         display: contents;
+    }
+}
+
+.page.remote-tools:has(.desktop-workspace[data-state="connected"]) {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+}
+
+.remote-tools:has(.desktop-workspace[data-state="connected"]) > .page-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+}
+
+.desktop-workspace[data-state="connected"] {
+    grid-template-columns: auto minmax(0, 1fr);
+    border: 0;
+    border-radius: 0;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-rail {
+    grid-row: 1;
+    grid-column: 1;
+    flex-direction: row;
+    align-items: center;
+    padding: 2px 4px;
+    gap: 2px;
+    overflow: visible;
+    border-right: 0;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-deck {
+    grid-row: 1;
+    grid-column: 2;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-viewport {
+    grid-row: 2;
+    grid-column: 1 / -1;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-popover {
+    grid-column: 1 / -1;
+    left: 4px;
+    width: min(320px, calc(100% - 8px));
+}
+
+.desktop-workspace[data-state="connected"] .desktop-viewport[data-single-monitor="true"][data-scale="fit"] .desktop-monitor > span {
+    display: none;
+}
+
+@media (max-width: 650px) {
+    .desktop-workspace[data-state="connected"] .desktop-deck {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: end;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-targets {
+        display: flex;
+        flex: 1 1 auto;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        padding: 2px 4px;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-targets > strong {
+        flex: 1;
+        min-width: 0;
+        overflow-wrap: anywhere;
+        line-height: 1.15;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-targets .desktop-connection[data-state="connected"] {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        min-height: 0;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip-path: inset(50%);
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-deck details[open] {
+        flex-basis: 100%;
+    }
+}
+
+@media (min-width: 480px) and (max-height: 500px) and (orientation: landscape) {
+    .desktop-workspace[data-state="connected"] .desktop-deck {
+        flex-wrap: nowrap;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-deck details[open] {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+
+    :root:has(.desktop-workspace[data-state="connected"]) {
+        --topbar-height: 44px;
+        --statusbar-height: calc(44px + env(safe-area-inset-bottom, 0px));
+    }
+
+    body:has(.desktop-workspace[data-state="connected"]) .topbar {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 12px;
+        height: 44px;
+        min-height: 44px;
+        padding-block: 0;
+    }
+
+    body:has(.desktop-workspace[data-state="connected"]) .topbar .navigation {
+        width: auto;
+        height: 44px;
+    }
+
+    body:has(.desktop-workspace[data-state="connected"]) .topbar .connection {
+        margin-inline-start: auto;
+    }
+
+    body:has(.desktop-workspace[data-state="connected"]) .app-statusbar {
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+    }
+
+    body:has(.desktop-workspace[data-state="connected"]) .statusbar-left {
+        flex: 1 1 auto;
     }
 }
