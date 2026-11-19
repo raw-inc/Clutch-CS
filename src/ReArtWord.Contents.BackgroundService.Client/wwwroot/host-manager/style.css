@@ -273,9 +273,9 @@
     flex: 1;
     overflow: hidden;
     scrollbar-width: thin;
-    margin: 8px;
+    margin: var(--panel-inset);
     background: var(--nested);
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-inset);
 }
 
 .hm-area {
@@ -370,6 +370,7 @@
 }
 
 .hm-segmented button {
+    border-radius: calc(var(--radius-control) - 3px);
     border: 0;
     background: transparent;
     color: var(--muted);
@@ -1157,7 +1158,7 @@
     font: 12px Consolas, monospace;
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 3px;
+    border-radius: var(--radius-control);
 }
 
 .hm-preview-layout {
@@ -1549,9 +1550,9 @@
 
 .hm-target-picker {
     flex: none;
-    margin: 0 8px 8px;
+    margin: var(--panel-inset) var(--panel-inset) 0;
     padding-inline: 12px;
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-inset);
     background: var(--panel);
 }
 
@@ -1642,6 +1643,8 @@
     }
 
     .hm-view-actions {
+        border-end-start-radius: var(--radius-inset);
+        border-end-end-radius: var(--radius-inset);
         position: sticky;
         bottom: var(--statusbar-height);
         z-index: 2;

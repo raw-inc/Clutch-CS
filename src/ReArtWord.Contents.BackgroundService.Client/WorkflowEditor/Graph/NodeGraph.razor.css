@@ -141,10 +141,11 @@
     fill: var(--panel);
     stroke: var(--control);
     filter: none;
-    rx: 6px;
+    rx: var(--radius-panel);
 }
 
 .graph-node .node-header {
+    clip-path: inset(0 round calc(var(--radius-panel) - 1px) calc(var(--radius-panel) - 1px) 0 0) fill-box;
     fill: var(--card);
 }
 

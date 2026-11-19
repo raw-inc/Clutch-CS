@@ -1,4 +1,9 @@
+.drag-outline {
+    rx: var(--radius-panel);
+}
+
 .running-outline {
+    rx: calc(var(--radius-panel) + 2px);
     fill: none;
     stroke: var(--accent);
     stroke-width: 2.5;
@@ -7,5 +12,6 @@
 }
 
 .collaborator-selection {
+    rx: calc(var(--radius-panel) + 3px);
     pointer-events: none;
 }

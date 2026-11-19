@@ -19,6 +19,7 @@
 }
 
 .recipe-node > rect {
+    rx: var(--radius-panel);
     fill: var(--surface, var(--raised));
     stroke: var(--control);
     stroke-width: 1.5;

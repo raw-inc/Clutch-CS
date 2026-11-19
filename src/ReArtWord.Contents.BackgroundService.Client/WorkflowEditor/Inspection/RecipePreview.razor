@@ -21,7 +21,7 @@
                 {
                     var position=node.Position??new NodePosition(60,80);var descriptor=inference.Descriptor(node.Id);var inputs=Ports(node,false);var outputs=Ports(node,true);var size=Size(node);var running=activity.IsRunning(ClusterId,observed,node.Id);var nested=SubworkflowInterface.Target(node.Type) is not null;
                     <g @key="node.Id" class="recipe-node @(running?"running":null)" data-node-id="@node.Id" transform="@FormattableString.Invariant($"translate({position.X} {position.Y})")" @ondblclick="()=>nested?OpenNestedAsync(node.Id):Task.CompletedTask">
-                        <rect width="@size.Width" height="@size.Height" rx="10" />
+                        <rect width="@size.Width" height="@size.Height" />
                         <text x="12" y="24" class="recipe-title">@Short(Ui.NodeName(node,descriptor))<title>@Ui.NodeName(node,descriptor) · @Ui.NodeName(descriptor)</title></text>
                         <text x="12" y="44" class="recipe-id">@LocalId(node.Id)</text>
                         @for(var index=0;index<inputs.Count;index++){<g><circle cx="0" cy="@(68+index*26)" r="5" /><text x="12" y="@(72+index*26)">@Short(Ui.PortName(node.Type,inputs[index],false))</text></g>}

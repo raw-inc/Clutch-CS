@@ -3,7 +3,7 @@
     padding: 16px;
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-panel);
     margin-bottom: 20px;
 }
 
@@ -84,7 +84,7 @@
     padding: 16px;
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-panel);
     min-width: 0;
 }
 

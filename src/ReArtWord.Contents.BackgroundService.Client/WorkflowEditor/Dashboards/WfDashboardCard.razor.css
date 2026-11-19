@@ -89,7 +89,7 @@
     width: 56px;
     height: 30px;
     border: 1px solid var(--muted);
-    border-radius: 16px;
+    border-radius: var(--radius-pill);
     background: var(--raised);
     transition: background 180ms ease, border-color 180ms ease;
 }

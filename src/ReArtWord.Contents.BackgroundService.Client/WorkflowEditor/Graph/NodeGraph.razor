@@ -29,8 +29,8 @@
         var nodeError=string.Join("\n",nodeIssues[node.Id].Select(issue=>Ui[issue.Message]));
         <g @key="node.Id" data-node-id="@node.Id" data-selected-scope="@regions.SelectedScope(node.Id)" data-scope-membership="@regions.Membership(node.Id)" data-running="@(running.Contains(node.Id)?"true":null)" @onpointerdown="e=>BeginAsync(node,e)" role="button" tabindex="0" aria-label="@(Ui.NodeName(node,descriptor)+" "+node.Id)" @onkeydown="e=>NodeKeyAsync(node.Id,e)" transform="@FormattableString.Invariant($"translate({position.X} {position.Y})")" class="graph-node @(Model.Selection.Nodes.Contains(node.Id)?"selected":null) @(nodeError.Length>0?"has-error":null)" aria-invalid="@(nodeError.Length>0?"true":"false")" data-category="@GraphPresentation.CategoryKey(descriptor?.Category??string.Empty)">
             @if(nodeError.Length>0){<title>@nodeError</title>}
-            <rect class="node-box" width="@CardWidth(node)" height="@(NodeHeight(node,descriptor,inputs.Count,outputs.Count))" rx="10" />
-            <rect class="node-header" x="1" y="1" width="@(CardWidth(node)-2)" height="50" rx="6" pointer-events="none" />
+            <rect class="node-box" width="@CardWidth(node)" height="@(NodeHeight(node,descriptor,inputs.Count,outputs.Count))" />
+            <rect class="node-header" x="1" y="1" width="@(CardWidth(node)-2)" height="50" pointer-events="none" />
             <rect class="category-strip" x="1" y="9" width="4" height="33" rx="2" pointer-events="none" />
             <NodeNameLabel Node="node" Descriptor="descriptor" Width="@(CardWidth(node)-24)" />
             <foreignObject x="12" y="32" width="@(CardWidth(node)-92)" height="18" class="node-identity">

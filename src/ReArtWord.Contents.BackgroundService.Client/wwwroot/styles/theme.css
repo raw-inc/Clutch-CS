@@ -27,6 +27,9 @@
     --backdrop: rgb(13 16 22 / 58%);
     --radius-control: 6px;
     --radius-panel: 12px;
+    --panel-inset: 8px;
+    --radius-inset: max(0px, calc(var(--radius-panel) - var(--panel-inset)));
+    --radius-chart: 3px;
     --radius-pill: 999px;
     --font-title: roboto, "Zen Kaku Gothic New", "M PLUS 2", meiryo, system-ui, sans-serif;
     --font-ui: roboto, "M PLUS 2", "Yu Gothic UI", meiryo, system-ui, sans-serif;
@@ -34,6 +37,11 @@
     font: 500 16px/1.75 var(--font-ui);
     background: var(--paper);
     color: var(--ink);
+}
+
+/* カードとその直下の面は、対応ブラウザーでは同じ曲線で角をつなぎます。 */
+:where(.card, .health-card, .dialog, .dashboard-card, .metric-cell, .workspace-index, .hm-main, .hm-content, .hm-target-picker, .scope-sidebar, .scope-results, .file-pane, .terminal-workspace, .desktop-workspace, .license-list section) {
+    corner-shape: superellipse(1.5);
 }
 
 :root[data-theme="light"] {

@@ -28,7 +28,7 @@
     z-index: 20;
     padding: 14px;
     border: 1px solid var(--line);
-    border-radius: 6px 6px 0 0;
+    border-radius: var(--radius-panel) var(--radius-panel) 0 0;
     background: var(--panel);
     color: var(--ink);
     box-shadow: 0 -8px 28px #0006;

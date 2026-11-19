@@ -12,12 +12,12 @@
         {
             @if(Bounds.TryGetValue(selected,out var box))
             {
-                <rect class="collaborator-selection" x="@(box.Position.X-3)" y="@(box.Position.Y-3)" width="@(box.Size.Width+6)" height="@(box.Size.Height+6)" rx="12" fill="none" stroke="@color" stroke-width="2" stroke-dasharray="6 4"><title>@Label(presence) · @selected</title></rect>
+                <rect class="collaborator-selection" x="@(box.Position.X-3)" y="@(box.Position.Y-3)" width="@(box.Size.Width+6)" height="@(box.Size.Height+6)" fill="none" stroke="@color" stroke-width="2" stroke-dasharray="6 4"><title>@Label(presence) · @selected</title></rect>
             }
         }
         @if(presence.DragPosition is {} position && Model.Draft.Document.Nodes.Any(node=>string.Equals(node.Id,presence.DragNodeId,StringComparison.Ordinal)))
         {
-            <g><rect x="@position.X" y="@position.Y" width="320" height="64" rx="8" fill="none" stroke="@color" stroke-width="2" stroke-dasharray="6 4" />
+            <g><rect x="@position.X" y="@position.Y" width="320" height="64" class="drag-outline" fill="none" stroke="@color" stroke-width="2" stroke-dasharray="6 4" />
             <text x="@(position.X+8)" y="@(position.Y+22)" fill="var(--violet)">@Label(presence) · @presence.DragNodeId · @Ui["Moving"]</text>
             </g>
         }
@@ -32,7 +32,7 @@
     {
         @foreach(var item in Bounds.Where(item=>Activity.IsRunning(Model.ClusterId,Model.Draft,item.Key)))
         {
-            <rect class="running-outline" x="@(item.Value.Position.X-2)" y="@(item.Value.Position.Y-2)" width="@(item.Value.Size.Width+4)" height="@(item.Value.Size.Height+4)" rx="11"><title>@Ui["Running · saved workflow version"]</title></rect>
+            <rect class="running-outline" x="@(item.Value.Position.X-2)" y="@(item.Value.Position.Y-2)" width="@(item.Value.Size.Width+4)" height="@(item.Value.Size.Height+4)"><title>@Ui["Running · saved workflow version"]</title></rect>
         }
     }
 </g>

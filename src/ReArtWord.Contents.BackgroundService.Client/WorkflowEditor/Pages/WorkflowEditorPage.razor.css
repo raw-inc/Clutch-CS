@@ -84,11 +84,11 @@
 }
 
 .split-button button:first-child {
-    border-radius: 4px 0 0 4px;
+    border-radius: var(--radius-control) 0 0 var(--radius-control);
 }
 
 .split-button button:last-child {
-    border-radius: 0 4px 4px 0;
+    border-radius: 0 var(--radius-control) var(--radius-control) 0;
     border-left: 1px solid var(--accent);
     min-width: 27px;
     padding: 5px;
@@ -539,7 +539,7 @@
     height: 27px;
     font-size: 11px;
     min-height: 32px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-control);
 }
 
 .studio .editor-toolbar .icon-button {

@@ -184,7 +184,7 @@ h2 {
     height: 100%;
     display: block;
     background: var(--accent);
-    border-radius: 0 3px 3px 0;
+    border-radius: 0 var(--radius-chart) var(--radius-chart) 0;
 }
 
 .activity-warning {
