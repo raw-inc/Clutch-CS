@@ -79,17 +79,23 @@ public sealed partial class ScriptPackagePanel
         return catalog?.Nuget;
     }
 
-    /// <summary>言語と配布方式の対応を同じ表示名で案内します。</summary>
-    /// <returns>パッケージ欄の名前です。</returns>
-    private static string SourceName(EScriptPackageKind source) => source switch
-    {
-        EScriptPackageKind.Nuget => "NuGet · C#",
-        EScriptPackageKind.Pip => "pip · Python",
-        _ => "npm · JavaScript",
-    };
+    private static readonly (EScriptPackageKind Kind, string Language, string Registry)[] packageSources =
+    [
+        (EScriptPackageKind.Nuget, "C#", "NuGet"),
+        (EScriptPackageKind.Pip, "Python", "pip"),
+        (EScriptPackageKind.Npm, "Node.js", "npm")
+    ];
 
-    /// <summary>結果照会で新しいインストールを開始しません。</summary>
-    /// <returns>現在構成と操作結果の表示です。</returns>
+    /// <summary>別の取得元へ、入力途中のパッケージ名とバージョンを持ち越さないようにします。</summary>
+    private void ChooseSource(EScriptPackageKind source)
+    {
+        kind = source;
+        packageId = string.Empty;
+        version = string.Empty;
+    }
+
+    /// <summary>表示中の接続先からインストール状態を取得します。</summary>
+    /// <returns>パッケージ構成と操作履歴を反映するまでの処理です。</returns>
     private async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
         if (loading || peer is null || cluster is null)

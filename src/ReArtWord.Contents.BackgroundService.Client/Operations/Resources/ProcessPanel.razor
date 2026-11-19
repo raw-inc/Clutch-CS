@@ -57,9 +57,14 @@
 <Modal Open="@(selected is not null&&!registrationOpen&&removing is null)" Title='@(selected?.Definition.DisplayName??Ui["Application state"])' Close="()=>selected=null">
     @if(selected is {} item)
     {
-        <p class="small muted">@Owner</p>
+        <div class="application-summary"><span class="badge @(item.Observed.Status?.Running is true ? "good" : "muted")">@Ui[State(item)]</span><span>@Owner</span></div>
         @if(message is not null){<p class="notice" role="status">@message()</p>}
-        <dl class="application-state"><dt>@Ui["Observed state"]</dt><dd>@Ui[State(item)]</dd><dt>PID</dt><dd>@(item.Observed.Status?.Identity?.ProcessId.ToString(CultureInfo.InvariantCulture)??"—")</dd><dt>@Ui["Exit code"]</dt><dd>@(item.Observed.Status?.ExitCode?.ToString(CultureInfo.InvariantCulture)??"—")</dd><dt>@Ui["Restart attempts"]</dt><dd>@item.Observed.Status?.RecoveryAttempts</dd><dt>@Ui["Next restart"]</dt><dd>@FormatTime(item.Observed.Status?.NextRecoveryAt)</dd></dl>
+        <dl class="application-state">
+            <div><dt>PID</dt><dd>@(item.Observed.Status?.Identity?.ProcessId.ToString(CultureInfo.InvariantCulture) ?? "—")</dd></div>
+            <div><dt>@Ui["Exit code"]</dt><dd>@(item.Observed.Status?.ExitCode?.ToString(CultureInfo.InvariantCulture) ?? "—")</dd></div>
+            <div><dt>@Ui["Restart attempts"]</dt><dd>@(item.Observed.Status?.RecoveryAttempts.ToString() ?? "—")</dd></div>
+            <div><dt>@Ui["Next restart"]</dt><dd>@(FormatTime(item.Observed.Status?.NextRecoveryAt) ?? "—")</dd></div>
+        </dl>
         @if(item.Observed.Status?.RecoveryExhausted is true){<p class="notice">@Ui["Restart limit reached"]</p>}
         @if(item.Observed.Status?.ReplacementDeadline is {} deadline){<p class="notice">@Ui["Self-restart confirmation deadline"]: @FormatTime(deadline) @Ui[item.Observed.Status.ReplacementProblem??string.Empty]</p>}
         else if(item.Observed.Status?.ReplacementProblem is {} replacementProblem){<p class="notice">@Ui[replacementProblem]</p>}
@@ -67,17 +72,17 @@
         @foreach(var schedule in item.Schedules??[]){<p class="small">@Ui["Next scheduled start"]: @FormatTime(schedule.NextAt) · @Ui["Last result"]: @schedule.Outcome @Ui[schedule.Reason??string.Empty]</p>}
         @if(item.Definition.Mode==EProcessMode.Managed)
         {
-            <fieldset disabled="@(busy||target is null)"><div class="toolbar">
-                <button @onclick='()=>CommandAsync("process.start",new{processId=item.Definition.Id},UiCancellation)'><UiIcon Name="play" />@Ui["Start"]</button>
+            <fieldset disabled="@(busy||target is null)"><legend>@Ui["Process controls"]</legend><div class="toolbar">
+                <button class="primary" @onclick='()=>CommandAsync("process.start",new{processId=item.Definition.Id},UiCancellation)'><UiIcon Name="play" />@Ui["Start"]</button>
                 <button @onclick="()=>{restarting=false;stopOpen=true;}">@Ui["Stop"]</button>
                 <button @onclick="()=>{restarting=true;stopOpen=true;}">@Ui["Restart"]</button>
-            </div><div class="toolbar section">
+            </div><details class="secondary-details recovery-controls"><summary>@Ui["Recovery controls"]</summary><div class="action-list">
                 <button class="quiet" @onclick='()=>CommandAsync("process.recoverySuppression",new{processId=item.Definition.Id,suppressed=!(item.Observed.Status?.RecoverySuppressed??false)},UiCancellation)'>@Ui[item.Observed.Status?.RecoverySuppressed is true?"Resume automatic recovery":"Suppress automatic recovery"]</button>
                 <button class="quiet" @onclick='()=>CommandAsync("process.confirmRecovery",new{processId=item.Definition.Id},UiCancellation)'>@Ui["Confirm recovery manually"]</button>
                 <button class="quiet" @onclick="()=>resolveOpen=true">@Ui["Resolve an unknown launch"]</button>
-            </div></fieldset>
+            </div></details></fieldset>
         }
-        <div class="toolbar section"><button class="quiet" disabled="@busy" @onclick="()=>Edit(item)">@Ui["Edit registration"]</button><button class="quiet danger" disabled="@(busy||refreshing||target is null)" @onclick="()=>ConfirmRemoval(item)">@Ui["Remove registration"]</button></div>
+        <div class="registration-actions"><button disabled="@busy" @onclick="()=>Edit(item)">@Ui["Edit registration"]</button><button class="quiet danger" disabled="@(busy||refreshing||target is null)" @onclick="()=>ConfirmRemoval(item)">@Ui["Remove registration"]</button></div>
         @if(result is not null){<JsonDetails Value="result" Title='@Ui["Actual operation result"]' />}
     }
 </Modal>

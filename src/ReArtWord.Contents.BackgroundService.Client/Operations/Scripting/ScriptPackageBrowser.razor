@@ -8,7 +8,7 @@
     @if(searching){<p role="status">@Ui["Searching packages…"]</p>}
     @if(results?.Problem is {} problem){<p class="notice error" role="alert">@Ui[problem]</p>}
     @if(results?.Notice is {} notice){<p class="footer-note">@Ui[notice]</p>}
-    <div class="package-browser-layout">
+    <div class="package-browser-layout" hidden="@(results is null && details is null && !selecting)">
         <div>
             @if(results is {Problem:null})
             {

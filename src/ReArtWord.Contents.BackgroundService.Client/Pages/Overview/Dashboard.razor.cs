@@ -69,6 +69,12 @@ public sealed partial class Dashboard : IAsyncDisposable
     /// <returns>選択したピアが必要な画面で接続先が未選択ならtrueです。</returns>
     private bool ViewUnavailable(string name) => !HasSelection && name is not ("All clusters" or "Peer list" or "Settings & maintenance");
 
+    private static string BrowserTopic => "Browser preferences";
+    private static string ClusterTopic => "Cluster configuration";
+    private static string UpdateTopic => "Software updates";
+    private static string ServiceTopic => "Diagnostics and credentials";
+    private static readonly string[] settingsTopics = [BrowserTopic, ClusterTopic, UpdateTopic, ServiceTopic];
+    private string settingsTopic = BrowserTopic;
     private string view = "All clusters";
     private bool HasSelection => Api.SelectedClusterId is not null && Api.SelectedPeerId is not null;
 

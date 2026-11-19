@@ -42,7 +42,7 @@
     width: min(850px, 90vw);
     max-height: 86vh;
     overflow: auto;
-    box-shadow: 0 20px 60px #0008;
+    box-shadow: 0 8px 24px #0002;
     font-size: 13px;
     color: var(--ink);
 }

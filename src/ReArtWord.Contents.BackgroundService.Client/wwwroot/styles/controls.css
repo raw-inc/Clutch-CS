@@ -42,7 +42,7 @@
 
 .pc-display-toggle button {
     min-height: 36px;
-    padding: 6px 16px;
+    padding: calc(6px + 0.1em) 16px calc(6px - 0.1em);
     font-size: 13px;
     border-radius: var(--radius-pill);
     border-color: var(--control);
@@ -172,4 +172,204 @@ meter::-webkit-meter-optimum-value {
 meter::-moz-meter-bar {
     background: var(--accent);
     border-radius: inherit;
+}
+
+.choice-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 4px;
+    border: 0;
+}
+
+.choice-strip label {
+    position: relative;
+    display: inline-flex;
+    margin: 0;
+    cursor: pointer;
+}
+
+.choice-strip input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.choice-strip label > span {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 9px 14px 6px;
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
+    color: var(--ink);
+    font-size: 14px;
+}
+
+.choice-strip input:checked + span {
+    background: var(--accent);
+    color: var(--on-accent);
+    border-color: var(--accent);
+}
+
+.choice-strip input:focus-visible + span {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.choice-strip input:disabled + span {
+    background: var(--disabled-face);
+    color: var(--disabled-ink);
+    border-color: var(--disabled-line);
+    cursor: not-allowed;
+}
+
+.settings-fields,
+.revision-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    gap: 8px 20px;
+}
+
+.revision-facts > div {
+    background: var(--card);
+    border-radius: var(--radius-control);
+    padding: 12px;
+}
+
+.revision-facts dt {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.revision-facts dd {
+    margin: 4px 0 0;
+    font-family: monospace;
+    overflow-wrap: anywhere;
+}
+
+.workspace-index[role="tablist"] {
+    display: grid;
+    align-content: start;
+    gap: 2px;
+    padding: 6px;
+    margin: 0;
+    overflow: visible;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-panel);
+}
+
+.workspace-index[role="tablist"] > button {
+    justify-content: flex-start;
+    text-align: start;
+    white-space: normal;
+    min-height: 40px;
+    padding: 10px 12px 8px;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.workspace-index[role="tablist"] > button[aria-selected="true"] {
+    box-shadow: inset 3px 0 var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.workspace-index[role="tablist"] > button.active::after {
+    content: none;
+}
+
+@media (max-width: 900px) {
+    .workspace-index[role="tablist"] {
+        display: none;
+    }
+}
+
+.node-inline-field .field-caption {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--ink);
+    font-weight: 600;
+}
+
+.node-inline-field:focus-within {
+    background: var(--accent-soft);
+    border-radius: var(--radius-control);
+}
+
+.node-inline-field small {
+    max-width: 100%;
+}
+
+@media (pointer: coarse) {
+    .dialog-content .toolbar button,
+    .dialog > .toolbar button,
+    .dashboard-operations .toolbar button,
+    .pc-display-toggle button,
+    .hm-view-actions button,
+    .hm-dialog-actions button,
+    .package-choices label > span,
+    .settings-picker label > span,
+    .file-navigation button,
+    .log-pagination button {
+        min-height: 44px;
+    }
+}
+
+@media (forced-colors: active) {
+    .choice-strip input:checked + span,
+    .workspace-index[role="tablist"] > button[aria-selected="true"] {
+        outline: 2px solid Highlight;
+        outline-offset: -3px;
+    }
+
+    .choice-strip input:focus-visible + span {
+        outline: 2px dashed Highlight;
+        outline-offset: 2px;
+    }
+}
+
+.node-readout {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    margin-top: 3px;
+    border-inline-start: 2px solid var(--control);
+    background: var(--card);
+}
+
+.node-readout span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.node-readout small {
+    color: var(--muted);
+}
+
+.node-inline-field:has(> .null-action) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-content: start;
+    align-items: center;
+    gap: 0 4px;
+}
+
+.node-inline-field:has(> .null-action) :is(.field-caption, small) {
+    grid-column: 1 / -1;
+}
+
+.node-inline-field > .null-action {
+    padding: 4px 6px;
+    font-size: 11px;
 }

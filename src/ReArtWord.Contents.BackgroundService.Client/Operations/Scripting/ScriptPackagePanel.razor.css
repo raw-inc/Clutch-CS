@@ -17,6 +17,9 @@
 }
 
 .package-form .package-runtime {
+    display: grid;
+    min-width: 0;
+    gap: 6px;
     flex-basis: 100%;
 }
 
@@ -40,4 +43,52 @@
     flex-wrap: wrap;
     justify-content: space-between;
     gap: 1rem;
+}
+
+.package-choices label {
+    flex: 1 1 8rem;
+}
+
+.package-choices label > span {
+    width: 100%;
+    justify-content: space-between;
+    align-items: baseline;
+}
+
+.package-choices small {
+    font-size: 12px;
+}
+
+.package-workspace {
+    display: grid;
+    align-items: start;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.package-workspace:has(aside) {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+}
+
+.package-pane {
+    min-width: 0;
+    padding: 16px;
+    border-radius: var(--radius-control);
+    background: var(--panel);
+}
+
+.package-pane h3:first-child {
+    margin-top: 0;
+}
+
+@media (max-width: 1000px) {
+    .package-workspace:has(aside) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.package-choices legend {
+    padding: 0;
+    color: var(--muted);
+    font-size: 13px;
 }
