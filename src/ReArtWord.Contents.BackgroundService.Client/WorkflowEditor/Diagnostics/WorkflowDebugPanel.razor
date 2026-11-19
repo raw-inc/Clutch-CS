@@ -1,13 +1,14 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Observability.Debugging
 <section class="workflow-debug">
-    <p>@Ui["Capture the next workflow input once, including merged and repeated downstream work. Arming does not run the workflow."]</p>
+    <p>@Ui["Capture the next input and its downstream work. Arming does not start a workflow."]</p>
     <p class="muted small">@Ui["Disabled by default. The reservation expires after 10 minutes; temporary records expire 30 minutes after arming or when their owner restarts. Binary bodies are omitted and recognized authentication fields are redacted."]</p>
     <div class="toolbar">
         <button class="primary" disabled="@(busy||Active)" @onclick="()=>ArmAsync(UiCancellation)">@Ui["Capture next input"]</button>
         <button disabled="@(busy||!Active)" @onclick="()=>StopAsync(UiCancellation)">@Ui["Stop capture only"]</button>
-        <button disabled="@busy" @onclick="()=>RefreshAsync(UiCancellation)">@Ui["Refresh"]</button>
+
         <button disabled="@(busy||state?.Nodes is null)" @onclick="()=>ExportAsync(UiCancellation)">@Ui["Download debug JSON"]</button>
     </div>
+    <button disabled="@busy" @onclick="()=>RefreshAsync(UiCancellation)">@Ui["Refresh"]</button>
     @if(problem is not null){<p class="notice error" role="status">@Ui[problem]</p>}
     @if(state is null)
     {

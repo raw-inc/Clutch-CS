@@ -128,6 +128,7 @@ public sealed partial class WorkflowEditorPage : IAsyncDisposable
 
     private double zoom = .9;
     private bool catalogOpen, inspectorOpen, showDetails = true;
+    private string? pickedWorkflow;
     private bool documentsOpen, documentToolsOpen, saveOptionsOpen, collaborationOpen, viewOptionsOpen, compatibilityOpen, debugOpen;
     private GraphViewOptions viewOptions = new();
     private string? viewProblem;

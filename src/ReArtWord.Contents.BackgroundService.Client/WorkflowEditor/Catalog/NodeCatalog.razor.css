@@ -7,13 +7,13 @@
 }
 
 .catalog-heading h2 {
-    font-size: 13px;
     margin: 0;
+    font-size: 16px;
 }
 
 .catalog-heading p {
-    font-size: 10px;
     margin: 5px 0 0;
+    font-size: 12px;
 }
 
 .catalog-filters {
@@ -388,4 +388,14 @@
 
 .studio .search-field {
     background: var(--paper);
+}
+
+.catalog-filters button {
+    border: 1px solid var(--control);
+}
+
+.catalog-filters button[aria-pressed="true"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 650;
 }

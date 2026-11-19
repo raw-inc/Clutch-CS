@@ -12,20 +12,24 @@
     <div class="toolbar">
         <UiIcon Name="dashboard" /><span class="muted small">WFDashboard</span>
         <button class="quiet icon-button" type="button" aria-label="@Ui["Open workflow"]" @onclick="Open"><UiIcon Name="chevron" /></button>
-        <input class="dashboard-name" aria-label="@Ui["WFDashboard name"]" value="@Model.Draft.Document.Name" disabled="@LayoutLocked" @oninput="e=>Model.Change(document=>document with{Name=e.Value?.ToString()??string.Empty})" />
-        <small class="muted">@Ui[Model.Draft.BaseRevision is null?"New · unsaved":Model.Draft.Dirty?"Unsaved":"Saved and shared"]</small>
+        <input readonly="@(!editingLayout)" class="dashboard-name" aria-label="@Ui["WFDashboard name"]" value="@Model.Draft.Document.Name" disabled="@LayoutLocked" @oninput="e=>Model.Change(document=>document with{Name=e.Value?.ToString()??string.Empty})" />
+        <small class="save-state"><span class="dot"></span>@Ui[Model.Draft.BaseRevision is null?"New · unsaved":Model.Draft.Dirty?"Unsaved":"Saved and shared"]</small>
     </div>
     <div class="toolbar dashboard-edit-tools">
+        <button type="button" class="quiet" aria-pressed="@editingLayout.ToString().ToLowerInvariant()" @onclick="()=>{editingLayout=!editingLayout;catalogOpen=false;}">@Ui[editingLayout?"Finish layout editing":"Edit board layout"]</button>
+        @if(editingLayout)
+        {
         <button type="button" class="quiet" aria-expanded="@(catalogOpen?"true":"false")" @onclick="()=>catalogOpen=!catalogOpen"><UiIcon Name="add" />@Ui["Add reference"]</button>
         <button type="button" class="quiet" disabled="@LayoutLocked" @onclick="()=>AddCard(WfDashboardLayout.CommentType,WfDashboardLayout.CommentSettings(string.Empty))">@Ui["Add comment"]</button>
         <button type="button" class="quiet" disabled="@LayoutLocked" @onclick="()=>AddCard(WfDashboardLayout.BreakType,WfDashboardLayout.BreakSettings())">@Ui["Add line break"]</button>
         <button type="button" class="quiet icon-button" title="@Ui["Undo"]" aria-label="@Ui["Undo"]" disabled="@(LayoutLocked||!Model.CanUndo)" @onclick="Model.Undo"><UiIcon Name="undo" /></button>
         <button type="button" class="primary" disabled="@(LayoutLocked||Model.Draft.Conflicts.Count!=0)" @onclick="Save"><UiIcon Name="save" />@Ui["Save"]</button>
+        }
         <button type="button" class="quiet icon-button" aria-label="@Ui["More actions"]" @onclick="Tools"><UiIcon Name="more" /></button>
     </div>
 </div>
 <div class="dashboard-workspace @(catalogOpen?"with-catalog":null)">
-    @if(catalogOpen){<aside class="dashboard-library"><WfDashboardStatePicker Added="reference=>AddCard(WfDashboardStateReference.CardType,reference.ToSettings())" /><WfDashboardCatalogPanel Add="AddCard" Close="()=>catalogOpen=false" /></aside>}
+    @if(catalogOpen){<aside class="dashboard-library"><WfDashboardCatalogPanel Add="AddCard" Close="()=>catalogOpen=false" /><WfDashboardStatePicker Added="reference=>AddCard(WfDashboardStateReference.CardType,reference.ToSettings())" /></aside>}
     <WfDashboardStateFeed Nodes="Cards" Cluster="@Model.ClusterId" Peer="@Model.PeerId" Instance="@(Connection.Connected?Connection.Current?.InstanceId:null)" Context="stateFeed">
     <section @ref="board" class="dashboard-board" aria-label="WFDashboard" @ondrop:preventDefault="true" @ondrop="DropAsync">
         <clutch-card-rows><div class="dashboard-cards">
@@ -37,21 +41,22 @@
                 var comment=card.Type==WfDashboardLayout.CommentType;
                 var lineBreak=card.Type==WfDashboardLayout.BreakType;
                 <article @key="card.Id" class="dashboard-card @(reference?.NodeType is "control.concurrencyLimit"?"concurrency-card":null) @(lineBreak?"dashboard-line-break":null) @(dropTarget==card.Id&&dragged!=card.Id?"drop-target":null)" data-card-id="@card.Id" @ondragenter="()=>dropTarget=card.Id">
-                    <header draggable="@(!LayoutLocked?"true":"false")" data-contents-dashboard-card="@card.Id" @ondragstart="()=>dragged=LayoutLocked?null:card.Id" @ondragend="()=>dragged=dropTarget=null" title="@(reference is null?null:state?.WorkflowName+" / "+reference.NodeId)">
+                    <header draggable="@(editingLayout&&!LayoutLocked?"true":"false")" data-contents-dashboard-card="@card.Id" @ondragstart="()=>dragged=(!editingLayout||LayoutLocked)?null:card.Id" @ondragend="()=>dragged=dropTarget=null" title="@(reference is null?null:state?.WorkflowName+" / "+reference.NodeId)">
                         <strong>@(comment?Ui["Dashboard comment"]:lineBreak?Ui["Dashboard line break"]:stateReference?.Target.Key??state?.Title??reference?.NodeId??Ui["Invalid reference"])</strong>
-                        <button class="quiet icon-button" type="button" aria-label="@Ui[comment||lineBreak?"Remove card":"Remove reference"]" title="@Ui[comment||lineBreak?"Remove card":"Remove reference"]" disabled="@LayoutLocked" @onclick="()=>RemoveCard(card.Id)"><UiIcon Name="close" /></button>
+                        @if(editingLayout){<button class="quiet icon-button" type="button" aria-label="@Ui[comment||lineBreak?"Remove card":"Remove reference"]" title="@Ui[comment||lineBreak?"Remove card":"Remove reference"]" disabled="@LayoutLocked" @onclick="()=>RemoveCard(card.Id)"><UiIcon Name="close" /></button>}
                     </header>
-                    @if(comment){<WfDashboardComment Node="card" Locked="LayoutLocked" />}
+                    @if(comment){<WfDashboardComment Node="card" Locked="@(LayoutLocked||!editingLayout)" />}
                     else if(stateReference is not null){<WfDashboardStateCard Reference="stateReference" State="stateFeed.Find(card.Id)" Problem="@stateFeed.Problem" />}
                     else if(!lineBreak)
                     {
                         @if(reference is null){<p class="notice warn">@Ui["Invalid reference"]</p>}
                         else{<WfDashboardCard Reference="reference" State="state" Cluster="@Model.ClusterId" Available="CanOperate" Busy="pending.Contains(card.Id)" Toggle="session.Toggle(reference)" Snapshots="session.Preview(Model.ClusterId??string.Empty,reference)" Pressed="()=>PressAsync(card)" ValueChanged="input=>SaveValueAsync(card,input)" />}
                     }
+                    @if(lastPress.TryGetValue(card.Id,out var pressed)){<small role="status">@pressed</small>}
                 </article>
             }
         </div></clutch-card-rows>
-        @if(Cards.Length==0){<div class="dashboard-empty"><UiIcon Name="dashboard" /><p>@Ui["Add supported nodes from workflows in this cluster."]</p><button type="button" @onclick="()=>catalogOpen=true">@Ui["Add reference"]</button></div>}
+        @if(Cards.Length==0 && editingLayout){<div class="dashboard-empty"><UiIcon Name="dashboard" /><p>@Ui["Add supported nodes from workflows in this cluster."]</p><button type="button" @onclick="()=>catalogOpen=true">@Ui["Add reference"]</button></div>}
         <div class="dashboard-notifications"><EditorNotifications Compact="true" /></div>
     </section>
     </WfDashboardStateFeed>

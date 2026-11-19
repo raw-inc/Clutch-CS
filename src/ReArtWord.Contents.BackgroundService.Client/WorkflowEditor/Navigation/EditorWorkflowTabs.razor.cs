@@ -15,6 +15,15 @@ namespace ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Navigation;
 public sealed partial class EditorWorkflowTabs
 {
     [Inject]
+    private IJSRuntime Browser
+    {
+        get; set;
+    } = null!;
+
+    private ElementReference tabStrip;
+    private bool revealSelected;
+
+    [Inject]
     private BrowserStorage Storage
     {
         get; set;
@@ -232,6 +241,7 @@ public sealed partial class EditorWorkflowTabs
     {
         if (!string.Equals(lastSelection, SelectedId, StringComparison.Ordinal))
         {
+            revealSelected = true;
             retained.Reveal(SelectedId);
             lastSelection = SelectedId;
         }
@@ -267,6 +277,11 @@ public sealed partial class EditorWorkflowTabs
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "Blazorの固定署名です。")]
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (revealSelected)
+        {
+            revealSelected = false;
+            await Browser.InvokeVoidAsync("contentsBrowser.revealTab", UiCancellation, tabStrip).ConfigureAwait(true);
+        }
         if (layoutNeedsSave)
         {
             layoutNeedsSave = false;
@@ -278,56 +293,6 @@ public sealed partial class EditorWorkflowTabs
             await menu.FocusAsync().ConfigureAwait(true);
         }
     }
-
-    /// <summary>Escapeでタブ操作を取り消します。</summary>
-    private void MenuKey(KeyboardEventArgs args)
-    {
-        string escape = "Escape";
-        if (string.Equals(args.Key, escape, StringComparison.Ordinal))
-        {
-            menuId = null;
-        }
-    }
-
-    /// <summary>草稿保持が完了したときだけタブを隠します。</summary>
-    /// <returns>非表示設定の保存です。</returns>
-    // 抑制理由: UIイベントの固定署名です。
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "UIイベントの固定署名でUiCancellationを使用します。")]
-    private async Task HideAsync()
-    {
-        if (Busy || menuId is not { } id)
-        {
-            return;
-        }
-        menuId = null;
-        try
-        {
-            await Hide.InvokeAsync(id).ConfigureAwait(true);
-            retained.Hide(id);
-            RebuildTabs();
-            await SaveLayoutAsync(UiCancellation).ConfigureAwait(true);
-        }
-        catch (InvalidOperationException)
-        {
-            preferenceProblem = "tabs.hideFailed";
-        }
-    }
-
-    /// <summary>WF本体の削除は既存の確認ダイアログへ委譲します。</summary>
-    /// <returns>削除確認の表示です。</returns>
-    // 抑制理由: UIイベントの固定署名です。
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "UIイベントの固定署名です。")]
-    private Task DeleteAsync()
-    {
-        string? id = menuId;
-        menuId = null;
-        return !Busy && id is not null ? Delete.InvokeAsync(id)
-                                       : Task.CompletedTask;
-    }
-
-    /// <summary>メニューの移動先を可視タブの範囲に限定します。</summary>
-    /// <returns>隣の表示タブまたは端です。</returns>
-    private string? Neighbor(int offset) => retained.Neighbor(menuId, offset);
 
     /// <summary>ドラッグまたはメニューからの並替えを保存します。</summary>
     /// <returns>表示順の更新です。</returns>

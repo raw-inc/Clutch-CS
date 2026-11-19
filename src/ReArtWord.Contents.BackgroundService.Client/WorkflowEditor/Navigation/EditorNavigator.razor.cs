@@ -118,6 +118,12 @@ public sealed partial class EditorNavigator
             {
                 return;
             }
+            bool narrow = module is null && await Script.InvokeAsync<bool>("contentsBrowser.narrowEditor", UiCancellation).ConfigureAwait(true);
+            if (narrow)
+            {
+                mapVisible = false;
+                StateHasChanged();
+            }
             module ??= await Script.InvokeAsync<IJSObjectReference>("import", UiCancellation, "./editor-navigation.js").ConfigureAwait(true);
             reference ??= DotNetObjectReference.Create(this);
             binding ??= await module.InvokeAsync<IJSObjectReference>("attachEditorNavigation", UiCancellation, CanvasHost, root, reference).ConfigureAwait(true);

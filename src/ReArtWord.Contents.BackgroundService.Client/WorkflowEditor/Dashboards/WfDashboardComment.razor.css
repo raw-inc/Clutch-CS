@@ -40,3 +40,12 @@
     display: block;
     margin-top: 6px;
 }
+
+p.comment-text {
+    max-height: 12rem;
+    overflow: auto;
+    white-space: pre-wrap;
+    font-size: 16px;
+    line-height: 1.6;
+    cursor: text;
+}

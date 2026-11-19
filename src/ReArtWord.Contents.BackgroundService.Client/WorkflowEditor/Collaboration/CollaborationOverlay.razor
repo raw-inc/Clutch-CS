@@ -18,13 +18,13 @@
         @if(presence.DragPosition is {} position && Model.Draft.Document.Nodes.Any(node=>string.Equals(node.Id,presence.DragNodeId,StringComparison.Ordinal)))
         {
             <g><rect x="@position.X" y="@position.Y" width="320" height="64" class="drag-outline" fill="none" stroke="@color" stroke-width="2" stroke-dasharray="6 4" />
-            <text x="@(position.X+8)" y="@(position.Y+22)" fill="var(--violet)">@Label(presence) · @presence.DragNodeId · @Ui["Moving"]</text>
+            <title>@Label(presence) · @presence.DragNodeId · @Ui["Moving"]</title>
             </g>
         }
         @if(presence.CursorX is double x && presence.CursorY is double y)
         {
             <g><path d="@FormattableString.Invariant($"M{x},{y} l0,16 l5,-5 l8,0 z")" fill="@color" />
-            <text x="@(x+16)" y="@(y+18)" fill="var(--violet)">@Label(presence) @if(presence.Dirty){<tspan> · @Ui["Unsaved"]</tspan>}</text>
+            <title>@Label(presence) · @Ui[presence.Dirty?"Unsaved":"No local changes"]</title>
             </g>
         }
     }

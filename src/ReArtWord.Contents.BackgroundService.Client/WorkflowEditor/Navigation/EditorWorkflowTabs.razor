@@ -1,6 +1,6 @@
 @using ReArtWord.Contents.BackgroundService.Client.Components
 @using ReArtWord.Contents.BackgroundService.Contracts.Workflow
-<nav class="editor-workflow-tabs" aria-label="@Ui["Workflows in the selected cluster"]">
+<nav @ref="tabStrip" class="editor-workflow-tabs" aria-label="@Ui["Workflows in the selected cluster"]">
     @foreach(var item in tabs)
     {
         <button class="workflow-tab @(item.Id==SelectedId?"selected":null) @(dropTarget==item.Id&&dragged!=item.Id?"drop-target":null) @(Diagnostics.Issues(Model.ClusterId,item.Id).Count>0?"has-error":null)" @key="item.Id" data-workflow-id="@item.Id" draggable="@(!Busy?"true":"false")" @ondragstart="()=>dragged=item.Id" @ondragend="()=>dragged=dropTarget=null" @ondragover:preventDefault="true" @ondragenter="()=>dropTarget=item.Id" @ondrop="()=>MoveAsync(dragged,item.Id,UiCancellation)" @oncontextmenu="e=>OpenMenu(item.Id,e)" @oncontextmenu:preventDefault="true" aria-pressed="@(item.Id==SelectedId)" title="@(item.Id+(item.LocalOnly?" · "+Ui["Local, not shared"]:string.Empty)+(item.Dirty?" · "+Ui["Unsaved draft on this device"]:string.Empty))" aria-disabled="@(Busy?"true":"false")" @onclick="()=>Busy||item.Id==SelectedId?Task.CompletedTask:Open.InvokeAsync(item.Id)" @ondblclick="()=>FocusError.InvokeAsync(item.Id)">

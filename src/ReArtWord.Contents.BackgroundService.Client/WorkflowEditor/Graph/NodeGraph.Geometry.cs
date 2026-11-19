@@ -8,6 +8,67 @@ namespace ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Graph;
 /// <summary>図のカード・ポート・接続線に使用する表示座標を計算します。</summary>
 public sealed partial class NodeGraph
 {
+    /// <summary>追加するノードと横幅が重なるカードの下に、操作できる余白を確保します。</summary>
+    /// <returns>キャンバス内の配置位置です。</returns>
+    internal NodePosition PlaceBelowNodes(NodeDefinition added, NodePosition preferred)
+    {
+        double y = preferred.Y;
+        double right = preferred.X + CardWidth(added);
+        foreach (NodeDefinition other in Model.Draft.Document.Nodes)
+        {
+            NodePosition at = Position(other);
+            if (at.X < right + 24 && preferred.X < at.X + CardWidth(other) + 24)
+            {
+                NodeDescriptor? descriptor = inference.EditorDescriptor(other.Id);
+                double bottom = at.Y + NodeHeight(other, descriptor, Ports(descriptor, false, other.Id).Count, Ports(descriptor, true).Count);
+                y = Math.Max(y, bottom + 24);
+            }
+        }
+        return preferred with { Y = y };
+    }
+
+    /// <summary>重なるカードだけを下へ移し、1回の操作で元に戻せる配置へまとめます。</summary>
+    internal void SeparateCards()
+    {
+        WorkflowDefinition document = Model.Draft.Document;
+        if (Model.Locks.Whole(document.Id))
+        {
+            return;
+        }
+        List<(double Left, double Right, double Top, double Bottom)> occupied = [];
+        Dictionary<string, NodePosition> moved = new(StringComparer.Ordinal);
+        foreach (NodeDefinition node in document.Nodes.OrderByDescending(item => Model.Locks.Node(document.Id, item.Id)).ThenBy(item => Position(item).Y))
+        {
+            NodePosition at = Position(node);
+            NodeDescriptor? descriptor = inference.EditorDescriptor(node.Id);
+            double width = CardWidth(node);
+            double height = NodeHeight(node, descriptor, Ports(descriptor, false, node.Id).Count, Ports(descriptor, true).Count);
+            double top = at.Y;
+            if (!Model.Locks.Node(document.Id, node.Id))
+            {
+                foreach ((double Left, double Right, double Top, double Bottom) box in occupied.OrderBy(item => item.Bottom))
+                {
+                    if (at.X < box.Right + 24 && box.Left < at.X + width + 24 && top < box.Bottom + 24 && box.Top < top + height + 24)
+                    {
+                        top = box.Bottom + 24;
+                    }
+                }
+            }
+            occupied.Add((at.X, at.X + width, top, top + height));
+            if (at.Y < top)
+            {
+                moved[node.Id] = at with { Y = top };
+            }
+        }
+        if (moved.Count != 0)
+        {
+            Model.Change(current => current with { Nodes = [.. current.Nodes.Select(Placed)] });
+        }
+
+        NodeDefinition Placed(NodeDefinition node) => moved.TryGetValue(node.Id, out NodePosition? at) ? node with { Position = at }
+                                                                                                       : node;
+    }
+
     private double CanvasWidth => Math.Max(1600, Model.Draft.Document.Nodes.Select(node => Position(node).X + CardWidth(node) + 64).DefaultIfEmpty().Max());
     private double CanvasHeight => Math.Max(1200, Model.Draft.Document.Nodes.Select(node =>
     {

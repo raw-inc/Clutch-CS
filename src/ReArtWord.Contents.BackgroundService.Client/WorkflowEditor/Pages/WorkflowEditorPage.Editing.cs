@@ -1,3 +1,5 @@
+using Microsoft.JSInterop;
+using Microsoft.AspNetCore.Components;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Components.Forms;
@@ -20,6 +22,34 @@ public sealed partial class WorkflowEditorPage
 {
     private bool recipePreviewOpen;
     private string recipePreviewNode = string.Empty, recipePreviewWorkflow = string.Empty, recipePreviewCluster = string.Empty;
+
+    /// <summary>狭いキャンバスでは、開いたパネルからもう一方へ切り替えます。</summary>
+    /// <returns>画面幅に応じた開閉状態の反映です。</returns>
+    private async Task TogglePanelAsync(bool catalog, CancellationToken cancellationToken = default)
+    {
+        bool compact = await Script.InvokeAsync<bool>("contentsBrowser.narrowEditor", cancellationToken).ConfigureAwait(true);
+        if (catalog)
+        {
+            catalogOpen = !catalogOpen;
+            inspectorOpen &= !compact || !catalogOpen;
+        }
+        else
+        {
+            inspectorOpen = !inspectorOpen;
+            catalogOpen &= !compact || !inspectorOpen;
+        }
+    }
+
+    /// <summary>自動入力を有効にする前に、編集者に対象を確認します。</summary>
+    /// <returns>確認後の下書きへの反映です。</returns>
+    private async Task ChangeAutomaticInputsAsync(bool enabled, CancellationToken cancellationToken = default)
+    {
+        bool confirmed = !enabled || await Script.InvokeAsync<bool>("confirm", cancellationToken, Ui["Confirm automatic inputs"]).ConfigureAwait(true);
+        if (confirmed)
+        {
+            Model.Change(document => document with { Enabled = enabled });
+        }
+    }
 
     /// <summary>編集中の定義を切り替えず、実効配置を別画面で表示します。</summary>
     private void PreviewRecipe(string node)
@@ -129,6 +159,10 @@ public sealed partial class WorkflowEditorPage
         NodeDefinition? node = new NodeDefinition(id, descriptor.Type, JsonSerializer.SerializeToElement(settings),
             Position: position ?? new(60 + (Model.Draft.Document.Nodes.Count % 3) * 390, 65 + (Model.Draft.Document.Nodes.Count / 3) * 420),
             StartOnLoad: descriptor.Kind == ENodeKind.Source, ContractVersion: descriptor.ContractVersion);
+        if (position is null && graph is not null && node.Position is { } preferred)
+        {
+            node = node with { Position = graph.PlaceBelowNodes(node, preferred) };
+        }
         Model.Change(document => document with { Nodes = [.. document.Nodes, node] });
         Model.SelectedNode = id;
         Model.SelectedWire = null;

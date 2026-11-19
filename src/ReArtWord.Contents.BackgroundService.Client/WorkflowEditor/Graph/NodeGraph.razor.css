@@ -17,7 +17,7 @@
 
 .graph-node > g > text,
 .port-label {
-    font-size: 10px;
+    font-size: 11px;
     fill: var(--muted);
     pointer-events: none;
 }
@@ -48,7 +48,7 @@
 }
 
 .wire-label {
-    font-size: 9px;
+    font-size: 11px;
     fill: var(--muted);
     pointer-events: none;
 }
@@ -67,7 +67,7 @@
 }
 
 .node-card-fields ::deep .node-inline-group {
-    font-size: 9px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.8px;
     color: var(--muted);
@@ -112,7 +112,7 @@
 ::deep .node-inline-field > small,
 ::deep .node-inline-field > .small {
     display: block;
-    font-size: 9px;
+    font-size: 11px;
     line-height: 14px;
     white-space: nowrap;
     overflow: hidden;
@@ -222,7 +222,7 @@
 }
 
 .graph-node .node-card-fields ::deep .node-inline-group {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.02em;
     color: var(--ink);
@@ -238,7 +238,7 @@
 }
 
 .graph-node ::deep .node-inline-field > small {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--muted);
 }
 
@@ -291,7 +291,7 @@
     background: color-mix(in srgb, var(--panel) 97%, transparent);
     border: 1px solid var(--line);
     border-radius: var(--radius-control);
-    font-size: 10px;
+    font-size: 11px;
     color: var(--ink);
     box-shadow: 0 3px 12px #0003;
 }
@@ -302,7 +302,7 @@
 
 .graph-connection-pending button {
     padding: 2px 7px;
-    font-size: 10px;
+    font-size: 11px;
 }
 
 .graph-wire-details {

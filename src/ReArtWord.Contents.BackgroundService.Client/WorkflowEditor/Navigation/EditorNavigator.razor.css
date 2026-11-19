@@ -71,7 +71,7 @@
 }
 
 .editor-minimap ::deep .map-node {
-    fill: var(--muted);
+    fill: var(--control);
 }
 
 .editor-minimap ::deep .map-node[data-search-match] {

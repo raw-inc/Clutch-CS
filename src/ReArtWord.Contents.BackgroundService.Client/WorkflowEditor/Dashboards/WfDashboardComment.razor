@@ -5,6 +5,10 @@
         <textarea @ref="input" rows="4" maxlength="@WfDashboardLayout.MaximumCommentLength" aria-label="@Ui["Dashboard comment"]" value="@text" @oninput="e=>text=e.Value?.ToString()??string.Empty" @onblur="Apply" @onkeydown="Key"></textarea>
         <small class="muted">@Ui["Leave the field to apply; Escape cancels. Save the dashboard to share the comment."]</small>
     }
+    else if (ReadOnly)
+    {
+        <p class="comment-text">@Text</p>
+    }
     else
     {
         <button @ref="label" type="button" class="comment-text @(string.IsNullOrEmpty(Text)?"empty":null)" disabled="@ReadOnly" aria-label="@Ui["Edit dashboard comment"]" @onclick="Begin">@(string.IsNullOrEmpty(Text)?Ui["Click to enter a comment"]:Text)</button>

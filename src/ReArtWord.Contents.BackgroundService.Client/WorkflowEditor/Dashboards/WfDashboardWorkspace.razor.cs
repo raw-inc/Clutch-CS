@@ -47,7 +47,8 @@ public sealed partial class WfDashboardWorkspace
     private WfDashboardActions actions = null!;
     private Task polling = Task.CompletedTask;
     private readonly HashSet<string> pending = new(StringComparer.Ordinal);
-    private bool catalogOpen, refreshing;
+    private readonly Dictionary<string, string> lastPress = new(StringComparer.Ordinal);
+    private bool editingLayout, catalogOpen, refreshing;
     private string? dragged, dropTarget;
     private ElementReference board;
     private bool CanOperate => Connection.Connected && session.Available && !Busy
@@ -64,7 +65,8 @@ public sealed partial class WfDashboardWorkspace
     {
         session = new(Api);
         actions = new(Api, Journal);
-        catalogOpen = Model.Draft.Document.Nodes.Count == 0;
+        editingLayout = Model.Draft.Document.Nodes.Count == 0;
+        catalogOpen = editingLayout;
         await RefreshAsync(UiCancellation).ConfigureAwait(true);
         polling = PollAsync(UiCancellation);
     }
@@ -216,6 +218,7 @@ public sealed partial class WfDashboardWorkspace
             {
                 message = "The source workflow accepted the button press.";
             }
+            lastPress[card.Id] = FormatTime(Api.UtcNow, "HH:mm:ss") + " · " + Ui[message];
             Notify(message);
         }).ConfigureAwait(true);
         if (accepted && !ComponentDisposed)
