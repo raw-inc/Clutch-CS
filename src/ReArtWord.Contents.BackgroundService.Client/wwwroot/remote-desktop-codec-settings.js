@@ -2,7 +2,7 @@
 /** 映像コーデックの詳細設定と入力検証を構成します。
  * @returns プリセット適用・草稿照合・読取り・表示更新の操作です。
  */
-export function createDesktopCodecSettings(body, ctx, numberSetting, apply, modeChanged)
+export function createDesktopCodecSettings(body, ctx, numberSetting, apply, modeChanged, actions = body)
 {
     let enabled = false, qualityMode = false, automaticP = true, bEnabled = false, codec = 'h264', connected = false, supported = false, busy = false;
     const custom = ctx.button(ctx.t('Custom codec settings', 'コーデック詳細設定を使用'), () =>
@@ -42,7 +42,8 @@ export function createDesktopCodecSettings(body, ctx, numberSetting, apply, mode
     capability.setAttribute('role', 'status');
     const commit = ctx.button(ctx.t('Apply codec settings', 'コーデック設定を反映'), apply);
     commit.className = 'primary codec-apply';
-    body.append(custom, interval.wrapper, pMode, p.wrapper, bMode, b.wrapper, mode, quality.wrapper, explanation, capability, commit);
+    body.append(custom, interval.wrapper, pMode, p.wrapper, bMode, b.wrapper, mode, quality.wrapper, explanation, capability);
+    actions.append(commit);
     for (const field of [interval.field, p.field, b.field, quality.field])
     {
         field.oninput = field.onchange = modeChanged;
@@ -172,6 +173,7 @@ export function sameDesktopCodecSettings(expected, actual)
 /** ボタンに現在の設定値を表示し、読み上げにも同じ状態を伝えます。 */
 function showSwitch(button, label, enabled)
 {
-    button.setAttribute('aria-pressed', String(enabled));
+    button.setAttribute('role', 'switch');
+    button.setAttribute('aria-checked', String(enabled));
     button.textContent = label + ' · ' + (enabled ? 'ON' : 'OFF');
 }

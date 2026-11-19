@@ -168,7 +168,8 @@ export async function filesView(root, ctx)
         copy.className = 'primary';
         const drives = ctx.button(ctx.t('Drives', 'ドライブ'), () => openAsync(null));
         drives.prepend(ctx.icon('drive'));
-        const up = ctx.button(ctx.t('↑ Up', '↑ 上へ'), () => openAsync(state.parent));
+        const up = ctx.button(ctx.t('Up', '上へ'), () => openAsync(state.parent));
+        up.prepend(ctx.icon('up'));
         const refresh = ctx.button(ctx.t('Refresh', '更新'), () => openAsync(state.directory));
         toolbar.append(drives, up, refresh);
         footer.append(count);

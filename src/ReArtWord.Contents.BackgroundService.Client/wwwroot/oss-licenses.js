@@ -1,3 +1,5 @@
+import { uiIcon } from './ui-icons.js';
+
 /** 利用しているライブラリーの通知とライセンスを表示します。
  * @returns 処理の完了と結果を伝えるPromiseです。
  * @contract 公開済みのJavaScriptメソッド名と呼出し側の契約を維持します。
@@ -23,6 +25,7 @@ export async function licensesView(root, ctx)
     label.htmlFor = search.id = 'license-query';
     label.textContent = ctx.t('Find a component', 'ライブラリーを検索');
     search.type = 'search';
+    search.placeholder = ctx.t('e.g. Microsoft.AspNetCore', '例：Microsoft.AspNetCore');
     const licenseLabel = document.createElement('label'), license = document.createElement('select');
     licenseLabel.htmlFor = license.id = 'license-type';
     licenseLabel.textContent = ctx.t('License', 'ライセンス');
@@ -35,6 +38,16 @@ export async function licensesView(root, ctx)
     root.append(filter);
     const cards = document.createElement('div');
     cards.className = 'license-cards';
+    const columns = document.createElement('div');
+    columns.className = 'license-columns';
+    columns.setAttribute('aria-hidden', 'true');
+    for (const label of [ctx.t('Component', 'ライブラリー'), ctx.t('Version', 'バージョン'), ctx.t('License', 'ライセンス'), ctx.t('Authors', '作者')])
+    {
+        const cell = document.createElement('strong');
+        cell.textContent = label;
+        columns.append(cell);
+    }
+    cards.append(columns);
     root.append(cards);
     const components = [];
 
@@ -66,7 +79,7 @@ export async function licensesView(root, ctx)
     license.addEventListener('change', applyFilter, { signal: ctx.signal });
     for (const entry of entries)
     {
-        const section = document.createElement('section'), title = document.createElement('h2'), meta = document.createElement('p');
+        const section = document.createElement('section'), title = document.createElement('h2'), meta = document.createElement('div');
         const pieces = entry.name.split('.');
         pieces.forEach((piece, index) =>
         {
@@ -76,9 +89,15 @@ export async function licensesView(root, ctx)
             }
             title.append(piece);
         });
-        meta.className = 'small muted';
+        meta.className = 'license-metadata';
         meta.setAttribute('data-card-caption', '');
-        meta.textContent = `${entry.version} · ${entry.license} · ${entry.authors}`;
+        for (const [label, value] of [[ctx.t('Version', 'バージョン'), entry.version], [ctx.t('License', 'ライセンス'), entry.license], [ctx.t('Authors', '作者'), entry.authors]])
+        {
+            const cell = document.createElement('span');
+            cell.dataset.label = label;
+            cell.textContent = value;
+            meta.append(cell);
+        }
         section.append(title, meta);
         if (entry.selectedLicense)
         {
@@ -98,22 +117,27 @@ export async function licensesView(root, ctx)
         {
             const link = document.createElement('a');
             link.href = entry.project;
-            link.textContent = ctx.t('Website ↗', 'サイト ↗');
+            link.textContent = ctx.t('Website', 'サイト');
+            link.append(uiIcon('external-link'));
             link.setAttribute('aria-label', entry.name + ' · ' + ctx.t('Project website (opens in a new tab)', 'プロジェクトサイトを新しいタブで開く'));
             link.target = '_blank';
             link.rel = 'noopener noreferrer';
             section.append(link);
         }
+        const notices = document.createElement('div');
+        notices.className = 'license-notices';
+        section.append(notices);
         for (const notice of entry.notices)
         {
             const details = document.createElement('details'), summary = document.createElement('summary'), text = document.createElement('pre');
-            summary.textContent = notice.label + ' · ' + entry.name;
+            summary.textContent = notice.label;
+            summary.setAttribute('aria-label', entry.name + ' · ' + notice.label);
             details.append(summary, text);
             if (!section.querySelector('details'))
             {
                 details.setAttribute('data-card-inset', '');
             }
-            section.append(details);
+            notices.append(details);
             let loaded = false;
 
             /** 開いた通知本文を取得し、取消し後には表示を更新しません。

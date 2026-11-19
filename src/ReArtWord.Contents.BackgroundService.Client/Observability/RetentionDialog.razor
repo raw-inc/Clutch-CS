@@ -8,8 +8,8 @@
 <label>@Ui["Common raw retention days"]<span class="unit-entry"><input type="number" min="0" step="1" class="count-entry" @bind="defaultRaw" @bind:event="oninput" /> @Ui["days"]</span></label>
 <label>@Ui["Common total retention days"]<span class="unit-entry"><input type="number" min="0" step="1" class="count-entry" @bind="defaultTotal" @bind:event="oninput" disabled="@defaultUnlimited" /> @Ui["days"]</span></label>
 <label><input type="checkbox" @bind="defaultUnlimited" />@Ui["Keep compressed history indefinitely"]</label>
-<label>@Ui["Rolling time (HH:mm)"]<input @bind="rollingTime" /></label>
-<label>@Ui["Rolling time zone"]<input @bind="timeZone" /></label>
+<label>@Ui["Rolling time (HH:mm)"]<input class="count-entry" @bind="rollingTime" /></label>
+<label>@Ui["Rolling time zone"]<input class="zone-entry" @bind="timeZone" /></label>
 <label>@Ui["Checkpoint after committed changes"]<span class="unit-entry"><input type="number" min="0" step="1" class="count-entry" @bind="checkpointEvents" @bind:event="oninput" /> @Ui["events"]</span></label>
 <label>@Ui["Checkpoint after days with changes"]<span class="unit-entry"><input type="number" min="0" step="1" class="count-entry" @bind="checkpointDays" @bind:event="oninput" /> @Ui["days"]</span></label>
 <p>@Ui["A checkpoint is captured when either threshold is reached. No extra checkpoint is created without changes."]</p>

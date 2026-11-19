@@ -132,10 +132,10 @@ export async function signalScopeViewAsync(container, ctx)
         const panel = document.createElement('details'), title = document.createElement('summary'), fields = [];
         const searchPanel = document.createElement('details'), searchSummary = document.createElement('summary'), query = document.createElement('input'), mode = document.createElement('select');
         searchPanel.className = 'scope-advanced';
-        searchSummary.textContent = 'Advanced Search';
+        searchSummary.textContent = ctx.t('Advanced Search', '詳細検索');
         query.type = 'search';
         query.className = 'scope-search';
-        query.setAttribute('aria-label', 'Advanced Search');
+        query.setAttribute('aria-label', searchSummary.textContent);
         query.placeholder = ctx.t('Search retained details and packet contents at the source', '保持中の詳細・パケット本文を取得側で検索');
         mode.setAttribute('aria-label', ctx.t('Advanced search mode', '高度検索の方式'));
         mode.append(new Option('Text', 'text'), new Option('Hex', 'hex'));

@@ -167,7 +167,7 @@ export function fileActionControls(root, ctx, actions)
                 event.preventDefault();
                 if (creating && !validFolderName(name.value))
                 {
-                    name.setCustomValidity(ctx.t('Enter one folder name without path separators or reserved characters.', 'パス区切りや予約文字を含まないフォルダー名を入力してください。'));
+                    name.setCustomValidity(ctx.t('Enter one folder name without path separators or reserved characters.', '「/」や「:」などの記号、予約名、末尾の空白やピリオドは使えません。'));
                     name.checkValidity();
                     name.focus();
                     return;

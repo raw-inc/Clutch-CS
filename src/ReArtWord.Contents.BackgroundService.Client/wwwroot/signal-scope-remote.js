@@ -112,10 +112,10 @@ export function scopeRemote(history, connections, tell, send, changed)
     function hex(raw)
     {
         const lines = [];
-        for (let offset = 0; offset < raw.length; offset += 16)
+        for (let offset = 0; offset < raw.length; offset += 8)
         {
-            const bytes = raw.subarray(offset, offset + 16);
-            const values = [...bytes].map(value => value.toString(16).padStart(2, '0').toUpperCase()).join(' ').padEnd(47);
+            const bytes = raw.subarray(offset, offset + 8);
+            const values = [...bytes].map(value => value.toString(16).padStart(2, '0').toUpperCase()).join(' ').padEnd(23);
             const ascii = [...bytes].map(value => (32) <= (value) && value <= 126 ? String.fromCharCode(value) : '.').join('');
             lines.push(offset.toString(16).padStart(4, '0').toUpperCase() + '  ' + values + '  ' + ascii);
         }

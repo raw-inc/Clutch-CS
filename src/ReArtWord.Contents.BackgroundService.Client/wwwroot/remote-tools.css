@@ -418,6 +418,8 @@
 .transfer-modes a[aria-current="page"] {
     background: var(--accent-soft);
     color: var(--accent);
+    box-shadow: inset 0 -2px var(--accent);
+    font-weight: 650;
 }
 
 .file-workspace {
@@ -497,9 +499,10 @@
     border: 1px solid var(--line);
     border-radius: var(--radius-panel);
     background: var(--paper);
-    color: var(--ink);
     overflow: auto;
     padding: 0;
+    background-color: var(--panel);
+    color: var(--ink);
 }
 
 .file-action-dialog::backdrop {
@@ -972,10 +975,13 @@
 .license-cards > section {
     margin-block: 8px;
     display: grid;
-    grid-template-columns: minmax(12rem, 1fr) minmax(12rem, 2fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: baseline;
     gap: 6px 16px;
     padding: 12px 16px;
+    border-block-end: 1px solid var(--line);
+    margin: 0;
+    border-radius: 0;
 }
 
 .license-cards > section > :is(details,p:not(.muted)) {
@@ -987,10 +993,14 @@
 }
 
 .license-cards pre {
-    font: 13px/1.6 Consolas, monospace;
-    white-space: pre;
+    font: 14px/1.6 var(--font-body, system-ui);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
     max-width: 100%;
     overflow: auto;
+    padding: 8px 0;
+    border: 0;
+    background: transparent;
 }
 
 @media (max-width: 680px) {
@@ -1047,6 +1057,7 @@
     border: 1px solid var(--control);
     border-radius: var(--radius-control);
     padding: 4px 8px;
+    text-decoration: none;
 }
 
 @media (max-width: 680px) {
@@ -1067,10 +1078,13 @@
 
 .terminal-keys .terminal-navigation-key {
     font: 700 16px/1.2 system-ui, sans-serif;
+    font-weight: 750;
+    color: var(--ink);
 }
 
-.terminal-surface .xterm-viewport {
+.terminal-screen .xterm .xterm-viewport {
     scrollbar-color: var(--control) var(--paper);
+    background: var(--paper);
 }
 
 .license-list .license-cards,
@@ -1092,4 +1106,171 @@
 
 .files-tool > .tool-toolbar > button {
     margin-inline-start: auto;
+}
+
+.license-cards > section h2 {
+    grid-column: 1;
+    margin: 0;
+}
+
+.license-cards > section > a {
+    justify-self: end;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    grid-row: 1;
+    grid-column: 5;
+}
+
+.license-cards > section > .small {
+    grid-column: 1 / -1;
+    margin: 0;
+}
+
+.license-cards details {
+    padding-block: 4px;
+}
+
+@media (max-width: 680px) {
+    .license-cards > section {
+        display: grid;
+        column-gap: 8px;
+    }
+}
+
+.terminal-toolbar button:not(:disabled),
+.terminal-workspace button.terminal-action:not(:disabled) {
+    border: 1px solid var(--control);
+}
+
+@media (max-width: 680px) {
+    .terminal-panel .terminal-screen {
+        min-height: 14rem;
+    }
+}
+
+@media (max-width: 680px) {
+    .files-tool .file-tree {
+        min-height: 0;
+        height: auto;
+        max-height: 40dvh;
+    }
+}
+
+.terminal-sidebar .terminal-session button {
+    margin-inline-start: 0;
+}
+
+.files-tool .tool-toolbar {
+    align-items: center;
+    border: 0;
+}
+
+.terminal-panel .terminal-target {
+    align-items: center;
+}
+
+.file-pane > .file-pane-title {
+    align-self: stretch;
+    width: 100%;
+    margin: 0;
+}
+
+.file-pane .file-navigation button:disabled {
+    color: var(--disabled-ink);
+    background: var(--disabled-face);
+    border-color: var(--line);
+    opacity: 1;
+}
+
+.file-pane .file-picker-control,
+.file-pane .file-location + button {
+    min-height: 40px;
+}
+
+.transfer-jobs > .remote-empty {
+    padding-inline: 0;
+}
+
+.file-pane .file-navigation button:not(:disabled) {
+    border-color: var(--control);
+}
+
+.license-cards > section > a .ui-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.license-columns,
+.license-cards > section {
+    display: grid;
+    grid-template-columns: minmax(12rem, 2fr) minmax(7rem, 0.8fr) minmax(6rem, 1fr) minmax(10rem, 2fr) minmax(3rem, auto);
+    gap: 6px 16px;
+    align-items: baseline;
+    padding: 10px 12px;
+}
+
+.license-columns {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.license-cards .license-metadata {
+    display: contents;
+}
+
+.license-cards .license-metadata > span {
+    grid-row: 1;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.license-notices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    grid-column: 1 / -1;
+}
+
+.license-notices details[open] {
+    flex: 1 1 100%;
+}
+
+@media (max-width: 760px) {
+    .license-columns {
+        display: none;
+    }
+
+    .license-cards > section {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .license-cards > section > a {
+        grid-column: 2;
+    }
+
+    .license-cards .license-metadata {
+        display: flex;
+        grid-column: 1 / -1;
+        flex-wrap: wrap;
+        gap: 4px 12px;
+    }
+
+    .license-cards .license-metadata > span::before {
+        content: attr(data-label) " ";
+        color: var(--muted);
+    }
+}
+
+.files-tool .button-link {
+    text-decoration: none;
+}
+
+.terminal-shell {
+    padding-inline-end: 32px;
+}
+
+.file-action-dialog [role="alert"] {
+    max-width: none;
+    word-break: auto-phrase;
 }

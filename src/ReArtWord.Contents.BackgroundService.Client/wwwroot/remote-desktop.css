@@ -1,7 +1,6 @@
 
 .page:has(.desktop-workspace) {
     max-width: none;
-    padding: 16px 24px 38px;
 }
 
 .remote-tools:has(.desktop-workspace) .page-title {
@@ -402,10 +401,6 @@
 }
 
 @media (max-width: 650px) {
-    .page:has(.desktop-workspace) {
-        padding: 12px 10px 34px;
-    }
-
     .desktop-toolbar {
         padding: 4px 6px;
         gap: 4px;
@@ -625,18 +620,13 @@
     }
 }
 
-.desktop-popover > p {
+.desktop-popover-content > p {
     white-space: pre-line;
 }
 
 .desktop-permission.warn {
     border-inline-start: 3px solid var(--warn);
     padding-inline-start: 10px;
-}
-
-.desktop-popover button:last-child.primary {
-    position: sticky;
-    bottom: 0;
 }
 
 .desktop-action .ui-icon {
@@ -662,16 +652,14 @@
 }
 
 .desktop-popover header {
-    position: sticky;
-    top: 0;
     background: var(--panel);
     z-index: 1;
 }
 
 .desktop-popover .codec-apply {
-    position: sticky;
-    bottom: 0;
     width: fit-content;
+    margin-block-start: 12px;
+    margin: 0;
 }
 
 .desktop-workspace[data-state="connected"] .desktop-targets {
@@ -692,4 +680,136 @@
     background: var(--accent-soft);
     color: var(--accent);
     box-shadow: inset 0 -2px var(--accent);
+}
+
+.desktop-menu[open] .desktop-popover {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    overflow: hidden;
+    padding: 0;
+}
+
+.desktop-popover > header,
+.desktop-popover > footer {
+    padding: 10px 16px;
+}
+
+.desktop-popover > footer {
+    border-block-start: 1px solid var(--line);
+}
+
+.desktop-popover > footer:empty {
+    display: none;
+}
+
+.desktop-popover-content {
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    padding: 4px 16px 16px;
+}
+
+.desktop-targets button,
+.desktop-targets .desktop-connection {
+    min-height: 40px;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-connect:disabled {
+    display: none;
+}
+
+.desktop-popover-content :is(select, input):disabled {
+    color: var(--muted);
+    opacity: 1;
+}
+
+.desktop-targets .desktop-connection {
+    align-self: center;
+    align-items: center;
+    display: inline-flex;
+    padding-inline: 8px;
+    border-radius: var(--radius-control);
+    background: var(--nested);
+}
+
+.desktop-workspace .desktop-targets > .desktop-connect,
+.desktop-workspace .desktop-targets .desktop-labeled {
+    min-height: 40px;
+    font-size: 13px;
+}
+
+.desktop-popover-content button[role="switch"] {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.desktop-popover-content button[role="switch"]::before {
+    content: "";
+    flex: none;
+    width: 24px;
+    height: 14px;
+    border: 1px solid var(--control);
+    border-radius: 8px;
+    background: radial-gradient(circle at 6px center, currentcolor 4px, transparent 5px) var(--nested);
+}
+
+.desktop-popover-content button[role="switch"][aria-checked="true"]::before {
+    background: radial-gradient(circle at 17px center, currentcolor 4px, transparent 5px) var(--accent-soft);
+}
+
+.desktop-details-list {
+    display: grid;
+    grid-template-columns: minmax(4em, auto) minmax(0, 1fr);
+    gap: 8px 12px;
+    margin: 0;
+    font-size: 13px;
+}
+
+.desktop-details-list dd,
+.desktop-details-list p {
+    margin: 0;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+.desktop-details-list dt {
+    color: var(--muted);
+}
+
+.desktop-details-list dt:has(+ dd > :empty),
+.desktop-details-list dd:has(> :empty) {
+    display: none;
+}
+
+.desktop-deck details[open] .desktop-toolbar {
+    flex-wrap: wrap;
+    white-space: normal;
+}
+
+.desktop-deck details[open] .desktop-toolbar .desktop-action.icon-button {
+    width: auto;
+    max-width: 100%;
+    min-height: 32px;
+    padding: 4px 7px;
+    gap: 4px;
+}
+
+.desktop-deck details[open] .desktop-toolbar .desktop-action.icon-button::after {
+    content: attr(aria-label);
+    font-size: 12px;
+}
+
+@media (min-width: 651px) {
+    .desktop-deck details[open] .desktop-toolbar {
+        flex-wrap: nowrap;
+        align-items: center;
+        min-height: 36px;
+        gap: 4px;
+        overflow-x: auto;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-targets {
+        padding-block: 2px;
+    }
 }

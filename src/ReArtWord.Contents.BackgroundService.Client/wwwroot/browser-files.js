@@ -146,7 +146,8 @@ export async function browserFilesView(root, ctx)
         copy.className = 'primary';
         const home = ctx.button(local ? ctx.t('Folder root', '選択フォルダー') : ctx.t('Drives', 'ドライブ'), () => openAsync(local ? '' : null));
         home.prepend(ctx.icon(local ? 'folder' : 'drive'));
-        const up = ctx.button(ctx.t('↑ Up', '↑ 上へ'), () => openAsync(state.parent));
+        const up = ctx.button(ctx.t('Up', '上へ'), () => openAsync(state.parent));
+        up.prepend(ctx.icon('up'));
         const refresh = ctx.button(ctx.t('Refresh', '更新'), () => openAsync(state.directory));
         refresh.prepend(ctx.icon('refresh'));
         navigation.append(home, up, refresh);
@@ -194,7 +195,7 @@ export async function browserFilesView(root, ctx)
                     }
                     localRoot = handle;
                     chooser.value = '';
-                    fileNames.textContent = ctx.t('No file selected', '未選択');
+                    fileNames.textContent = ctx.t('No file selected', 'ファイル未選択');
                     title.textContent = ctx.t('This device · ', 'この端末 · ') + handle.name;
                     title.prepend(ctx.icon('monitor'));
                     await openAsync('');
@@ -234,11 +235,11 @@ export async function browserFilesView(root, ctx)
                 state.selected.clear();
                 state.entries.clear();
                 const files = [...chooser.files];
-                fileNames.textContent = files.length ? files.map(file => file.name).join(', ') : ctx.t('No file selected', '未選択');
+                fileNames.textContent = files.length ? files.map(file => file.name).join(', ') : ctx.t('No file selected', 'ファイル未選択');
                 if ((4096) < (files.length) || new Set(files.map(file => file.name)).size !== files.length)
                 {
                     chooser.value = '';
-                    fileNames.textContent = ctx.t('No file selected', '未選択');
+                    fileNames.textContent = ctx.t('No file selected', 'ファイル未選択');
                     ctx.say(ctx.t('Select at most 4096 files with distinct names.', '重複しない名前のファイルを4096件以内で選択してください。'));
                     render([]);
                     updateControls();
@@ -259,10 +260,10 @@ export async function browserFilesView(root, ctx)
             const filesLabel = document.createElement('label'), filesCaption = document.createElement('span'), fileNames = document.createElement('span');
             filesLabel.className = 'file-picker-control';
             filesCaption.textContent = chooseFilesLabel;
-            fileNames.textContent = ctx.t('No file selected', '未選択');
+            fileNames.textContent = ctx.t('No file selected', 'ファイル未選択');
             filesLabel.append(filesCaption, fileNames, chooser);
             access.append(picker, filesLabel, permission);
-            section.insertBefore(access, navigation);
+            section.insertBefore(access, location);
         }
 
         /** ドロップされた対象を確認して受け付けます。 */
@@ -494,8 +495,11 @@ export async function browserFilesView(root, ctx)
     {
         queue.replaceChildren();
         const heading = document.createElement('h2');
-        heading.textContent = ctx.t('Browser transfers · keep this page open', '端末との転送 · この画面を開いたままにしてください');
-        queue.append(heading);
+        heading.textContent = ctx.t('Browser transfers', '端末との転送');
+        const hint = document.createElement('p');
+        hint.className = 'small muted';
+        hint.textContent = ctx.t('Keep this page open during transfers.', '転送が終わるまで、この画面を開いたままにしてください。');
+        queue.append(heading, hint);
         if (!jobs.length)
         {
             const empty = document.createElement('p');

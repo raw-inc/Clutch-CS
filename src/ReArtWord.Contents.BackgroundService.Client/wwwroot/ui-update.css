@@ -70,15 +70,15 @@ progress {
     display: block;
     width: 100%;
     height: 8px;
-    border: 0;
     border-radius: var(--radius-chart);
     overflow: hidden;
-    background: var(--control);
+    background: var(--nested);
     accent-color: var(--accent);
+    border: 1px solid var(--control);
 }
 
 progress::-webkit-progress-bar {
-    background: var(--control);
+    background: var(--nested);
     border-radius: var(--radius-chart);
 }
 
@@ -149,18 +149,15 @@ button:disabled {
 
 .manual > a {
     display: inline-block;
-    margin: 10px;
-}
-
-.manual-brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 18px;
-    font-weight: 650;
+    margin-block: 10px;
 }
 
 .save-reminder {
     padding-inline-start: 10px;
     border-inline-start: 3px solid var(--warn);
+}
+
+.update-splash .update-status {
+    font-size: 16px;
+    color: var(--ink);
 }

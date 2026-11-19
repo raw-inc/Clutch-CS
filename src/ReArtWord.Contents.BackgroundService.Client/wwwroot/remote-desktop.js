@@ -75,6 +75,9 @@ export async function desktopView(root, ctx)
         trigger.append(ctx.icon(icon));
         const body = document.createElement('div');
         body.className = 'desktop-popover';
+        const content = document.createElement('div');
+        content.className = 'desktop-popover-content';
+        const actions = document.createElement('footer');
         const heading = document.createElement('h2');
         heading.textContent = label;
         const close = ctx.button(ctx.t('Close panel', 'パネルを閉じる'), () =>
@@ -87,7 +90,7 @@ export async function desktopView(root, ctx)
         close.replaceChildren(ctx.icon('close'));
         const header = document.createElement('header');
         header.append(heading, close);
-        body.append(header);
+        body.append(header, content, actions);
         element.append(trigger, body);
         rail.append(element);
         menus.push(element);
@@ -104,7 +107,7 @@ export async function desktopView(root, ctx)
                 }
             }
         }, { signal: ctx.signal });
-        return { element, body, trigger };
+        return { element, body: content, actions, trigger };
     }
 
     /** 入力欄に対応するラベルを付けます。
@@ -129,7 +132,7 @@ export async function desktopView(root, ctx)
     }
 
     const settingsMenu = menu(ctx.t('Connection settings', '接続設定'), 'settings');
-    const codecMenu = experimental ? menu(ctx.t('Codec details', 'コーデック詳細設定'), 'video-fullscreen') : null;
+    const codecMenu = experimental ? menu(ctx.t('Codec details', 'コーデック詳細設定'), 'values') : null;
     const detailsMenu = menu(ctx.t('Connection details', '接続の詳細'), 'info');
     const cluster = document.createElement('select'), host = document.createElement('select');
     const transmissionPreset = document.createElement('select');
@@ -251,7 +254,7 @@ export async function desktopView(root, ctx)
     overlay.hidden = false;
     overlay.setAttribute('aria-label', ctx.t('Stream statistics', '配信の統計'));
     const metrics = {}, metricLabels = {};
-    for (const [key, label] of [['speed', ctx.t('Receive', '受信')], ['fps', ctx.t('Display FPS', '表示FPS')], ['delivery', ctx.t('Send → receive', '送信→受信')], ['delay', ctx.t('Receive → display', '受信→表示')], ['bitrate', ctx.t('Target bitrate', '設定ビットレート')], ['codec', ctx.t('Codec', 'コーデック')]])
+    for (const [key, label] of [['speed', ctx.t('Receive', '受信')], ['fps', ctx.t('Display FPS', '表示FPS')], ['delivery', ctx.t('Send → receive', '送信から受信')], ['delay', ctx.t('Receive → display', '受信から表示')], ['bitrate', ctx.t('Target bitrate', '設定ビットレート')], ['codec', ctx.t('Codec', 'コーデック')]])
     {
         const row = document.createElement('div'), term = document.createElement('dt'), value = document.createElement('dd');
         term.textContent = label;
@@ -276,6 +279,11 @@ export async function desktopView(root, ctx)
     const audioStatus = document.createElement('p');
     audioStatus.setAttribute('role', 'status');
     const codecNote = document.createElement('p');
+    const settingsNotice = document.createElement('p');
+    settingsNotice.className = 'small muted';
+    settingsNotice.textContent = ctx.t('Disconnect to change connection settings.', '接続設定を変更するときは、いったん切断してください。');
+    settingsNotice.hidden = true;
+    settingsMenu.body.append(settingsNotice);
     settingsMenu.body.append(labeled(ctx.t('Video codec', '映像コーデック'), codec), labeled(ctx.t('Video decoder', '映像デコーダー'), acceleration), fps.wrapper, bitrateMode, bitrate.wrapper, audioBuffer.wrapper);
     if (chromium)
     {
@@ -306,7 +314,7 @@ export async function desktopView(root, ctx)
         {
             choose(selected);
         }
-    }, updateControls) : null;
+    }, updateControls, codecMenu.actions) : null;
 
     /** 伝送設定の草稿を照合して、プリセット名またはカスタムを表示します。 */
     function updateTransmissionPreset()
@@ -391,14 +399,18 @@ export async function desktopView(root, ctx)
         return value;
     }
 
-    const settingsNotice = document.createElement('p');
-    settingsNotice.className = 'small muted';
-    settingsNotice.textContent = ctx.t('Disconnect to change connection settings.', '接続設定を変更するときは、いったん切断してください。');
-    settingsNotice.hidden = true;
-    settingsMenu.body.append(settingsNotice);
     const permission = document.createElement('p');
     permission.className = 'desktop-permission';
-    detailsMenu.body.append(status, permission, audioStatus, codecNote);
+    const measurements = document.createElement('dl');
+    measurements.className = 'desktop-details-list';
+    for (const [caption, value] of [[ctx.t('Connection', '接続'), status], [ctx.t('Input permission', '入力権限'), permission], [ctx.t('Audio', '音声'), audioStatus], [ctx.t('Codec', 'コーデック'), codecNote]])
+    {
+        const term = document.createElement('dt'), detail = document.createElement('dd');
+        term.textContent = caption;
+        detail.append(value);
+        measurements.append(term, detail);
+    }
+    detailsMenu.body.append(measurements);
     const deck = document.createElement('header'), targets = document.createElement('div'), connectedTarget = document.createElement('strong');
     connectedTarget.hidden = true;
     targets.className = 'desktop-targets';
@@ -421,7 +433,10 @@ export async function desktopView(root, ctx)
     let audio, closing = Promise.resolve(), muted = false, autoMuted = false, audioReady = false, localConnection = false, targetLabel = '';
     let selection = 0, watch = 0, lastMessage = 0, heartbeat = false, lastRefresh = -Infinity, refreshes = 0, lastStats = 0, lastDraw = 0, hidden = false, fullscreenEscape = false;
     const videoStatus = document.createElement('p');
-    detailsMenu.body.append(videoStatus);
+    const videoTerm = document.createElement('dt'), videoDetail = document.createElement('dd');
+    videoTerm.textContent = ctx.t('Video', '映像');
+    videoDetail.append(videoStatus);
+    measurements.append(videoTerm, videoDetail);
     let receivedBytes = 0;
     let workerAllowed = true;
     const delivery = createDesktopLatency();
@@ -1338,7 +1353,7 @@ export async function desktopView(root, ctx)
             const delay = Math.max(0, ...views.filter(Boolean).map(view => view.video.delay));
             metrics.delay.textContent = Math.round(delay) + ' ms';
             updateDeliveryDisplay(now);
-            videoStatus.textContent = ctx.t('Receive-to-display: ', '受信→表示: ') + Math.round(delay) + ' ms · ' +
+            videoStatus.textContent = ctx.t('Receive-to-display: ', '受信から表示: ') + Math.round(delay) + ' ms\n' +
                 ctx.t('Decoder preference: ', 'デコーダー指定: ') + acceleration.options[acceleration.selectedIndex]?.textContent +
                 ' · ' + views.filter(Boolean).map(view => `${view.video.renderer} · Decode ${Math.round(view.video.decodeDelay)} ms · Draw ${view.video.drawCost.toFixed(1)} ms · Flush ${view.video.flushes} · Replay ${view.video.replays}`).join(' / ');
 
@@ -1956,7 +1971,7 @@ export async function desktopView(root, ctx)
             disconnect();
         }
     });
-    action(reconnectButton, ctx.t('Automatic reconnect', '自動再接続'), 'refresh');
+    action(reconnectButton, ctx.t('Automatic reconnect', '自動再接続'), 'history');
     reconnectButton.setAttribute('aria-pressed', 'false');
     reconnectButton.title = ctx.t('Automatically reconnect after communication failures. The default is three attempts: immediately, then 3 seconds after failure, then 10 seconds after failure. Success resets the attempts. Manual disconnection stops retries.', '通信切断時に自動再接続します。既定は即時、失敗後3秒、次の失敗後10秒の3回です。接続成功で試行回数をリセットし、手動切断で中止します。');
     const reload = ctx.button(ctx.t('Refresh hosts', 'ホスト一覧を更新'), refreshAsync);

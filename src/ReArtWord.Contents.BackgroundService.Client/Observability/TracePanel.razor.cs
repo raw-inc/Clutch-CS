@@ -37,6 +37,10 @@ public sealed partial class TracePanel
     private string rawLimit = string.Empty;
     private bool stopOpen;
 
+    /// <summary>画面を開いた接続先から現在の追跡状態を読み込みます。</summary>
+    /// <returns>初期状態の照会です。</returns>
+    protected override Task OnInitializedAsync() => RefreshAsync();
+
     /// <summary>表示対象の最新状態を取得して画面へ反映します。</summary>
     /// <returns>要求処理と現時点の画面反映の完了です。</returns>
     // 抑制理由: UIコールバックの呼出し署名を維持し、取消可能なI/Oには画面が所有するトークンを渡します。

@@ -9,7 +9,7 @@ export function scopeTable(container, ctx, send, report)
     viewport.tabIndex = 0;
     viewport.setAttribute('aria-label', ctx.t('Captured packets', '取得したパケット'));
     table.className = 'scope-packets';
-    for (const label of ['#', ctx.t('Time', '時刻'), 'Protocol', 'Source', 'Destination', 'Info', ctx.t('Seen', '観測')])
+    for (const label of ['#', ctx.t('Time', '時刻'), ctx.t('Protocol', 'プロトコル'), ctx.t('Source', '送信元'), ctx.t('Destination', '宛先'), ctx.t('Info', '内容'), ctx.t('Seen', '観測')])
     {
         const cell = document.createElement('th');
         cell.textContent = label;

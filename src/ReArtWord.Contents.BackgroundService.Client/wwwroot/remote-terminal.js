@@ -13,7 +13,7 @@ export async function terminalView(root, ctx)
     const experimental = experimentalEnabled();
     root.className = 'terminal-workspace';
     const sidebar = document.createElement('aside');
-    sidebar.className = 'remote-sidebar';
+    sidebar.className = 'remote-sidebar terminal-sidebar';
     const peersTree = document.createElement('div');
     const sessions = document.createElement('div');
     const panel = document.createElement('section');
@@ -657,7 +657,7 @@ export async function terminalView(root, ctx)
         focus: () => term?.focus(),
 
         fit: () => layout.update() });
-    for (const [button, icon] of [[user, 'play'], [admin, 'settings'], [copy, 'copy'], [paste, 'clipboard'], [leave, 'stop']])
+    for (const [button, icon] of [[user, 'play'], [admin, 'settings'], [copy, 'copy'], [paste, 'clipboard'], [leave, 'close']])
     {
         button.prepend(ctx.icon(icon));
     }

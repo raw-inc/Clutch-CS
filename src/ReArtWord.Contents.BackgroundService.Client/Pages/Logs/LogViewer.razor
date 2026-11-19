@@ -6,7 +6,7 @@
 <main class="page log-page">
     <div class="page-title">
         <h1>LogViewer</h1>
-        <div class="toolbar"><button @onclick="()=>operationsOpen=true">@Ui["Operation history"]</button><button @onclick="()=>traceOpen=true" disabled="@(!HasSelection)"><UiIcon Name="settings" />@Ui["Trace settings"]</button><RetentionDialog Disabled="@(!HasSelection)" /></div>
+        <div class="toolbar"><button @onclick="()=>operationsOpen=true"><UiIcon Name="logs" />@Ui["Operation history"]</button><button @onclick="()=>traceOpen=true" disabled="@(!HasSelection)"><UiIcon Name="settings" />@Ui["Trace settings"]</button><RetentionDialog Disabled="@(!HasSelection)" /></div>
     </div>
     @if (!string.IsNullOrWhiteSpace(message))
     {
@@ -22,7 +22,7 @@
         <div class="log-observation-controls">
             <label>@Ui["log.viewer.scope"]<select value="@(SearchAllClusters ? "all" : "current")" @onchange="ScopeChangedAsync"><option value="current" disabled="@(!HasSelection)">@Ui["log.viewer.current"]</option><option value="all">@Ui["log.viewer.all"]</option></select></label>
             <label>@Ui["log.viewer.refresh"]<select value="@refreshSeconds" @onchange="RefreshChangedAsync">@foreach(var seconds in refreshIntervals){<option value="@seconds">@(seconds == 0 ? Ui["log.viewer.off"] : Ui.Format("log.viewer.every", seconds))</option>}</select></label>
-            <label title="@Ui["log.viewer.recentHelp"]"><input type="checkbox" role="switch" checked="@uncompressedOnly" @onchange="UncompressedOnlyChangedAsync" />@Ui["log.viewer.recentOnly"]</label>
+            <label title="@Ui["log.viewer.recentHelp"]"><input type="checkbox" role="switch" checked="@uncompressedOnly" @onchange="UncompressedOnlyChangedAsync" />@Ui["log.viewer.recentOnly"] <strong>@Ui[uncompressedOnly?"On":"Off"]</strong></label>
             @if(lastRefresh is { } updated){<span class="small">@Ui.Format("log.viewer.updated", FormatTime(updated, "HH:mm:ss"))</span>}
         </div>
         @if(SearchAllClusters){<p class="small">@Ui[HasSelection ? "log.viewer.settingsContext" : "log.viewer.selectForSettings"]</p>}
@@ -35,9 +35,9 @@
             <div class="log-filters">
                 <label>@Ui.Format("display.timezone.from",DisplayTimeZone.Id)<input type="datetime-local" value="@from" @oninput="FromChanged" /></label>
                 <label>@Ui.Format("display.timezone.until",DisplayTimeZone.Id)<input type="datetime-local" value="@until" @oninput="UntilChanged" /></label>
-                <label>@Ui["PC (Peer ID)"]<input @bind="peer" @bind:event="oninput" placeholder="Peer ID" /></label>
-                <label>@Ui["Workflow"]<input @bind="workflow" @bind:event="oninput" placeholder="Workflow ID" /></label>
-                <label>@Ui["Node"]<input @bind="node" @bind:event="oninput" placeholder="Node ID" /></label>
+                <label>@Ui["PC (Peer ID)"]<input @bind="peer" @bind:event="oninput" placeholder="@Ui["e.g. stage-peer"]" /></label>
+                <label>@Ui["Workflow"]<input @bind="workflow" @bind:event="oninput" placeholder="@Ui["e.g. opening-cues"]" /></label>
+                <label>@Ui["Node"]<input @bind="node" @bind:event="oninput" placeholder="@Ui["e.g. light-output"]" /></label>
                 <label>@Ui["Related log ID (exact match)"]<input @bind="causation" @bind:event="oninput" placeholder="6865b4d1-0000-4000-8000-000000000001" /></label>
             </div>
         </details>
@@ -86,7 +86,7 @@
                 </dl>
                 @if (LogLocation(selected) is { } uri)
                 {
-                    <a class="log-editor-link" href="@uri">@Ui["editor.navigation.openLog"] <UiIcon Name="chevron" /></a>
+                    <a class="log-editor-link" href="@uri">@Ui["editor.navigation.openLog"] <span aria-hidden="true">→</span></a>
                 }
                 @if (selected.Entry.CausationId is not null)
                 {

@@ -158,7 +158,7 @@ export function createTerminalKeys(ctx, options)
         });
         toggles.push([key, button]);
     }
-    for (const [label, data, description] of [['Esc', '\x1b', 'Escape'], ['Tab', '\t', 'Tab'], ['Del', '\x1b[3~', 'Delete'], ['⌫', '\x7f', 'Backspace'], ['↵', '\r', 'Enter']])
+    for (const [label, data, description] of [['Esc', '\x1b', 'Escape'], ['Tab', '\t', 'Tab'], ['Del', '\x1b[3~', 'Delete'], ['Backspace', '\x7f', 'Backspace'], ['Enter', '\r', 'Enter']])
     {
         add(modifierRow, label, description, () => options.send(transform(data)));
     }

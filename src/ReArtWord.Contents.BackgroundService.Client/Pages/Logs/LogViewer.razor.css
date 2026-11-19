@@ -124,6 +124,9 @@
 .log-level {
     font: 10px/1.4 Consolas, monospace;
     letter-spacing: 0.3px;
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1.4;
 }
 
 .log-health {
@@ -392,10 +395,11 @@
 }
 
 .log-editor-link {
+    min-height: 40px;
+    font-size: 13px;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    min-height: 40px;
+    gap: 6px;
 }
 
 @media (max-width: 680px) {
@@ -404,7 +408,7 @@
         z-index: 9;
         inset: auto 8px var(--statusbar-height);
         padding: 16px;
-        max-height: 56dvh;
+        max-height: min(42dvh, 24rem);
         overflow: auto;
         border: 1px solid var(--control);
         border-radius: var(--radius-panel);
@@ -422,4 +426,10 @@
 
 .log-results-heading > span[role="status"] {
     margin-inline-end: auto;
+}
+
+[aria-current="page"][role="status"] {
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--ink);
 }
