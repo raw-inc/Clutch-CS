@@ -137,7 +137,9 @@ for (const [name, engine] of [['Chrome', chromium], ['Firefox', firefox]])
         await openDirectoryAsync(pane);
         const opener = pane.getByRole('button', { name: 'New folder', exact: true });
         await opener.click();
-        const dialog = page.getByRole('dialog'), field = dialog.getByLabel('Folder name');
+
+        // 閉じた直後は呼び出し元がまだ無効なため、ダイアログ要素が取り除かれてからフォーカスを確認する。
+        const dialog = page.locator('dialog'), field = dialog.getByLabel('Folder name');
         await field.waitFor();
         const style = await field.evaluate(e =>
         {
@@ -171,7 +173,7 @@ for (const [name, engine] of [['Chrome', chromium], ['Firefox', firefox]])
         await openDirectoryAsync(right);
         assert.equal(await left.getByRole('button', { name: 'Delete selected', exact: true }).isDisabled(), true);
         await left.getByRole('button', { name: 'New folder', exact: true }).click();
-        const dialog = page.getByRole('dialog');
+        const dialog = page.locator('dialog');
         assert.match(await dialog.textContent(), /test-host · C:\/files/);
         await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
         await dialog.waitFor({ state: 'detached' });
