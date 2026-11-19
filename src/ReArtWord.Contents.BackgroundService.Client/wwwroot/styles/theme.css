@@ -41,7 +41,7 @@
 }
 
 /* カードとその直下の面は、対応ブラウザーでは同じ曲線で角をつなぎます。 */
-:where(.card, .health-card, .dialog, .dashboard-card, .metric-cell, .workspace-index, .hm-main, .hm-content, .hm-target-picker, .scope-sidebar, .scope-results, .file-pane, .terminal-workspace, .desktop-workspace, .license-list section) {
+:where(.card, .health-card, .dialog, .dashboard-card, .metric-cell, .workspace-index, .hm-main, .hm-content, .hm-target-picker, .scope-sidebar, .scope-results, .file-pane, .terminal-workspace, .desktop-workspace, .license-list section, .file-action-dialog, .hm-dialog, .update-splash, .manual, clutch-card-rows > :first-child > *) {
     corner-shape: superellipse(1.5);
 }
 

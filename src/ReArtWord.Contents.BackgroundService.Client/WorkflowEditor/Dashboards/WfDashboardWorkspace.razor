@@ -16,7 +16,7 @@
         <small class="muted">@Ui[Model.Draft.BaseRevision is null?"New · unsaved":Model.Draft.Dirty?"Unsaved":"Saved and shared"]</small>
     </div>
     <div class="toolbar dashboard-edit-tools">
-        <button type="button" class="quiet" @onclick="()=>catalogOpen=!catalogOpen"><UiIcon Name="add" />@Ui["Add reference"]</button>
+        <button type="button" class="quiet" aria-expanded="@(catalogOpen?"true":"false")" @onclick="()=>catalogOpen=!catalogOpen"><UiIcon Name="add" />@Ui["Add reference"]</button>
         <button type="button" class="quiet" disabled="@LayoutLocked" @onclick="()=>AddCard(WfDashboardLayout.CommentType,WfDashboardLayout.CommentSettings(string.Empty))">@Ui["Add comment"]</button>
         <button type="button" class="quiet" disabled="@LayoutLocked" @onclick="()=>AddCard(WfDashboardLayout.BreakType,WfDashboardLayout.BreakSettings())">@Ui["Add line break"]</button>
         <button type="button" class="quiet icon-button" title="@Ui["Undo"]" aria-label="@Ui["Undo"]" disabled="@(LayoutLocked||!Model.CanUndo)" @onclick="Model.Undo"><UiIcon Name="undo" /></button>

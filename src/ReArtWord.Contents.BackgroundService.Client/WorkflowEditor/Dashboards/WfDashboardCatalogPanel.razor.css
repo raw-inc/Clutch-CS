@@ -4,6 +4,10 @@
     padding: 12px;
 }
 
+.dashboard-catalog .section-heading {
+    margin: 0;
+}
+
 .dashboard-catalog-items {
     display: grid;
     gap: 6px;

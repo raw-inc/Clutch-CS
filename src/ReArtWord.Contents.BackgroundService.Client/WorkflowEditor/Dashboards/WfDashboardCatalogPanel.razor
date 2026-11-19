@@ -1,6 +1,6 @@
 @inject ManagementApi Api
 <div class="dashboard-catalog">
-    <div class="inspector-heading"><h2>@Ui["Add reference"]</h2><button class="quiet icon-button" type="button" aria-label="@Ui["Close"]" @onclick="Close"><UiIcon Name="close" /></button></div>
+    <div class="section-heading"><h2>@Ui["Add reference"]</h2><button class="quiet icon-button" type="button" aria-label="@Ui["Close"]" @onclick="Close"><UiIcon Name="close" /></button></div>
     <input type="search" aria-label="@Ui["Search nodes by logical name or physical name"]" placeholder="@Ui["Logical name, node ID, type or workflow…"]" value="@search" @oninput="SearchAsync" maxlength="256" />
     @if(problem is not null){<p class="notice warn">@Ui[problem]</p>}
     <div class="dashboard-catalog-items" aria-busy="@busy.ToString().ToLowerInvariant()">

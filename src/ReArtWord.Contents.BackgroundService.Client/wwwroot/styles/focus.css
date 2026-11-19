@@ -25,7 +25,8 @@
         box-shadow: inset 0 -2px var(--accent);
     }
 
-    :root :is(input, select, textarea)[aria-invalid="true"]:focus {
+    :root :is(input, select, textarea):is([aria-invalid="true"], :user-invalid):focus {
+        background-color: color-mix(in srgb, var(--danger) 8%, var(--panel));
         border-color: var(--danger);
         box-shadow: inset 0 -2px var(--danger);
     }
