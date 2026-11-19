@@ -192,7 +192,9 @@ test('published Desktop PWA is installable from the current origin and reopens i
         await context?.close();
         assert.equal(path.dirname(profile), temporary);
         assert.ok(path.basename(profile).startsWith('contents-pwa-'));
-        await rm(profile, { recursive: true, force: true });
+
+        // Windows ではブラウザーを閉じた直後もログファイルが使用中のことがある。
+        await rm(profile, { recursive: true, force: true, maxRetries: 5 });
     }
 });
 
