@@ -198,7 +198,7 @@
   "Temporary safety targets": "一時安全操作の対象",
   "Effective nodes and safety groups": "有効版のノード・安全グループ",
   "New inputs stopped": "新規入力停止",
-  "Temporary continuation past an automatic stop": "自動停止への一時続行",
+  "Temporary continuation past an automatic stop": "自動停止後の一時続行",
   "Normal decision": "通常判断",
   "No temporary override": "一時指定なし",
   "Local only": "局所のみ",
