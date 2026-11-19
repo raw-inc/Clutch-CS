@@ -2410,10 +2410,16 @@ export async function desktopView(root, ctx)
         clipboard.activateAsync().catch(() => ctx.say(ctx.t('Clipboard synchronization is unavailable.', 'クリップボード同期を利用できません。')));
     }
 
-    viewport.addEventListener('pointerenter', () =>
+    // https://www.w3.org/TR/pointerevents3/#boundary-events-caused-by-layout-changes
+    // 接続後に映像が静止中のポインターの下へ広がるだけでもpointerenterは発生する。
+    // クリップボードを読み始めるのは、利用者が映像上でポインターを動かすか、操作対象にしたときに限る。
+    viewport.addEventListener('pointermove', () =>
     {
-        clipboardPointerInside = true;
-        activateClipboard();
+        if (!clipboardPointerInside)
+        {
+            clipboardPointerInside = true;
+            activateClipboard();
+        }
     }, { signal: ctx.signal });
     viewport.addEventListener('pointerleave', () =>
     {

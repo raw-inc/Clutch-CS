@@ -367,8 +367,10 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         assert.equal(await button.getAttribute('aria-pressed'), 'true');
         assert(messages.some(message => message.kind === 15 && message.values[1] === 1));
         assert.equal(messages.some(message => message.kind === 16), false);
-        await page.locator('.desktop-viewport').click({ position: { x: 100, y: 100 } });
+        await page.mouse.move(0, 0);
+        await page.locator('.desktop-viewport').hover({ position: { x: 100, y: 100 } });
         await untilAsync(() => messages.some(message => message.kind === 16));
+        await page.locator('.desktop-viewport').click({ position: { x: 100, y: 100 } });
         const initial = messages.findLast(message => message.kind === 16);
         assert.equal(initial.text, 'initial client');
         notify(1, initial.values[1], 1);
