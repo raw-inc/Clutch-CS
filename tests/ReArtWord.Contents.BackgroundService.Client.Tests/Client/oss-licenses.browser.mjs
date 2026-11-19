@@ -79,7 +79,7 @@ for (const language of ['ja', 'en'])
         const csv = page.locator('section').filter({ has: page.getByRole('heading', { name: 'CsvHelper', exact: true }) });
         const selection = language === 'ja' ? '採用ライセンス: Apache-2.0' : 'Selected license: Apache-2.0';
         assert.ok(await csv.getByText(selection, { exact: true }).isVisible());
-        assert.match(await csv.locator('.muted').textContent(), /MS-PL OR Apache-2\.0/u);
+        assert.ok(await csv.getByText('MS-PL OR Apache-2.0', { exact: true }).isVisible());
         await csv.locator('summary').first().click();
         await csv.locator('pre').filter({ hasText: 'Apache License' }).waitFor({ state: 'visible' });
         const zstd = page.locator('section').filter({ has: page.getByRole('heading', { name: 'ZstdSharp.Port', exact: true }) });
