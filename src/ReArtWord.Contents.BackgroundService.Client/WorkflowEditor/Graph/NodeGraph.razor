@@ -33,7 +33,9 @@
             <rect class="node-header" x="1" y="1" width="@(CardWidth(node)-2)" height="50" rx="6" pointer-events="none" />
             <rect class="category-strip" x="1" y="9" width="4" height="33" rx="2" pointer-events="none" />
             <NodeNameLabel Node="node" Descriptor="descriptor" Width="@(CardWidth(node)-24)" />
-<text x="12" y="45" class="node-type">@Short(string.IsNullOrWhiteSpace(node.LogicalName)?node.Id:Ui.NodeName(descriptor),24)<title>@node.Id</title></text>
+            <foreignObject x="12" y="32" width="@(CardWidth(node)-92)" height="18" class="node-identity">
+                <div xmlns="http://www.w3.org/1999/xhtml" title="@node.Id">@(string.IsNullOrWhiteSpace(node.LogicalName) ? node.Id : Ui.NodeName(descriptor))</div>
+            </foreignObject>
             <text x="@(CardWidth(node)-12)" y="45" text-anchor="end" class="node-kind">@Ui[descriptor is null?"?":descriptor.IsValueOperation?"VALUE":descriptor.Kind==ENodeKind.Source?"SOURCE":"ACTION"]<title>@Ui[GraphPresentation.CategoryName(descriptor?.Category??string.Empty)]</title></text>
             @for(var index=0;index<inputs.Count;index++)
             {
@@ -41,8 +43,12 @@
                 <g class="port-group kind-@port.Key" @onpointerdown:stopPropagation="true" data-wire-node="@node.Id" data-wire-port="@name" data-wire-output="false" @onclick="()=>Input(node.Id,name)">
                     <title>@(node.Id+"."+PortName(node.Id,name,false)+" ← "+port.DisplayLabel(Ui)+" · "+Ui[port.Description])</title>
                     <circle role="button" tabindex="0" aria-label="@Ui.Format("{0} input {1} ({2})",node.Id,PortName(node.Id,name,false),port.DisplayLabel(Ui))" @onkeydown:stopPropagation="true" @onkeydown="e=>InputKey(node.Id,name,e)" cx="0" cy="@y" r="7" class="port @(EndpointHighlighted(node.Id,name,false)?"endpoint-highlight":null)" />
-                    <text x="12" y="@(y+4)">@Short(PortName(node.Id,name,false),16)</text>
-                    @if(View.ShowPortTypes){<g><text class="port-type" x="12" y="@(y+16)">@Short(port.DisplayLabel(Ui),18)</text></g>}
+                    @{var portLabel = PortName(node.Id,name,false);}
+                    <foreignObject x="12" y="@(y-10)" width="@(CardWidth(node)/2-18)" height="@(View.ShowPortTypes ? 29 : 20)" class="port-caption">
+                        <div xmlns="http://www.w3.org/1999/xhtml" title="@(portLabel + " · " + port.DisplayLabel(Ui))">
+                            <span>@portLabel</span>@if(View.ShowPortTypes){<small>@port.DisplayLabel(Ui)</small>}
+                        </div>
+                    </foreignObject>
                 </g>
             }
             @for(var index=0;index<outputs.Count;index++)
@@ -51,8 +57,13 @@
                 <g class="port-group kind-@port.Key" @onpointerdown:stopPropagation="true" data-wire-node="@node.Id" data-wire-port="@name" data-wire-output="true" @onclick="()=>Output(node.Id,name)">
                     <title>@(node.Id+"."+PortName(node.Id,name,true)+" → "+port.DisplayLabel(Ui)+" · "+Ui[port.Description])</title>
                     <circle role="button" tabindex="0" aria-label="@Ui.Format("{0} output {1} ({2})",node.Id,PortName(node.Id,name,true),port.DisplayLabel(Ui))" @onkeydown:stopPropagation="true" @onkeydown="e=>OutputKey(node.Id,name,e)" cx="@CardWidth(node)" cy="@y" r="7" class="port @(output is {} pending&&pending.Node==node.Id&&pending.Port==name?"pending":null) @(EndpointHighlighted(node.Id,name,true)?"endpoint-highlight":null)" />
-                    <text x="@(CardWidth(node)-12)" y="@(y+4)" text-anchor="end">@Short(PortName(node.Id,name,true),16)@if(string.Equals(name,CompletionPorts.Success,StringComparison.Ordinal)){<tspan>: @Diagnostics.Values.Display(Model.ClusterId,Model.Draft,node.Id)</tspan>}</text>
-                    @if(View.ShowPortTypes){<g><text class="port-type" x="@(CardWidth(node)-12)" y="@(y+16)" text-anchor="end">@Short(port.DisplayLabel(Ui),18)</text></g>}
+                    @{var portLabel = PortName(node.Id,name,true);
+                    if (string.Equals(name,CompletionPorts.Success,StringComparison.Ordinal)){portLabel += ": " + Diagnostics.Values.Display(Model.ClusterId,Model.Draft,node.Id);}}
+                    <foreignObject x="@(CardWidth(node)/2+6)" y="@(y-10)" width="@(CardWidth(node)/2-18)" height="@(View.ShowPortTypes ? 29 : 20)" class="port-caption port-output">
+                        <div xmlns="http://www.w3.org/1999/xhtml" title="@(portLabel + " · " + port.DisplayLabel(Ui))">
+                            <span>@portLabel</span>@if(View.ShowPortTypes){<small>@port.DisplayLabel(Ui)</small>}
+                        </div>
+                    </foreignObject>
                 </g>
             }
             @if(node.Type is "control.button" or "control.toggleButton")

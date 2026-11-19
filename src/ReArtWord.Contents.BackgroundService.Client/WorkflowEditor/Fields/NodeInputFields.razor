@@ -37,10 +37,14 @@
     var raw = (connected?null:Model.ReadInput(key)) ?? (binary ? Convert.ToBase64String(value?.Binary.ToArray() ?? []) : kind == JsonValueKind.String && value?.Json.ValueKind==JsonValueKind.String ? value.Json.GetString() ?? string.Empty : value?.Json.GetRawText() ?? string.Empty);
     var reason = connected ? Ui[value is null?"Connected value is not available without execution":"Connected value preview · read-only"] : Inline && binary ? Ui["Edit in inspector"] : null;
     <label @key="port.Name" @onfocusin="()=>BeginInput(port.Name,kind)" @onfocusout="()=>EndInput(port.Name)" class="@(Inline ? "node-inline-field" : null)">
-        @Ui.PortName(Node.Type,port.Name,false) @(port.Required ? "*" : "")
+        <span class="field-caption" title="@Ui.PortName(Node.Type,port.Name,false)">@Ui.PortName(Node.Type,port.Name,false) @(port.Required ? "*" : "")</span>
         @if(expected?.Type=="type definition")
         {
             <TypeInputField Value="value" Disabled="@(reason is not null)" ValueChanged='v=>CommitAsync(port.Name,v.ValueKind==JsonValueKind.Undefined?string.Empty:v.GetRawText(),false,JsonValueKind.Undefined)' InvalidChanged='raw=>TypeEditorBinding.InvalidAsync(Model,key,InvalidChanged,raw,UiCancellation)' />
+        }
+        else if (Inline && connected && !binary)
+        {
+            <NodeReadout Text="@(value is null ? reason : raw)" />
         }
         else if(kind is JsonValueKind.True or JsonValueKind.False)
         {
@@ -54,7 +58,7 @@
         {
             <textarea disabled="@(reason is not null)" aria-label="@(Ui.PortName(Node.Type,port.Name,false)+Ui[" constant input"])" title="@(reason ?? Ui[binary ? "port.input.binaryFormat" : "port.input.format"])" value="@raw" @oninput="e=>CommitAsync(port.Name,e.Value?.ToString()??string.Empty,binary,kind)" />
         }
-        @if (reason is not null) { <small class="node-inline-reason" title="@reason">@reason</small> }
+        @if (reason is not null && !(Inline && connected && !binary && expected?.Type != "type definition")) { <small class="node-inline-reason" title="@reason">@reason</small> }
         @if (!connected && Model.ReadInput(key) is not null) { <small class="error">@(binary ? Ui["Enter valid Base64"] : Ui["Enter valid JSON"])</small> }
     </label>
 }

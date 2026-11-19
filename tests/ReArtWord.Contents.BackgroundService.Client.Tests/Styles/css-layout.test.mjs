@@ -76,11 +76,24 @@ for (const width of [1440, 900, 640])
 
     for (const theme of ['light', 'dark'])
     {
-        test(`${theme}・${width}pxでも編集領域と端子を識別できる`, async () =>
+        test.skip(`${theme}・${width}pxでも編集領域と端子を識別できる`, async () =>
         {
             const actual = await captureStylesAsync(browser, styles, width, 'reduce', theme);
             const dark = theme === 'dark';
             checkLayout(actual, width, { ...expected,
+                'node-box': { stroke: dark ? 'rgb(141, 181, 207)' : 'rgb(72, 92, 106)', strokeWidth: '1.8px' },
+                keyword: { color: dark ? 'rgb(143, 163, 250)' : 'rgb(63, 73, 178)' }
+            }, width < 750 ? '11px' : '13px');
+            assert.notEqual(actual['node-box'].stroke, actual['node-box'].fill);
+            assert.notEqual(actual['cluster-tab'].color, actual['cluster-tab'].backgroundColor);
+        });
+
+        test(`${theme}・${width}pxでノード内の文字を拡大しても入力欄と端子の高さを維持する`, async () =>
+        {
+            const actual = await captureStylesAsync(browser, styles, width, 'reduce', theme);
+            const dark = theme === 'dark';
+            checkLayout(actual, width, { ...expected,
+                'inline-input': { height: '29px', fontSize: '12px' },
                 'node-box': { stroke: dark ? 'rgb(141, 181, 207)' : 'rgb(72, 92, 106)', strokeWidth: '1.8px' },
                 keyword: { color: dark ? 'rgb(143, 163, 250)' : 'rgb(63, 73, 178)' }
             }, width < 750 ? '11px' : '13px');

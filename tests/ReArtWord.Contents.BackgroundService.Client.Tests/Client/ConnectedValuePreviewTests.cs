@@ -80,12 +80,27 @@ public sealed class ConnectedValuePreviewTests
     /// <returns>Razorの出力と保存内容の確認です。</returns>
     [Theory]
     [InlineData(false, false, true)]
-    [InlineData(false, true, true)]
+    [InlineData(false, true, true, Skip = "旧カードは接続値を無効な入力欄で表示していました。")]
     [InlineData(true, false, true)]
-    [InlineData(true, true, true)]
+    [InlineData(true, true, true, Skip = "旧カードは接続値を無効な設定欄で表示していました。")]
     [InlineData(false, false, false)]
     [InlineData(true, false, false)]
     public async Task ConnectedFieldsRenderPreviewWithoutChangingSavedData(bool setting, bool inline, bool known)
+        => await VerifyPreviewAsync(setting, inline, known, true).ConfigureAwait(true);
+
+    /// <summary>接続済みのカードには値か未取得の理由を読み取り専用で表示します。</summary>
+    /// <returns>表示と保存値の確認です。</returns>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task ConnectedCardDisplaysReadOnlyValueAsync(bool setting, bool known)
+        => await VerifyPreviewAsync(setting, true, known, false).ConfigureAwait(true);
+
+    /// <summary>値の出所と表示を照合し、確認だけで草稿を変更していないことを検証します。</summary>
+    /// <returns>接続値の確認結果です。</returns>
+    private static async Task VerifyPreviewAsync(bool setting, bool inline, bool known, bool disabledField)
     {
         WorkflowDefinition document = Definition("string", "live preview");
         string port = setting ? SettingPorts.Name("message")
@@ -124,7 +139,16 @@ public sealed class ConnectedValuePreviewTests
             parameters["Ports"] = new PortDescriptor[] { new("message", EPortValueKind.Json) };
             return (await renderer.RenderComponentAsync<NodeInputFields>(ParameterView.FromDictionary(parameters)).ConfigureAwait(true)).ToHtmlString();
         }).ConfigureAwait(true);
-        Assert.Contains("disabled", html, StringComparison.Ordinal);
+        if (disabledField)
+        {
+            Assert.Contains("disabled", html, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.DoesNotContain("<input", html, StringComparison.Ordinal);
+            Assert.DoesNotContain("<textarea", html, StringComparison.Ordinal);
+            Assert.DoesNotContain("<select", html, StringComparison.Ordinal);
+        }
         Assert.DoesNotContain("saved fallback", html, StringComparison.Ordinal);
         string expected = known ? "live preview"
                                 : "not available without execution";

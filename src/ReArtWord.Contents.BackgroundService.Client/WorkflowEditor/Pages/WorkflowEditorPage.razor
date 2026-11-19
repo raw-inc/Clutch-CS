@@ -117,9 +117,22 @@ else
 </Modal>
 @if(ExperimentalEnabled){<Modal Wide="true" Open="debugOpen" Title="@Ui["Workflow next-input debug"]" Close="()=>debugOpen=false"><WorkflowDebugPanel @key="(Model.ClusterId,Model.Draft.Document.Id,Api.SelectedPeerId)" WorkflowId="@Model.Draft.Document.Id" /></Modal>}
 <Modal Open="documentToolsOpen" Title="@Ui["Workflow actions"]" Close="()=>documentToolsOpen=false">
-    <button class="danger" disabled="@busy" @onclick="()=>{documentToolsOpen=false;deleteOpen=true;}"><UiIcon Name="trash" />@Ui["Delete workflow"]</button>
-    @if(!Model.Draft.Document.IsDashboard){<button @onclick="()=>{documentToolsOpen=false;compatibilityOpen=true;}">@Ui["Check compatibility"]</button>}
-    <div class="action-list">@if(!Model.Draft.Document.IsDashboard){<button disabled="@(Model.SelectedNode is null||busy)" @onclick="RunSelectedAsync">@Ui["Run from selected node"]</button>}<button @onclick="()=>{documentToolsOpen=false;importOpen=true;}">@Ui["Import YAML / JSON"]</button><button @onclick="ExportAsync">@Ui["Export JSON"]</button><button disabled="@(busy||LocalContext)" title="@(LocalContext?Ui["Connect to a Core to export YAML."]:null)" @onclick="()=>ExportYamlAsync(lifetime.Token)">@Ui["Export YAML"]</button><button @onclick="()=>{documentToolsOpen=false;operationsOpen=true;}">@Ui["History and result lookup"]</button></div>
+    <h3>@Ui["Workflow files"]</h3>
+    <div class="action-list">
+        <button @onclick="()=>{documentToolsOpen=false;importOpen=true;}"><UiIcon Name="folder" />@Ui["Import YAML / JSON"]</button>
+        <button @onclick="ExportAsync"><UiIcon Name="download" />@Ui["Export JSON"]</button>
+        <button disabled="@(busy||LocalContext)" title="@(LocalContext?Ui["Connect to a Core to export YAML."]:null)" @onclick="()=>ExportYamlAsync(lifetime.Token)"><UiIcon Name="download" />@Ui["Export YAML"]</button>
+    </div>
+    <h3>@Ui["Execution and diagnostics"]</h3>
+    <div class="action-list">
+        @if (!Model.Draft.Document.IsDashboard)
+        {
+            <button disabled="@(Model.SelectedNode is null||busy)" @onclick="RunSelectedAsync"><UiIcon Name="play" />@Ui["Run from selected node"]</button>
+            <button @onclick="()=>{documentToolsOpen=false;compatibilityOpen=true;}"><UiIcon Name="check" />@Ui["Check compatibility"]</button>
+        }
+        <button @onclick="()=>{documentToolsOpen=false;operationsOpen=true;}"><UiIcon Name="history" />@Ui["History and result lookup"]</button>
+    </div>
+    <div class="destructive-action"><button class="quiet danger" disabled="@busy" @onclick="()=>{documentToolsOpen=false;deleteOpen=true;}"><UiIcon Name="trash" />@Ui["Delete workflow"]</button></div>
 </Modal>
 <WorkflowDeleteDialog Open="deleteOpen" Close="()=>deleteOpen=false" Deleted="DeletedWorkflowAsync" />
 <Modal Open="compatibilityOpen" Title="@Ui["Behavior contract compatibility"]" Close="()=>compatibilityOpen=false"><CompatibilityPanel @key="(Model.Draft.Document.Id,Api.SelectedClusterId,Api.SelectedPeerId)" WorkflowId="@Model.Draft.Document.Id" /></Modal>

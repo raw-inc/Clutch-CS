@@ -738,3 +738,7 @@
         display: none;
     }
 }
+
+.studio .editor-toolbar button:not(.icon-button) {
+    padding-block: 6px 4px;
+}

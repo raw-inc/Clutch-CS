@@ -15,12 +15,6 @@
     outline: none;
 }
 
-.node-type {
-    font-size: 10px;
-    fill: var(--muted);
-    pointer-events: none;
-}
-
 .graph-node > g > text,
 .port-label {
     font-size: 10px;
@@ -83,8 +77,8 @@
 
 .node-card-fields ::deep .node-inline-field {
     margin: 0;
-    padding: 3px 0 5px;
-    font-size: 10px;
+    padding: 1px 4px;
+    font-size: 12px;
     color: var(--muted);
     line-height: 16px;
 }
@@ -94,8 +88,8 @@
 ::deep .node-inline-field > textarea {
     display: block;
     width: 100%;
-    margin-top: 4px;
-    font-size: 11px;
+    margin-top: 2px;
+    font-size: 12px;
     padding: 5px 7px;
     border-color: var(--line);
     border-bottom-color: var(--control);
@@ -158,9 +152,13 @@
     fill: var(--category-color);
 }
 
-.graph-node .node-type {
-    fill: var(--muted);
-    font-size: 9px;
+.node-identity div {
+    font-size: 11px;
+    line-height: 18px;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .graph-node .node-kind {
@@ -170,9 +168,26 @@
     pointer-events: none;
 }
 
-.graph-node .port-group > text {
-    fill: var(--ink);
-    font-size: 10px;
+.port-caption span,
+.port-caption small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.port-caption span {
+    font: 600 12px/17px var(--font-ui);
+    color: var(--ink);
+}
+
+.port-caption small {
+    font: 500 10px/12px var(--font-ui);
+    color: var(--muted);
+}
+
+.port-output {
+    text-align: right;
 }
 
 .graph-node .port-group .port-type {
@@ -206,9 +221,10 @@
 }
 
 .graph-node .node-card-fields ::deep .node-inline-group {
-    font-size: 8px;
-    letter-spacing: 0.4px;
-    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--ink);
     border-color: var(--line);
 }
 
@@ -221,7 +237,7 @@
 }
 
 .graph-node ::deep .node-inline-field > small {
-    font-size: 8px;
+    font-size: 10px;
     color: var(--muted);
 }
 
