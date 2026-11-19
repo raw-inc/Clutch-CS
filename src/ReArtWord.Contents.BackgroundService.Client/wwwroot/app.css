@@ -573,12 +573,11 @@ details[open] > summary {
     gap: 16px;
 }
 
-.conflict-candidates summary > span {
-    min-width: 0;
+.conflict-candidates details > code {
+    display: block;
 }
 
 .conflict-candidates code {
-    display: block;
     overflow-wrap: anywhere;
     color: var(--muted);
     font-weight: normal;
