@@ -65,6 +65,13 @@ public sealed partial class Modal : IAsyncDisposable
         set;
     }
 
+    /// <summary>確定操作の前にダイアログ下部で入力する項目です。</summary>
+    [Parameter]
+    public RenderFragment? ActionFields
+    {
+        get; set;
+    }
+
     /// <summary>ダイアログ下部に固定する確定操作です。</summary>
     [Parameter]
     public RenderFragment? Actions

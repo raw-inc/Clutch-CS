@@ -5,7 +5,7 @@
         <div class="dialog-content">@ChildContent</div>
         @if (Actions is not null)
         {
-            <footer class="toolbar"><button type="button" @onclick="()=>RequestCloseAsync(UiCancellation)">@Ui[ShowCloseAction?"Close":"Cancel"]</button>@Actions</footer>
+            <footer class="toolbar">@ActionFields<button type="button" @onclick="()=>RequestCloseAsync(UiCancellation)">@Ui[ShowCloseAction?"Close":"Cancel"]</button>@Actions</footer>
         }
         else if (ShowCloseAction)
         {

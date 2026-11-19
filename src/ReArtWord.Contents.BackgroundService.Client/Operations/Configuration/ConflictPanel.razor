@@ -77,8 +77,10 @@
         @if(!SameConnection){<p class="notice error">@Ui["The connection changed. Retrieve the list again."]</p>}
     }
     </ChildContent>
-    <Actions>
+    <ActionFields>
         <label class="resolution-review"><input type="checkbox" @bind="reviewed" disabled="@busy" />@Ui["I reviewed all displayed candidate revisions"]</label>
+    </ActionFields>
+    <Actions>
         <button class="primary" disabled="@(busy||!SameConnection||selected?.Resolvable!=true||version is null||!reviewed)" @onclick="ResolveAsync">@Ui["Resolve using the reviewed candidate"]</button>
     </Actions>
 </Modal>
