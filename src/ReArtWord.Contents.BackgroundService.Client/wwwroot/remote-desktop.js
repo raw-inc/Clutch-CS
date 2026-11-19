@@ -22,7 +22,7 @@ export async function desktopView(root, ctx)
     root.className = 'desktop-workspace';
     const experimental = experimentalEnabled();
     let viewOnly = false, viewOnlySupported = false;
-    let clipboard = null, clipboardSupported = false, clipboardPointerInside = false;
+    let clipboard = null, clipboardSupported = false, clipboardPointerInside = false, clipboardAreaUsed = false;
     let annotationsSupported = false, annotationFrame = 0;
     const annotationState = createAnnotationState();
     const annotationPointer = createAnnotationPointer(send, point, () => viewOnly && annotationsSupported && !hidden && socket?.readyState === WebSocket.OPEN);
@@ -813,6 +813,7 @@ export async function desktopView(root, ctx)
         const previous = socket;
         socket = null;
         clipboard.connect(false);
+        clipboardPointerInside = clipboardAreaUsed = false;
         clipboard.leave();
         clipboardSupported = false;
         annotationPointer.leave();
@@ -2143,9 +2144,9 @@ export async function desktopView(root, ctx)
     {
         const previous = clipboard?.available;
         clipboard?.connect(clipboardSupported && !viewOnly && !localConnection && socket?.readyState === WebSocket.OPEN);
-        if (!previous && clipboard?.available && (clipboardPointerInside || viewport.contains(document.activeElement)))
+        if (previous && !clipboard.available)
         {
-            activateClipboard();
+            clipboardPointerInside = clipboardAreaUsed = false;
         }
         clipboardSync.disabled = !clipboard?.available;
         clipboardSync.setAttribute('aria-pressed', String(clipboard?.enabled === true));
@@ -2353,6 +2354,10 @@ export async function desktopView(root, ctx)
         {
             return;
         }
+        if (!clipboardAreaUsed && !event.repeat)
+        {
+            activateClipboard();
+        }
         const key = physicalKey(event);
         if (key)
         {
@@ -2404,11 +2409,16 @@ export async function desktopView(root, ctx)
     /** ユーザー操作から権限の読取りを開始し、イベントの外へ例外を残しません。 */
     function activateClipboard()
     {
+        if (!clipboard.available || !clipboard.enabled)
+        {
+            return;
+        }
         if (document.hidden || !document.hasFocus())
         {
             clipboard.leave();
             return;
         }
+        clipboardAreaUsed = true;
         clipboard.activateAsync().catch(() => ctx.say(ctx.t('Clipboard synchronization is unavailable.', 'クリップボード同期を利用できません。')));
     }
 
@@ -2417,7 +2427,7 @@ export async function desktopView(root, ctx)
     // クリップボードを読み始めるのは、利用者が映像上でポインターを動かすか、操作対象にしたときに限る。
     viewport.addEventListener('pointermove', () =>
     {
-        if (!clipboardPointerInside)
+        if (!clipboardPointerInside && clipboard.available)
         {
             clipboardPointerInside = true;
             activateClipboard();
@@ -2429,6 +2439,7 @@ export async function desktopView(root, ctx)
         clipboard.leaveArea();
     }, { signal: ctx.signal });
     viewport.addEventListener('focusin', activateClipboard, { signal: ctx.signal });
+    viewport.addEventListener('pointerdown', activateClipboard, { signal: ctx.signal });
 
     /** 操作領域以外でのローカルコピーを、遅れて届いたホスト更新より優先します。 */
     function copiedOutsideDesktop(event)
@@ -2476,7 +2487,8 @@ export async function desktopView(root, ctx)
     }, { signal: ctx.signal });
     window.addEventListener('focus', () =>
     {
-        if (clipboardPointerInside || viewport.contains(document.activeElement))
+        // 再接続後もDOMのフォーカスは残るため、この接続で操作した場合だけ復帰時の同期を再開する。
+        if (clipboardAreaUsed && (clipboardPointerInside || viewport.contains(document.activeElement)))
         {
             activateClipboard();
         }
