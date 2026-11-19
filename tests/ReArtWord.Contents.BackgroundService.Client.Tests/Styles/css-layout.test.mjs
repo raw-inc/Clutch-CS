@@ -129,6 +129,16 @@ function luminance(color)
 
 for (const theme of ['light', 'dark'])
 {
+    test(`${theme}の狭い画面で候補と監視設定の選択枠が縦長にならない`, async () =>
+    {
+        const actual = await captureStylesAsync(browser, styles, 390, 'reduce', theme);
+        for (const key of ['candidate-checked', 'candidate-unchecked', 'application-check'])
+        {
+            assert.ok((16) <= (parseFloat(actual[key].width)), key);
+            assert.equal(actual[key].width, actual[key].height, key);
+        }
+    });
+
     test(`${theme}のカード・主操作・状態ラベルで文字のコントラストを確保する`, async () =>
     {
         const actual = await captureStylesAsync(browser, styles, 900, 'reduce', theme);

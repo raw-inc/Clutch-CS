@@ -869,11 +869,6 @@ td details {
     margin-bottom: 10px;
 }
 
-.candidate-option > label > input[type="radio"] {
-    width: auto;
-    margin: 0;
-}
-
 .candidate-option > label > span {
     color: var(--accent);
 }
@@ -937,7 +932,7 @@ td details {
 
 .dialog-content label:has(>input[type="checkbox"]) {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 8px;
 }
 
