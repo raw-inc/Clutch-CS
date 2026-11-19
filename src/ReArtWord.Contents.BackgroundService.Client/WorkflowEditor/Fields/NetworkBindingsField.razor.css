@@ -44,6 +44,10 @@
     grid-column: 1 / -1;
 }
 
+.network-binding-add label {
+    margin: 0;
+}
+
 .network-binding-add,
 .network-binding-actions {
     display: flex;

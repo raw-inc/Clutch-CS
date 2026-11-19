@@ -10,6 +10,7 @@
 }
 
 .package-search label {
+    margin: 0;
     display: grid;
     gap: 0.4rem;
     flex: 1;
