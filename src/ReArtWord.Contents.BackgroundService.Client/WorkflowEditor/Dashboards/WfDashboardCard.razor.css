@@ -30,11 +30,6 @@
     overflow-wrap: anywhere;
 }
 
-.dashboard-control:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 3px;
-}
-
 .dashboard-push {
     background: var(--accent);
     color: var(--on-accent);

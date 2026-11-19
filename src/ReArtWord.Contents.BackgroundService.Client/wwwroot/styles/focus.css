@@ -1,0 +1,82 @@
+/* 通常配色では寸法を変えずに下端を強調する。強制配色では OS の強調色で輪郭を示す。 */
+@media (forced-colors: none) {
+    :root :is(button, summary, a[href], span[role="button"]):focus-visible,
+    .choice-strip input:focus-visible + span {
+        outline: none;
+        background-color: var(--focus-face);
+        box-shadow: inset 0 -2px var(--focus-mark, var(--accent));
+    }
+
+    :root :is(button.primary, .desktop-connect, .dashboard-push, .manual button, [aria-pressed="true"]):focus-visible,
+    .choice-strip input:checked:focus-visible + span {
+        --focus-mark: var(--on-accent);
+
+        color: var(--on-accent);
+        background-color: var(--accent-hover);
+    }
+
+    :root :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"]), select, textarea):focus,
+    .search-field:focus-within,
+    .code-input:focus-within,
+    .script-editor-surface .cm-editor.cm-focused {
+        outline: none;
+        border-color: var(--accent);
+        background-color: var(--focus-face);
+        box-shadow: inset 0 -2px var(--accent);
+    }
+
+    :root :is(input, select, textarea)[aria-invalid="true"]:focus {
+        border-color: var(--danger);
+        box-shadow: inset 0 -2px var(--danger);
+    }
+
+    :root :is(.search-field input, .code-input textarea):focus {
+        outline: none;
+        box-shadow: none;
+        background: transparent;
+    }
+
+    :root :is(input[type="checkbox"], input[type="radio"], input[type="range"], input[type="color"]):focus-visible {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: inset 0 -2px var(--accent);
+    }
+
+    :root label:has(> :is(input[type="checkbox"], input[type="radio"]):focus-visible):not(.choice-strip label) {
+        background-color: var(--focus-face);
+        box-shadow: inset 0 -2px var(--accent);
+    }
+
+    :root label > :is(input[type="checkbox"], input[type="radio"]):focus-visible {
+        outline: none;
+        box-shadow: none;
+    }
+
+    :root :is(.navigation a, .workspace-index > [role="tab"], .tabs button, .editor-cluster-tabs button, .workflow-tab):focus-visible {
+        position: relative;
+        box-shadow: none;
+    }
+
+    :root .workspace-index > [role="tab"][aria-selected="true"]:focus-visible {
+        background: var(--accent-soft);
+        box-shadow: inset 3px 0 var(--accent);
+    }
+
+    :root :is(.navigation a, .workspace-index > [role="tab"], .tabs button, .editor-cluster-tabs button, .workflow-tab):focus-visible::before {
+        content: "";
+        position: absolute;
+        inset-block-start: 8px;
+        inset-inline: 25%;
+        height: 2px;
+        background: currentcolor;
+        pointer-events: none;
+    }
+}
+
+@media (forced-colors: active) {
+    :root :is(button, input, select, textarea, summary, a[href], [role="button"], [role="tab"]):focus-visible,
+    .choice-strip input:focus-visible + span {
+        outline: 2px dashed Highlight;
+        outline-offset: -2px;
+    }
+}

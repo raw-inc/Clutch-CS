@@ -19,7 +19,7 @@ before(async() =>
             if (pathname === '/')
             {
                 response.setHeader('Content-Type', 'text/html; charset=utf-8');
-                response.end('<!doctype html><link rel="stylesheet" href="/styles/fonts.css"><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-tools.css"><main id="tool"></main>');
+                response.end('<!doctype html><link rel="stylesheet" href="/styles/fonts.css"><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-tools.css"><link rel="stylesheet" href="/styles/focus.css"><main id="tool"></main>');
                 return;
             }
             const file = pathname === '/local-fixture.mjs' ? fixture : path.resolve(root, '.' + decodeURIComponent(pathname));
@@ -129,6 +129,28 @@ async function openDirectoryAsync(pane)
 
 for (const [name, engine] of [['Chrome', chromium], ['Firefox', firefox]])
 {
+    test(`${name}: folder fields use the dialog focus treatment and keyboard focus returns to the opener`, async context =>
+    {
+        const { page } = await openFilesAsync(context, engine, 'files');
+        const pane = page.locator('.file-pane').first();
+        await pane.locator('select').selectOption('test-host');
+        await openDirectoryAsync(pane);
+        const opener = pane.getByRole('button', { name: 'New folder', exact: true });
+        await opener.click();
+        const dialog = page.getByRole('dialog'), field = dialog.getByLabel('Folder name');
+        await field.waitFor();
+        const style = await field.evaluate(e =>
+        {
+            const s = getComputedStyle(e);
+            return [e === document.activeElement, s.outlineStyle, s.boxShadow, s.borderTopLeftRadius, getComputedStyle(e.closest('dialog')).borderTopLeftRadius];
+        });
+        assert.deepEqual([style[0], style[1], style[3], style[4]], [true, 'none', '6px', '12px']);
+        assert.ok(style[2].includes('inset'));
+        await page.keyboard.press('Escape');
+        await dialog.waitFor({ state: 'detached' });
+        assert.ok(await opener.evaluate(e => e === document.activeElement));
+    });
+
     test(`${name}: Cluster panes confirm creation and recursive multi-delete, then refresh both copies of the folder`, async context =>
     {
         const { page, state } = await openFilesAsync(context, engine, 'files');

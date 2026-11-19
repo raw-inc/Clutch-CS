@@ -273,3 +273,30 @@ test('published conflict cards keep their heading, explanation and action togeth
         }
     }
 });
+
+test('keyboard focus stays visible inside a field without shifting it; forced colors retain a focus indicator', async context =>
+{
+    const browser = await chromium.launch();
+    context.after(() => browser.close());
+    const page = await browser.newPage({ serviceWorkers: 'block' });
+    await page.goto(origin + '/licenses');
+    const field = page.getByRole('searchbox');
+    await field.waitFor();
+    for (const colorScheme of ['light', 'dark'])
+    {
+        await page.emulateMedia({ colorScheme });
+        await field.evaluate(e => e.blur());
+        const before = await field.boundingBox();
+        await field.focus();
+        const mark = await field.evaluate(e =>
+        {
+            const s = getComputedStyle(e);
+            return [s.outlineStyle, s.boxShadow, s.borderBottomColor];
+        });
+        assert.equal(mark[0], 'none');
+        assert.ok(mark[1].includes('inset') && mark[1].includes(mark[2]));
+        assert.deepEqual(await field.boundingBox(), before);
+    }
+    await page.emulateMedia({ forcedColors: 'active' });
+    assert.notEqual(await field.evaluate(e => getComputedStyle(e).outlineStyle), 'none');
+});

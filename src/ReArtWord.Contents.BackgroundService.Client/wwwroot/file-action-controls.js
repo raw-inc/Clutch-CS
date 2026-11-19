@@ -78,6 +78,12 @@ export function fileActionControls(root, ctx, actions)
                 await ctx.guard(() => actions.refresh(snapshot));
             }
             actions.changed();
+
+            // 確認中は呼び出し元ボタンを無効にするため、ダイアログを閉じるだけではフォーカスが戻らない。
+            if (!attempted && current(snapshot) && document.activeElement === document.body)
+            {
+                (creating ? create : remove).focus({ preventScroll: true });
+            }
         }
     }
 

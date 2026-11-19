@@ -30,11 +30,6 @@
     cursor: default;
 }
 
-.comment-text:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 3px;
-}
-
 .dashboard-comment textarea {
     width: 100%;
     min-height: 96px;

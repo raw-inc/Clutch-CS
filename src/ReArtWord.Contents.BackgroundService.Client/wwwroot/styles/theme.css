@@ -30,6 +30,7 @@
     --panel-inset: 8px;
     --radius-inset: max(0px, calc(var(--radius-panel) - var(--panel-inset)));
     --radius-chart: 3px;
+    --focus-face: color-mix(in srgb, var(--accent) 8%, var(--panel));
     --radius-pill: 999px;
     --font-title: roboto, "Zen Kaku Gothic New", "M PLUS 2", meiryo, system-ui, sans-serif;
     --font-ui: roboto, "M PLUS 2", "Yu Gothic UI", meiryo, system-ui, sans-serif;

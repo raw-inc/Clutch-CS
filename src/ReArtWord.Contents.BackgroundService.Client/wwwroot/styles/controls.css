@@ -214,11 +214,6 @@ meter::-moz-meter-bar {
     border-color: var(--accent);
 }
 
-.choice-strip input:focus-visible + span {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-}
-
 .choice-strip input:disabled + span {
     background: var(--disabled-face);
     color: var(--disabled-ink);
