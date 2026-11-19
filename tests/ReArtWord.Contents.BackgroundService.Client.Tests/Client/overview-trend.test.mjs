@@ -67,7 +67,7 @@ async function fixtureAsync(t, reduce = false)
     } };
     const series = { setAttribute: (name, value) => attributes.set(name, value),
 
-        querySelector: () => line };
+        querySelector: selector => selector === ".trend-highlight" ? band : line };
     const chart = { isConnected: true, hidden: false, height: 104, width: 300, viewBox: { baseVal: { y: -2, height: 104, width: 300 } },
 
         querySelector: selector => ({ '[data-shadow-blur]': blur, '[data-shadow-band]': band, '[data-area-clip]': clip })[selector] ?? series,

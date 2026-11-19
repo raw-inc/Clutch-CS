@@ -49,7 +49,7 @@ function draw()
 }
 
 /** 現在の設定と状態から表示を更新します。 */
-export function update(chart, path, origin, serverNow)
+export function update(chart, path, origin, serverNow, highlight = "")
 {
     if (!chart?.isConnected)
     {
@@ -59,7 +59,7 @@ export function update(chart, path, origin, serverNow)
     if (!state)
     {
         const series = chart.querySelector("[data-series]");
-        state = { series, line: series.querySelector("path"), origin: 0 };
+        state = { series, line: series.querySelector("path"), highlight: series.querySelector(".trend-highlight"), origin: 0 };
         charts.set(chart, state);
     }
     state.epoch = Number(serverNow) - performance.now();
@@ -68,6 +68,11 @@ export function update(chart, path, origin, serverNow)
     {
         state.line.setAttribute("d", path);
         state.path = path;
+    }
+    if (state.highlightPath !== highlight)
+    {
+        state.highlight.setAttribute("d", highlight);
+        state.highlightPath = highlight;
     }
     position(state, performance.now());
     schedule();

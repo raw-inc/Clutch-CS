@@ -35,6 +35,11 @@
     stroke-linecap: round;
 }
 
+.trend-highlight {
+    stroke: var(--warn);
+    stroke-linecap: butt;
+}
+
 .trend-plot small {
     position: absolute;
     inset: 0;
@@ -55,4 +60,19 @@ figcaption {
     margin-top: 4px;
     color: var(--muted);
     font-size: 10px;
+}
+
+.threshold-label {
+    color: var(--warn);
+    font-weight: 600;
+}
+
+@media (forced-colors: active) {
+    .trend-line {
+        stroke: CanvasText;
+    }
+
+    .trend-highlight {
+        stroke: Highlight;
+    }
 }

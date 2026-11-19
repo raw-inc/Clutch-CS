@@ -98,16 +98,24 @@ internal static class DashboardMetrics
     /// <summary>実測点だけを時間軸に配置し、欠測区間を接続しません。</summary>
     /// <returns>SVGのパス。二点未満なら空です。</returns>
     internal static string Trend(IReadOnlyList<ResourceSample> samples, string metric, string target, double maximum = 100)
+        => TrendPaths(samples, metric, target, maximum).Series;
+
+    /// <summary>使用率は80%との交点で線を分け、超えた区間だけを重ね描きします。</summary>
+    /// <returns>全実測点の折れ線と、強調する区間の折れ線です。</returns>
+    internal static (string Series, string Highlight) TrendPaths(IReadOnlyList<ResourceSample> samples, string metric, string target, double maximum)
     {
         if (samples.Count < 2 || !double.IsFinite(maximum) || maximum <= 0)
         {
-            return string.Empty;
+            return (string.Empty, string.Empty);
         }
         ResourceSample last = samples[^1];
         DateTimeOffset start = last.ObservedAt.AddMinutes(-5);
         long startMilliseconds = last.ObservedAt.ToUnixTimeMilliseconds() - 300000;
         StringBuilder result = new();
         DateTimeOffset? previous = null;
+        bool usage = metric is "cpu.usage" or "memory.usage" or "gpu.usage" or "gpu.memory.usage";
+        StringBuilder? highlight = null;
+        double lastX = 0, lastValue = 0;
         int count = 0;
         foreach (ResourceSample sample in samples.Where(sample => start.AddMinutes(-1) <= sample.ObservedAt && sample.InstanceId == last.InstanceId))
         {
@@ -117,22 +125,43 @@ internal static class DashboardMetrics
                 previous = null;
                 continue;
             }
-            string command = "M";
-            if (previous is not null && sample.ObservedAt - previous.Value <= TimeSpan.FromSeconds(15))
-            {
-                command = "L";
-            }
+            bool connected = previous is not null && sample.ObservedAt - previous.Value <= TimeSpan.FromSeconds(15);
+            string command = connected ? "L"
+                                       : "M";
             double x = (sample.ObservedAt.ToUnixTimeMilliseconds() - startMilliseconds) / 1000d;
             double y = 100 - value.Value / maximum * 100;
             result.Append(CultureInfo.InvariantCulture, $"{command}{x:F3},{y:F2} ");
+            double threshold = 80;
+            if (usage && connected && threshold < Math.Max(lastValue, value.Value))
+            {
+                double startX = lastX, endX = x, startValue = lastValue, endValue = value.Value;
+                if (lastValue <= threshold || value.Value <= threshold)
+                {
+                    double crossing = lastX + (x - lastX) * (threshold - lastValue) / (value.Value - lastValue);
+                    if (lastValue <= threshold)
+                    {
+                        startX = crossing;
+                        startValue = threshold;
+                    }
+                    else
+                    {
+                        endX = crossing;
+                        endValue = threshold;
+                    }
+                }
+                highlight ??= new();
+                highlight.Append(CultureInfo.InvariantCulture, $"M{startX:F3},{100 - startValue / maximum * 100:F2} L{endX:F3},{100 - endValue / maximum * 100:F2} ");
+            }
+            lastX = x;
+            lastValue = value.Value;
             previous = sample.ObservedAt;
             count++;
         }
         if (count < 2)
         {
-            return string.Empty;
+            return (string.Empty, string.Empty);
         }
-        return result.ToString();
+        return (result.ToString(), highlight?.ToString() ?? string.Empty);
     }
 
     /// <summary>同じ実体の表示期間だけを使い、転送量用の目盛り上限を切り上げます。</summary>

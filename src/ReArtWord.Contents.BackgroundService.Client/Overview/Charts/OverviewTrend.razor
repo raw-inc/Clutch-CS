@@ -3,12 +3,16 @@
     <div class="trend-plot">
         <svg @ref="chart" viewBox="0 -2 300 104" preserveAspectRatio="none" role="img" aria-label="@Label">
             <path d="M0,0 H300 M0,50 H300 M0,100 H300" class="trend-grid" />
-            <g data-series><path class="trend-line" /></g>
+            <g data-series><path class="trend-line" /><path class="trend-line trend-highlight" aria-hidden="true" /></g>
         </svg>
         @if (string.IsNullOrEmpty(path))
         {
             <small>@Ui["Collecting measured samples"]</small>
         }
     </div>
-    <figcaption><span>@Ui["Five minutes ago"]</span><span>@Ui["Now"]</span></figcaption>
+    <figcaption>
+        <span>@Ui["Five minutes ago"]</span>
+        @if (highlight.Length != 0){<span class="threshold-label">@Ui["Above 80%"]</span>}
+        <span>@Ui["Now"]</span>
+    </figcaption>
 </figure>

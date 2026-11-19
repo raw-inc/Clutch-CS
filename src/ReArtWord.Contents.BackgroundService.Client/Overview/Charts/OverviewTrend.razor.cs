@@ -75,6 +75,7 @@ public sealed partial class OverviewTrend : IAsyncDisposable
     } = "100 %";
 
     private string path = string.Empty;
+    private string highlight = string.Empty;
     private ElementReference chart;
     private IJSObjectReference? module;
     private long? origin;
@@ -83,7 +84,7 @@ public sealed partial class OverviewTrend : IAsyncDisposable
     /// <summary>親から渡された値に合わせて表示用の状態を更新します。</summary>
     protected override void OnParametersSet()
     {
-        path = DashboardMetrics.Trend(Samples, Metric, Target, Maximum);
+        (path, highlight) = DashboardMetrics.TrendPaths(Samples, Metric, Target, Maximum);
         origin = Samples.Count == 0 ? null
                                     : Samples[^1].ObservedAt.ToUnixTimeMilliseconds();
     }
@@ -123,7 +124,7 @@ public sealed partial class OverviewTrend : IAsyncDisposable
 
             if (module is not null)
             {
-                await module.InvokeVoidAsync("update", UiCancellation, chart, path, origin, Api.UtcNow.ToUnixTimeMilliseconds()).ConfigureAwait(true);
+                await module.InvokeVoidAsync("update", UiCancellation, chart, path, origin, Api.UtcNow.ToUnixTimeMilliseconds(), highlight).ConfigureAwait(true);
             }
         }
         finally
