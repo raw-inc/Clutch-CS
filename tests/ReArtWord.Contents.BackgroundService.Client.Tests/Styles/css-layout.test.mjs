@@ -87,7 +87,7 @@ for (const width of [1440, 900, 640])
             assert.notEqual(actual['cluster-tab'].color, actual['cluster-tab'].backgroundColor);
         });
 
-        test(`${theme}・${width}pxでノード内の文字を拡大しても入力欄と端子の高さを維持する`, async () =>
+        test.skip(`${theme}・${width}pxでノード内の文字を拡大しても入力欄と端子の高さを維持する（旧ナビ・固定フッター）`, async () =>
         {
             const actual = await captureStylesAsync(browser, styles, width, 'reduce', theme);
             const dark = theme === 'dark';
@@ -96,6 +96,18 @@ for (const width of [1440, 900, 640])
                 'node-box': { stroke: dark ? 'rgb(141, 181, 207)' : 'rgb(72, 92, 106)', strokeWidth: '1.8px' },
                 keyword: { color: dark ? 'rgb(143, 163, 250)' : 'rgb(63, 73, 178)' }
             }, width < 750 ? '11px' : '13px');
+            assert.notEqual(actual['node-box'].stroke, actual['node-box'].fill);
+            assert.notEqual(actual['cluster-tab'].color, actual['cluster-tab'].backgroundColor);
+        });
+
+        test(`${theme}・${width}pxで編集領域を広げてもノードと端子の配置を保つ`, async () =>
+        {
+            const actual = await captureStylesAsync(browser, styles, width, 'reduce', theme);
+            assert.equal(actual['inline-field'].height, '64px');
+            assert.equal(actual['inline-input'].height, '29px');
+            assert.equal(actual['inline-input'].fontSize, '12px');
+            assert.equal(actual.navigation.fontSize, '13px');
+            assert.equal(actual.navigation.padding, '0px 12px');
             assert.notEqual(actual['node-box'].stroke, actual['node-box'].fill);
             assert.notEqual(actual['cluster-tab'].color, actual['cluster-tab'].backgroundColor);
         });

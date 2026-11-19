@@ -94,17 +94,19 @@ class CardRows extends HTMLElement
         }
         for (const row of rows.values())
         {
-            alignRow(row);
+            alignRow(row, this.hasAttribute('data-balance-short-cards'));
         }
         this.removeAttribute('data-measuring');
     }
 }
 
 /** 入れ子の上端は、本文を動かさず、内側の面の直前に余白を足して揃える。 */
-function alignRow(row)
+function alignRow(row, balanceShortCards)
 {
     const heights = row.map(item => item.height);
     const stretch = 1 < row.length && Math.max(...heights) < 2 * Math.min(...heights);
+    const shortest = Math.min(...heights);
+    const shorterHeight = balanceShortCards && !stretch ? Math.max(...heights.filter(height => height < 2 * shortest)) : 0;
     const details = row.map(item => item.detail).filter(box => box?.height);
     const sizes = details.map(box => box.height);
     const alignInsets = 1 < row.length && details.length === row.length
@@ -113,6 +115,10 @@ function alignRow(row)
     for (const item of row)
     {
         item.card.toggleAttribute('data-stretch', stretch);
+        if (balanceShortCards)
+        {
+            item.card.style.setProperty('--comparable-card-height', (item.height <= shorterHeight ? shorterHeight : 0) + 'px');
+        }
         if (item.inset)
         {
             const offset = alignInsets ? top - item.detail.top : 0;

@@ -8,15 +8,14 @@
 
         <button disabled="@(busy||state?.Nodes is null)" @onclick="()=>ExportAsync(UiCancellation)">@Ui["Download debug JSON"]</button>
     </div>
-    <div class="debug-query"><button class="debug-refresh" disabled="@busy" @onclick="()=>RefreshAsync(UiCancellation)">@Ui["Refresh"]</button></div>
+    <div class="debug-query section-heading">
+        @if(problem is null){<p class="muted">@(state is null?Ui["No debug capture is reserved or retained on this connection."]:Ui["Debug state "+state.State])</p>}
+        <button class="debug-refresh" disabled="@busy" @onclick="()=>RefreshAsync(UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh"]</button>
+    </div>
     @if(problem is not null){<p class="notice error" role="status">@Ui[problem]</p>}
-    @if(state is null)
+    @if(state is not null)
     {
-        <p class="muted">@Ui["No debug capture is reserved or retained on this connection."]</p>
-    }
-    else
-    {
-        <p role="status"><strong>@Ui["Debug state "+state.State]</strong>@if(state.Outcome is not null){<span> · @Ui[state.Outcome.ToString()!]</span>} · <code>@state.Arm.Id</code> · @state.Reason</p>
+        <p role="status">@if(state.Outcome is not null){<span> · @Ui[state.Outcome.ToString()!]</span>} · <code>@state.Arm.Id</code> · @state.Reason</p>
         <p class="small">@Ui["Capture owner"]: @state.CapturePeerId · @Ui["Execution"]: <code>@state.ExecutionId</code> · @Ui["Revision"]: <code>@state.Revision</code></p>
         @if(state.Truncated){<p class="notice warn">@Ui["The capture limit was reached. This is a partial record; the workflow was not stopped."]</p>}
         <p class="muted small">@Ui["Values, connections and collections are summarized with size limits. Unexecuted branches are included; summary rows describe aggregate results."]</p>

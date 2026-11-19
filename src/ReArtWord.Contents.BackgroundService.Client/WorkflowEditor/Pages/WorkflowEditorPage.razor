@@ -41,7 +41,7 @@ else
         <div class="document-heading">
             <span class="muted small feature-stage">WorkflowEditor</span>
             <button class="icon-button" title="@Ui["Open or create a workflow"]" aria-label="@Ui["Open workflow"]" @onclick="()=>documentsOpen=true"><UiIcon Name="nodes" /><UiIcon Name="chevron" /></button>
-            <div class="document-title"><input aria-label="@Ui["Workflow name"]" value="@Model.Draft.Document.Name" @oninput="e=>Model.Change(document=>document with{Name=e.Value?.ToString()??string.Empty})" disabled="@(busy||Model.Locks.Whole(Model.Draft.Document.Id))" /></div>
+            <div class="document-title"><input aria-label="@Ui["Workflow name"]" title="@Model.Draft.Document.Name" value="@Model.Draft.Document.Name" @oninput="e=>Model.Change(document=>document with{Name=e.Value?.ToString()??string.Empty})" disabled="@(busy||Model.Locks.Whole(Model.Draft.Document.Id))" /></div>
             <span class="save-state @(Model.Draft.Dirty?"modified":string.Empty)"><span class="dot"></span>@(Model.Draft.BaseRevision is null?Ui["New · unsaved"]:Model.Draft.Dirty?Ui["Unsaved"]:Model.Draft.LocalOnly?Ui["Saved locally · not shared"]:Ui["Saved and shared"])</span>
             <div class="document-actions">
                 <button class="quiet" aria-label="@Ui["Validate workflow"]" title="@Ui["Validate"]" @onclick="ValidateAsync" disabled="@busy"><UiIcon Name="check" />@Ui["Validate"]</button>
@@ -53,10 +53,11 @@ else
         <div class="editor-toolbar">
             <button class="quiet @(catalogOpen?"active":string.Empty)" aria-pressed="@(catalogOpen?"true":"false")" aria-label="@Ui["Node catalog"]" @onclick="()=>TogglePanelAsync(true,lifetime.Token)"><UiIcon Name="add" />@Ui["Nodes"]</button>
             <span class="toolbar-divider"></span><button class="quiet icon-button" aria-label="@Ui["Undo"]" title="@Ui["Undo"]" @onclick="Model.Undo" disabled="@(!Model.CanUndo||busy)"><UiIcon Name="undo" /></button>
-            <span class="toolbar-divider"></span>
+            <span class="toolbar-divider"></span><span class="toolbar-spacer"></span>
             <label class="workflow-input-switch" title='@Ui["Edit automatic workflow inputs. Save and activate to apply. OFF stops automatic inputs after activation; manual runs remain available."]'>
                 <input type="checkbox" role="switch" @bind:get="Model.Draft.Document.Enabled" @bind:set="value=>ChangeAutomaticInputsAsync(value,lifetime.Token)" disabled="@(busy||Model.Locks.Whole(Model.Draft.Document.Id))" />
-                @Ui["Automatic workflow inputs"] · @Ui[Model.Draft.Document.Enabled?"On":"Off"]
+                <span class="workflow-input-full">@Ui["Automatic workflow inputs"]</span><span class="workflow-input-short" aria-hidden="true">@Ui["Automatic execution"]</span>
+                <span>· @Ui[Model.Draft.Document.Enabled?"On":"Off"]</span>
             </label>
             @if(LivePolicy.Enabled){<span class="badge">@Ui["Live apply · cluster"]</span>}
             <span class="toolbar-spacer"></span>
@@ -75,15 +76,21 @@ else
     <div class="workspace @(!catalogOpen?"catalog-hidden":string.Empty) @(!inspectorOpen?"inspector-hidden":string.Empty)" inert="@busy">
         <aside class="library" hidden="@(!catalogOpen)"><NodeCatalog Visible="catalogOpen" Catalog="catalog" Add="AddNode" Close="()=>catalogOpen=false" DragStarted="BeginCatalogDrag" DragEnded="EndCatalogDrag" /></aside>
         <section @ref="canvasContainer" class="canvas-container" tabindex="0" @ondragover:preventDefault="true" @ondrop="DropNodeAsync">
-            <div class="canvas-editors small muted" aria-live="polite">
-                @foreach(var people in Collaboration.Presence.Where(item=>item.Presence.WorkflowId==Model.Draft.Document.Id && item.Presence.UiInstanceId!=Collaboration.UiInstanceId).GroupBy(item=>item.Presence.DisplayName,StringComparer.Ordinal))
-                {
-                    @foreach(var peer in people)
+            @{
+                var collaborators = Collaboration.Presence.Where(item=>item.Presence.WorkflowId==Model.Draft.Document.Id && item.Presence.UiInstanceId!=Collaboration.UiInstanceId).ToArray();
+            }
+            @if(collaborators.Length>0)
+            {
+                <details class="canvas-editors">
+                    <summary>@Ui.Format("{0} editors", collaborators.Length)</summary>
+                    <ul>
+                    @foreach(var peer in collaborators)
                     {
-                        <span title="@Ui["Dashed outlines show another editor’s selection."]">@Ui["Collaborator"] · @peer.Presence.DisplayName @if(people.Count()>1){<code>@(peer.Presence.UiInstanceId.ToString("N")[..6])</code>} · @(peer.Presence.Dirty?Ui["Unsaved"]:Ui["No local changes"])</span>
+                        <li style="@("--editor-color:"+CollaborationOverlay.Color(peer.Presence.UiInstanceId))"><strong>@peer.Presence.DisplayName</strong> <span>@peer.PeerId · @peer.Presence.UiInstanceId.ToString("N")[..4]</span>@if(peer.Presence.Dirty){<span> · @Ui["Unsaved"]</span>}</li>
                     }
-                }
-            </div>
+                    </ul>
+                </details>
+            }
             <NodeGraph ToggleStates="@ToggleStates.Find(Model.ClusterId,Model.Draft.Document.Id)" ButtonPressed="RunCoreAsync" PreviewRequested="PreviewRecipe" ExtractRequested="ExtractSubworkflowAsync" @ref="graph" Catalog="catalog" SelectionChanged="StateHasChanged" DragChanged="value=>dragging=value" ShowDetails="showDetails" Zoom="zoom" ZoomChanged="value=>zoom=value" View="EffectiveView" />
             @if(Model.Draft.Document.Nodes.Count==0){<div class="canvas-empty"><button @onclick="()=>catalogOpen=true"><UiIcon Name="add" />@Ui["Add node"]</button></div>}
         </section>
@@ -95,7 +102,7 @@ else
             @if(Model.SelectedNode is not null){<NodeInspector ToggleState="@ToggleStates.Find(Model.ClusterId,Model.Draft.Document.Id).GetValueOrDefault(Model.SelectedNode)" ButtonPressed="RunCoreAsync" @key="Model.SelectedNode" Visible="inspectorOpen" Catalog="catalog" InvalidChanged="value=>invalid=value" />}else{<WorkflowInspector Visible="inspectorOpen" Routes="@(inspectorOpen?AllRoutes:[])" Catalog="catalog" />}
         </aside>
     </div>
-    <div class="editor-statusbar"><button class="arrange-nodes" title="@Ui["Separate overlapping nodes"]" disabled="@(busy||Model.Locks.Whole(Model.Draft.Document.Id))" @onclick="()=>graph?.SeparateCards()">@Ui["Space nodes"]</button><span>@Ui.Format("{0} nodes",Model.Draft.Document.Nodes.Count)<span class="status-separator">/</span>@Ui.Format("{0} connections",Model.Draft.Document.Wires.Count)</span><span class="statusbar-spacer"></span><div class="zoom-tools"><button class="quiet" aria-label="@Ui["Zoom out"]" @onclick="()=>zoom=Math.Max(.05,Math.Round(zoom-.05,2))">−</button><span>@((int)Math.Round(zoom*100))%</span><button class="quiet" aria-label="@Ui["Zoom in"]" @onclick="()=>zoom=Math.Min(1.5,Math.Round(zoom+.05,2))">＋</button></div><span class="toolbar-divider"></span><button class="quiet" title="@(LocalContext?Ui["Local editing · not shared"]:Ui[Collaboration.Status])" @onclick="()=>collaborationOpen=true"><span class="dot"></span><span id="collaboration-status" class="collaboration-status">@(LocalContext?Ui["Local editing"]:Collaboration.Active?Ui["Checking draft"]:Collaboration.Pending?Ui["Draft synchronization pending"]:Ui["Collaboration"])</span>@if(Model.Draft.Conflicts.Count!=0){<span class="badge warn">@Ui.Format("{0} conflicts",Model.Draft.Conflicts.Count)</span>}</button></div>
+    <div class="editor-statusbar"><button class="arrange-nodes" title="@Ui["Separate overlapping nodes. Use Undo to restore the previous layout."]" aria-describedby="node-overlap-notice" disabled="@(busy||Model.Locks.Whole(Model.Draft.Document.Id))" @onclick="()=>graph?.SeparateCards()">@Ui["Space nodes"]</button><span>@Ui.Format("{0} nodes",Model.Draft.Document.Nodes.Count)<span class="status-separator">/</span>@Ui.Format("{0} connections",Model.Draft.Document.Wires.Count)</span><span class="statusbar-spacer"></span><div class="zoom-tools"><button class="quiet" aria-label="@Ui["Zoom out"]" @onclick="()=>zoom=Math.Max(.05,Math.Round(zoom-.05,2))">−</button><span>@((int)Math.Round(zoom*100))%</span><button class="quiet" aria-label="@Ui["Zoom in"]" @onclick="()=>zoom=Math.Min(1.5,Math.Round(zoom+.05,2))">＋</button></div><span class="toolbar-divider"></span><button class="quiet" title="@(LocalContext?Ui["Local editing · not shared"]:Ui[Collaboration.Status])" @onclick="()=>collaborationOpen=true"><span class="dot"></span><span id="collaboration-status" class="collaboration-status">@(LocalContext?Ui["Local editing"]:Collaboration.Active?Ui["Checking draft"]:Collaboration.Pending?Ui["Draft synchronization pending"]:Ui["Collaboration"])</span>@if(Model.Draft.Conflicts.Count!=0){<span class="badge warn">@Ui.Format("{0} conflicts",Model.Draft.Conflicts.Count)</span>}</button></div>
     }
 </main>
 <Modal Open="viewOptionsOpen" Title="@Ui["Editor view"]" Close="()=>viewOptionsOpen=false">
@@ -108,8 +115,14 @@ else
         @if(ExperimentalEnabled)
         {
             <label><input type="checkbox" checked="@viewOptions.RealtimePointer" @onchange="e=>ChangeViewAsync(viewOptions with{RealtimePointer=(bool)e.Value!})" />@Ui["Live pointer sharing (up to 7 Hz)"]</label>
-            <label><input type="checkbox" checked="@LivePolicy.Enabled" aria-describedby="live-policy-note" disabled="@(LocalContext||LivePolicy.Busy||!LivePolicy.CanChange)" @onchange="e=>ChangeLiveAsync((bool)e.Value!,lifetime.Token)" />@Ui["Automatically save and apply edits · cluster setting"]</label>@if(LocalContext||!LivePolicy.CanChange){<p id="live-policy-note" class="small muted policy-reason">@Ui["A connected peer and confirmed cluster settings are required."]</p>}
-            @if(!LivePolicy.CanChange){<p class="muted small">@Ui["Apply or resolve pending cluster settings before changing live workflow updates."]</p>}
+            <div class="live-policy @(LocalContext||!LivePolicy.CanChange?"unavailable":null)">
+                <label><input type="checkbox" checked="@LivePolicy.Enabled" aria-describedby="@(LocalContext||!LivePolicy.CanChange?"live-policy-note":null)" disabled="@(LocalContext||LivePolicy.Busy||!LivePolicy.CanChange)" @onchange="e=>ChangeLiveAsync((bool)e.Value!,lifetime.Token)" />@Ui["Automatically save and apply edits · cluster setting"]</label>
+                @if(LocalContext||!LivePolicy.CanChange)
+                {
+                    <p id="live-policy-note" class="small muted">@Ui["A connected peer and confirmed cluster settings are required."]</p>
+                    @if(!LivePolicy.CanChange){<p class="muted small">@Ui["Apply or resolve pending cluster settings before changing live workflow updates."]</p>}
+                }
+            </div>
         }
         @if(LivePolicy.Enabled && string.Equals(LivePolicy.ResultWorkflow,Model.Draft.Document.Id,StringComparison.Ordinal) && LivePolicy.Result is {} applied)
         {

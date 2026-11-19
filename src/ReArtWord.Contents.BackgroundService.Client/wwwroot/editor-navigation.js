@@ -289,7 +289,17 @@ export function attachEditorNavigation(viewport, root, receiver)
         {
             if (code && !disposed)
             {
-                code.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                const card = code.closest('.graph-node');
+                if (card)
+                {
+                    const bounds = card.getBoundingClientRect(), work = viewport.getBoundingClientRect();
+                    viewport.scrollLeft += bounds.left - work.left - 10;
+                    viewport.scrollTop += bounds.top - work.top - 10;
+                }
+                else
+                {
+                    code.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                }
             }
         }).catch(() =>
         {});

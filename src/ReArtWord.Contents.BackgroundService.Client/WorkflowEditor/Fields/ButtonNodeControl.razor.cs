@@ -46,7 +46,7 @@ public sealed partial class ButtonNodeControl
             {
                 return value.GetString()!;
             }
-            return Ui["Press button"];
+            return Ui.Format("Run {0}", Node.LogicalName ?? Ui["Button"]);
         }
     }
 

@@ -185,7 +185,7 @@
 }
 
 .port-caption small {
-    font: 500 10px/12px var(--font-ui);
+    font: 500 12px/12px var(--font-ui);
     color: var(--muted);
 }
 

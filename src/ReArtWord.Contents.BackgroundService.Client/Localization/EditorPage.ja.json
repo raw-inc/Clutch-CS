@@ -250,5 +250,10 @@
   "Exit layout editing to operate the board.": "配置の編集を終えると操作できます。",
   "No action recorded on this page.": "この画面での操作記録はありません。",
   "Collaborator": "共同編集者",
-  "Dashed outlines show another editor’s selection.": "破線の枠は共同編集者が選択しているノードです。"
+  "Dashed outlines show another editor’s selection.": "破線の枠は共同編集者が選択しているノードです。",
+  "{0} editors": "共同編集中 · {0} 件",
+  "Separate overlapping nodes. Use Undo to restore the previous layout.": "重なったノードを移動します。「元に戻す」で以前の配置に戻せます。",
+  "Some nodes overlap. Space nodes to make the controls reachable.": "ノードが重なっています。「間隔を整える」で隠れたノードを表示できます。",
+  "Layout edits remain in the draft until saved.": "保存していない配置の変更は草稿に残ります。",
+  "Automatic execution": "自動実行"
 }

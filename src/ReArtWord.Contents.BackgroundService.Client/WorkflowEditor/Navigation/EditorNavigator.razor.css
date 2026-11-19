@@ -71,7 +71,9 @@
 }
 
 .editor-minimap ::deep .map-node {
-    fill: var(--muted);
+    fill: var(--raised);
+    stroke: var(--control);
+    stroke-width: 1px;
 }
 
 .editor-minimap ::deep .map-node[data-search-match] {
@@ -134,4 +136,9 @@
         width: 140px;
         height: 90px;
     }
+}
+
+.editor-navigation button[aria-pressed="true"] {
+    border-color: var(--accent);
+    box-shadow: inset 0 -2px var(--accent);
 }

@@ -229,3 +229,39 @@
         max-height: none;
     }
 }
+
+.dashboard-heading .toolbar > button[aria-label] {
+    flex: none;
+}
+
+.dashboard-card > .board-action-note {
+    padding-inline: 12px;
+    margin-block-end: 8px;
+    line-height: 1.5;
+}
+
+@media (max-width: 680px) {
+    .dashboard-heading,
+    .dashboard-heading > .toolbar {
+        gap: 4px 8px;
+    }
+
+    .dashboard-heading > .toolbar {
+        padding-block: 4px;
+    }
+
+    .dashboard-workspace.with-catalog {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .dashboard-workspace.with-catalog :is(.dashboard-library, .dashboard-board) {
+        flex: 0 0 auto;
+        overflow: visible;
+    }
+
+    .dashboard-workspace.with-catalog .dashboard-library ::deep .dashboard-catalog-items {
+        max-height: none;
+        min-height: 0;
+    }
+}

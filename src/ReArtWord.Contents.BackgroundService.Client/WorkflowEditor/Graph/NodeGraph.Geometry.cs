@@ -69,6 +69,26 @@ public sealed partial class NodeGraph
                                                                                                        : node;
     }
 
+    /// <summary>前面のノードが別のノードの操作を隠す配置を検出します。</summary>
+    /// <returns>現在の表示でカードが交差するかです。</returns>
+    private static bool HasOverlap(IReadOnlyDictionary<string, (NodePosition Position, NodeSize Size)> bounds)
+    {
+        (NodePosition Position, NodeSize Size)[] ordered = bounds.Values.OrderBy(item => item.Position.Y).ToArray();
+        for (int i = 0; i < ordered.Length; i++)
+        {
+            var (position, size) = ordered[i];
+            for (int j = i + 1; j < ordered.Length && ordered[j].Position.Y < position.Y + size.Height; j++)
+            {
+                var (other, otherSize) = ordered[j];
+                if (other.X < position.X + size.Width && position.X < other.X + otherSize.Width)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private double CanvasWidth => Math.Max(1600, Model.Draft.Document.Nodes.Select(node => Position(node).X + CardWidth(node) + 64).DefaultIfEmpty().Max());
     private double CanvasHeight => Math.Max(1200, Model.Draft.Document.Nodes.Select(node =>
     {

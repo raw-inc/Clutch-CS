@@ -4,4 +4,8 @@
 @inject EditorPresentationCache Presentation
 <div class="workflow-button" title="@Ui[DisabledReason ?? (IsToggle?"Toggle the selected value and emit a signal when the state changes.":"Press to emit the input values and one start signal.")]">
     <button type="button" disabled="@(pressing || DisabledReason is not null)" aria-busy="@(pressing?"true":"false")" aria-pressed="@PressedState" @onclick="PressAsync">@if(IsToggle){<span class="toggle-state">@(ToggleState is true?"ON":ToggleState is false?"OFF":"?")</span>}@Label</button>
+    @if(DisabledReason is { } reason)
+    {
+        <small class="node-button-reason">@Ui[reason]</small>
+    }
 </div>

@@ -204,7 +204,6 @@
 .inspector-heading {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     position: sticky;
     top: 0;
     margin-bottom: 6px;
@@ -213,7 +212,8 @@
     border-bottom: 1px solid var(--line);
     flex-wrap: wrap;
     gap: 8px 12px;
-    padding: 8px 12px;
+    justify-content: space-between;
+    padding: 10px 12px;
 }
 
 .inspector-heading h2 {
@@ -554,7 +554,9 @@
 }
 
 .studio .editor-statusbar {
-    height: 29px;
+    height: auto;
+    min-height: 40px;
+    padding-block: 4px;
 }
 
 .editor-statusbar .toolbar-divider {
@@ -763,12 +765,14 @@
 
 .workflow-picker-list label {
     align-items: center;
-    min-height: 40px;
     padding: 6px 12px;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     justify-content: start;
     gap: 10px;
+    margin: 0;
+    min-height: 44px;
+    border-block-end: 1px solid var(--line);
 }
 
 .workflow-picker-list label:has(:checked) {
@@ -912,6 +916,9 @@
 
 .editor-statusbar .arrange-nodes {
     flex: none;
+    min-height: 32px;
+    padding-inline: 8px;
+    border-color: var(--control);
 }
 
 .studio .library,
@@ -933,21 +940,181 @@
     border-inline-start: 2px solid var(--control);
 }
 
-.canvas-editors span {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+.canvas-editors {
+    position: sticky;
+    z-index: 2;
+    inset-block-start: 8px;
+    inset-inline-start: 8px;
+    width: fit-content;
+    max-width: calc(100% - 16px);
+    height: 0;
+    margin: 0;
+    overflow: visible;
 }
 
-.canvas-editors span::before {
-    content: "";
-    width: 12px;
-    border-top: 2px dashed var(--control);
+.canvas-editors > summary {
+    width: fit-content;
+    min-height: 34px;
+    padding: 6px 30px 6px 10px;
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
+    background: var(--panel);
+    white-space: nowrap;
 }
 
-.editor-view-options .policy-reason {
-    margin: -6px 0 0;
-    padding: 4px 12px 8px;
+.canvas-editors > ul {
+    position: relative;
+    max-height: 30dvh;
+    overflow-y: auto;
+    margin: 0;
+    padding: 6px 12px;
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
+    background: var(--panel);
+    font-size: 13px;
+    list-style: none;
+}
+
+.canvas-editors li {
+    padding: 6px;
+    border-inline-start: 3px dashed var(--editor-color, var(--control));
+}
+
+.editor-view-options .live-policy.unavailable {
+    padding: 8px 12px;
     border-inline-start: 2px solid var(--control);
     background: var(--disabled-face);
+    border-radius: var(--radius-control);
+}
+
+.editor-view-options .live-policy label,
+.editor-view-options .live-policy p {
+    margin-block: 4px;
+    border: 0;
+}
+
+.inspector-heading .toolbar {
+    flex: 1 1 auto;
+    justify-content: end;
+}
+
+.studio:has(.node-overlap-notice) .arrange-nodes {
+    color: var(--warn);
+    background: var(--warn-soft);
+    border-color: var(--warn);
+}
+
+@media (max-width: 750px) {
+    .studio .document-heading {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        height: auto;
+        gap: 5px 8px;
+        padding: 5px 8px;
+    }
+
+    .studio .document-heading .feature-stage {
+        display: none;
+    }
+
+    .studio .document-title {
+        min-width: 0;
+    }
+
+    .studio .document-actions {
+        grid-column: 1 / -1;
+        justify-content: start;
+        flex-wrap: wrap;
+        margin: 0;
+    }
+
+    .studio .document-actions button {
+        min-height: 34px;
+        padding-inline: 7px;
+    }
+
+    .studio .editor-statusbar {
+        flex-wrap: wrap;
+    }
+
+    .editor-statusbar .zoom-tools button {
+        min-width: 32px;
+        height: 32px;
+    }
+
+    .editor-statusbar > span:has(.status-separator) {
+        display: none;
+    }
+}
+
+@media (pointer: coarse) {
+    .editor-statusbar .zoom-tools button {
+        min-width: 44px;
+        height: 44px;
+    }
+}
+
+.document-title input:not(:focus) {
+    text-overflow: ellipsis;
+}
+
+.studio .library {
+    background: var(--card);
+}
+
+.inspector-heading .toolbar > button {
+    white-space: nowrap;
+}
+
+.studio ::deep .node-button-reason {
+    font-size: 11px;
+    line-height: 1.35;
+    color: var(--muted);
+    word-break: auto-phrase;
+}
+
+.workflow-input-short {
+    display: none;
+}
+
+@media (max-width: 440px) {
+    .studio .document-heading .save-state {
+        grid-column: 2;
+        margin-block-start: -3px;
+    }
+
+    .studio .document-actions {
+        gap: 4px;
+    }
+
+    .studio .document-actions > .icon-button {
+        min-width: 28px;
+        width: 28px;
+        padding-inline: 4px;
+    }
+
+    .studio .document-actions > button:first-child ::deep .ui-icon {
+        display: none;
+    }
+
+    .workflow-input-full {
+        position: absolute;
+        inline-size: 1px;
+        block-size: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+    }
+
+    .workflow-input-short {
+        display: inline;
+    }
+
+    .workflow-input-switch {
+        white-space: nowrap;
+        font-size: 12px;
+    }
+
+    .studio .editor-toolbar button {
+        padding-inline: 6px;
+    }
 }
