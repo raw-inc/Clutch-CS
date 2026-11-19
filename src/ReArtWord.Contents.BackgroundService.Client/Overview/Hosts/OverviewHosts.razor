@@ -6,7 +6,7 @@
 else
 {
     var busyHosts = displayPeers.Where(peer => !Previous(peer) && DashboardMetrics.AboveThreshold(peer.Latest) > 0).Select(peer => peer.Peer.HostId).Distinct(StringComparer.Ordinal).ToArray();
-    @if (busyHosts.Length > 0){<p class="notice warn metrics-warning">@Ui["PCs above 80%"]: @string.Join(", ",busyHosts)</p>}
+    @if (busyHosts.Length > 0){<p class="notice warn metrics-warning"><UiIcon Name="info" />@Ui["PCs above 80%"]: @string.Join(", ",busyHosts)</p>}
     <clutch-card-rows><div class="host-grid @(Detailed ? "detailed" : "summary") @(ClusterId is null ? "all-clusters" : null)">
     @foreach(var host in displayPeers.GroupBy(item=>item.Peer.HostId).OrderBy(group=>group.Key))
     {

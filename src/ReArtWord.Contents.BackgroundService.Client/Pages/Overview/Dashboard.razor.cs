@@ -67,7 +67,7 @@ public sealed partial class Dashboard : IAsyncDisposable
     [
         ("All clusters", "dashboard"), ("Peer list", "monitor"), ("Selected cluster", "network"),
         ("Execution & processes", "play"), ("Applications", "windows"), ("Script packages", "code"),
-        ("Snapshots", "save"), ("Resolve conflicts", "subworkflow"), ("Safety", "shield"),
+        ("Snapshots", "save"), ("Resolve conflicts", "copy"), ("Safety", "shield"),
         ("Settings & maintenance", "values"), ("Operations", "history")
     ];
 

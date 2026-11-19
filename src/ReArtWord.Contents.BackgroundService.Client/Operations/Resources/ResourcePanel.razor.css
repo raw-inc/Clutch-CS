@@ -28,8 +28,8 @@
     appearance: none;
     height: 8px;
     border-radius: var(--radius-chart);
-    background: var(--nested);
-    border: 1px solid var(--control);
+    background: var(--raised);
+    border: 0;
 }
 
 .resource-detail td:last-child {
@@ -38,7 +38,7 @@
 }
 
 .resource-metrics meter::-webkit-meter-bar {
-    background: var(--nested);
+    background: var(--raised);
     border: 0;
     border-radius: var(--radius-chart);
     height: 8px;

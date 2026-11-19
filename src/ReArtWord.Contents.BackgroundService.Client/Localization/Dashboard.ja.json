@@ -1,5 +1,5 @@
 {
-  "Above 80%": "80%超",
+  "Above 80%": "80 % 超",
   "Browser preferences": "ブラウザー設定",
   "Cluster configuration": "クラスタ設定",
   "Software updates": "ソフトウェア更新",
@@ -52,7 +52,7 @@
   "History not saved": "履歴未保存",
   "Diagnostic history persistence is unconfirmed.": "診断履歴への保存は未確認です",
   "Workflow activity": "ワークフローの活動",
-  "Last 60 seconds": "直近60秒",
+  "Last 60 seconds": "直近 60 秒",
   "Completions · deduplicated by execution ID": "完了回数 · 実行 ID の重複を除外",
   "No completions in the retrieved range.": "取得範囲に完了記録はありません。",
   "Recent logs": "直近のログ",
@@ -157,7 +157,7 @@
   "OS traffic": "OS通信量",
   "Not measured": "取得不可",
   "Peer instance is unconfirmed": "ピア実体を確認できません",
-  "Latest poll: {0}/{1} peers": "直近の取得: {0}/{1}ピア",
+  "Latest poll: {0}/{1} peers": "直近の取得: {0}/{1} ピア",
   "Dashboard": "Dashboard",
   "All clusters": "全クラスタ",
   "Selected cluster": "選択中のクラスタ",
@@ -225,5 +225,12 @@
   "Peer / Host": "ピア / ホスト",
   "No detached changes": "離脱中の変更なし",
   "Participating in this cluster": "このクラスタに参加中",
-  "Checked at {0}": "{0} 確認"
+  "Checked at {0}": "{0} 確認",
+  "Previous measurement at {0}": "前回の計測 {0}",
+  "Last measurement": "前回の計測",
+  "Saved measurements before the last measurement": "前回の計測までの記録",
+  "Do not process new work until rejoined: {0}": "{0} はクラスタから離脱します。再参加するまで、このピアにはクラスタの処理が割り当てられません。",
+  "Instance ID": "実体ID",
+  "Stopping observation for {0} can remove clusters only visible through it.": "{0} の監視を停止します。この設定でしか観測できないクラスタは一覧から外れます。",
+  "Select a local release manifest to choose the files for this update.": "手元のマニフェストを指定して、配布するファイルを選びます。"
 }

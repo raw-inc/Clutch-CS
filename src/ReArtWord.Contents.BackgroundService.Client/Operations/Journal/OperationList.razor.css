@@ -1,0 +1,11 @@
+.operation-lookup .field-actions > label:nth-child(2) {
+    flex: 1 1 20rem;
+}
+
+.operation-lookup input {
+    font-family: monospace;
+}
+
+.operation-lookup + .section {
+    border-block-start: 1px solid var(--line);
+}

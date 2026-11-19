@@ -8,7 +8,9 @@
     display: flex;
     justify-content: space-between;
     gap: 10px;
-    align-items: center;
+    align-items: start;
+    flex-wrap: wrap;
+    column-gap: 16px;
 }
 
 .host-name {
@@ -110,7 +112,7 @@ h3 {
     gap: 14px;
     margin-top: 12px;
     font-size: 12px;
-    align-items: start;
+    align-items: baseline;
 }
 
 .device-line > span:first-child {
@@ -130,9 +132,10 @@ h3 {
 
 .network-caption {
     display: flex;
-    justify-content: space-between;
     color: var(--muted);
     font-size: 12px;
+    justify-content: start;
+    gap: 6px;
 }
 
 .network-caption span {
@@ -357,4 +360,48 @@ h3 {
 .host-name small.metric-alert {
     color: var(--warn);
     font-size: 13px;
+}
+
+.host-heading {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+}
+
+.host-heading h3 {
+    overflow: visible;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    min-width: 0;
+    margin: 0;
+}
+
+.host-name .host-membership {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+.host-card header ::deep .host-power-control {
+    margin-inline-start: auto;
+}
+
+.stale :is(.metric-number, .metric-detail, .device-metrics, .network-values) {
+    color: var(--muted);
+}
+
+.stale .metric-cell {
+    background: color-mix(in srgb, var(--raised) 30%, var(--nested));
+}
+
+.metric-unavailable {
+    font-size: 15px;
+    margin-block: 8px 0;
+    color: var(--muted);
+}
+
+@media (max-width: 500px) {
+    .host-card header .host-name {
+        flex-basis: 100%;
+    }
 }

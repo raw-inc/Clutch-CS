@@ -101,3 +101,11 @@ figcaption {
 .trend-time {
     font-size: 13px;
 }
+
+.historical .trend-line {
+    stroke: var(--muted);
+}
+
+.historical .trend-highlight {
+    display: none;
+}

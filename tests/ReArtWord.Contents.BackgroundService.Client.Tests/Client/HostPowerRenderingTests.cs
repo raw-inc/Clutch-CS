@@ -17,7 +17,7 @@ public sealed class HostPowerRenderingTests
 {
     /// <summary>正常時のホバー表示と、それ以外の自動テキスト表示を維持します。</summary>
     /// <returns>描画したアイコン・色条件・状態テキストの検証です。</returns>
-    [Theory]
+    [Theory(Skip = "The host status now belongs to the PC heading. This component only renders the power controls.")]
     [InlineData(EPeerStatus.Ready, false, false, "good", "ready", "Ready")]
     [InlineData(EPeerStatus.Ready, true, false, "warn", "ready", "Previous / unconfirmed")]
     [InlineData(EPeerStatus.Syncing, false, false, "warn", "ring", "Syncing")]
@@ -25,26 +25,7 @@ public sealed class HostPowerRenderingTests
     [InlineData(EPeerStatus.Ready, true, true, "warn offline", "none", "Offline")]
     public async Task StatusPreservesLabelsAndUsesMatchingIconAsync(EPeerStatus status, bool stale, bool offline, string css, string? animation, string label)
     {
-        BrowserTestRuntime js = new();
-        ServiceCollection services = new();
-        services.AddLogging();
-        services.AddSingleton<IJSRuntime>(js);
-        services.AddSingleton(new UiText(new(js)));
-        using ServiceProvider provider = services.BuildServiceProvider();
-        HtmlRenderer renderer = new(provider, provider.GetRequiredService<ILoggerFactory>());
-        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = renderer.ConfigureAwait(true);
-        string html = await renderer.Dispatcher.InvokeAsync(async () =>
-        {
-            Dictionary<string, object?> parameters = new(StringComparer.Ordinal)
-            {
-                [nameof(HostPowerControl.HostId)] = "test-PC",
-                [nameof(HostPowerControl.Status)] = status,
-                [nameof(HostPowerControl.Stale)] = stale,
-                [nameof(HostPowerControl.Offline)] = offline,
-            };
-            Microsoft.AspNetCore.Components.Web.HtmlRendering.HtmlRootComponent output = await renderer.RenderComponentAsync<HostPowerControl>(ParameterView.FromDictionary(parameters)).ConfigureAwait(true);
-            return WebUtility.HtmlDecode(output.ToHtmlString());
-        }).ConfigureAwait(true);
+        string html = await RenderPowerAsync(status, stale, offline).ConfigureAwait(true);
         Assert.Matches("<button[^>]*aria-label=\"[^\"]*test-PC[^\"]*\"[^>]*data-power-trigger", html);
         Assert.DoesNotContain("test-PC: " + label, html, StringComparison.Ordinal);
         Assert.Contains("class=\"health-indicator " + css + "\"", html, StringComparison.Ordinal);
@@ -69,5 +50,47 @@ public sealed class HostPowerRenderingTests
         {
             Assert.Contains("data-power-animation=\"" + animation + "\"", html, StringComparison.Ordinal);
         }
+    }
+
+    /// <summary>電源操作の対象と確認を示し、稼働状態をボタンの中で重複表示しません。</summary>
+    /// <returns>通常時とオフライン時の電源操作を確認します。</returns>
+    [Theory]
+    [InlineData(EPeerStatus.Ready, false)]
+    [InlineData(EPeerStatus.Unavailable, true)]
+    public async Task PowerActionsShowTheirTargetAndKeepConfirmationAsync(EPeerStatus status, bool offline)
+    {
+        string html = await RenderPowerAsync(status, offline, offline).ConfigureAwait(true);
+        Assert.DoesNotContain("health-indicator", html, StringComparison.Ordinal);
+        Assert.Matches("<button[^>]*aria-label=\"[^\"]*test-PC[^\"]*\"[^>]*data-power-trigger", html);
+        Assert.Matches("<div data-power-confirmation hidden", html);
+        Assert.Contains(offline ? "data-power-confirm=\"wake\""
+                                : "data-power-confirm=\"restart\"", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>対象実体の状態を指定して電源操作を描画します。</summary>
+    /// <returns>実際のRazor出力です。</returns>
+    private static async Task<string> RenderPowerAsync(EPeerStatus status, bool stale, bool offline)
+    {
+        BrowserTestRuntime js = new();
+        ServiceCollection services = new();
+        services.AddLogging();
+        services.AddSingleton<IJSRuntime>(js);
+        services.AddSingleton(new UiText(new(js)));
+        using ServiceProvider provider = services.BuildServiceProvider();
+        HtmlRenderer renderer = new(provider, provider.GetRequiredService<ILoggerFactory>());
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = renderer.ConfigureAwait(true);
+        string html = await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            Dictionary<string, object?> parameters = new(StringComparer.Ordinal)
+            {
+                [nameof(HostPowerControl.HostId)] = "test-PC",
+                [nameof(HostPowerControl.Status)] = status,
+                [nameof(HostPowerControl.Stale)] = stale,
+                [nameof(HostPowerControl.Offline)] = offline,
+            };
+            Microsoft.AspNetCore.Components.Web.HtmlRendering.HtmlRootComponent output = await renderer.RenderComponentAsync<HostPowerControl>(ParameterView.FromDictionary(parameters)).ConfigureAwait(true);
+            return WebUtility.HtmlDecode(output.ToHtmlString());
+        }).ConfigureAwait(true);
+        return html;
     }
 }

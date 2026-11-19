@@ -108,8 +108,10 @@
 }
 
 .package-pane .empty {
-    font-size: 16px;
+    font-size: 13px;
     font-weight: 400;
+    border: 0;
+    background: var(--nested);
 }
 
 @media (max-width: 680px) {
@@ -163,4 +165,12 @@
 .package-pane ::deep .runtime-picker :is(input, select),
 .package-workspace label {
     font-size: 14px;
+}
+
+.package-runtime > strong,
+.package-runtime > label,
+.package-pane .footer-note {
+    font-size: 13px;
+    font-weight: 500;
+    word-break: auto-phrase;
 }

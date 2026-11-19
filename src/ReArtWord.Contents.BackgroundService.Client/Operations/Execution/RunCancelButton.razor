@@ -2,6 +2,10 @@
 @if(message is not null){<p class="small notice">@message()</p>}
 
 <Modal Open="confirming" Title='@Ui["Cancel this execution"]' Close="()=>confirming=false">
-    <ChildContent><p>@Ui["Completed effects cannot be undone."]</p><code>@RunId</code></ChildContent>
+    <ChildContent>
+        <p><strong>@(WorkflowId ?? Ui["Workflow"])</strong><br />@ClusterId / @PeerId</p>
+        <p>@Ui["Completed effects cannot be undone."]</p>
+        <p class="small muted">@Ui["Operation ID"] · <code>@RunId</code></p>
+    </ChildContent>
     <Actions><button class="danger" disabled="@(busy||submitted)" @onclick="()=>{confirming=false;return CancelAsync(UiCancellation);}"><UiIcon Name="stop" />@Ui["Cancel this execution"]</button></Actions>
 </Modal>

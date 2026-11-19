@@ -1,9 +1,12 @@
 @using ReArtWord.Contents.BackgroundService.Client.Components
 @using ReArtWord.Contents.BackgroundService.Client.Operations.Execution
+<section class="section operation-lookup">
+<h2>@Ui["Look up an operation"]</h2>
+<div class="toolbar field-actions"><label>@Ui["Operation type"]<select @bind="kind"><option value="capture">@Ui["Capture snapshot"]</option><option value="restore">@Ui["Restore snapshot"]</option><option value="file">@Ui["File operation across all targets"]</option><option value="update">@Ui["Release update"]</option><option value="run">@Ui["Manual run"]</option><option value="cancel">@Ui["Cancel execution"]</option><option value="save">@Ui["Save operation"]</option><option value="conflict">@Ui["Resolve shared state conflicts"]</option><option value="script-package">@Ui["script-package"]</option><option value="script-runtime">@Ui["script-runtime"]</option></select></label><label>@Ui["Known operation ID"]<input @bind="identity" @bind:event="oninput" placeholder="6865b4d1-0000-4000-8000-000000000001" /></label><button @onclick="LookupAsync">@Ui["Look up this ID"]</button></div>
+@if(problem is not null){<p class="notice error">@(problem?.Invoke())</p>}
+</section>
 <section class="section">
 <h2>@Ui["Operations recorded in this browser"]</h2>
-<div class="toolbar field-actions"><label>@Ui["Operation type"]<select @bind="kind"><option value="capture">@Ui["Capture snapshot"]</option><option value="restore">@Ui["Restore snapshot"]</option><option value="file">@Ui["File operation across all targets"]</option><option value="update">@Ui["Release update"]</option><option value="run">@Ui["Manual run"]</option><option value="cancel">@Ui["Cancel execution"]</option><option value="save">@Ui["Save operation"]</option><option value="conflict">@Ui["Resolve shared state conflicts"]</option><option value="script-package">@Ui["script-package"]</option><option value="script-runtime">@Ui["script-runtime"]</option></select></label><label>@Ui["Known operation ID"]<input @bind="identity" @bind:event="oninput" placeholder="@Ui["Operation GUID"]" /></label><button @onclick="LookupAsync">@Ui["Query known ID"]</button></div>
-@if(problem is not null){<p class="notice error">@(problem?.Invoke())</p>}
 @if(Journal.Items.Count==0)
 {
     <p class="empty">@Ui["No operations recorded in this browser."]</p>
@@ -32,7 +35,7 @@ else
 <td>@foreach(var progress in Progress(item.Result)){<div class="small">@progress</div>}</td>
 <td>
 <button @onclick="()=>ReadResultAsync(item)">@Ui["Query again"]</button>@if(item.RecoverPath is not null){<button @onclick="()=>RecoverResultAsync(item)">@Ui["Recover the started restore"]</button>}<button @onclick="()=>DownloadAsync(item)">@Ui["Export original request"]</button>
-@if(ReadRun(item) is {} run){<PcSelectionDetails Report="run.Report" />@if(run is {Running: true, OwnerInstanceId: Guid owner}){<RunCancelButton RunId="run.OperationId" OwnerInstanceId="owner" PeerId="@run.PeerId" ClusterId="@item.ClusterId" Completed="()=>ReadResultAsync(item)" />}}
+@if(ReadRun(item) is {} run){<PcSelectionDetails Report="run.Report" />@if(run is {Running: true, OwnerInstanceId: Guid owner}){<RunCancelButton WorkflowId="@run.WorkflowId" RunId="run.OperationId" OwnerInstanceId="owner" PeerId="@run.PeerId" ClusterId="@item.ClusterId" Completed="()=>ReadResultAsync(item)" />}}
 <JsonDetails Value="item" />
 </td>
 </tr>

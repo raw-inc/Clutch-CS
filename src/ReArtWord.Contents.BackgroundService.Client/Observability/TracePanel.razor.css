@@ -1,0 +1,16 @@
+.trace-status td {
+    overflow-wrap: anywhere;
+}
+
+.trace-status td small {
+    display: block;
+    color: var(--muted);
+}
+
+.trace-settings .review-heading {
+    margin-block-end: 12px;
+}
+
+.trace-settings .review-heading h2 {
+    margin: 0;
+}

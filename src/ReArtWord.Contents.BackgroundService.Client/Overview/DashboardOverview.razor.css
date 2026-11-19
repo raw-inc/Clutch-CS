@@ -311,3 +311,19 @@ h2 {
     font-size: 20px;
     margin: 0;
 }
+
+.panel-links a {
+    font-size: 13px;
+}
+
+.panel-links a .ui-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.activity-empty,
+.logs-panel .empty {
+    color: var(--ink);
+    font-size: 14px;
+    text-align: start;
+}

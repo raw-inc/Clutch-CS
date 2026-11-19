@@ -47,6 +47,13 @@ public sealed partial class OverviewHostCard
     private static readonly string[] powerActions = ["restart", "shutdown"];
     private bool powerBusy;
     private string? powerProblem;
+    private string HealthState => (Offline, stale) switch
+    {
+        (true, _) => "Offline",
+        (_, true) => "Previous / unconfirmed",
+        _ => (PowerTarget?.Peer.Status ?? item.Peer.Status).ToString()
+    };
+
     private bool Offline => PowerPeers.Count != 0 && PowerPeers.All(peer => !peer.Online);
     private DashboardHostPeer? PowerTarget => PowerPeers.Where(peer => peer.Online && peer.Peer.Status is EPeerStatus.Ready or EPeerStatus.Syncing)
         .OrderByDescending(peer => peer.Peer.InstanceId == item.Peer.InstanceId).ThenBy(peer => peer.ClusterId, StringComparer.Ordinal).FirstOrDefault();

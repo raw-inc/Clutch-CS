@@ -8,6 +8,7 @@
         <h1>LogViewer</h1>
         <div class="toolbar"><button @onclick="()=>operationsOpen=true"><UiIcon Name="logs" />@Ui["Operation history"]</button><button @onclick="()=>traceOpen=true" disabled="@(!HasSelection)"><UiIcon Name="settings" />@Ui["Trace settings"]</button><RetentionDialog Disabled="@(!HasSelection)" /></div>
     </div>
+    @if(SearchAllClusters){<p class="log-settings-context muted">@Ui[HasSelection ? "log.viewer.settingsContext" : "log.viewer.selectForSettings"]</p>}
     @if (!string.IsNullOrWhiteSpace(message))
     {
         <p class="notice" role="status">@Ui[message]</p>
@@ -25,7 +26,7 @@
             <label title="@Ui["log.viewer.recentHelp"]"><input type="checkbox" role="switch" checked="@uncompressedOnly" @onchange="UncompressedOnlyChangedAsync" />@Ui["log.viewer.recentOnly"] <strong>@Ui[uncompressedOnly?"On":"Off"]</strong></label>
             @if(lastRefresh is { } updated){<span class="small">@Ui.Format("log.viewer.updated", FormatTime(updated, "HH:mm:ss"))</span>}
         </div>
-        @if(SearchAllClusters){<p class="small">@Ui[HasSelection ? "log.viewer.settingsContext" : "log.viewer.selectForSettings"]</p>}
+
         @if (!string.IsNullOrWhiteSpace(causation))
         {
             <div class="log-related-filter"><span title="@causation">@Ui["Related logs"] · @causation[..Math.Min(8,causation.Length)]</span><button class="quiet icon-button" aria-label='@Ui["Clear related log filter"]' @onclick="ClearRelatedAsync"><UiIcon Name="close" /></button></div>
@@ -106,9 +107,9 @@
     @if(session is { PageIndex: >= 0 })
     {
         <nav class="toolbar log-pagination" aria-label="@Ui["log.viewer.pagination"]">
-            <button @onclick="()=>SearchAsync(-1)" disabled="@(loading || session.PageIndex == 0)">@Ui["Previous page"]</button>
+            @if(hasMore || session.PageIndex > 0){<button @onclick="()=>SearchAsync(-1)" disabled="@(loading || session.PageIndex == 0)">@Ui["Previous page"]</button>}
             <span aria-current="page" role="status">@Ui.Format("log.viewer.page", session.PageIndex + 1)</span>
-            <button @onclick="()=>SearchAsync(1)" disabled="@(loading || !hasMore)">@Ui["Next page"]</button>
+            @if(hasMore || session.PageIndex > 0){<button @onclick="()=>SearchAsync(1)" disabled="@(loading || !hasMore)">@Ui["Next page"]</button>}
             @if(refreshSeconds != 0 && (hasMore || 0 < session.PageIndex)){<span class="small">@Ui["log.viewer.nextPauses"]</span>}
         </nav>
     }
@@ -122,5 +123,5 @@
         </details>
     }
 </main>
-<Modal Open="traceOpen" Title="@Ui["Log tracing"]" Close="()=>traceOpen=false"><TracePanel /></Modal>
+@if(traceOpen){<TracePanel Close="()=>traceOpen=false" />}
 <Modal Open="operationsOpen" Title="@Ui["Operation history and status"]" Close="()=>operationsOpen=false"><OperationList /></Modal>

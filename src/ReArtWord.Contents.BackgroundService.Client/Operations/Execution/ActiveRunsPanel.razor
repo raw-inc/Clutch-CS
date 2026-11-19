@@ -1,14 +1,14 @@
 @using ReArtWord.Contents.BackgroundService.Client.Components
 @using ReArtWord.Contents.BackgroundService.Contracts.Execution
 <section class="section">
-    <div class="section-heading"><h2>@Ui["Running workflows"]</h2><button disabled="@busy" @onclick="()=>LoadAsync(null, UiCancellation)">@Ui["Refresh running workflows"]</button></div>
+    <div class="section-heading"><h2>@Ui["Running workflows"]</h2><button class="quiet" disabled="@busy" @onclick="()=>LoadAsync(null, UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh running workflows"]</button></div>
     <p class="footer-note">@Ui["Executions accepted by the selected peer. Cancellation targets the original execution; it does not undo completed effects."]</p>
     @if(message is not null){<p class="notice" role="status">@message()</p>}
     @if(page is not null)
     {
         @if (page.Items.Count == 0)
         {
-            <p class="empty"><UiIcon Name="play" />@Ui["No running workflows were found on this peer."]</p>
+            <p class="empty"><UiIcon Name="history" />@Ui["No running workflows were found on this peer."]</p>
         }
         else
         {
@@ -21,7 +21,7 @@
                             <button disabled="@busy" @onclick="()=>CheckAsync(run.OperationId, UiCancellation)">@Ui["Check execution result"]</button>
                             @if (run.OwnerInstanceId is Guid owner)
                             {
-                                <RunCancelButton RunId="run.OperationId" OwnerInstanceId="owner" PeerId="@peer" ClusterId="@cluster" Completed="()=>CheckAsync(run.OperationId, UiCancellation)" />
+                                <RunCancelButton WorkflowId="@run.WorkflowId" RunId="run.OperationId" OwnerInstanceId="owner" PeerId="@peer" ClusterId="@cluster" Completed="()=>CheckAsync(run.OperationId, UiCancellation)" />
                             }
                         </div>
                     </li>

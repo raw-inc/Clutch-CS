@@ -29,6 +29,9 @@
     <label>@Ui["Partial file failure on one PC"]<select @bind="failure"><option value="@EFileInternalFailurePolicy.Keep">@Ui["Keep the progress made"]</option><option value="@EFileInternalFailurePolicy.Restore">@Ui["Restore the pre-operation state"]</option></select></label>
     <label>@Ui["Confirm temporary safety actions"]<select @bind="confirmation"><option value="@ESafetyConfirmation.None">@Ui["No additional confirmation"]</option><option value="@ESafetyConfirmation.Continue">@Ui["Confirm temporary continuation only"]</option><option value="@ESafetyConfirmation.Always">@Ui["Confirm temporary stop and continuation"]</option></select></label>
     </div>
+    <div class="configuration-save-mode">
+    <label>@Ui["Apply after saving"]<select @bind="policy"><option value="@EActivationPolicy.Auto">@Ui["Apply automatically after a successful snapshot"]</option><option value="@EActivationPolicy.Explicit">@Ui["Save only"]</option><option value="@EActivationPolicy.ConfirmImpact">@Ui["Apply after impact confirmation"]</option></select></label>
+    </div>
     <h3>@Ui["Host groups (flat sets of host IDs)"]</h3>
     <p class="small muted">@Ui["Each group contains host IDs and has no subgroups."]</p>
     <p class="small muted">@Ui["Observed host IDs"]: @string.Join(", ",Connection.Current?.Peers.Select(peer=>peer.HostId).Distinct()??[])</p>
@@ -37,7 +40,7 @@
         <div class="toolbar" @key="group"><label>@Ui["Group name"]<input @bind="group.Name" @bind:event="oninput" /></label><label>@Ui["Host IDs (comma separated)"]<input @bind="group.Hosts" @bind:event="oninput" /></label><button @onclick="()=>groups.Remove(group)">@Ui["Remove row"]</button></div>
     }
     <button @onclick="()=>groups.Add(new())">@Ui["Add group"]</button>
-    <label>@Ui["Apply after saving"]<select @bind="policy"><option value="@EActivationPolicy.Auto">@Ui["Apply automatically after a successful snapshot"]</option><option value="@EActivationPolicy.Explicit">@Ui["Save only"]</option><option value="@EActivationPolicy.ConfirmImpact">@Ui["Apply after impact confirmation"]</option></select></label>
+
 
     @if(state?.Saved is not null&&state.Saved.Revision!=state.Effective?.Revision)
     {

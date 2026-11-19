@@ -217,3 +217,24 @@ footer {
 .panel-content footer {
     word-break: auto-phrase;
 }
+
+.cluster-health-card > header {
+    justify-content: start;
+    gap: 10px;
+}
+
+.panel-content > .empty {
+    color: var(--ink);
+    font-size: 14px;
+    text-align: start;
+}
+
+.panel-content > footer {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.panel-links a .ui-icon {
+    width: 16px;
+    height: 16px;
+}

@@ -28,6 +28,7 @@ th {
     max-width: 420px;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-size: 13px;
 }
 
 .peer-list-footer {
@@ -43,6 +44,7 @@ th {
 
 .version small {
     font: inherit;
+    font-size: inherit;
 }
 
 @media (max-width: 760px) {
@@ -53,5 +55,20 @@ th {
 
     .version span {
         white-space: nowrap;
+    }
+}
+
+@media (max-width: 760px) {
+    .table-wrap:has(.record-table) {
+        border: 0;
+        background: transparent;
+    }
+
+    .record-table tbody {
+        gap: 8px;
+    }
+
+    .record-table .version {
+        column-gap: 8px;
     }
 }

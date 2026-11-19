@@ -32,7 +32,8 @@ public sealed partial class PeerStateLabel
     private string Tone => State switch
     {
         nameof(EPeerStatus.Ready) => "good",
-        "Offline" => "warn offline",
+        nameof(EPeerStatus.Syncing) => "syncing",
+        "Offline" => "offline",
         _ => "warn"
     };
 

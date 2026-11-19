@@ -406,9 +406,11 @@
     .log-detail {
         position: fixed;
         z-index: 9;
-        inset: auto 8px var(--statusbar-height);
+        inset: auto 8px max(8px, env(safe-area-inset-bottom));
         padding: 16px;
-        max-height: min(42dvh, 24rem);
+        max-height: min(38dvh, 22rem);
+        scrollbar-width: thin;
+        scrollbar-gutter: stable;
         overflow: auto;
         border: 1px solid var(--control);
         border-radius: var(--radius-panel);
@@ -432,4 +434,9 @@
     font-size: 14px;
     line-height: 1.4;
     color: var(--ink);
+}
+
+.log-settings-context {
+    margin-block: 0 14px;
+    font-size: 13px;
 }

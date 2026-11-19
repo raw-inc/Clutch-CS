@@ -34,8 +34,12 @@ export async function licensesView(root, ctx)
     {
         license.add(new Option(kind, kind));
     }
-    filter.append(label, search, licenseLabel, license, count);
+    const searchField = document.createElement('span');
+    searchField.className = 'search-field';
+    searchField.append(uiIcon('search'), search);
+    filter.append(label, searchField, licenseLabel, license, count);
     root.append(filter);
+    filter.id = 'license-filters';
     const cards = document.createElement('div');
     cards.className = 'license-cards';
     const columns = document.createElement('div');
@@ -130,8 +134,9 @@ export async function licensesView(root, ctx)
         for (const notice of entry.notices)
         {
             const details = document.createElement('details'), summary = document.createElement('summary'), text = document.createElement('pre');
-            summary.textContent = notice.label;
-            summary.setAttribute('aria-label', entry.name + ' · ' + notice.label);
+            const caption = noticeCaption(notice.label, ctx);
+            summary.textContent = caption;
+            summary.setAttribute('aria-label', entry.name + ' · ' + caption);
             details.append(summary, text);
             if (!section.querySelector('details'))
             {
@@ -183,6 +188,12 @@ export async function licensesView(root, ctx)
         components.push({ name: entry.name.toLowerCase(), license: entry.license, section });
         cards.append(section);
     }
+    const back = document.createElement('a');
+    back.className = 'license-back';
+    back.href = '#license-filters';
+    back.textContent = ctx.t('Back to filters', '検索・絞り込みへ戻る');
+    root.append(back);
+
     return {
         /** 所有する監視・接続・表示資源を解放します。 */
         dispose()
@@ -200,4 +211,22 @@ function appendLicenseSelection(section, selection, ctx, component = '')
         text.textContent += ` (${selection.license})`;
     }
     section.append(text);
+}
+
+/** 配布元の文書名を残し、文書の種類が分かる見出しを表示します。
+ * @returns 通知を開くときに表示する名前です。
+ */
+function noticeCaption(label, ctx)
+{
+    switch (label)
+    {
+        case 'License':
+            return ctx.t('License text', 'ライセンス本文');
+        case 'Third-party notices':
+            return ctx.t('Third-party notices', '第三者のソフトウェアに関する通知');
+        case 'Copyright notice':
+            return ctx.t('Copyright notice', '著作権表示');
+        default:
+            return ctx.t(label + ' notice', label + ' のライセンス・通知');
+    }
 }

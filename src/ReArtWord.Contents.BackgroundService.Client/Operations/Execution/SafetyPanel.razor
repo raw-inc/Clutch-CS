@@ -3,10 +3,12 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Execution
 <section class="card">
 <h2>@Ui["Safety"]</h2>
-<p class="small muted">@Ui["Acknowledgement applies to new-input decisions. Check the original result to confirm an already-started execution stopped."]</p>
+<p class="small muted">@Ui["Pause or resume new inputs for a node or safety group."]</p>
+<div class="toolbar inline-status">
 @if(Current is {} active){<span class="badge @(active.Stopped||active.Continued ? "warn" : "good")">@Ui[active.Stopped?"New inputs stopped":active.Continued?"Temporary continuation past an automatic stop":"Normal decision"]</span>}
 @if(Current is null){<span class="badge">@Ui["Not checked"]</span>}
 <button @onclick="OpenAsync"><UiIcon Name="search" />@Ui["Review effective state and targets"]</button>
+</div>
 <p class="notice">@(message?.Invoke())</p>
 @if(lastOperation is Guid operation){<p>@Ui["Current operation"] @operation <button @onclick="ReadOperationAsync" disabled="@busy">@Ui["Query acceptance again"]</button></p>}
 </section>

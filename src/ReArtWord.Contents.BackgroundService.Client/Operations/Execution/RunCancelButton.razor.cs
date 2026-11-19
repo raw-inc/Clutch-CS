@@ -19,6 +19,14 @@ public sealed partial class RunCancelButton
         get; set;
     } = null!;
 
+    /// <summary>確認画面に表示する実行元ワークフローです。</summary>
+    [Parameter]
+    public string? WorkflowId
+    {
+        get;
+        set;
+    }
+
     /// <summary>元のワークフロー実行。</summary>
     [Parameter]
     public Guid RunId

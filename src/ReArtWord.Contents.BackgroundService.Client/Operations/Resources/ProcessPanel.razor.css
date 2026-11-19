@@ -4,7 +4,9 @@
     align-items: center;
     gap: 14px 28px;
     margin-bottom: 20px;
-    padding: 16px 0;
+    padding: 12px 14px;
+    border-radius: var(--radius-inset);
+    background: var(--nested);
 }
 
 .application-target label {
@@ -126,7 +128,6 @@
     background: var(--panel);
 }
 
-.application-summary,
-.application-target {
-    background: var(--nested);
+.applications-panel > .section-heading button.quiet {
+    padding-inline: 0;
 }

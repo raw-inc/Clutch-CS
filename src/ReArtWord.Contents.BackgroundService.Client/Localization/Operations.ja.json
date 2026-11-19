@@ -379,7 +379,7 @@
   "Whole scope": "全体",
   "Capture these resolved targets": "この実対象集合を取得",
   "Restore individual targets": "対象ごとの復元",
-  "Choose one snapshot per target. Targets with no snapshot at that time are not applied but remain in the original compensation scope. Explicitly excluded targets are also excluded from compensation.": "復元する対象ごとにスナップショットを選んでください。選んだ時点にデータがなければ、その対象は復元しません。復元に失敗して元に戻すときは、明示的に除外した対象だけが対象外になります。",
+  "Choose one snapshot per target. Targets with no snapshot at that time are not applied but remain in the original compensation scope. Explicitly excluded targets are also excluded from compensation.": "復元する履歴を対象ごとに選びます。「今回要求に含めない」を選ぶと、今回の復元は行いませんが、失敗時に元へ戻す範囲には残ります。「除外」を選ぶと、元へ戻す範囲からも外れます。",
   "Point in time (browser local time)": "時点指定（ブラウザー時刻）",
   "Do not include in this request": "今回要求に含めない",
   "Latest at the specified time": "指定時点の最新",
@@ -433,7 +433,7 @@
   "The comparison base after discard could not be retrieved. Recheck state in the editor.": "破棄後の比較元を取得できません。エディタで状態を再確認してください。",
   "The edit-confirmation result is unknown. Check the original restore request again.": "編集確認の結果が不明です。元の復元要求を再確認してください。",
   "Inspect internal state and edit locally": "内部状態の確認・端末内編集",
-  "Only workflow internal values are handled here. Files, processes, external sends and secrets are not queued offline. ClientHost candidates are unsaved and unsent, and are lost when it exits. Browser drafts are stored separately and are not sent to the execution peer until explicit integration.": "ここで扱うのはワークフローの内部値です。ブラウザーの草稿は自動送信されません。端末内の未送信候補はClientHostを終了すると失われます。ファイルやプロセスの操作、外部送信、秘密情報は予約できません。",
+  "Only workflow internal values are handled here. Files, processes, external sends and secrets are not queued offline. ClientHost candidates are unsaved and unsent, and are lost when it exits. Browser drafts are stored separately and are not sent to the execution peer until explicit integration.": "ワークフローの内部値を確認・編集します。このブラウザーの草稿は、適用するまで実行先へ送られません。送信前の候補は ClientHost の終了時に失われます。",
   "Scope": "範囲",
   "Workflow shared": "ワークフロー共有",
   "Selected peer": "選択ピア",
@@ -596,6 +596,11 @@
   "Select another runtime to change the default.": "別の実行環境を選ぶと既定に設定できます。",
   "Search npm by package name or keyword.": "npm のパッケージ名またはキーワードで検索できます。",
   "Editing creates a comparison draft. The selected revision changes only when you confirm the resolution.": "編集内容は確認用の草稿です。「解消」を確定するまで保存済みの値は変わりません。",
-  "Compare the saved values and choose the revision to keep.": "保存された値を比べて、残す版を選んでください。",
-  "Review changes saved while this peer was away. Choose between conflicting revisions before sharing.": "離脱中にこのピアで保存した変更を確認できます。競合した場合は、共有する版を選んでください。"
+  "Compare the saved values and choose the revision to keep.": "競合した値を比べて、残す版を選びます。",
+  "Review changes saved while this peer was away. Choose between conflicting revisions before sharing.": "離脱中にこのピアで保存した変更を確認できます。競合した場合は、共有する版を選んでください。",
+  "Look up this ID": "このIDを照会",
+  "Look up an operation": "操作IDで照会",
+  "Restore normal tracing": "通常の記録に戻す",
+  "Start temporary tracing": "一時的な追跡を開始",
+  "Pause or resume new inputs for a node or safety group.": "ノードや安全グループを選び、新規入力の受付を一時停止または再開できます。"
 }

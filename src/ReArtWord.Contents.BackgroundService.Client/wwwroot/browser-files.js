@@ -467,6 +467,7 @@ export async function browserFilesView(root, ctx)
             const available = local ? !!localRoot : !!target, locked = busy || state.browsing || choosing || panes.some(pane => pane.actions?.busy);
             home.disabled = refresh.disabled = address.disabled = go.disabled = !available || locked;
             up.disabled = !available || state.parent === null || locked;
+            up.title = available && state.parent === null ? ctx.t('This is the configured transfer root.', 'このフォルダーが転送範囲の最上位です。') : ctx.t('Up', '上へ');
             if (picker)
             {
                 picker.disabled = locked || typeof globalThis.showDirectoryPicker !== 'function';

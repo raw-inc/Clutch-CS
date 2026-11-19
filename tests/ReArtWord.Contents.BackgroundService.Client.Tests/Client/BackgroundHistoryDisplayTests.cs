@@ -21,13 +21,27 @@ public sealed class BackgroundHistoryDisplayTests
 {
     /// <summary>Readyを残し、完了・未確認状態には背景中の表示を出しません。</summary>
     /// <returns>実Razorの割合・稼働状態・未確認理由の表示です。</returns>
+    [Theory(Skip = "The progress label now places a space before the percent sign.")]
+    [InlineData("Ready", 58, null, true)]
+    [InlineData("Ready", 58, "Sync.HistoryUnavailable", true)]
+    [InlineData("Ready", 0, null, false)]
+    [InlineData("Syncing", 58, null, false)]
+    [InlineData("Unconfirmed", 58, null, false)]
+    public Task BackgroundProgressNeverReplacesOperationalState(string state, long pending, string? problem, bool visible) => CheckProgressAsync(state, pending, problem, visible, "42%");
+
+    /// <summary>背景補完中の割合は、Readyの意味を保ったまま表示します。</summary>
+    /// <returns>ステータスと進捗の表示を照合します。</returns>
     [Theory]
     [InlineData("Ready", 58, null, true)]
     [InlineData("Ready", 58, "Sync.HistoryUnavailable", true)]
     [InlineData("Ready", 0, null, false)]
     [InlineData("Syncing", 58, null, false)]
     [InlineData("Unconfirmed", 58, null, false)]
-    public async Task BackgroundProgressNeverReplacesOperationalState(string state, long pending, string? problem, bool visible)
+    public Task BackgroundProgressShowsFractionWithOperationalStateAsync(string state, long pending, string? problem, bool visible) => CheckProgressAsync(state, pending, problem, visible, "42 %");
+
+    /// <summary>稼働状態、背景補完の有無、待機の理由を描画結果から確認します。</summary>
+    /// <returns>表示の確認です。</returns>
+    private static async Task CheckProgressAsync(string state, long pending, string? problem, bool visible, string percent)
     {
         ServiceCollection services = new();
         services.AddLogging();
@@ -45,7 +59,7 @@ public sealed class BackgroundHistoryDisplayTests
         if (visible)
         {
             Assert.Contains("aria-valuenow=\"42\"", html, StringComparison.Ordinal);
-            Assert.Contains("42%", html, StringComparison.Ordinal);
+            Assert.Contains(percent, html, StringComparison.Ordinal);
             Assert.Equal(problem is not null, html.Contains("Waiting", StringComparison.Ordinal));
         }
     }

@@ -1,12 +1,12 @@
 @using ReArtWord.Contents.BackgroundService.Client.Overview.Charts
 <span class="health-indicator @Tone" title="@Ui[State]">
-    @if(State == "Ready"){<UiIcon Name="check" />}
-    else if(State == "Syncing"){<ActivityRing Identity="@Identity" Active="true" />}
-    else if(State == "Offline"){<UiIcon Name="stop" />}
+    @if(State == "Ready" && History is not { Pending: > 0 }){<UiIcon Name="check" />}
+    else if(State == "Syncing" || State == "Ready"){<ActivityRing Identity="@Identity" Active="true" />}
+    else if(State == "Offline"){<UiIcon Name="offline" />}
     else{<span class="power-unknown" aria-hidden="true">?</span>}
     <span class="health-label">@Ui[State]</span>
     @if(State == "Ready" && History is { Pending: > 0 } history)
     {
-        <span class="background-sync" role="progressbar" aria-label='@Ui["Background Sync"]' aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Percent" title="@Description">@Ui["Background Sync"] @Percent%@if(history.Problem is not null){<span> · @Ui["Waiting"]</span>}</span>
+        <span class="background-sync" role="progressbar" aria-label='@Ui["Background Sync"]' aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Percent" title="@Description">@Ui["Background Sync"] @Percent %@if(history.Problem is not null){<span> · @Ui["Waiting"]</span>}</span>
     }
 </span>

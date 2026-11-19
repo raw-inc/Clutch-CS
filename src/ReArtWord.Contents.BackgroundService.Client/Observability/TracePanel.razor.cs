@@ -14,6 +14,14 @@ namespace ReArtWord.Contents.BackgroundService.Client.Observability;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1515", Justification = "Razor が生成する公開 partial 宣言と同じコンポーネント型を構成するため。")]
 public sealed partial class TracePanel
 {
+    /// <summary>追跡設定を閉じたことを親画面へ通知します。</summary>
+    [Parameter]
+    public EventCallback Close
+    {
+        get;
+        set;
+    }
+
     [Inject]
     private ManagementApi Api
     {
@@ -36,6 +44,10 @@ public sealed partial class TracePanel
     private bool raw = true;
     private string rawLimit = string.Empty;
     private bool stopOpen;
+
+    /// <summary>通常設定をまだ確認できない行では、設定が無効と表示しません。</summary>
+    /// <returns>確認できた値に対応する表示です。</returns>
+    private string Flag(bool? value) => Ui[value?.ToString() ?? "Unconfirmed"];
 
     /// <summary>画面を開いた接続先から現在の追跡状態を読み込みます。</summary>
     /// <returns>初期状態の照会です。</returns>

@@ -74,6 +74,14 @@ public sealed partial class OverviewTrend : IAsyncDisposable
         set;
     } = "100 %";
 
+    /// <summary>現在値を確認できない場合は、保存された測定範囲として表示します。</summary>
+    [Parameter]
+    public bool Historical
+    {
+        get;
+        set;
+    }
+
     private string path = string.Empty;
     private string highlight = string.Empty;
     private ElementReference chart;
@@ -124,7 +132,9 @@ public sealed partial class OverviewTrend : IAsyncDisposable
 
             if (module is not null)
             {
-                await module.InvokeVoidAsync("update", UiCancellation, chart, path, origin, Api.UtcNow.ToUnixTimeMilliseconds(), highlight).ConfigureAwait(true);
+                long? animatedOrigin = Historical ? null
+                                                  : origin;
+                await module.InvokeVoidAsync("update", UiCancellation, chart, path, animatedOrigin, Api.UtcNow.ToUnixTimeMilliseconds(), highlight).ConfigureAwait(true);
             }
         }
         finally

@@ -55,6 +55,7 @@
     <ApplicationGroupPanel @ref="groupPanel" @key="(cluster,peer)" ClusterId="@cluster" PeerId="@peer" Owner="@Owner" Available="@(target is not null)" Applications="@processes.Select(item=>item.Definition).ToArray()" />
 }
 <Modal ShowCloseAction="true" Open="@(selected is not null&&!registrationOpen&&removing is null)" Title='@(selected?.Definition.DisplayName??Ui["Application state"])' Close="()=>selected=null">
+    <ChildContent>
     @if(selected is {} item)
     {
         <div class="application-summary"><span data-status-label class="badge process-status @(item.Observed.Status?.Running is true ? "good" : "muted")">@Ui[State(item)]</span><span>@Owner</span></div>
@@ -82,9 +83,12 @@
                 <button class="quiet" @onclick="()=>resolveOpen=true">@Ui["Resolve an unknown launch"]</button>
             </div></details></fieldset>
         }
-        <div class="registration-actions"><button disabled="@busy" @onclick="()=>Edit(item)">@Ui["Edit registration"]</button><button class="quiet danger" disabled="@(busy||refreshing||target is null)" @onclick="()=>ConfirmRemoval(item)">@Ui["Remove registration"]</button></div>
         @if(result is not null){<JsonDetails Value="result" Title='@Ui["Actual operation result"]' />}
     }
+    </ChildContent>
+    <Actions>
+        @if(selected is { } displayed){<button disabled="@busy" @onclick="()=>Edit(displayed)">@Ui["Edit registration"]</button><button class="quiet danger" disabled="@(busy||refreshing||target is null)" @onclick="()=>ConfirmRemoval(displayed)">@Ui["Remove registration"]</button>}
+    </Actions>
 </Modal>
 <Modal Open="@(removing is not null)" Title='@Ui["Remove registration"]' Close="CloseRemoval">
     <p>@Owner · <strong>@removing?.Definition.DisplayName</strong></p>
