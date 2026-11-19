@@ -1,4 +1,7 @@
 {
+  "Missing": "値なし",
+  "Resource": "リソース",
+  "Snapshot": "スナップショット",
   "Operation {0} could not be recorded before sending. No request was sent. Check browser storage and query this ID if it already exists.": "操作 {0} を送信前に記録できなかったため、要求は送信していません。ブラウザーの保存領域を確認してください。このIDの操作が既に存在する場合は、元の結果を照会してください。",
   "A response was received for operation {0}, but its latest result could not be saved in this browser. Query the original operation ID instead of running it again.": "操作 {0} の応答は受信しましたが、最新結果をブラウザーに保存できませんでした。再実行せず、元の操作IDで結果を照会してください。",
   "Connected peer storage status": "接続先の保存状態",

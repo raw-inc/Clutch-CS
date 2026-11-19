@@ -1,4 +1,7 @@
 {
+  "Revision": "リビジョン",
+  "Order": "実行順",
+  "Binary": "バイナリ",
   "Operation result": "操作結果",
   "Status notice": "状態の通知",
   "Last observation": "前回の観測",

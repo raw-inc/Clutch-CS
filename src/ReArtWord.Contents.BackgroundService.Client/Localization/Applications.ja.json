@@ -1,4 +1,7 @@
 {
+  "Daily": "毎日",
+  "Once": "1回のみ",
+  "Schedule": "スケジュール",
   "Remove registration": "登録を削除",
   "Removing this registration disables automatic monitoring, recovery and scheduled starts. A running application will not be stopped.": "登録を削除すると、自動監視・自動復旧・起動スケジュールが解除されます。実行中のアプリケーションは停止しません。",
   "Workflows that use this registration will no longer be able to operate it.": "この登録を参照するワークフローは、アプリケーションを操作できなくなります。",
