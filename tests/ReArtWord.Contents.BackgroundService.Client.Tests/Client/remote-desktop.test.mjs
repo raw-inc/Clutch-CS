@@ -1789,7 +1789,7 @@ test('screen switching preserves the audio context and disconnect closes it', as
     assert.equal(f.contexts[0].state, 'closed');
 });
 
-test('toolbar labels disconnect and audio state while keeping both fullscreen actions accessible', async t =>
+test.skip('toolbar labels disconnect and audio state while keeping both fullscreen actions accessible', async t =>
 {
     const f = await fixtureAsync(t), toolbar = descendants(f.root).find(item => item.className === 'desktop-toolbar');
 
@@ -1799,6 +1799,38 @@ test('toolbar labels disconnect and audio state while keeping both fullscreen ac
     const button = name => descendants(f.root).find(item => item.tag === 'button' && item.getAttribute('aria-label') === name);
 
     for (const name of ['Disconnect', 'Mute audio', 'Fullscreen', 'Video fullscreen'])
+    {
+        assert.equal(button(name).parentElement, toolbar);
+    }
+    assert.equal(button('Disconnect').textContent, 'Disconnect');
+    assert.match(button('Disconnect').className, /desktop-labeled/);
+    const sound = button('Mute audio');
+    assert.equal(sound.textContent, '');
+    assert.equal(sound.getAttribute('aria-pressed'), 'false');
+    await f.click('Mute audio');
+    assert.equal(sound.textContent, '');
+    assert.equal(sound.getAttribute('aria-pressed'), 'true');
+    assert.equal(sound.dataset.muted, 'true');
+    assert.equal(f.contexts[0].gains.at(-1), 0);
+    await f.click('Unmute audio');
+    assert.equal(sound.textContent, '');
+    assert.equal(sound.getAttribute('aria-pressed'), 'false');
+    assert.equal(sound.dataset.muted, 'false');
+    assert.equal(f.contexts[0].gains.at(-1), 1);
+    assert.equal(f.socket.readyState, 1);
+});
+
+test('connection actions stay with the host while display controls reflect the current audio state', async t =>
+{
+    const f = await fixtureAsync(t), toolbar = descendants(f.root).find(item => item.className === 'desktop-toolbar');
+
+    /** 操作の実行と処理中表示を持つボタンを構成します。
+     * @returns 呼出し元が使用する値です。
+     */
+    const button = name => descendants(f.root).find(item => item.tag === 'button' && item.getAttribute('aria-label') === name);
+
+    assert.equal(button('Disconnect').parentElement.className, 'desktop-targets');
+    for (const name of [ 'Mute audio', 'Fullscreen', 'Video fullscreen'])
     {
         assert.equal(button(name).parentElement, toolbar);
     }
@@ -3727,7 +3759,7 @@ for (const [id, fps, bitrate, audioCodec, audioBitrate, samples, interval] of [
     }
 }
 
-test('the transmission preset sits immediately left of the host and shows Custom only for unmatched values', async t =>
+test.skip('the transmission preset sits immediately left of the host and shows Custom only for unmatched values', async t =>
 {
     const f = await fixtureAsync(t, null, { defaultAudio: true });
     await f.click('Disconnect');
@@ -3735,6 +3767,40 @@ test('the transmission preset sits immediately left of the host and shows Custom
     const preset = f.presetSelector, custom = preset.options.find(item => item.value === 'custom');
     assert.equal(preset.parentElement, host.parentElement);
     assert.equal(preset.parentElement.children.indexOf(preset) + 1, preset.parentElement.children.indexOf(host));
+    assert.equal(custom.hidden, true);
+    assert.equal(custom.disabled, true);
+    for (const [name, changed, original] of [
+        ['Target fps', '31', '30.0'],
+        ['Maximum video kbps', '5000', '4096'],
+        ['Audio buffer samples/ch', '18000', '12000'],
+        ['Audio bitrate', '192', '128']
+    ])
+    {
+        const field = all.find(item => item.getAttribute('aria-label') === name);
+        field.value = changed;
+        field.oninput();
+        assert.equal(preset.value, 'custom');
+        assert.equal(custom.hidden, false);
+        field.value = original;
+        field.onchange();
+        assert.equal(preset.value, 'fixed-balanced');
+        assert.equal(custom.hidden, true);
+    }
+    await f.click('Variable bitrate (VBR)');
+    assert.equal(preset.value, 'custom');
+    await f.click('Variable bitrate (VBR)');
+    assert.equal(preset.value, 'fixed-balanced');
+});
+
+test('the labeled transmission preset precedes the host selector and shows Custom only for unmatched values', async t =>
+{
+    const f = await fixtureAsync(t, null, { defaultAudio: true });
+    await f.click('Disconnect');
+    const all = descendants(f.root), host = all.find(item => item.getAttribute('aria-label') === 'Host');
+    const preset = f.presetSelector, custom = preset.options.find(item => item.value === 'custom');
+    const fields = preset.parentElement.parentElement;
+    assert.equal(fields, host.parentElement.parentElement);
+    assert.equal(fields.children.indexOf(preset.parentElement) + 1, fields.children.indexOf(host.parentElement));
     assert.equal(custom.hidden, true);
     assert.equal(custom.disabled, true);
     for (const [name, changed, original] of [

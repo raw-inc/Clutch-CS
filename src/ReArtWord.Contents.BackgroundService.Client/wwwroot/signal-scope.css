@@ -50,10 +50,11 @@
     display: grid;
     grid-template-columns: 310px minmax(0, 1fr);
     min-width: 0;
-    border: 1px solid var(--line);
+    border: 0;
     border-radius: var(--radius-control);
     overflow: hidden;
-    background: var(--paper);
+    background: transparent;
+    gap: 12px;
 }
 
 .scope-sidebar {
@@ -63,6 +64,7 @@
     padding: 10px;
     border-right: 1px solid var(--line);
     background: var(--panel);
+    border: 0;
 }
 
 .scope-sidebar > .scope-sources {
@@ -297,4 +299,29 @@
     .scope-search {
         min-width: 180px;
     }
+}
+
+.scope-filters {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+    border-radius: var(--radius-control);
+    background: var(--card);
+}
+
+.scope-sidebar > .scope-toolbar {
+    margin-bottom: 12px;
+}
+
+.scope-sidebar,
+.scope-results {
+    border-radius: var(--radius-panel);
+    padding: 12px;
+    background: var(--panel);
+}
+
+.scope-filters .scope-search {
+    min-width: min(100%, 12rem);
 }

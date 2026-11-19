@@ -23,7 +23,7 @@
 }
 
 .hm-page-heading h1 {
-    font-size: 22px;
+    font-size: clamp(26px, 3vw, 40px);
     letter-spacing: -0.025em;
     margin: 0 0 5px;
     font-weight: 600;
@@ -104,12 +104,13 @@
 .hm-workspace {
     display: grid;
     grid-template-columns: 236px minmax(0, 1fr);
-    height: calc(100dvh - var(--topbar-height) - 94px - var(--statusbar-height));
+    gap: 16px;
+    height: calc(100dvh - var(--topbar-height) - 110px - var(--statusbar-height));
     min-height: 430px;
-    border: 1px solid var(--line);
+    border: 0;
     border-radius: var(--radius-control);
     overflow: hidden;
-    background: var(--paper);
+    background: transparent;
 }
 
 .hm-sidebar {
@@ -245,17 +246,20 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .hm-tabs {
     display: flex;
     align-items: stretch;
     gap: 3px;
-    padding: 0 16px;
-    background: var(--panel);
+    padding: 4px 8px;
+    background: transparent;
     border-bottom: 1px solid var(--line);
     overflow: auto;
     flex: none;
+    flex-wrap: wrap;
+    border: 0;
 }
 
 .hm-tabs button {
@@ -266,8 +270,8 @@
     border-radius: 0;
     background: transparent;
     color: var(--muted);
-    padding: 12px 16px;
-    min-height: 44px;
+    padding: 8px 12px;
+    min-height: 38px;
     flex: none;
 }
 
@@ -286,6 +290,9 @@
     flex: 1;
     overflow: auto;
     scrollbar-width: thin;
+    margin: 8px;
+    background: var(--nested);
+    border-radius: var(--radius-control);
 }
 
 .hm-area {
@@ -1388,16 +1395,16 @@
     .hm-host-list {
         grid-column: 1/-1;
         grid-row: 3;
-        flex-direction: row;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+        max-height: 11rem;
         padding: 0 0 6px;
         margin: 0;
         overflow: auto;
     }
 
     .hm-host-list .hm-host {
-        min-width: 206px;
-        max-width: 240px;
-        flex: 0 0 auto;
+        min-width: 0;
         min-height: 54px;
     }
 
@@ -1538,5 +1545,29 @@
     .hm-protocol[data-pending="true"] {
         animation: none;
         outline-color: var(--warn);
+    }
+}
+
+.hm-sidebar,
+.hm-main {
+    border-radius: var(--radius-panel);
+    background: var(--card);
+    border: 0;
+}
+
+.hm-area-picker {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    .hm-area-picker {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 8px;
+    }
+
+    .hm-tabs {
+        display: none;
     }
 }

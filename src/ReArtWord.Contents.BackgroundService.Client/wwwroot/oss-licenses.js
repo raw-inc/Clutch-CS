@@ -18,6 +18,36 @@ export async function licensesView(root, ctx)
             {} };
     }
     entries.sort((left, right) => left.name.localeCompare(right.name, 'en', { sensitivity: 'base' }) || left.version.localeCompare(right.version, 'en', { numeric: true }));
+    const filter = document.createElement('div'), label = document.createElement('label'), search = document.createElement('input'), count = document.createElement('output');
+    filter.className = 'license-filter';
+    label.htmlFor = search.id = 'license-query';
+    label.textContent = ctx.t('Find a component', 'ライブラリーを検索');
+    search.type = 'search';
+    filter.append(label, search, count);
+    root.append(filter);
+    const components = [];
+
+    /** 絞り込み後の表示件数を読み上げの対象にも反映します。 */
+    function showCount(visible)
+    {
+        count.textContent = ctx.t(visible + ' of ' + entries.length, entries.length + ' 件中 ' + visible + ' 件');
+    }
+
+    showCount(entries.length);
+    search.addEventListener('input', () =>
+    {
+        const query = search.value.trim().toLowerCase();
+        let visible = 0;
+        for (const component of components)
+        {
+            component.section.hidden = !component.name.includes(query);
+            if (!component.section.hidden)
+            {
+                visible++;
+            }
+        }
+        showCount(visible);
+    }, { signal: ctx.signal });
     for (const entry of entries)
     {
         const section = document.createElement('section'), title = document.createElement('h2'), meta = document.createElement('p');
@@ -96,6 +126,7 @@ export async function licensesView(root, ctx)
                 });
             }, { signal: ctx.signal });
         }
+        components.push({ name: entry.name.toLowerCase(), section });
         root.append(section);
     }
     return {

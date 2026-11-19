@@ -1,4 +1,5 @@
 export const keys = [
+    "Settings category",
     "Automatic login account saved; login notice prevents automatic login",
     "Disable the login notice on this PC",
     "The current login notice title and text will be removed from this PC. Managed policies may restore them.",

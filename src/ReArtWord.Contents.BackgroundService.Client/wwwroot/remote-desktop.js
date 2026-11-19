@@ -382,7 +382,15 @@ export async function desktopView(root, ctx)
     }
 
     detailsMenu.body.append(status, audioStatus, codecNote);
-    root.append(toolbar, rail, viewport);
+    const deck = document.createElement('header'), targets = document.createElement('div');
+    targets.className = 'desktop-targets';
+    deck.className = 'desktop-deck';
+    const controls = document.createElement('details'), controlsLabel = document.createElement('summary');
+    controlsLabel.textContent = ctx.t('Display and input', '表示・入力');
+    controls.open = 650 < window.innerWidth;
+    controls.append(controlsLabel, toolbar);
+    deck.append(targets, controls);
+    root.append(deck, rail, viewport);
     viewport.append(empty, overlay);
     let peers = [], socket, monitors = [], views = [], selected = 0, disposed = false, generation = 0, render = 0, pointer;
     const input = new ArrayBuffer(24), inputView = new DataView(input);
@@ -2206,9 +2214,10 @@ export async function desktopView(root, ctx)
     statistics.setAttribute('aria-pressed', String(!overlay.hidden));
     if (experimental)
     {
-        toolbar.append(cluster);
+        targets.append(labeled(ctx.t('Cluster', 'クラスタ'), cluster));
     }
-    toolbar.append(transmissionPreset, host, start, stop, connection, sound, fullscreen, videoFullscreen, cursorSync, clipboardSync, sizing, follow);
+    targets.append(labeled(ctx.t('Transmission preset', '伝送プリセット'), transmissionPreset), labeled(ctx.t('Host', '接続先'), host), start, stop, connection);
+    toolbar.append(sound, fullscreen, videoFullscreen, cursorSync, clipboardSync, sizing, follow);
     toolbar.append(screens, keyboardSeparator, reconnectButton, viewOnlyButton, keyboardButton, displaySeparator, keybar, keySeparator, reload);
     cluster.onchange = hosts;
     rail.append(settingsMenu.element);

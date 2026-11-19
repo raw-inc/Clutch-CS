@@ -219,7 +219,8 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
             assert.ok(Math.abs(original.headerTop - original.top) <= 1, 'no gap above the display header');
             for (const fraction of [0.25, 0.75])
             {
-                const x = original.left + original.width * fraction, y = original.top + original.height * 0.7;
+                // ブラウザー間で端数の丸め方が異なるため、実際に送る座標と期待値を同じ整数ピクセルに揃える。
+                const x = Math.round(original.left + original.width * fraction), y = Math.round(original.top + original.height * 0.7);
                 await page.mouse.move(x, y);
                 const wanted = original.horizontal * (x - original.left) / (original.width - 1);
                 await page.waitForFunction(wanted => Math.abs(document.querySelector('.desktop-viewport').scrollLeft - wanted) <= 2, wanted);

@@ -160,7 +160,7 @@ export async function filesView(root, ctx)
         footer.className = 'file-pane-footer';
         const count = document.createElement('span');
         count.setAttribute('role', 'status');
-        const copy = ctx.button(index === 0 ? ctx.t('Copy selected →', '右へコピー →') : ctx.t('← Copy selected', '← 左へコピー'), async () =>
+        const copy = ctx.button(ctx.t('Copy selected files', '選択したファイルをコピー'), async () =>
         {
             const other = panes[1 - index];
             await enqueueAsync(state, other, other.directory, [...state.selected]);
@@ -171,8 +171,8 @@ export async function filesView(root, ctx)
         const up = ctx.button(ctx.t('↑ Up', '↑ 上へ'), () => openAsync(state.parent));
         const refresh = ctx.button(ctx.t('Refresh', '更新'), () => openAsync(state.directory));
         toolbar.append(drives, up, refresh);
-        footer.append(count, copy);
-        section.append(label, toolbar, location, tree, footer);
+        footer.append(count);
+        section.append(label, location, toolbar, tree, footer);
         split.append(section);
         state.actions = fileActionControls(section, ctx, {
             read: () => ({ generation: state.generation, directory: state.directory, peer: state.peer, label: state.peer?.hostId ?? '',
@@ -187,13 +187,16 @@ export async function filesView(root, ctx)
 
             refresh: snapshot => Promise.all(panes.filter(item => samePeer(item.peer, snapshot.peer) && item.directory === snapshot.directory).map(item => item.refresh()))
         });
-        toolbar.append(state.actions.create, state.actions.remove);
+        toolbar.append(state.actions.create);
+        footer.append(state.actions.remove, copy);
 
         /** 現在の設定と状態から表示を更新します。 */
         function update()
         {
             const locked = state.busy || panes.some(item => item.actions?.busy);
             count.textContent = ctx.t(state.selected.size + ' selected', state.selected.size + ' 件を選択');
+            const destination = panes[1 - index]?.hostId;
+            copy.textContent = destination ? ctx.t('Copy to ' + destination, destination + ' にコピー') : ctx.t('Copy selected files', '選択したファイルをコピー');
             copy.disabled = locked || !state.peer || !state.selected.size || !panes[1 - index]?.directory || panes[1 - index]?.busy || state.peer.clusterId !== panes[1 - index]?.peer?.clusterId;
             drives.disabled = refresh.disabled = address.disabled = go.disabled = !state.peer || locked;
             up.disabled = !state.peer || !state.directory || locked;

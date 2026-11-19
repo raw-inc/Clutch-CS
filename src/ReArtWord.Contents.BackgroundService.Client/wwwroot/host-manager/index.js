@@ -72,7 +72,10 @@ export async function mount(element, labels)
     const content = node('div', '', 'hm-content'), activity = node('button', '', 'hm-activity');
     activity.type = 'button';
     activity.hidden = true;
-    main.append(tabs, message, content, activity);
+    const areaPicker = node('select', '', 'hm-area-picker');
+    areaPicker.setAttribute('aria-label', labels['Settings category'] ?? 'Settings category');
+    areaPicker.addEventListener('change', () => tabs.querySelector('#hm-tab-' + areaPicker.value)?.click(), { signal: screen.abort.signal });
+    main.append(tabs, areaPicker, message, content, activity);
     workspace.append(sidebar, main);
     element.append(title, workspace);
     const search = input('', 'search');
@@ -444,6 +447,7 @@ export async function mount(element, labels)
         const button = action(ctx, label, glyph, () =>
         {
             screen.area = area;
+            areaPicker.value = area;
             for (const item of tabs.children)
             {
                 const selected = item === button;
@@ -458,6 +462,10 @@ export async function mount(element, labels)
         button.setAttribute('aria-controls', 'hm-panel-' + area);
         button.tabIndex = area === screen.area ? 0 : -1;
         tabs.append(button);
+        const option = node('option', ctx.t(label));
+        option.value = area;
+        option.selected = area === screen.area;
+        areaPicker.append(option);
     }
     tabs.addEventListener('keydown', event =>
     {

@@ -340,7 +340,7 @@ test('a restarted endpoint cannot enqueue from paths browsed on its old instance
     check.checked = true;
     check.onchange();
     f.setPeers([{ ...left, instanceId: 'restarted' }, right]);
-    await f.clickIn(0, 'Copy selected →');
+    await f.clickIn(0, 'Copy to right');
     assert.equal(f.transfers.length, 0);
     assert.ok(f.messages.at(-1).includes('Refresh hosts'));
 });
@@ -361,7 +361,7 @@ test('copy enqueue keeps browsed peers even when a higher priority peer appears'
     check.checked = true;
     check.onchange();
     f.setPeers([left, right, { ...left, peerId: 'new-peer', instanceId: 'new-instance', priority: 100 }]);
-    await f.clickIn(0, 'Copy selected →');
+    await f.clickIn(0, 'Copy to right');
     assert.equal(f.transfers.length, 1);
     assert.equal(f.transfers[0].source.peerId, left.peerId);
     assert.equal(f.transfers[0].destination.peerId, right.peerId);

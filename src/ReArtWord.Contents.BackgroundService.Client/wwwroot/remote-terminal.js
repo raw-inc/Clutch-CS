@@ -716,10 +716,15 @@ export async function terminalView(root, ctx)
     }
 
     showShells(ctx.t('Select a peer', 'ピアを選択'));
-    toolbar.append(shellLabel, user, admin, leave, copy, paste, ...fullscreen.buttons);
+    const sessionActions = document.createElement('div'), screenActions = document.createElement('div');
+    sessionActions.className = 'terminal-session-actions';
+    screenActions.className = 'terminal-screen-actions';
+    sessionActions.append(shellLabel, user, admin, leave);
+    screenActions.append(copy, paste, ...fullscreen.buttons);
+    toolbar.append(sessionActions, screenActions);
     if (tokenPolicy)
     {
-        toolbar.append(tokenPolicy);
+        sessionActions.append(tokenPolicy);
     }
     const sessionHeading = document.createElement('h2');
     sessionHeading.textContent = ctx.t('Shared sessions', '共有セッション');

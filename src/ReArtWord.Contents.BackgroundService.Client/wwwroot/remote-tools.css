@@ -395,21 +395,27 @@
 }
 
 .transfer-modes {
-    display: flex;
-    gap: 24px;
-    border-bottom: 1px solid var(--line);
-    margin: 0 0 18px;
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px;
+    margin-bottom: 16px;
+    border-radius: var(--radius-panel);
+    background: var(--card);
 }
 
 .transfer-modes a {
-    padding: 10px 2px;
+    padding: 8px 14px;
+    border-radius: var(--radius-control);
     color: var(--muted);
-    font-size: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
 }
 
 .transfer-modes a[aria-current="page"] {
-    border-bottom: 2px solid var(--accent);
-    color: var(--ink);
+    background: var(--accent);
+    color: var(--on-accent);
 }
 
 .file-workspace {
@@ -437,8 +443,8 @@
     border-bottom: 1px solid var(--line);
     padding: 10px 12px;
     margin: 0;
-    font-size: 11px;
-    font-weight: 500;
+    font-size: 14px;
+    font-weight: 600;
     color: var(--muted);
 }
 
@@ -463,12 +469,12 @@
 }
 
 .file-navigation button {
-    font-size: 11px;
+    font-size: 12px;
     padding: 5px 9px;
     background: transparent;
     border-color: transparent;
     color: var(--muted);
-    min-height: 30px;
+    min-height: 36px;
 }
 
 .file-navigation button:hover {
@@ -598,6 +604,7 @@
 
 .file-pane-footer {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
@@ -611,7 +618,9 @@
 }
 
 .file-pane-footer button {
-    font-size: 11px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 12px;
     padding: 5px 9px;
     min-height: 30px;
 }
@@ -684,7 +693,7 @@
 
 .transfer-job progress {
     width: 100%;
-    height: 5px;
+    height: 8px;
     accent-color: var(--accent);
 }
 
@@ -694,20 +703,36 @@
 }
 
 .license-list {
-    max-width: 1100px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+    gap: 16px;
+    align-items: start;
+    overflow-wrap: anywhere;
+}
+
+.license-list > .page-description {
+    grid-column: 1 / -1;
+    max-width: 80ch;
 }
 
 .license-list section {
-    padding: 18px 0;
-    border-bottom: 1px solid var(--line);
+    padding: clamp(16px, 2vw, 24px);
+    min-width: 0;
+    background: var(--card);
+    border-radius: var(--radius-panel);
+    font-size: 14px;
 }
 
 .license-list h2 {
-    font-size: 16px;
+    font-size: 18px;
+    margin-bottom: 6px;
 }
 
 .license-list details {
     margin-top: 12px;
+    padding-inline: 10px;
+    background: var(--nested);
+    border-radius: var(--radius-control);
 }
 
 .license-list pre {
@@ -797,8 +822,66 @@
     }
 
     .transfer-modes {
-        gap: 14px;
-        overflow-x: auto;
-        white-space: nowrap;
+        gap: 2px;
     }
+}
+
+.terminal-session-actions,
+.terminal-screen-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.terminal-session-actions label {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.terminal-screen-actions {
+    margin-inline-start: auto;
+}
+
+.remote-tools .terminal-toolbar,
+.file-pane > label,
+.file-pane .file-pane-title {
+    background: var(--card);
+    padding: 12px;
+}
+
+.file-pane,
+.terminal-workspace {
+    border-radius: var(--radius-panel);
+    background: var(--panel);
+}
+
+.terminal-session-actions .terminal-shell {
+    max-width: min(65vw, 18rem);
+}
+
+.license-filter {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 26rem) auto;
+    align-items: center;
+    justify-content: start;
+    gap: 4px 12px;
+    margin: 0;
+}
+
+.license-filter input {
+    grid-column: 1;
+}
+
+.license-filter output {
+    white-space: nowrap;
+}
+
+.license-filter label {
+    grid-column: 1 / -1;
+    margin: 0;
+    font-weight: 600;
 }

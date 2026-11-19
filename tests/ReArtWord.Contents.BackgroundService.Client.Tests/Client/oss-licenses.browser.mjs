@@ -86,6 +86,13 @@ for (const language of ['ja', 'en'])
         assert.match(await zstd.textContent(), /Zstandard: .*BSD-3-Clause \(BSD-3-Clause OR GPL-2\.0-only\)/u);
         const editor = page.locator('section').filter({ has: page.getByRole('heading', { name: '@codemirror/autocomplete', exact: true }) });
         assert.equal(await editor.locator('a').count(), 0);
+        const filter = page.getByRole('searchbox', { name: language === 'ja' ? 'ライブラリーを検索' : 'Find a component' });
+        await filter.fill('CSVHELPER');
+        assert.deepEqual(await page.locator('section:visible h2').allTextContents(), ['CsvHelper']);
+        await filter.fill('missing-component');
+        assert.equal(await page.locator('section:visible').count(), 0);
+        await filter.fill('');
+        assert.equal(await page.locator('section:visible').count(), names.length);
     });
 }
 

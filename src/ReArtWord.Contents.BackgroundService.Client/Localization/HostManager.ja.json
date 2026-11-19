@@ -1,4 +1,5 @@
 {
+  "Settings category": "設定項目",
   "Device.SettingsChanged": "設定が変更されています。再取得してから編集してください。",
   "Static addresses require DHCP to be disabled explicitly or already disabled.": "固定アドレスを変更するには、DHCPを明示的に無効化するか、すでに無効なIFを選択してください。",
   "The gateway must belong to the interface subnet.": "ゲートウェイは対象IFのサブネット内のアドレスを指定してください。",
@@ -149,7 +150,7 @@
   "No matching hosts": "該当するホストがありません",
   "Unavailable in this tab": "このタブでは未対応",
   "Choose a host to get started": "ホストを選択してください",
-  "Select one host, or select several to manage them together.": "左の一覧から、個別または一括で管理するホストを選択します。",
+  "Select one host, or select several to manage them together.": "複数のホストを選ぶと、まとめて設定できます。",
   "Loading settings": "設定を取得中",
   "Discard unsaved changes?": "未適用の編集を破棄しますか？",
   "Your edited settings have not been applied.": "編集内容はまだホストへ適用されていません。",

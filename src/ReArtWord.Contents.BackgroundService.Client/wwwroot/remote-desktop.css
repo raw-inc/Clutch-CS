@@ -16,18 +16,18 @@
     position: relative;
     display: grid;
     grid-template-columns: 44px minmax(0, 1fr);
-    grid-template-rows: 44px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
     min-width: 0;
     min-height: 0;
     overflow: hidden;
     border: 1px solid var(--line);
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-panel);
     background: var(--paper);
 }
 
 .desktop-toolbar {
-    grid-column: 1/-1;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 6px;
     padding: 5px 10px;
@@ -38,7 +38,7 @@
     white-space: nowrap;
 }
 
-.desktop-toolbar > select {
+.desktop-targets select {
     height: 30px;
     padding: 4px 8px;
     font-size: 11px;
@@ -47,17 +47,13 @@
     min-width: 110px;
 }
 
-.desktop-toolbar > select:nth-child(2) {
-    flex-basis: 200px;
-    width: 200px;
-}
-
-.desktop-toolbar .desktop-connect {
+.desktop-targets .desktop-connect {
     height: 30px;
     font-size: 11px;
     padding: 4px 10px;
     flex: none;
     flex-direction: row-reverse;
+    min-height: 36px;
 }
 
 .desktop-connection {
@@ -192,9 +188,10 @@
     position: absolute;
     z-index: 4;
     left: 48px;
-    top: 48px;
+    grid-row: 2;
+    top: 4px;
     width: min(300px, calc(100% - 56px));
-    max-height: calc(100% - 56px);
+    max-height: calc(100% - 8px);
     overflow: auto;
     padding: 16px;
     background: var(--panel);
@@ -250,10 +247,9 @@
     font-size: 11px;
 }
 
-.desktop-toolbar > .desktop-transmission-preset {
-    min-width: 190px;
-    max-width: 230px;
+.desktop-targets label:has(.desktop-transmission-preset) {
     flex: 0 1 220px;
+    max-width: min(100%, 220px);
 }
 
 .desktop-bitrate-mode[data-quality="false"][aria-pressed="false"] span:first-child,
@@ -414,13 +410,13 @@
         gap: 4px;
     }
 
-    .desktop-toolbar > select {
+    .desktop-targets select {
         min-width: 100px;
         height: 26px;
         padding: 3px 7px;
     }
 
-    .desktop-toolbar .desktop-connect {
+    .desktop-targets .desktop-connect {
         height: 26px;
         padding: 3px 8px;
     }
@@ -530,4 +526,81 @@
     bottom: 0;
     pointer-events: none;
     touch-action: auto;
+}
+
+.desktop-deck {
+    grid-column: 1 / -1;
+    min-width: 0;
+    max-height: 45dvh;
+    overflow: auto;
+    background: var(--card);
+}
+
+.desktop-targets {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 8px 12px;
+    padding: 12px;
+}
+
+.desktop-targets label {
+    margin: 0;
+    flex: 0 1 12rem;
+    min-width: 0;
+    font-weight: 600;
+}
+
+.desktop-targets label select {
+    width: 100%;
+    height: 36px;
+    font-size: 13px;
+}
+
+.desktop-targets .desktop-labeled:enabled {
+    width: auto;
+    min-width: 80px;
+    height: 36px;
+    color: var(--ink);
+    background: var(--nested);
+    border-color: var(--control);
+    font-size: 13px;
+}
+
+.desktop-deck > details > summary {
+    margin: 0;
+    padding: 6px 12px;
+    border-block: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.desktop-deck .desktop-keybar {
+    flex-wrap: wrap;
+    flex: 0 1 auto;
+}
+
+@media (max-width: 650px) {
+    .desktop-targets {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: end;
+        gap: 6px;
+        padding: 8px;
+    }
+
+    .desktop-targets label {
+        flex: 1 1 8rem;
+    }
+
+    .desktop-targets label select {
+        min-width: 0;
+    }
+
+    .desktop-targets .desktop-connection {
+        grid-column: 1 / -1;
+        display: inline-flex;
+    }
 }

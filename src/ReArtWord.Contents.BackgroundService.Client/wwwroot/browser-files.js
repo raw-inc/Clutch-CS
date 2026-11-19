@@ -137,7 +137,7 @@ export async function browserFilesView(root, ctx)
         footer.className = 'file-pane-footer';
         const count = document.createElement('span');
         count.setAttribute('role', 'status');
-        const copy = ctx.button(local ? ctx.t('Copy selected →', '右へコピー →') : ctx.t('← Copy selected', '← 左へコピー'), () => copyItemsAsync(state, [...state.selected].map(path => state.entries.get(path)), panes[local ? 1 : 0].directory));
+        const copy = ctx.button(local ? ctx.t('Copy to host', 'ホストにコピー') : ctx.t('Copy to this device', 'この端末にコピー'), () => copyItemsAsync(state, [...state.selected].map(path => state.entries.get(path)), panes[local ? 1 : 0].directory));
         copy.className = 'primary';
         const home = ctx.button(local ? ctx.t('Folder root', '選択フォルダー') : ctx.t('Drives', 'ドライブ'), () => openAsync(local ? '' : null));
         home.prepend(ctx.icon(local ? 'folder' : 'drive'));
@@ -145,8 +145,8 @@ export async function browserFilesView(root, ctx)
         const refresh = ctx.button(ctx.t('Refresh', '更新'), () => openAsync(state.directory));
         refresh.prepend(ctx.icon('refresh'));
         navigation.append(home, up, refresh);
-        footer.append(count, copy);
-        section.append(title, navigation, location, tree, footer);
+        footer.append(count);
+        section.append(title, location, navigation, tree, footer);
         split.append(section);
         state.actions = fileActionControls(section, ctx, {
             read: () => ({ generation: state.generation, directory: state.directory, peer: target, root: localRoot,
@@ -164,7 +164,8 @@ export async function browserFilesView(root, ctx)
 
             refresh: snapshot => openAsync(snapshot.directory)
         });
-        navigation.append(state.actions.create, state.actions.remove);
+        navigation.append(state.actions.create);
+        footer.append(state.actions.remove, copy);
         let picker, chooser;
         if (local)
         {

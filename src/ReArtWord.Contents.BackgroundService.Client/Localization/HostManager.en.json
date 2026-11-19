@@ -1,4 +1,5 @@
 {
+  "Settings category": "Settings category",
   "Device.SettingsChanged": "Settings changed. Refresh before editing again.",
   "Static addresses require DHCP to be disabled explicitly or already disabled.": "Static addresses require DHCP to be disabled explicitly or already disabled.",
   "The gateway must belong to the interface subnet.": "The gateway must belong to the interface subnet.",

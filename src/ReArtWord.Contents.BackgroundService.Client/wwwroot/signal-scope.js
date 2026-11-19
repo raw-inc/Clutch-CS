@@ -67,11 +67,16 @@ export async function signalScopeViewAsync(container, ctx)
     const reload = ctx.button(ctx.t('Refresh hosts', 'Host再取得'), () => sources.loadAsync());
     display.setAttribute('aria-label', ctx.t('Endpoint display', '送受信先の表示'));
     display.append(new Option('IP:Port', 'ip'), new Option('Host:Port', 'host'));
-    toolbar.append(search, start, stop, clear, latest, display);
+    start.className = 'primary';
+    const filters = document.createElement('div');
+    filters.className = 'scope-filters';
+    filters.append(search, latest, display);
+    toolbar.append(start, stop, clear);
     selection.prepend(reload);
-    results.append(status);
+    results.append(filters, searchError, status);
     workspace.append(selection, results);
-    container.append(toolbar, searchError, workspace);
+    selection.prepend(toolbar);
+    container.append(workspace);
     const table = scopeTable(results, ctx, send, view =>
     {
         status.textContent = ctx.t('Matched', '一致') + ': ' + view.total.toLocaleString() + ' / ' + view.retained.toLocaleString() + ' · '
