@@ -9,9 +9,9 @@
     else{<span>@Ui["Select connection"]</span>}
     <UiIcon Name="chevron" />
 </button>
-<Modal Open="open" Title="@Ui["Clusters visible from this PC"]" Close="()=>open=false">
+<Modal Open="open" ShowCloseAction="true" Title="@Ui["Clusters visible from this PC"]" Close="()=>open=false">
     <p>@Ui["ClientHost observes the configured networks together. It does not join any cluster as a Core peer."]</p>
-    <p class="notice" role="status">@Ui[message??string.Empty]</p>
+    @if(!string.IsNullOrEmpty(message)){<p class="notice" role="status">@Ui[message]</p>}
     <button @onclick="RefreshAsync" disabled="@busy">@Ui["Refresh observations"]</button>
     @if(clusters.Count==0)
     {
@@ -20,16 +20,17 @@
     @foreach(var cluster in clusters)
     {
         <section class="card section" @key="cluster.ClusterId">
-            <h3>Cluster @cluster.ClusterId</h3>
+            <h3>@cluster.ClusterId</h3>
             <p class="small muted">@Ui["Last received"] @FormatTime(cluster.LastSeen) · @Ui["Coordinator candidates:"] @string.Join(", ",cluster.CoordinatorCandidates)</p>
             @if(cluster.CoordinatorCandidates.Count>1)
             {
                 <p>@Ui["Coordinator candidates disagree. Select a peer explicitly."]</p>
             }
-            <table><thead><tr><th>Peer / Host</th><th>@Ui["Observed state"]</th><th>@Ui["Instance"]</th><th>@Ui["Connect"]</th></tr></thead><tbody>
+            <table class="peer-connections"><thead><tr><th>@Ui["Peer / Host"]</th><th>@Ui["Observed state"]</th><th>@Ui["Instance"]</th><th>@Ui["Connect"]</th></tr></thead><tbody>
             @foreach(var peer in cluster.Peers)
             {
-                <tr @key="peer.InstanceId"><td>@peer.PeerId / @peer.HostId</td><td>@Ui[peer.Status.ToString()]</td><td class="small mono">@peer.InstanceId</td><td><button @onclick="()=>SelectAsync(cluster.ClusterId,peer.PeerId,peer.InstanceId)" disabled="@busy">@Ui["Connect to this cluster and peer"]</button></td></tr>
+                var selected = Connected && cluster.ClusterId == ClusterId && peer.PeerId == PeerId && peer.InstanceId == Connection.Current?.InstanceId;
+                <tr @key="peer.InstanceId"><td data-label="@Ui["Peer / Host"]">@peer.PeerId / @peer.HostId</td><td data-label="@Ui["Observed state"]">@Ui[peer.Status.ToString()]</td><td class="small mono" data-label="@Ui["Instance"]">@peer.InstanceId</td><td>@if(selected){<span class="tag">@Ui["Connected"]</span>}else{<button @onclick="()=>SelectAsync(cluster.ClusterId,peer.PeerId,peer.InstanceId)" disabled="@busy">@Ui["Connect"]</button>}</td></tr>
             }
             </tbody></table>
         </section>

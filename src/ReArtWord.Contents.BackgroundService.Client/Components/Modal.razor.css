@@ -76,6 +76,7 @@
     padding: 16px clamp(16px, 3vw, 28px);
     overflow: auto;
     overscroll-behavior: contain;
+    scroll-padding-block: 12px;
 }
 
 .dialog > .toolbar:last-child {
@@ -102,4 +103,47 @@
 
 .dialog-content ::deep .field-actions {
     align-items: end;
+}
+
+.dialog > footer.toolbar {
+    border-block-start: 1px solid var(--control);
+}
+
+.dialog-content ::deep .maintenance-form > label,
+.dialog-content ::deep .maintenance-form fieldset {
+    margin-block: 0;
+}
+
+.dialog-content ::deep .maintenance-form {
+    gap: 16px;
+}
+
+.dialog-content ::deep h3 {
+    font-size: 16px;
+}
+
+.dialog-content ::deep :is(.operational-fields, .group-settings-fields) {
+    display: grid;
+    gap: 16px;
+    padding: 0;
+}
+
+.dialog-content ::deep :is(.operational-fields, .group-settings-fields) > :is(label, h3, p, button, .toolbar) {
+    margin: 0;
+}
+
+.dialog-content ::deep :is(.operational-fields, .group-settings-fields) label {
+    gap: 4px;
+}
+
+.dialog-content ::deep :is(.operational-fields, .group-settings-fields) :is(input, select) {
+    margin-block: 0;
+}
+
+.dialog-content ::deep :is(.operational-fields, .group-settings-fields) > button {
+    justify-self: start;
+}
+
+.dialog-content ::deep .group-settings-fields small {
+    font-size: 13px;
 }

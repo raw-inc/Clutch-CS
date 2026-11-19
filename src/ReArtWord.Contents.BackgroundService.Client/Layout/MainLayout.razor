@@ -17,7 +17,7 @@
             <a href="@item.Route" class="@(NavigationRoute == item.Route ? "active" : null)" aria-current="@(NavigationRoute == item.Route ? "page" : null)"><UiIcon Name="@item.Icon" />@item.Name</a>
         }
         <details class="route-menu" @key="Navigation.Uri">
-            <summary aria-label='@Ui["Main navigation"]'><UiIcon Name="menu" /><span>@Ui["Menu"]</span></summary>
+            <summary aria-label='@Ui["Main navigation"]'><UiIcon Name="menu" /><span>@(navigationItems.FirstOrDefault(item=>item.Route==NavigationRoute).Name ?? Ui["Menu"])</span></summary>
             <div>
                 @foreach (var item in navigationItems)
                 {
@@ -30,8 +30,8 @@
     <div class="connection"><ConnectionPicker TargetChanged="StateHasChanged" ClusterId="@Api.SelectedClusterId" PeerId="@Api.SelectedPeerId" Connected="Connection.Connected" /></div>
 </header>
 <footer class="app-statusbar">
-    <div class="statusbar-left"><a href="/licenses">OSS License</a><span aria-hidden="true">|</span>@if(Api.SelectedClusterId is not null&&Api.SelectedPeerId is not null){<PersistenceNotice @key="(Api.SelectedClusterId,Api.SelectedPeerId)" Peers="@(Connection.Current?.Peers??[])" Connected="Connection.Connected" />}<TransferProgressPopup @ref="transfers" ActiveCount="transferCount" CountUnconfirmed="transferCountUnconfirmed" /><FleetUpdateFooter Updates="@Fleet.Activities" StaleOperations="@Fleet.StaleOperations" Unavailable="@Fleet.Unavailable" /><PwaStatus /></div>
-    <div class="statusbar-right"><span>Clutch-CS - © raw inc.</span><span aria-hidden="true">|</span><span title="@(Ui["footer.version"]+": "+FullUiVersion)">v@(ShortUiVersion)</span></div>
+    <div class="statusbar-left"><a href="/licenses">OSS License</a><span aria-hidden="true">|</span>@if(Api.SelectedClusterId is not null&&Api.SelectedPeerId is not null){<PersistenceNotice @key="(Api.SelectedClusterId,Api.SelectedPeerId)" Peers="@(Connection.Current?.Peers??[])" Connected="Connection.Connected" />}<TransferProgressPopup @ref="transfers" ActiveCount="transferCount" CountUnconfirmed="transferCountUnconfirmed" /><FleetUpdateFooter Updates="@Fleet.Activities" StaleOperations="@Fleet.StaleOperations" Unavailable="@Fleet.Unavailable" /></div>
+    <div class="statusbar-right"><PwaStatus /><span>Clutch-CS - © raw inc.</span><span aria-hidden="true">|</span><span title="@(Ui["footer.version"]+": "+FullUiVersion)">v@(ShortUiVersion)</span></div>
 </footer>
 @if(initialized)
 {

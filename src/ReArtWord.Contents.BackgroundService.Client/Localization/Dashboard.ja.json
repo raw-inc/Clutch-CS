@@ -52,7 +52,7 @@
   "History not saved": "履歴未保存",
   "Diagnostic history persistence is unconfirmed.": "診断履歴への保存は未確認です",
   "Workflow activity": "ワークフローの活動",
-  "Last 60 seconds": "直近 60 秒",
+  "Last 60 seconds": "直近60秒",
   "Completions · deduplicated by execution ID": "完了回数 · 実行 ID の重複を除外",
   "No completions in the retrieved range.": "取得範囲に完了記録はありません。",
   "Recent logs": "直近のログ",
@@ -215,5 +215,15 @@
   "Down": "受信",
   "Up": "送信",
   "Last 15 minutes": "直近 15 分",
-  "PCs above 80%": "使用率が 80 % を超えた PC"
+  "PCs above 80%": "使用率が 80 % を超えた PC",
+  "Power actions": "電源操作",
+  "Refresh resource measurements": "計測値を更新",
+  "Refresh applications": "アプリ一覧を更新",
+  "Saved and effective revisions match": "保存版と有効版が一致",
+  "Not checked": "未照会",
+  "No conflicts": "競合なし",
+  "Peer / Host": "ピア / ホスト",
+  "No detached changes": "離脱中の変更なし",
+  "Participating in this cluster": "このクラスタに参加中",
+  "Checked at {0}": "{0} 確認"
 }

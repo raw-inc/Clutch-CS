@@ -2,10 +2,11 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Updates
 <section class="card update-settings">
 <h2>@Ui["Release update"]</h2>
+<p class="small muted">@Ui["Choose a published release for the selected peers."]</p>
 <button @onclick="Open">@Ui["Select a release to install"]</button>
-<p class="notice">@(message?.Invoke())</p>
-</section>
+@if(message is not null){<p class="notice">@message()</p>}
 <UpdateSchedulePanel Edit="EditSchedule" />
+</section>
 <Modal Open="open" Title="@Ui["Update a fixed set of peers"]" Close="()=>open=false">
 <p class="notice">@(message?.Invoke())</p>
 <p>@Ui.Format("The initiating peer is {0}. The request is retained on this device before sending.", ownerPeer)</p>

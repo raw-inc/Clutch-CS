@@ -64,6 +64,13 @@ public sealed partial class Modal : IAsyncDisposable
         get; set;
     }
 
+    /// <summary>長い閲覧画面を本文の末尾から閉じられるようにします。</summary>
+    [Parameter]
+    public bool ShowCloseAction
+    {
+        get; set;
+    }
+
     /// <summary>入力済みの編集を閉じる際に破棄を確認します。</summary>
     [Parameter]
     public bool ConfirmDiscard

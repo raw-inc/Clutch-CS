@@ -6,11 +6,12 @@
 <section class="card">
     <header class="review-heading">
         <div><h2>@Ui["Shared state conflicts"]</h2>
-            <p class="small muted">@Ui["Compare concurrently saved candidates. Resolution checks all reviewed revisions and does not rewrite an already-running occurrence."]</p></div>
+            <p class="small muted">@Ui["Compare the saved values and choose the revision to keep."]</p></div>
     </header>
+    @if(!loaded){<p class="small muted">@Ui["Not checked"]</p>}
     @if(loaded)
     {
-        <p role="status"><span class="badge @(conflicts.Count>0?"warn":"good")">@Ui.Format("Unresolved: {0}", conflicts.Count)</span> · @FormatTime(checkedAt,"HH:mm")</p>
+        <p role="status"><span class="badge @(conflicts.Count>0?"warn":"good")">@(conflicts.Count == 0 ? Ui["No conflicts"] : Ui.Format("Unresolved: {0}", conflicts.Count))</span> · @Ui.Format("Checked at {0}", FormatTime(checkedAt,"HH:mm"))</p>
         @if(conflicts.Count>0)
         {
         <div class="table-wrap"><table class="record-table"><thead><tr><th>@Ui["Storage purpose / target"]</th><th>@Ui["Affected scope"]</th><th class="numeric">@Ui["Candidates"]</th><th>@Ui["Actions"]</th></tr></thead><tbody>
@@ -40,7 +41,7 @@
     @if(selected is { } current)
     {
         <p>@current.Scope / @current.Key</p>
-        <p class="small mono">@Ui["Conflict ID"] @current.Id</p>
+        <details class="secondary-details"><summary>@Ui["Conflict ID"]</summary><code>@current.Id</code></details>
         @if(!current.Resolvable){<p class="notice error">@Ui["This purpose is unsupported or the candidate is invalid. Check diagnostics and stored artifacts instead of resolving here."]</p>}
         @if(current.ValuesHidden){<p>@Ui["Secret values are not displayed or saved on this device. Select a reviewed candidate revision."]</p>}
         var previews = current.ValuesHidden ? [] : current.Candidates.Select(candidate => Preview(candidate.Value)).ToArray();
@@ -66,7 +67,7 @@
         <p class="small muted">@Ui["Review all candidates before resolving."]</p>
         @if(CanEdit(current,SelectedCandidate))
         {
-            <label><input type="checkbox" checked="@edit" @onchange="ChangeEdit" disabled="@busy" />@Ui["Edit the selected candidate for comparison"]</label>
+            <label><input type="checkbox" checked="@edit" @onchange="ChangeEdit" disabled="@busy" />@Ui["Edit the selected candidate for comparison"]</label><p class="small muted">@Ui["Editing creates a comparison draft. The selected revision changes only when you confirm the resolution."]</p>
             @if(edit){<label>@Ui["Content to edit (JSON)"]<textarea rows="12" @bind="edited" @bind:event="oninput" disabled="@busy" /></label><p class="small">@Ui["Definition and operational-setting hashes are recalculated while retaining the saved envelope. JSON null differs from deletion."]</p>}
         }
         <label><input type="checkbox" @bind="reviewed" disabled="@busy" />@Ui["I reviewed all displayed candidate revisions"]</label>

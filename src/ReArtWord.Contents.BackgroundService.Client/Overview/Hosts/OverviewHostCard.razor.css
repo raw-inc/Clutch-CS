@@ -7,15 +7,15 @@
 .host-card header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
     gap: 10px;
+    align-items: center;
 }
 
 .host-name {
     display: flex;
     gap: 10px;
     min-width: 0;
-    align-items: center;
+    align-items: start;
 }
 
 .host-name > div {
@@ -110,10 +110,12 @@ h3 {
     gap: 14px;
     margin-top: 12px;
     font-size: 12px;
+    align-items: start;
 }
 
 .device-line > span:first-child {
     color: var(--muted);
+    line-height: 1.5;
 }
 
 .unavailable {
@@ -306,4 +308,53 @@ h3 {
     color: var(--warn);
     font-size: 12px;
     font-weight: 700;
+}
+
+.gpu-reading,
+.gpu-reading b,
+.network-values {
+    font-size: 13px;
+}
+
+@media (max-width: 600px) {
+    .gpu-values {
+        align-items: start;
+    }
+}
+
+.metric-label + .metric-alert {
+    margin-inline-start: 0.5em;
+    padding-inline: 0.35em;
+    border: 1px solid currentcolor;
+    border-radius: var(--radius-control);
+    white-space: nowrap;
+}
+
+.host-name h3 {
+    margin: 0;
+    line-height: 24px;
+}
+
+.host-name .host-icon {
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    width: 24px;
+    padding: 0;
+}
+
+@container (max-width: 370px) {
+    .device-line:has(.gpu-values) {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .device-line .gpu-values {
+        width: 100%;
+    }
+}
+
+.host-name small.metric-alert {
+    color: var(--warn);
+    font-size: 13px;
 }

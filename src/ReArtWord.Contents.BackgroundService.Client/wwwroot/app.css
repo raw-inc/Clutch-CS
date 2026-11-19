@@ -909,6 +909,7 @@ details[open] > summary {
     padding: 14px;
     border-radius: var(--radius-control);
     background: var(--nested);
+    border: 1px solid var(--control);
 }
 
 .candidate-option.chosen {
@@ -1025,4 +1026,129 @@ details[open] > summary {
 .operational-fields input,
 .operational-fields select {
     min-width: 0;
+}
+
+.panel-links {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+}
+
+input[type="radio"],
+input[type="checkbox"] {
+    accent-color: var(--accent);
+}
+
+:lang(ja) :is(h1, h2, h3, label, .empty, .muted, .notice, .hm-muted) {
+    word-break: auto-phrase;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+    .record-table tbody tr + tr {
+        border-block-start: 2px solid var(--line);
+    }
+
+    .record-table td > :is(.badge, button) {
+        justify-self: start;
+        width: fit-content;
+    }
+}
+
+.fleet-update .maintenance-form .allow-active {
+    grid-column: 1 / -1;
+}
+
+.fleet-update .maintenance-form > label {
+    margin: 0;
+}
+
+.fleet-update > .small,
+.fleet-update details p {
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.fleet-update .maintenance-form {
+    align-items: end;
+    row-gap: 16px;
+}
+
+.fleet-update input:not([type="checkbox"]),
+.fleet-update select {
+    min-height: 42px;
+}
+
+.zone-entry {
+    width: min(100%, 22rem);
+}
+
+.range-note.warn {
+    color: var(--warn);
+    border-inline-start: 3px solid var(--warn);
+    background: var(--nested);
+}
+
+.candidate-option mark {
+    color: var(--ink);
+    background: var(--accent-soft);
+    text-decoration: underline;
+    text-decoration-color: var(--accent);
+    text-underline-offset: 2px;
+}
+
+.review-heading + button,
+.table-wrap + button {
+    margin-block-start: 12px;
+}
+
+@media (max-width: 760px) {
+    .record-table td.numeric {
+        text-align: start;
+    }
+
+    .record-table td.numeric::before {
+        text-align: start;
+    }
+}
+
+.restore-action {
+    border-color: var(--warn);
+}
+
+button.danger:disabled {
+    color: var(--disabled-ink);
+    background: var(--disabled-face);
+}
+
+.notice.metrics-warning {
+    border-inline-start-color: var(--warn);
+    background: var(--nested);
+    color: var(--warn);
+}
+
+.secondary-details > summary,
+.resource-detail > summary {
+    display: list-item;
+    min-height: 36px;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+@media (max-width: 900px) {
+    :root {
+        --statusbar-height: calc(70px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+.debug-query {
+    margin-block-start: 16px;
+}
+
+.debug-query + .muted {
+    margin-top: 6px;
 }

@@ -233,8 +233,14 @@ public sealed partial class OverviewHostCard
                                                                : value.Value.ToString("0.0", CultureInfo.CurrentCulture) + " °C";
 
     /// <summary>取得不能を区別して通信量を毎秒の単位で表示します。</summary>
-    /// <returns>MiB/sまたはKiB/sの通信量、取得不能ならダッシュです。</returns>
-    private static string Rate(double? value) => value is null ? "—"
-                                                               : 1048576 <= value.Value ? (value.Value / 1048576).ToString("0.00", CultureInfo.CurrentCulture) + " MiB/s"
-                                                                                        : (value.Value / 1024).ToString("0.0", CultureInfo.CurrentCulture) + " KiB/s";
+    /// <returns>概要と同じ毎秒ビット数で表した通信量です。</returns>
+    private static string Rate(double? value)
+    {
+        if (value is null)
+        {
+            return "—";
+        }
+        var (number, unit) = NetworkThroughput(value);
+        return number + " " + unit;
+    }
 }

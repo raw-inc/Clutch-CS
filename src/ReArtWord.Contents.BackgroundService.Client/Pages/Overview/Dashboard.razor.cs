@@ -65,10 +65,10 @@ public sealed partial class Dashboard : IAsyncDisposable
                                                                   : null;
     private static readonly (string Name, string Icon)[] views =
     [
-        ("All clusters", "dashboard"), ("Peer list", "monitor"), ("Selected cluster", "nodes"),
-        ("Execution & processes", "play"), ("Applications", "windows"), ("Script packages", "terminal"),
+        ("All clusters", "dashboard"), ("Peer list", "monitor"), ("Selected cluster", "network"),
+        ("Execution & processes", "play"), ("Applications", "windows"), ("Script packages", "code"),
         ("Snapshots", "save"), ("Resolve conflicts", "subworkflow"), ("Safety", "shield"),
-        ("Settings & maintenance", "settings"), ("Operations", "logs")
+        ("Settings & maintenance", "values"), ("Operations", "history")
     ];
 
     /// <summary>接続先が未選択でもクラスタの探索とブラウザー設定は利用できます。</summary>

@@ -6,7 +6,7 @@
 <h2>@Ui["Snapshots"]</h2>
 @if(snapshotCheckedAt is {} checkedAt){<p class="small muted">@Ui.Format("Snapshots retrieved: {0}", snapshots.Count) · @FormatTime(checkedAt,"HH:mm:ss")</p>}
 <p class="small muted">@Ui["Restore settings and explicitly included runtime state. External effects that already occurred are not undone."]</p>
-<div class="toolbar"><button class="primary" @onclick="OpenCapture"><UiIcon Name="save" />@Ui["Capture current state"]</button><button @onclick="OpenRestoreAsync"><UiIcon Name="undo" />@Ui["Restore by target"]</button></div>
+<div class="toolbar"><button class="primary" @onclick="OpenCapture"><UiIcon Name="save" />@Ui["Capture current state"]</button><button class="restore-action" @onclick="OpenRestoreAsync"><UiIcon Name="undo" />@Ui["Restore by target"]</button></div>
 <p class="notice">@(message?.Invoke())</p>
 </section>
 <Modal Open="captureOpen" Title="@Ui["Capture current state"]" Close="()=>captureOpen=false">
@@ -14,7 +14,7 @@
 <p class="notice">@(message?.Invoke())</p>
     <label>@Ui["Kind"]<select @bind="kind">@foreach(var value in Enum.GetValues<ESnapshotKind>()){<option value="@value">@Ui[value.ToString()]</option>}</select>
 </label>
-    <label>Peer<select @bind="peer">@foreach(var item in Connection.Current?.Peers??[]){<option value="@item.PeerId">@item.PeerId</option>}</select>
+    <label>@Ui["Peer"]<select @bind="peer">@foreach(var item in Connection.Current?.Peers??[]){<option value="@item.PeerId">@item.PeerId</option>}</select>
 </label>
 <label>@Ui["Target ID"]<input @bind="target" @bind:event="oninput" placeholder="Workflow ID / workflow:ID / peer:Peer:ID" />
 </label>
@@ -52,7 +52,7 @@
 <summary>@Ui["Add a target not listed"]</summary>
 <label>@Ui["Kind"]<select @bind="kind">@foreach(var value in Enum.GetValues<ESnapshotKind>()){<option value="@value">@Ui[value.ToString()]</option>}</select>
 </label>
-<label>Peer<input @bind="peer" @bind:event="oninput" />
+<label>@Ui["Peer"]<input @bind="peer" @bind:event="oninput" />
 </label>
 <label>@Ui["Target ID"]<input @bind="target" @bind:event="oninput" />
 </label>

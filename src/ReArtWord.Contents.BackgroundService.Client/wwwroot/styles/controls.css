@@ -35,9 +35,13 @@
 }
 
 .pc-display-toggle {
-    display: inline-flex;
     flex-wrap: wrap;
-    gap: 4px;
+    display: inline-flex;
+    align-items: stretch;
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
 }
 
 .pc-display-toggle button {
@@ -539,4 +543,29 @@ input[type="file"]::file-selector-button {
 
 .count-entry {
     width: 10ch;
+}
+
+select:not([multiple], [size]) {
+    appearance: none;
+    padding-inline-end: 32px;
+    background-image: linear-gradient(45deg, transparent 50%, currentcolor 50%), linear-gradient(135deg, currentcolor 50%, transparent 50%);
+    background-position: calc(100% - 16px) center, calc(100% - 11px) center;
+    background-size: 5px 5px;
+    background-repeat: no-repeat;
+}
+
+@media (forced-colors: active) {
+    select:not([multiple], [size]) {
+        appearance: auto;
+        background-image: none;
+    }
+}
+
+.pc-display-toggle button[aria-pressed] {
+    border: 0;
+    border-radius: 0;
+}
+
+.pc-display-toggle button[aria-pressed="true"] {
+    box-shadow: inset 0 -2px var(--accent);
 }

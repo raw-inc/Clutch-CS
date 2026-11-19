@@ -124,11 +124,11 @@
     justify-content: space-between;
     gap: 12px;
     padding: 0 max(18px, env(safe-area-inset-right)) 0 max(18px, env(safe-area-inset-left));
-    font-size: 10px;
     color: var(--muted);
     background: var(--paper);
     border-top: 1px solid var(--line);
     z-index: 5;
+    font-size: 12px;
 }
 
 .statusbar-left,
@@ -152,10 +152,8 @@
     flex: none;
 }
 
-.statusbar-left ::deep .pwa-state {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 22vw;
+.statusbar-right ::deep .pwa-state {
+    margin-inline-end: auto;
 }
 
 @media (max-width: 900px) {
@@ -400,12 +398,49 @@
     }
 
     .route-menu summary span {
-        display: none;
+        font-size: 12px;
+        font-weight: 600;
     }
 
     .route-menu > div {
         position: fixed;
         inset: 52px 8px auto;
         width: auto;
+    }
+}
+
+@media (max-width: 750px) {
+    .topbar {
+        flex-wrap: wrap;
+    }
+
+    .topbar .connection {
+        flex: 1 1 10rem;
+    }
+
+    .statusbar-right {
+        font-size: 11px;
+        gap: 5px;
+    }
+
+    .statusbar-right ::deep .pwa-state {
+        white-space: normal;
+        line-height: 1.15;
+    }
+}
+
+.statusbar-left ::deep :is(.statusbar-action, .transfer-toggle) {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+@media (max-width: 900px) {
+    .statusbar-left {
+        height: 44px;
+    }
+
+    .statusbar-left :is(a, button),
+    .statusbar-left ::deep button {
+        min-height: 44px;
     }
 }

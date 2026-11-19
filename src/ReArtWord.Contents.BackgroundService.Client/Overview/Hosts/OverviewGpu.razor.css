@@ -15,27 +15,27 @@
 }
 
 .gpu-heading span {
-    font-size: 11px;
+    font-size: 13px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .gpu-heading b {
-    font-size: 13px;
+    font-size: 14px;
     white-space: nowrap;
     font-weight: 550;
 }
 
 .gpu-memory small,
 .unavailable {
-    font-size: 9px;
+    font-size: 13px;
     color: var(--muted);
 }
 
 .gpu-memory {
     flex-wrap: wrap;
-    font-size: 10px;
+    font-size: 13px;
     color: var(--muted);
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;

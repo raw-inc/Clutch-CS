@@ -122,3 +122,45 @@
         margin: 0;
     }
 }
+
+.package-form label,
+.package-form select {
+    font-size: 14px;
+    font-weight: normal;
+}
+
+.package-form small {
+    font-size: 13px;
+}
+
+.package-form input,
+.package-form select,
+.package-form button {
+    min-height: 40px;
+}
+
+.package-form button {
+    justify-self: start;
+    width: fit-content;
+}
+
+.script-packages .package-choices {
+    margin: 0;
+    padding-inline: 0;
+}
+
+.package-environment .empty {
+    border: 1px solid var(--line);
+    background: var(--nested);
+    text-align: center;
+}
+
+.package-pane ::deep .runtime-picker button {
+    width: fit-content;
+    justify-self: start;
+}
+
+.package-pane ::deep .runtime-picker :is(input, select),
+.package-workspace label {
+    font-size: 14px;
+}

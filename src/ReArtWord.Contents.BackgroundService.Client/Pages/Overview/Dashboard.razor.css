@@ -126,6 +126,7 @@
 
 .settings-picker .choice-strip input:checked + span {
     border-bottom: 2px solid var(--accent);
+    border-bottom-color: var(--accent);
 }
 
 .dashboard-operations ::deep .review-heading {
@@ -162,4 +163,75 @@
 
 .dashboard-operations > details.secondary-details > summary {
     margin: 0;
+}
+
+.execution-telemetry > .card {
+    margin: 0;
+    border: 0;
+    padding: clamp(16px, 2vw, 28px);
+}
+
+.dashboard-operations ::deep > .section {
+    margin-block: 0;
+}
+
+.settings-picker .choice-strip {
+    gap: 0;
+}
+
+.settings-picker .choice-strip label > span {
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+}
+
+.settings-browser ::deep .check strong {
+    white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+    .settings-picker h2 {
+        position: absolute;
+        clip-path: inset(50%);
+    }
+}
+
+.dashboard-operations ::deep .review-heading p {
+    max-width: 74ch;
+}
+
+.dashboard-operations ::deep .table-wrap + button {
+    margin-block-start: 12px;
+}
+
+.dashboard-operations ::deep section > p + button {
+    margin-block-start: 10px;
+}
+
+.internal-data-card > summary {
+    font-size: 17px;
+    padding: 12px 16px;
+    margin: 0;
+}
+
+.internal-data-card[open] {
+    padding-top: 0;
+}
+
+.dashboard-operations ::deep .field-actions > label select {
+    min-width: min(16rem, 100%);
+}
+
+.dashboard-operations ::deep .field-actions input,
+.dashboard-operations ::deep .field-actions select {
+    min-height: 40px;
+}
+
+.dashboard-sections .tabs button {
+    min-height: 42px;
+}
+
+.dashboard-sections .tabs button .badge {
+    margin-block: 0;
+    line-height: 1.2;
 }

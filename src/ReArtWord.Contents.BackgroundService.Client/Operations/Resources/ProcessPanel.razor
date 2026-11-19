@@ -1,7 +1,7 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Processes
 <section class="applications-panel">
-    <div class="section-heading"><h2>@Ui["Applications"]</h2><div class="toolbar"><button class="quiet" disabled="@busy" @onclick="()=>RefreshAsync(UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh"]</button><button class="primary" disabled="@(busy||target is null)" @onclick="()=>Edit(null)"><UiIcon Name="add" />@Ui["Register application"]</button></div></div>
-    <div class="application-target card">
+    <div class="section-heading"><h2>@Ui["Applications"]</h2><div class="toolbar"><button class="quiet" disabled="@busy" @onclick="()=>RefreshAsync(UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh applications"]</button><button class="primary" disabled="@(busy||target is null)" @onclick="()=>Edit(null)"><UiIcon Name="add" />@Ui["Register application"]</button></div></div>
+    <div class="application-target">
         <label>@Ui["Application host"]<select value="@peer" disabled="@(busy||refreshing||registrationOpen||selected is not null||removing is not null)" @onchange="e=>SelectPeerAsync(e.Value?.ToString(),UiCancellation)">
             @foreach(var item in (Connection.Current?.Peers??[]).OrderBy(item=>item.HostId,StringComparer.CurrentCulture))
             {
@@ -54,7 +54,7 @@
 {
     <ApplicationGroupPanel @ref="groupPanel" @key="(cluster,peer)" ClusterId="@cluster" PeerId="@peer" Owner="@Owner" Available="@(target is not null)" Applications="@processes.Select(item=>item.Definition).ToArray()" />
 }
-<Modal Open="@(selected is not null&&!registrationOpen&&removing is null)" Title='@(selected?.Definition.DisplayName??Ui["Application state"])' Close="()=>selected=null">
+<Modal ShowCloseAction="true" Open="@(selected is not null&&!registrationOpen&&removing is null)" Title='@(selected?.Definition.DisplayName??Ui["Application state"])' Close="()=>selected=null">
     @if(selected is {} item)
     {
         <div class="application-summary"><span data-status-label class="badge process-status @(item.Observed.Status?.Running is true ? "good" : "muted")">@Ui[State(item)]</span><span>@Owner</span></div>
@@ -75,7 +75,7 @@
             <fieldset disabled="@(busy||target is null)"><legend>@Ui["Process controls"]</legend><div class="toolbar">
                 <button class="primary" disabled="@(item.Observed.Status?.Running is true)" @onclick='()=>CommandAsync("process.start",new{processId=item.Definition.Id},UiCancellation)'><UiIcon Name="play" />@Ui["Start"]</button>
                 <button class="danger" disabled="@(item.Observed.Status?.Running is false)" @onclick="()=>{restarting=false;stopOpen=true;}">@Ui["Stop"]</button>
-                <button @onclick="()=>{restarting=true;stopOpen=true;}">@Ui["Restart"]</button>
+                <button disabled="@(item.Observed.Status?.Running is false)" @onclick="()=>{restarting=true;stopOpen=true;}">@Ui["Restart"]</button>
             </div>@if(item.Observed.Status?.Running is false){<p class="small muted">@Ui["The application is stopped. Use Start to run it."]</p>}<details class="secondary-details recovery-controls"><summary>@Ui["Recovery controls"]</summary><div class="action-list">
                 <button class="quiet" @onclick='()=>CommandAsync("process.recoverySuppression",new{processId=item.Definition.Id,suppressed=!(item.Observed.Status?.RecoverySuppressed??false)},UiCancellation)'>@Ui[item.Observed.Status?.RecoverySuppressed is true?"Resume automatic recovery":"Suppress automatic recovery"]</button>
                 <button class="quiet" @onclick='()=>CommandAsync("process.confirmRecovery",new{processId=item.Definition.Id},UiCancellation)'>@Ui["Confirm recovery manually"]</button>

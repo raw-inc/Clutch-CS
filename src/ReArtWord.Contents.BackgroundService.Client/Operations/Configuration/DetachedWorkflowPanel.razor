@@ -8,12 +8,13 @@
 <section class="card">
     <header class="review-heading">
         <div><h2>@Ui["Local changes while detached"]</h2>
-            <p class="small muted">@Ui["Local storage is separate from cluster sharing. After rejoining, non-conflicting changes are merged; conflicting changes must be compared and selected."]</p></div>
+            <p class="small muted">@Ui["Review changes saved while this peer was away. Choose between conflicting revisions before sharing."]</p></div>
 
     </header>
+    @if(!loaded){<p class="small muted">@Ui["Not checked"]</p>}
     @if(loaded)
     {
-        <p>@Ui.Format("{0} items", entries.Count)</p>
+        <p role="status"><span class="badge @(entries.Count > 0 ? "warn" : "good")">@(entries.Count == 0 ? Ui["No detached changes"] : Ui.Format("{0} items", entries.Count))</span> · @Ui.Format("Checked at {0}",FormatTime(lastChecked,"HH:mm"))</p>
         @if(entries.Count>0)
         {
         <div class="table-wrap"><table class="record-table"><thead><tr><th>Workflow</th><th>@Ui["Local revision"]</th><th>@Ui["Integration status"]</th><th>@Ui["Actions"]</th></tr></thead><tbody>

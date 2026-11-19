@@ -1,59 +1,28 @@
 .host-power-control {
     position: relative;
     flex: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: end;
+    gap: 6px;
 }
 
-.health-indicator {
-    cursor: pointer;
-    border: 1px solid var(--control);
-    border-radius: var(--radius-control);
-    padding: 4px 8px;
+.power-menu-trigger {
+    min-height: 36px;
+    padding: 4px 9px;
 }
 
-.health-indicator:hover {
-    background: transparent;
-    color: inherit;
-}
-
-.health-indicator.good:hover {
-    color: var(--green);
-}
-
-.health-indicator.warn:hover {
-    color: var(--warn);
-}
-
-.health-indicator.offline,
-.health-indicator.offline:hover {
-    color: var(--muted);
-}
-
-.health-indicator[aria-disabled="true"] {
-    cursor: default;
+@media (pointer: coarse), (max-width: 760px) {
+    .power-menu-trigger {
+        min-height: 44px;
+    }
 }
 
 .power-symbol {
     flex: none;
     overflow: visible;
     transform-origin: center;
-}
-
-.power-syncing {
-    display: inline-flex;
-    flex: none;
-}
-
-.power-syncing.confirmed {
-    color: var(--green);
-}
-
-.power-unknown {
-    display: inline-grid;
-    place-items: center;
-    width: 18px;
-    height: 18px;
-    font-size: 15px;
-    font-weight: 600;
 }
 
 .power-panel {

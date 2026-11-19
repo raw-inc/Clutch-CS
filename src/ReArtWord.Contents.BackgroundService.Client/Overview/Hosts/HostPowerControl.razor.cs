@@ -80,12 +80,18 @@ public sealed partial class HostPowerControl
     private static readonly string[] powerActions = ["restart", "shutdown"];
     private static readonly string[] offlineActions = ["remove", "wake"];
     private bool CanAct => Offline || Status is EPeerStatus.Ready or EPeerStatus.Syncing;
-    private string HealthClass => Offline ? "warn offline"
-                                          : !Stale && Status == EPeerStatus.Ready ? "good"
-                                                                                  : "warn";
-    private string StatusLabel => Offline ? Ui["Offline"]
-                                          : Stale ? Ui["Previous / unconfirmed"]
-                                                  : Ui[Status.ToString()];
+    private string StateKey
+    {
+        get
+        {
+            if (Offline)
+            {
+                return "Offline";
+            }
+            return Stale ? "Previous / unconfirmed"
+                         : Status.ToString();
+        }
+    }
 
     /// <summary>実体の変更をブラウザーの確認状態へ反映し、共通時計へ発光を同期します。</summary>
     /// <returns>今回の表示との同期です。</returns>

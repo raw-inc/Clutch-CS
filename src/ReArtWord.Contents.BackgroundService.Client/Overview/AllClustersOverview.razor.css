@@ -207,3 +207,13 @@ footer {
         grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 }
+
+.cluster-health-card dt,
+.panel-heading > span,
+.panel-content footer {
+    font-size: 13px;
+}
+
+.panel-content footer {
+    word-break: auto-phrase;
+}

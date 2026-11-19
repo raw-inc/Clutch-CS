@@ -4,6 +4,7 @@
     align-items: center;
     gap: 14px 28px;
     margin-bottom: 20px;
+    padding: 16px 0;
 }
 
 .application-target label {
@@ -79,6 +80,7 @@
 
 .application-summary {
     color: var(--muted);
+    background: transparent;
 }
 
 .application-state {

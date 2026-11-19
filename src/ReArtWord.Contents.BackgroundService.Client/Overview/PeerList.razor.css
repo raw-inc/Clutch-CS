@@ -41,10 +41,17 @@ th {
     max-width: 75%;
 }
 
-.health-indicator .health-label {
-    max-width: none;
-    opacity: 1;
-    transform: translateX(0);
-    margin-left: 8px;
-    transition: none;
+.version small {
+    font: inherit;
+}
+
+@media (max-width: 760px) {
+    .peer-list .record-table tbody tr {
+        padding-block: 12px;
+        border-block-end: 1px solid var(--control);
+    }
+
+    .version span {
+        white-space: nowrap;
+    }
 }

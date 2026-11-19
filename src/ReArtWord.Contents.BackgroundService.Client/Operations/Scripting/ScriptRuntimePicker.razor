@@ -12,7 +12,7 @@
                 <option value="@entry.Path" disabled="@(!entry.Available)">@EntryLabel(entry)</option>
             }
         </select>
-        <button type="button" disabled="@(Disabled||busy||PeerId is null)" title="@Ui["Refresh runtime choices"]" @onclick="()=>LoadAsync(true,UiCancellation)"><UiIcon Name="refresh" /></button>
+        <button type="button" disabled="@(Disabled||busy||PeerId is null)" title="@Ui["Refresh runtime choices"]" @onclick="()=>LoadAsync(true,UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh runtime choices"]</button>
     </div>
     <details class="secondary-details">
         <summary>@Ui["Register an executable path"]</summary>

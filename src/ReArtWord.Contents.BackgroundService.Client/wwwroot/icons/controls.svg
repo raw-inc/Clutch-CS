@@ -51,4 +51,5 @@
   <symbol id="windows" viewBox="0 0 24 24"><path d="M18.98 3H5.02C3.89 3 3 3.89 3 5.02V18.98C3 20.11 3.89 21 5.02 21H18.98C20.11 21 21 20.11 21 18.98V5.02C21 3.89 20.11 3 18.98 3ZM18.98 11.02H12.98V5.02H18.98V11.02ZM11.02 5.02V11.02H5.02V5.02H11.02ZM5.02 12.98H11.02V18.98H5.02V12.98ZM12.98 18.98V12.98H18.98V18.98H12.98Z"/></symbol>
   <symbol id="brand" viewBox="0 0 24 24"><path d="M3 3h6v6H3z M15 15h6v6h-6z M15 3h6v6h-6z M9 6h6 M6 9v9h9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
   <symbol id="menu" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" /></symbol>
+  <symbol id="external-link" viewBox="0 0 24 24"><path d="M14 3h7v7h-2V6.4l-9.3 9.3-1.4-1.4L17.6 5H14zM5 5h6v2H5v12h12v-6h2v8H3V5z"/></symbol>
 </svg>

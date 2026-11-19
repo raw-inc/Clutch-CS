@@ -21,6 +21,7 @@ namespace ReArtWord.Contents.BackgroundService.Client.Operations.Configuration;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1515", Justification = "Razor が生成する公開 partial 宣言と同じコンポーネント型を構成するため。")]
 public sealed partial class DetachedWorkflowPanel
 {
+    private DateTimeOffset lastChecked;
     private static string MatchDetachedDiscarded => "Detached.Discarded";
 
     [Inject]
@@ -79,6 +80,7 @@ public sealed partial class DetachedWorkflowPanel
             entries = page?.Entries ?? throw UiError.InvalidOperation("The list is unconfirmed.");
             cursor = page.Cursor;
             (cluster, peer) = target;
+            lastChecked = Api.UtcNow;
             loaded = true;
         }
         catch (Exception error) when (error is HttpRequestException or JsonException or InvalidOperationException or OperationCanceledException)

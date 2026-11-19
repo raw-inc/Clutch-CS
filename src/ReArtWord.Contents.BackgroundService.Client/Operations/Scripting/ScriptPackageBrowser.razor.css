@@ -83,3 +83,18 @@
         grid-row: 1;
     }
 }
+
+.package-search input,
+.package-search button {
+    min-height: 40px;
+    margin: 0;
+}
+
+.package-browser .footer-note {
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.package-search {
+    align-items: end;
+}

@@ -5,7 +5,7 @@
         <button disabled="@loading" @onclick="()=>RefreshAsync(UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh package information"]</button>
     </div>
     <p class="footer-note">@Ui.Format("Package destination: {0} / {1}", cluster, peer)</p>
-    <p>@Ui["Packages are installed on this peer. Analyze and save a script to adopt the current package configuration. Existing saved scripts keep their previous configuration."]</p>
+    <p class="small muted">@Ui["Packages are installed on this peer. Analyze and save a script to adopt the current package configuration. Existing saved scripts keep their previous configuration."]</p>
     @if (message is not null)
     {
         <p class="notice" role="status">@message.Invoke()</p>

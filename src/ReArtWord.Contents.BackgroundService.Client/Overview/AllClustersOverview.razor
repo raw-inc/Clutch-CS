@@ -10,7 +10,7 @@
     else
     {
     <div class="overview-heading"><h2 title='@Ui["Health uses confirmed peer status. Peers outside the polling range or with stale or failed reads remain unconfirmed."]'>@Ui["Cluster health"]</h2><div><span class="scope">@Ui.Format("{0} clusters · {1} observed peers",telemetry?.Clusters.Count??0,telemetry?.KnownPeers??0)</span>@if(telemetry?.KnownPeers>DashboardTelemetry.MaximumPeers){<button class="quiet" @onclick="NextAsync" disabled="@refreshing">@Ui["Next PCs"]</button>}</div></div>
-    @if(telemetry?.Problem is {} problem){<p class="range-note">@Ui[problem]</p>}
+    @if(telemetry?.Problem is {} problem){<p class="range-note warn">@Ui[problem]</p>}
     @if(telemetry is not null && telemetry.Clusters.Count>0)
     {
         <clutch-card-rows><div class="cluster-health-grid" aria-label='@Ui["Cluster health"]'>
@@ -20,7 +20,7 @@
                 var health=telemetry.Health(cluster,now);
                 var stale=cluster.AgeAt(now)>TimeSpan.FromSeconds(15)||telemetry.Problem is not null;
                 <article class="health-card cluster-health-card" @key="cluster.ClusterId" aria-label="@cluster.ClusterId">
-                    <header><h3>@cluster.ClusterId</h3><span tabindex="0" class="health-indicator @(health.State=="Ready"?"good":"warn") @(health.State=="Ready" && health.History is {Pending: > 0}?"history-sync":null)"><ActivityRing Identity="@cluster.ClusterId" Active="@(!stale && cluster.Peers.Any(peer=>peer.Status is EPeerStatus.Ready or EPeerStatus.Syncing or EPeerStatus.Joining or EPeerStatus.Degraded))" /><span class="health-label"><PeerStateLabel State="@health.State" History="health.History" /></span></span></header>
+                    <header><h3>@cluster.ClusterId</h3><PeerStateLabel State="@(stale && health.State == "Ready" ? "Unconfirmed" : health.State)" History="health.History" Identity="@cluster.ClusterId" /></header>
                     <dl><div><dt>@Ui["Ready peers"]</dt><dd>@health.Ready / @cluster.Peers.Count</dd></div><div><dt>@Ui["Verified peers"]</dt><dd>@health.Verified / @cluster.Peers.Count</dd></div><div><dt>@Ui["Coordinator"]</dt><dd>@(stale||cluster.CoordinatorCandidates.Count==0?Ui["Unconfirmed"]:cluster.CoordinatorCandidates.Count==1?cluster.CoordinatorCandidates[0]:Ui["Coordinator disagreement"])</dd></div><div><dt>@Ui["Last check"]</dt><dd>@(FormatTime(health.CheckedAt,"HH:mm:ss")??Ui["Unconfirmed"])</dd></div></dl>
                 </article>
             }
@@ -30,7 +30,7 @@
     <OverviewHosts Active="Active" Detailed="detailedHosts" LivePeers="@(telemetry?.Peers.Select(item=>item.Peer with {ClusterId=item.Cluster}).ToArray()??[])" />
     @if(telemetry is not null)
     {
-        @if(telemetry.Peers.Count<telemetry.KnownPeers){<p class="range-note">@Ui.Format("Showing peers {0}–{1} of {2}. Other peers are outside this polling range.",telemetry.Offset+1,telemetry.Offset+telemetry.Peers.Count,telemetry.KnownPeers)</p>}
+        @if(telemetry.Peers.Count<telemetry.KnownPeers){<p class="range-note warn">@Ui.Format("Showing peers {0}–{1} of {2}. Other peers are outside this polling range.",telemetry.Offset+1,telemetry.Offset+telemetry.Peers.Count,telemetry.KnownPeers)</p>}
         <clutch-card-rows><div class="secondary-grid">
             <section><div class="panel-heading"><h2>@Ui["Workflow activity"]</h2><span>@Ui["Last 60 seconds"]</span></div>
                 <div class="health-card panel-content">
@@ -41,7 +41,7 @@
                 <footer>@Ui.Format("Latest poll: {0}/{1} peers",telemetry.Observations.Sum(pair=>pair.Value.ActivityPeers),telemetry.KnownPeers) · @Ui["Partial range, not a cluster total"] @if(activity.Length>8){<span> · @Ui.Format("Showing 8/{0} workflows",activity.Length)</span>}</footer>
                 </div>
             </section>
-            <section><div class="panel-heading"><h2>@Ui["Recent logs"]</h2><a href="/logs">LogViewer <UiIcon Name="chevron" /></a><span>@Ui["Last 15 minutes"]</span></div>
+            <section><div class="panel-heading"><h2>@Ui["Recent logs"]</h2><div class="panel-links"><span>@Ui["Last 15 minutes"]</span><a href="/logs">LogViewer <span aria-hidden="true">→</span></a></div></div>
                 <div class="health-card panel-content">
                 @{var logs=telemetry.Observations.SelectMany(pair=>(pair.Value.Logs?.Entries??[]).Select(row=>(Cluster:pair.Key,Row:row))).OrderByDescending(item=>item.Row.Time).Take(8).ToArray();}
                 @if(logs.Length==0){<p class="empty">@Ui["No logs in the retrieved range."]</p>}

@@ -27,7 +27,7 @@
     {
         <p class="small muted">@Owner</p>
         @if(message is not null){<p class="notice" role="status">@message()</p>}
-        <fieldset disabled="@(busy||!Available)">
+        <fieldset class="group-settings-fields" disabled="@(busy||!Available)">
             <label>@Ui["Application group name"]<input maxlength="160" @bind="form.Name" @bind:event="oninput" /></label>
             <label><input type="checkbox" @bind="form.Automatic" />@Ui["Automatically recover this application group"]</label>
             <label>@Ui["Group recovery policy"]<select @bind="form.Mode"><option value="@EProcessGroupRecoveryMode.FailedApplications">@Ui[Policy(EProcessGroupRecoveryMode.FailedApplications)]</option><option value="@EProcessGroupRecoveryMode.EntireGroup">@Ui[Policy(EProcessGroupRecoveryMode.EntireGroup)]</option></select></label>

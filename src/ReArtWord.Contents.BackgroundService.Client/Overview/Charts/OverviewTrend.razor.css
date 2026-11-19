@@ -66,8 +66,8 @@ figcaption {
 }
 
 .threshold-label {
-    color: var(--warn);
     font-weight: 600;
+    color: var(--muted);
 }
 
 @media (forced-colors: active) {
@@ -95,4 +95,9 @@ figcaption {
     margin-right: 4px;
     border-top: 1px dashed var(--muted);
     vertical-align: middle;
+}
+
+.trend-scale,
+.trend-time {
+    font-size: 13px;
 }

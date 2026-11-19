@@ -1,71 +1,44 @@
-
 .health-indicator {
     display: inline-flex;
     align-items: center;
-    gap: 0;
-    flex: none;
+    gap: 6px;
     min-height: 24px;
-    padding: 4px;
-    color: var(--muted);
-    background: transparent;
-    border: 0;
+    color: var(--warn);
+    line-height: 1.4;
+    vertical-align: middle;
+}
+
+.health-indicator > :is(.ui-icon, .activity-ring, .power-unknown) {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    width: 18px;
+    height: 18px;
 }
 
 .health-indicator.good {
     color: var(--green);
 }
 
-.health-indicator.warn {
-    color: var(--warn);
-}
-
-.health-indicator.good .activity-ring,
-.power-syncing.confirmed .activity-ring {
-    color: color-mix(in srgb, var(--green) 92%, var(--paper));
-}
-
-.health-indicator .dot {
-    width: 6px;
-    height: 6px;
-}
-
-.health-label {
-    min-width: 0;
-    padding-inline-start: 6px;
+.health-indicator .health-label,
+.health-indicator .background-sync {
+    font-size: 13px;
     overflow-wrap: anywhere;
-    font-size: 12px;
 }
 
-.health-indicator:focus-visible {
-    outline: 1px solid var(--accent);
-    outline-offset: 3px;
+.health-indicator.good > .health-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
-.health-indicator:not(.good) .health-label {
-    max-width: 230px;
-    opacity: 1;
-    transform: translateX(0);
-    margin-left: 8px;
-    transition-delay: 0s;
-}
-
-.health-indicator.history-sync {
-    max-width: 100%;
-}
-
-.health-indicator.history-sync .health-label {
-    max-width: none;
-    opacity: 1;
-    transform: translateX(0);
-    margin-left: 8px;
-    transition-delay: 0s;
-    white-space: normal;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .health-label {
-        transition: none;
-    }
+.health-indicator .background-sync {
+    color: var(--ink);
 }
 
 clutch-status-labels {
