@@ -4,7 +4,7 @@
     height: 22px;
     border: 0;
     background: transparent;
-    font-size: 10px;
+    font-size: inherit;
     color: var(--muted);
 }
 
@@ -14,4 +14,8 @@
 
 .statusbar-action {
     font-size: 12px;
+}
+
+.persistence-counts td {
+    align-items: baseline;
 }

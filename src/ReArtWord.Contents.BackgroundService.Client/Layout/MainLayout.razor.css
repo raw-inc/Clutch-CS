@@ -40,17 +40,40 @@
     height: 19px;
 }
 
+.app-shell {
+    min-height: calc(100dvh - var(--statusbar-height));
+    display: flex;
+    flex-direction: column;
+}
+
+.app-content {
+    flex: 1 0 auto;
+    min-width: 0;
+}
+
 .navigation {
+    container: main-navigation / inline-size;
     height: 100%;
     display: flex;
-    gap: 2px;
-    margin-left: 4px;
+    flex: 1 1 0;
+    align-items: center;
     min-width: 0;
-    overflow-x: auto;
-    flex: 1 1 auto;
-    overscroll-behavior-x: contain;
-    scroll-padding-inline: 12px;
-    scrollbar-width: thin;
+}
+
+.navigation-links {
+    display: none;
+    height: 100%;
+    gap: 2px;
+}
+
+@container main-navigation (min-width: 990px) {
+    .navigation-links {
+        display: flex;
+    }
+
+    .navigation .route-menu {
+        display: none;
+    }
 }
 
 .navigation ::deep a {
@@ -59,7 +82,7 @@
     gap: 8px;
     position: relative;
     color: var(--muted);
-    padding: 0 15px;
+    padding: 0 12px;
     font-size: 13px;
     font-weight: 600;
     text-decoration: none;
@@ -85,8 +108,8 @@
     background: var(--accent);
     border-radius: 3px;
     bottom: 4px;
-    left: 15px;
-    right: 15px;
+    left: 12px;
+    right: 12px;
 }
 
 .navigation ::deep  .ui-icon {
@@ -100,10 +123,10 @@
 }
 
 .connection ::deep .connection-button {
-    max-width: min(24vw, 340px);
+    max-width: min(22vw, 280px);
 }
 
-.connection ::deep .connection-button > span:not(.connection-dot) {
+.connection ::deep .connection-button > .connection-name {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -115,137 +138,74 @@
 
 .app-statusbar {
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    inset: auto 0 0;
     height: var(--statusbar-height);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 0 max(18px, env(safe-area-inset-right)) 0 max(18px, env(safe-area-inset-left));
+    gap: 8px 24px;
+    padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
     color: var(--muted);
     background: var(--paper);
     border-top: 1px solid var(--line);
     z-index: 5;
-    font-size: 12px;
+    font-size: 13px;
+    line-height: 1.45;
 }
 
 .statusbar-left,
 .statusbar-right {
     display: flex;
     align-items: center;
-    gap: 10px;
-    white-space: nowrap;
-    height: 24px;
+    gap: 4px 16px;
+    min-width: 0;
 }
 
-.statusbar-left {
-    min-width: 0;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
+.statusbar-right {
+    justify-content: end;
+}
+
+.statusbar-left > a,
+.statusbar-left ::deep :is(.statusbar-action, .transfer-toggle) {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    font: inherit;
+}
+
+.statusbar-left ::deep button.statusbar-action.warn {
+    color: var(--warn);
 }
 
 .statusbar-left > *,
-.statusbar-right {
+.statusbar-right > * {
     flex: none;
-}
-
-.statusbar-right ::deep .pwa-state {
-    margin-inline-end: auto;
 }
 
 @media (max-width: 900px) {
     .app-statusbar {
+        position: static;
+        height: auto;
         flex-direction: column;
         align-items: stretch;
-        gap: 0;
-        padding: 0 max(12px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(12px, env(safe-area-inset-left));
+        gap: 4px;
+        padding-block: 4px max(8px, env(safe-area-inset-bottom));
     }
 
-    .statusbar-left {
-        height: 32px;
-        flex: none;
-        gap: 12px;
-    }
-
+    .statusbar-left,
     .statusbar-right {
-        height: 22px;
-        justify-content: flex-end;
+        flex-wrap: wrap;
+        justify-content: start;
     }
+}
 
+@media (pointer: coarse) {
     .statusbar-left > a,
-    .statusbar-left ::deep .transfer-toggle,
-    .statusbar-left ::deep a.pwa-state {
-        min-height: 28px;
+    .statusbar-left ::deep :is(.statusbar-action, .transfer-toggle, a.pwa-state) {
         display: inline-flex;
         align-items: center;
+        min-height: 44px;
     }
-
-    .statusbar-left ::deep .pwa-state {
-        max-width: none;
-    }
-}
-
-@media (max-width: 1100px) {
-    .topbar {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto minmax(100px, min(42vw, 260px));
-        grid-template-rows: 50px 44px;
-        gap: 0 10px;
-        padding: 7px max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
-    }
-
-    .brand {
-        gap: 8px;
-        max-width: 100%;
-    }
-
-    .topbar ::deep .language-selector {
-        margin-left: 0;
-    }
-
-    .topbar ::deep .language-button,
-    .connection ::deep .connection-button {
-        height: 44px;
-        padding-inline: 8px;
-    }
-
-    .connection ::deep .connection-button {
-        width: 100%;
-        max-width: 100%;
-        gap: 6px;
-    }
-
-    .navigation {
-        grid-row: 2;
-        grid-column: 1 / -1;
-        width: 100%;
-        height: 44px;
-        margin-left: 0;
-        gap: 0;
-        scrollbar-width: none;
-    }
-
-    .navigation ::deep a {
-        padding: 0 12px;
-    }
-}
-
-@media (max-width: 750px) {
-    .brand {
-        font-size: 15px;
-    }
-
-    .navigation ::deep a {
-        font-size: 11px;
-    }
-
-    .navigation ::deep  .ui-icon {
-        width: 14px;
-    }
-
 }
 
 .brand-name {
@@ -289,158 +249,103 @@
     object-position: left;
 }
 
-@media (max-width: 360px) {
-    .topbar {
-        grid-template-columns: minmax(0, 1fr) auto 120px;
-        column-gap: 8px;
-    }
-
-    .brand {
-        gap: 6px;
-    }
-}
-
-@media (max-width: 1320px) {
-    .navigation ::deep a {
-        display: none;
-    }
-
-    .navigation {
-        align-items: center;
-        overflow: visible;
-    }
-
-}
-
-@media (pointer: coarse) {
-    .statusbar-left,
-    .statusbar-left > a,
-    .statusbar-left ::deep button.statusbar-action,
-    .statusbar-left ::deep button.transfer-toggle,
-    .statusbar-left ::deep a.pwa-state {
-        min-height: 44px;
-    }
-}
-
 .route-menu {
+    position: relative;
+}
+
+.route-menu summary {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.route-menu > div {
+    position: absolute;
+    inset-block-start: 100%;
+    inset-inline-start: 0;
+    z-index: 35;
+    width: 15rem;
+    max-height: min(70dvh, 420px);
+    overflow: auto;
+    background: var(--panel);
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
+    padding: 6px;
+}
+
+.navigation .route-menu a {
+    display: flex;
+    min-height: 44px;
+    padding: 8px 12px;
+}
+
+.connection ::deep .connection-symbol {
     display: none;
 }
 
-@media (max-width: 1320px) {
-    .route-menu {
-        display: block;
-        position: relative;
-    }
-
-    .route-menu summary {
-        display: flex;
-        gap: 6px;
-        align-items: center;
-        min-height: 44px;
-        cursor: pointer;
-    }
-
-    .route-menu > div {
-        position: absolute;
-        inset-block-start: 100%;
-        inset-inline-start: 0;
-        z-index: 35;
-        width: 15rem;
-        max-height: 70vh;
-        overflow: auto;
-        background: var(--panel);
-        border: 1px solid var(--control);
-        border-radius: var(--radius-control);
-        padding: 6px;
-    }
-
-    .navigation .route-menu a {
-        display: flex;
-        min-height: 44px;
-        padding: 8px 12px;
-    }
-}
-
-@media (max-width: 750px) {
+@media (max-width: 1100px) {
     .topbar {
-        display: flex;
-        height: auto;
-        min-height: 52px;
-        gap: 5px;
-        flex-wrap: nowrap;
+        gap: 8px;
+        padding-inline: max(10px, env(safe-area-inset-left)) max(10px, env(safe-area-inset-right));
     }
 
     .brand {
-        flex: 1 1 auto;
-        min-width: 0;
+        gap: 8px;
+        max-width: 34%;
     }
 
-    .navigation {
-        width: auto;
-        flex: none;
-        height: 44px;
-    }
-
-    .route-menu > div {
-        inset-inline: auto 0;
-    }
-
-    .topbar .connection {
-        flex: 0 1 8rem;
-        min-width: 0;
+    .topbar ::deep .language-selector {
+        margin-left: 0;
     }
 }
 
-@media (max-width: 750px) {
-    .route-menu summary {
-        justify-content: center;
-        min-width: 44px;
+@media (max-width: 580px) {
+    .brand {
+        flex: 1 1 0;
+        max-width: none;
+    }
+
+    .navigation {
+        flex: none;
+        container-type: normal;
     }
 
     .route-menu summary span {
-        font-size: 12px;
-        font-weight: 600;
+        display: none;
     }
 
     .route-menu > div {
         position: fixed;
-        inset: 52px 8px auto;
+        inset: var(--topbar-height) 8px auto;
         width: auto;
     }
-}
 
-@media (max-width: 750px) {
-    .topbar {
-        flex-wrap: wrap;
-    }
-
-    .topbar .connection {
-        flex: 1 1 10rem;
-    }
-
-    .statusbar-right {
-        font-size: 11px;
-        gap: 5px;
-    }
-
-    .statusbar-right ::deep .pwa-state {
-        white-space: normal;
-        line-height: 1.15;
-    }
-}
-
-.statusbar-left ::deep :is(.statusbar-action, .transfer-toggle) {
-    text-decoration: underline;
-    text-underline-offset: 3px;
-}
-
-@media (max-width: 900px) {
-    .statusbar-left {
-        height: 44px;
-    }
-
-    .statusbar-left :is(a, button),
-    .statusbar-left ::deep button {
+    .connection ::deep .connection-button {
+        width: 44px;
+        max-width: none;
         min-height: 44px;
+        position: relative;
+        padding: 0;
+        border-color: transparent;
+    }
+
+    .connection ::deep .connection-name,
+    .connection ::deep .connection-chevron {
+        display: none;
+    }
+
+    .connection ::deep .connection-symbol {
+        display: inline-flex;
+    }
+
+    .connection ::deep .connection-dot {
+        position: absolute;
+        inset: 5px 5px auto auto;
     }
 }

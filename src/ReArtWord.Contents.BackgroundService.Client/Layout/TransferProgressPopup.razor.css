@@ -8,7 +8,7 @@
     border: 0;
     padding: 1px 4px;
     background: transparent;
-    font-size: 10px;
+    font-size: inherit;
     color: var(--muted);
     height: 22px;
 }

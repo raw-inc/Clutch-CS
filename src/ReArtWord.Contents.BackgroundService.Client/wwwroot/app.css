@@ -1,6 +1,6 @@
 :root {
     --topbar-height: 58px;
-    --statusbar-height: 26px;
+    --statusbar-height: 32px;
 }
 
 * {
@@ -14,25 +14,19 @@ body {
 
 @media (max-width: 1100px) {
     :root {
-        --topbar-height: 102px;
+        --topbar-height: 54px;
+    }
+}
+
+@media (pointer: coarse) {
+    :root {
+        --statusbar-height: 45px;
     }
 }
 
 @media (max-width: 900px) {
     :root {
-        --statusbar-height: calc(56px + env(safe-area-inset-bottom, 0px));
-    }
-}
-
-@media (pointer: coarse) and (max-width: 900px) {
-    :root {
-        --statusbar-height: calc(67px + env(safe-area-inset-bottom, 0px));
-    }
-}
-
-@media (pointer: coarse) and (min-width: 901px) {
-    :root {
-        --statusbar-height: 45px;
+        --statusbar-height: 0px;
     }
 }
 
@@ -526,19 +520,6 @@ td details {
     margin-top: 15px;
 }
 
-summary {
-    cursor: pointer;
-    color: var(--muted);
-}
-
-details > summary {
-    padding: 8px 0;
-}
-
-details[open] > summary {
-    margin-bottom: 8px;
-}
-
 .review-heading {
     display: flex;
     flex-wrap: wrap;
@@ -560,6 +541,7 @@ details[open] > summary {
 .review-heading p {
     max-width: 72ch;
     margin-top: 6px;
+    text-wrap: pretty;
 }
 
 .review-heading > button {
@@ -571,6 +553,7 @@ details[open] > summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
     gap: 16px;
+    margin-block-start: 12px;
 }
 
 .conflict-candidates details > code {
@@ -661,11 +644,7 @@ details[open] > summary {
     border-radius: var(--radius-control);
     margin-top: 16px;
     background: var(--panel);
-    padding: 3px 16px;
-}
-
-.secondary-details > summary {
-    font-size: 12px;
+    padding: 0 12px;
 }
 
 .secondary-details > .section,
@@ -775,58 +754,6 @@ details[open] > summary {
 
 :where(.page, .dialog) :where(input:not([type]), input[type="search"], select):not([multiple]) {
     min-height: 38px;
-}
-
-:where(.secondary-details, .resource-detail, .license-list details) > summary {
-    list-style: none;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 44px;
-    color: var(--ink);
-    font-weight: 600;
-}
-
-:where(.secondary-details, .resource-detail, .license-list details) > summary::before {
-    content: "";
-    flex: none;
-    width: 7px;
-    height: 7px;
-    border-right: 2px solid currentcolor;
-    border-bottom: 2px solid currentcolor;
-    transform: rotate(-45deg);
-    margin-inline: 4px;
-}
-
-:where(.secondary-details, .resource-detail, .license-list details)[open] > summary::before {
-    transform: rotate(45deg);
-}
-
-@media (pointer: fine) and (min-width: 751px) {
-    @supports (appearance: base-select) {
-        :where(.page, .dialog, .route-picker) select:not([multiple], [size]),
-        :where(.page, .dialog, .route-picker) select:not([multiple], [size])::picker(select) {
-            appearance: base-select;
-        }
-
-        ::picker(select) {
-            padding: 4px;
-            border: 1px solid var(--control);
-            border-radius: var(--radius-control);
-            color: var(--ink);
-            background: var(--panel);
-        }
-
-        select:not([multiple], [size]) option {
-            padding: 6px 10px;
-            font: 500 14px/1.5 var(--font-ui);
-        }
-
-        select:not([multiple], [size]) option:checked {
-            color: var(--accent);
-            background: var(--accent-soft);
-        }
-    }
 }
 
 .dialog-content h3:first-child {
@@ -1122,27 +1049,22 @@ button.danger:disabled {
     background: var(--disabled-face);
 }
 
+.notice.warning,
 .notice.metrics-warning {
-    border-inline-start-color: var(--warn);
-    background: var(--nested);
+    border-color: var(--warn);
+    background: var(--warn-soft);
     color: var(--warn);
 }
 
-.secondary-details > summary,
-.resource-detail > summary {
-    display: list-item;
-    min-height: 36px;
-    padding: 8px 12px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-control);
-    font-weight: 600;
-    cursor: pointer;
+.notice.success {
+    border-color: var(--green);
+    background: var(--green-soft);
+    color: var(--green);
 }
 
-@media (max-width: 900px) {
-    :root {
-        --statusbar-height: calc(70px + env(safe-area-inset-bottom, 0px));
-    }
+.notice > .ui-icon {
+    margin-inline-end: 6px;
+    vertical-align: middle;
 }
 
 .debug-query {
@@ -1151,4 +1073,134 @@ button.danger:disabled {
 
 .debug-query + .muted {
     margin-top: 6px;
+}
+
+.dialog.dialog-compact {
+    width: min(100% - 24px, 32rem);
+}
+
+.dialog :where(p, small) {
+    word-break: auto-phrase;
+}
+
+.field-actions > button {
+    min-height: 40px;
+}
+
+.field-actions :is(input, select) {
+    min-height: 40px;
+}
+
+@media (max-width: 680px) {
+    .field-actions :is(input, select, button) {
+        min-height: 44px;
+    }
+}
+
+.inline-status {
+    align-items: center;
+    margin-block-start: 12px;
+}
+
+.resolution-review {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 13px;
+}
+
+.included-target {
+    padding-inline: 0;
+    background: none;
+    box-shadow: -3px 0 var(--accent);
+}
+
+.fleet-update .file-picker-control,
+.fleet-update .file-picker-control > span:first-child {
+    min-height: 42px;
+}
+
+.fleet-update > h3 {
+    font-size: 16px;
+}
+
+.fleet-update > p {
+    color: var(--muted);
+}
+
+:lang(ja) :is(.empty, .footer-note, .disclosure-copy, .review-heading p) {
+    word-break: auto-phrase;
+}
+
+.section-heading a.small {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+}
+
+.section-heading a.small .ui-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.dialog-content {
+    scrollbar-width: thin;
+    scrollbar-color: var(--control) transparent;
+    scrollbar-gutter: stable;
+}
+
+.configuration-save-mode {
+    padding-block-start: 8px;
+    margin-block: 6px 18px;
+    border-block-start: 1px solid var(--line);
+}
+
+.settings-fields > label {
+    gap: 4px;
+    margin: 0;
+}
+
+.settings-fields {
+    row-gap: 16px;
+}
+
+.release-update-actions {
+    align-items: center;
+    gap: 10px;
+}
+
+.fleet-update > p.small {
+    color: var(--muted);
+}
+
+.comparison-edit > label {
+    margin-block-end: 0;
+}
+
+.comparison-edit > p {
+    margin-block: 0 10px;
+}
+
+.experimental-switch .switch-state {
+    display: inline-block;
+    margin-inline-start: 4px;
+    white-space: nowrap;
+}
+
+.group-settings-fields > label {
+    margin-block: 0;
+    gap: 4px;
+}
+
+.group-settings-fields > label + label {
+    margin-block-start: 14px;
 }

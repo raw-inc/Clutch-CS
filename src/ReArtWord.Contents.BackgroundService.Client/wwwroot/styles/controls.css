@@ -405,7 +405,7 @@ clutch-card-rows:not([data-measuring]) > :first-child > * > [data-card-inset] {
         animation: show-dialog var(--motion-base) var(--ease-panel);
     }
 
-    :where(.secondary-details, .resource-detail, .license-list details) > summary::before {
+    :where(details) > summary::after {
         transition: transform var(--motion-fast) var(--ease-action);
     }
 
@@ -545,20 +545,10 @@ input[type="file"]::file-selector-button {
     width: 10ch;
 }
 
+/* Native selection keeps its affordance and keyboard behavior in each browser. */
 select:not([multiple], [size]) {
-    appearance: none;
-    padding-inline-end: 32px;
-    background-image: linear-gradient(45deg, transparent 50%, currentcolor 50%), linear-gradient(135deg, currentcolor 50%, transparent 50%);
-    background-position: calc(100% - 16px) center, calc(100% - 11px) center;
-    background-size: 5px 5px;
-    background-repeat: no-repeat;
-}
-
-@media (forced-colors: active) {
-    select:not([multiple], [size]) {
-        appearance: auto;
-        background-image: none;
-    }
+    appearance: auto;
+    cursor: pointer;
 }
 
 .pc-display-toggle button[aria-pressed] {
@@ -568,4 +558,131 @@ select:not([multiple], [size]) {
 
 .pc-display-toggle button[aria-pressed="true"] {
     box-shadow: inset 0 -2px var(--accent);
+}
+
+summary {
+    color: var(--ink);
+    cursor: pointer;
+}
+
+:where(details:not(.route-menu, .desktop-menu)) > summary {
+    position: relative;
+    display: block;
+    padding: 10px 32px 10px 0;
+    min-height: 40px;
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 600;
+    list-style: none;
+}
+
+:where(details) > summary::-webkit-details-marker {
+    display: none;
+}
+
+:where(details:not(.route-menu, .desktop-menu)) > summary::after {
+    content: "";
+    position: absolute;
+    inset: calc(50% - 4px) 10px auto auto;
+    width: 8px;
+    height: 8px;
+    border: solid currentcolor;
+    border-width: 0 2px 2px 0;
+    transform: rotate(-45deg);
+    pointer-events: none;
+}
+
+:where(details:not(.route-menu, .desktop-menu))[open] > summary::after {
+    transform: rotate(45deg);
+}
+
+:where(details:not(.route-menu, .desktop-menu)) > summary:hover {
+    color: var(--accent);
+}
+
+:where(details.secondary-details)[open] > summary {
+    border-bottom: 1px solid var(--line);
+    margin-block-end: 8px;
+}
+
+:where(input[type="checkbox"]:not([role="switch"]), input[type="radio"]) {
+    accent-color: var(--accent);
+    flex: none;
+}
+
+@media (forced-colors: none) {
+    input:is([type="checkbox"]:not([role="switch"]), [type="radio"]) {
+        appearance: none;
+        display: inline-grid;
+        place-content: center;
+        flex: none;
+        width: 18px;
+        height: 18px;
+        padding: 0;
+        margin: 0;
+        vertical-align: middle;
+        background-color: var(--panel);
+        border: 1px solid var(--control);
+        border-radius: 3px;
+        cursor: pointer;
+    }
+
+    input[type="radio"] {
+        border-radius: 50%;
+    }
+
+    input:is([type="checkbox"]:not([role="switch"]), [type="radio"]):checked,
+    input[type="checkbox"]:not([role="switch"]):indeterminate {
+        background-color: var(--accent);
+        border-color: var(--accent);
+        color: var(--on-accent);
+    }
+
+    input[type="checkbox"]:not([role="switch"]):checked::before {
+        content: "";
+        width: 8px;
+        height: 5px;
+        border: solid currentcolor;
+        border-width: 0 0 2px 2px;
+        transform: translateY(-1px) rotate(-45deg);
+    }
+
+    input[type="checkbox"]:not([role="switch"]):indeterminate::before {
+        content: "";
+        width: 8px;
+        height: 2px;
+        background: currentcolor;
+    }
+
+    input[type="radio"]:checked::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentcolor;
+    }
+
+    input:is([type="checkbox"]:not([role="switch"]), [type="radio"]):disabled {
+        background-color: var(--disabled-face);
+        border-color: var(--control);
+        color: var(--disabled-ink);
+        cursor: not-allowed;
+    }
+
+}
+
+label:has(> input:is([type="checkbox"]:not([role="switch"]), [type="radio"])):not(.choice-strip label) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+@media (pointer: coarse), (max-width: 600px) {
+    label:has(> input:is([type="checkbox"]:not([role="switch"]), [type="radio"])):not(.choice-strip label) {
+        min-height: 44px;
+    }
+}
+
+clutch-card-rows[data-balance-short-cards]:not([data-measuring]) > :first-child > * {
+    min-height: var(--comparable-card-height, 0);
 }

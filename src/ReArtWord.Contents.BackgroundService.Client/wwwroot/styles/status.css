@@ -65,3 +65,11 @@ clutch-status-labels {
     border-radius: 50%;
     background: currentcolor;
 }
+
+.health-indicator.syncing {
+    color: var(--muted);
+}
+
+.health-indicator.offline {
+    color: var(--danger);
+}

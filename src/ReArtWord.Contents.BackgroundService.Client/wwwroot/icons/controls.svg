@@ -52,4 +52,4 @@
   <symbol id="brand" viewBox="0 0 24 24"><path d="M3 3h6v6H3z M15 15h6v6h-6z M15 3h6v6h-6z M9 6h6 M6 9v9h9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
   <symbol id="menu" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" /></symbol>
   <symbol id="external-link" viewBox="0 0 24 24"><path d="M14 3h7v7h-2V6.4l-9.3 9.3-1.4-1.4L17.6 5H14zM5 5h6v2H5v12h12v-6h2v8H3V5z"/></symbol>
-</svg>
+<symbol id="offline" viewBox="0 0 24 24"><path d="M2.7 3.8 4.1 2.4l17.5 17.5-1.4 1.4-3.2-3.2H6a5 5 0 0 1-.8-9.9L2.7 3.8ZM7 10.1l-.2.1H6a3 3 0 0 0 0 6h9.1l-8.1-6.1ZM13 5a6 6 0 0 1 5.9 4.9A4 4 0 0 1 21 17l-1.5-1.5a2 2 0 0 0-1.4-3.5H17v-1a4 4 0 0 0-5.9-3.5l-1.4-1.4A6 6 0 0 1 13 5Z"/></symbol></svg>

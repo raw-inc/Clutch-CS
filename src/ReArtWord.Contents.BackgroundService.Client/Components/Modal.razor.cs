@@ -33,6 +33,14 @@ public sealed partial class Modal : IAsyncDisposable
         get; set;
     }
 
+    /// <summary>確認する対象と操作を短いダイアログへまとめます。</summary>
+    [Parameter]
+    public bool Compact
+    {
+        get;
+        set;
+    }
+
     /// <summary>画面に表示する見出しまたは翻訳キーです。</summary>
     [Parameter]
     public string Title
