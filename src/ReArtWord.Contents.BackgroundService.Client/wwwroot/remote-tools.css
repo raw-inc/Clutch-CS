@@ -704,6 +704,11 @@
 
 .license-list {
     display: grid;
+    gap: 16px;
+}
+
+.license-cards {
+    display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
     gap: 16px;
     align-items: start;
@@ -729,6 +734,8 @@
 }
 
 .license-list details {
+    --card-inset-margin: 12px;
+
     margin-top: 12px;
     padding-inline: 10px;
     background: var(--nested);

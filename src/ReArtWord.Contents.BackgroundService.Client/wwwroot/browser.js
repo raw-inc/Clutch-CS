@@ -72,7 +72,7 @@ window.contentsBrowser = {
     dashboardDropTarget: (board, x, y) =>
     {
         const rows = [];
-        for (const card of board.querySelectorAll(':scope > .dashboard-cards > [data-card-id]'))
+        for (const card of board.querySelectorAll('.dashboard-cards > [data-card-id]'))
         {
             const rect = card.getBoundingClientRect(), last = rows.at(-1);
             if (!last || 1 < Math.abs(last.top - rect.top))

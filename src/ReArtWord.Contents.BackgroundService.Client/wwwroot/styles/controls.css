@@ -373,3 +373,20 @@ meter::-moz-meter-bar {
     padding: 4px 6px;
     font-size: 11px;
 }
+
+clutch-card-rows {
+    display: contents;
+}
+
+/* 測定中だけ元の高さに戻し、同じ行で余白を補うカードを選ぶ。 */
+clutch-card-rows > :first-child > * {
+    align-self: start;
+}
+
+clutch-card-rows:not([data-measuring]) > :first-child > [data-stretch] {
+    align-self: stretch;
+}
+
+clutch-card-rows:not([data-measuring]) > :first-child > * > [data-card-inset] {
+    margin-block-start: calc(var(--card-inset-margin, 0px) + var(--card-inset-offset, 0px));
+}

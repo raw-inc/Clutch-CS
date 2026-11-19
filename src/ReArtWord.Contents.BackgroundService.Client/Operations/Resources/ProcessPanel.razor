@@ -17,7 +17,7 @@
     }
     else
     {
-        <ul class="application-list">
+        <clutch-card-rows><ul class="application-list">
             @foreach (var item in processes)
             {
                 <li @key="item.Definition.Id">
@@ -25,8 +25,8 @@
                         <h3>@item.Definition.DisplayName</h3>
                         <span class="badge @(item.Observed.Status?.Running is true ? "good" : "muted")">@Ui[State(item)]</span>
                     </header>
-                    <p class="application-path">@item.Definition.ExecutablePath</p>
-                    <dl class="application-facts">
+                    <p class="application-path" data-card-caption>@item.Definition.ExecutablePath</p>
+                    <dl class="application-facts" data-card-inset>
                         @if (item.Observed.Status?.Identity is {} identity)
                         {
                             <div><dt>PID</dt><dd>@identity.ProcessId</dd></div>
@@ -47,7 +47,7 @@
                     </div>
                 </li>
             }
-        </ul>
+        </ul></clutch-card-rows>
     }
 </section>
 @if(peer is not null && cluster is not null)

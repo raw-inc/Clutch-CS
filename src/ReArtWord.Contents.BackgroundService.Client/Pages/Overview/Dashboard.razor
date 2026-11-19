@@ -57,7 +57,7 @@
         <ActiveRunsPanel @key="(Api.SelectedClusterId, Api.SelectedPeerId, Connection.Current?.InstanceId)" />
         @if(Connection.Current is {} running)
         {
-            <div class="execution-telemetry">
+            <clutch-card-rows><div class="execution-telemetry">
                 @if (running.Schedules is {} schedules)
                 {
                     <section class="card">
@@ -85,7 +85,7 @@
                 {
                     <p class="notice">@Ui["Last schedule problem"]: @scheduleProblem</p>
                 }
-            </div>
+            </div></clutch-card-rows>
             <section><div class="section-heading"><h2>@Ui["Sources"]</h2><span>@Ui["Manage listening sources"]</span></div>@if (running.Sources.Count > 0){<div class="table-wrap"><table><thead><tr><th>Workflow / Node</th><th>@Ui["State"]</th><th>@Ui["Reason"]</th><th>@Ui["Actions"]</th></tr></thead><tbody>@foreach(var source in running.Sources){<tr><td>@source.WorkflowId / @source.NodeId</td><td>@source.Status.State</td><td>@source.Status.ReasonCode</td><td><button disabled="@(!source.CanStop)" @onclick="()=>StopSourceAsync(source,false)">@Ui["Stop intake"]</button><button disabled="@(!source.CanStop)" @onclick="()=>StopSourceAsync(source,true)">@Ui["Cancel accepted work too"]</button></td></tr>}</tbody></table></div>}else{<div class="empty"><UiIcon Name="signal" />@Ui["No listening sources."]</div>}<p class="footer-note">@Ui["Stopping intake allows accepted work to finish. It does not confirm or undo external side effects."]</p></section>
         }
         <div class="section"><ResourcePanel @ref="resourcePanel" /></div>
@@ -106,9 +106,9 @@
                 }
             </fieldset>
         </div>
-        <div class="dashboard-operations settings-browser" hidden="@(settingsTopic != BrowserTopic)">
+        <clutch-card-rows><div class="dashboard-operations settings-browser" hidden="@(settingsTopic != BrowserTopic)">
             <DisplaySettingsPanel /><ExperimentalSettingsPanel />
-        </div>
+        </div></clutch-card-rows>
         <div class="dashboard-operations" hidden="@(settingsTopic != UpdateTopic)">
             @if (fleetUpdates is not null)
             {

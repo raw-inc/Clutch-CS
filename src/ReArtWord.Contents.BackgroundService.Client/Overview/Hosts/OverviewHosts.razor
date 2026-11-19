@@ -4,10 +4,10 @@
 @if(displayPeers.Count==0){<div class="overview-empty"><UiIcon Name="monitor" /><strong>@Ui["Waiting for PC measurements"]</strong></div>}
 else
 {
-    <div class="host-grid @(Detailed ? "detailed" : "summary") @(ClusterId is null ? "all-clusters" : null)">
+    <clutch-card-rows><div class="host-grid @(Detailed ? "detailed" : "summary") @(ClusterId is null ? "all-clusters" : null)">
     @foreach(var host in displayPeers.GroupBy(item=>item.Peer.HostId).OrderBy(group=>group.Key))
     {
         <OverviewHostCard @key="host.Key" Peers="host.ToArray()" PowerPeers="records.Where(item=>item.Peer.HostId==host.Key).ToArray()" Detailed="Detailed" IsPrevious="Previous" Removed="ReloadAsync" Memberships="@string.Join(", ",host.Select(item=>item.ClusterId+" / "+item.Peer.PeerId).Distinct())" />
     }
-    </div>
+    </div></clutch-card-rows>
 }

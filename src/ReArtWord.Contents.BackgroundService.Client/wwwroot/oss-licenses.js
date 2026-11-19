@@ -25,6 +25,10 @@ export async function licensesView(root, ctx)
     search.type = 'search';
     filter.append(label, search, count);
     root.append(filter);
+    const rows = document.createElement('clutch-card-rows'), cards = document.createElement('div');
+    cards.className = 'license-cards';
+    rows.append(cards);
+    root.append(rows);
     const components = [];
 
     /** 絞り込み後の表示件数を読み上げの対象にも反映します。 */
@@ -53,6 +57,7 @@ export async function licensesView(root, ctx)
         const section = document.createElement('section'), title = document.createElement('h2'), meta = document.createElement('p');
         title.textContent = entry.name;
         meta.className = 'small muted';
+        meta.setAttribute('data-card-caption', '');
         meta.textContent = `${entry.version} · ${entry.license} · ${entry.authors}`;
         section.append(title, meta);
         if (entry.selectedLicense)
@@ -83,6 +88,10 @@ export async function licensesView(root, ctx)
             const details = document.createElement('details'), summary = document.createElement('summary'), text = document.createElement('pre');
             summary.textContent = notice.label;
             details.append(summary, text);
+            if (!section.querySelector('details'))
+            {
+                details.setAttribute('data-card-inset', '');
+            }
             section.append(details);
             let loaded = false;
 
@@ -127,7 +136,7 @@ export async function licensesView(root, ctx)
             }, { signal: ctx.signal });
         }
         components.push({ name: entry.name.toLowerCase(), section });
-        root.append(section);
+        cards.append(section);
     }
     return {
         /** 所有する監視・接続・表示資源を解放します。 */

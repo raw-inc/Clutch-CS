@@ -24,7 +24,7 @@
     min-width: 0;
     padding: 16px;
     background: var(--nested);
-    border-radius: var(--radius-control);
+    border-radius: var(--radius-panel);
 }
 
 .application-list header {
@@ -51,6 +51,9 @@
     display: flex;
     flex-wrap: wrap;
     gap: 12px 20px;
+
+    --card-inset-margin: 1em;
+
     padding-block: 12px;
     border-block: 1px solid var(--line);
 }

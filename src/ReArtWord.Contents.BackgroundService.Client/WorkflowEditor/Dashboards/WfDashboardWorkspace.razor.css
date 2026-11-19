@@ -148,6 +148,22 @@
     }
 }
 
+@media (max-width: 600px) {
+    .dashboard-workspace.with-catalog {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .dashboard-library {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .dashboard-board {
+        padding: 12px;
+    }
+}
+
 @media (min-width: 801px) {
     @container wf-dashboard (min-width: 516px) {
         .dashboard-card.concurrency-card {

@@ -13,7 +13,7 @@
     @if(telemetry?.Problem is {} problem){<p class="range-note">@Ui[problem]</p>}
     @if(telemetry is not null && telemetry.Clusters.Count>0)
     {
-        <div class="cluster-health-grid" aria-label='@Ui["Cluster health"]'>
+        <clutch-card-rows><div class="cluster-health-grid" aria-label='@Ui["Cluster health"]'>
             @foreach(var cluster in telemetry.Clusters)
             {
                 var now=Api.UtcNow;
@@ -24,14 +24,14 @@
                     <dl><div><dt>@Ui["Ready peers"]</dt><dd>@health.Ready / @cluster.Peers.Count</dd></div><div><dt>@Ui["Verified peers"]</dt><dd>@health.Verified / @cluster.Peers.Count</dd></div><div><dt>@Ui["Coordinator"]</dt><dd>@(stale||cluster.CoordinatorCandidates.Count==0?Ui["Unconfirmed"]:cluster.CoordinatorCandidates.Count==1?cluster.CoordinatorCandidates[0]:Ui["Coordinator disagreement"])</dd></div><div><dt>@Ui["Last check"]</dt><dd>@(FormatTime(health.CheckedAt,"HH:mm:ss")??Ui["Unconfirmed"])</dd></div></dl>
                 </article>
             }
-        </div>
+        </div></clutch-card-rows>
     }
     <div class="overview-heading"><h2>@Ui["PC health"]</h2><div class="pc-display-toggle" role="group" aria-label='@Ui["PC health display"]'><button class="quiet @(!detailedHosts ? "active" : "")" aria-pressed="@(!detailedHosts ? "true" : "false")" @onclick="()=>detailedHosts=false">@Ui["PC summary"]</button><button class="quiet @(detailedHosts ? "active" : "")" aria-pressed="@(detailedHosts ? "true" : "false")" @onclick="()=>detailedHosts=true">@Ui["PC details"]</button></div></div>
     <OverviewHosts Active="Active" Detailed="detailedHosts" LivePeers="@(telemetry?.Peers.Select(item=>item.Peer with {ClusterId=item.Cluster}).ToArray()??[])" />
     @if(telemetry is not null)
     {
         @if(telemetry.Peers.Count<telemetry.KnownPeers){<p class="range-note">@Ui.Format("Showing peers {0}–{1} of {2}. Other peers are outside this polling range.",telemetry.Offset+1,telemetry.Offset+telemetry.Peers.Count,telemetry.KnownPeers)</p>}
-        <div class="secondary-grid">
+        <clutch-card-rows><div class="secondary-grid">
             <section><div class="panel-heading"><h2>@Ui["Workflow activity"]</h2><span>@Ui["Last 60 seconds"]</span></div>
                 <div class="health-card panel-content">
                 @{var activity=telemetry.Observations.SelectMany(pair=>pair.Value.Activity(Api.UtcNow).Select(row=>(Cluster:pair.Key,Row:row))).OrderByDescending(item=>item.Row.Completed).ToArray();}
@@ -49,7 +49,7 @@
                 <footer>@Ui["Up to 8 log entries per polled cluster; showing the latest 8 observed entries."]@if(telemetry.Observations.Any(pair=>pair.Value.LogProblem is not null || pair.Value.Logs?.Complete!=true)){<span> · @Ui["Some results are omitted or unavailable. Open Log Viewer for details."]</span>}</footer>
                 </div>
             </section>
-        </div>
+        </div></clutch-card-rows>
     }
     }
 </section>
