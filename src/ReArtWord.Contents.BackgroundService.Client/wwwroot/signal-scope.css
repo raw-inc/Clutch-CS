@@ -380,17 +380,13 @@
     }
 }
 
-.scope-filters .scope-column-choice {
-    display: none;
+@media (min-width: 681px) {
+    .signal-scope .scope-filters > label.scope-column-choice:has(> input[type="checkbox"]) {
+        display: none;
+    }
 }
 
 @media (max-width: 680px) {
-    .scope-filters .scope-column-choice {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-    }
-
     .signal-scope:not(.all-columns) .scope-packets {
         min-width: 0;
     }

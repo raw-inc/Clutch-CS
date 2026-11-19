@@ -232,6 +232,10 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         const sidebar = await page.locator('.scope-sidebar').boundingBox();
         const results = await page.locator('.scope-results').boundingBox();
         assert(sidebar.x + sidebar.width <= results.x);
+        const columnChoice = page.locator('.scope-column-choice');
+        assert.equal(await columnChoice.isVisible(), false);
+        await page.setViewportSize({ width: 768, height: 900 });
+        assert.equal(await columnChoice.isVisible(), false);
         await page.setViewportSize({ width: 390, height: 844 });
         const narrowSidebar = await page.locator('.scope-sidebar').boundingBox();
         const narrowResults = await page.locator('.scope-results').boundingBox();
@@ -242,7 +246,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         const columnToggle = page.getByRole('checkbox', { name: 'All columns', exact: true });
         const toggleBox = await columnToggle.boundingBox();
         assert(toggleBox.height < 24 && Math.abs(toggleBox.width - toggleBox.height) <= 1);
-        await page.locator('.scope-column-choice').click();
+        await columnChoice.click();
         assert.equal(await columnToggle.isChecked(), true);
         await page.evaluate(async () =>
         {
