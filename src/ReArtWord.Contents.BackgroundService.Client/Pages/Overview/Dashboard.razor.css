@@ -42,11 +42,6 @@
     border-radius: var(--radius-panel);
 }
 
-.dashboard-operations ::deep .section-heading {
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
 .dashboard-operations ::deep .empty {
     display: flex;
     align-items: center;

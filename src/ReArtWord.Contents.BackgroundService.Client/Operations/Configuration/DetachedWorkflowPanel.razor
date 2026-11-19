@@ -6,17 +6,23 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Workflow
 @using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor
 <section class="card">
-    <div class="toolbar"><h2>@Ui["Local changes while detached"]</h2><button disabled="@busy" @onclick="()=>LoadAsync(false)">@Ui["Check unshared and pending changes"]</button></div>
-    <p class="small muted">@Ui["Local storage is separate from cluster sharing. After rejoining, non-conflicting changes are merged; conflicting changes must be compared and selected."]</p>
+    <header class="review-heading">
+        <div><h2>@Ui["Local changes while detached"]</h2>
+            <p class="small muted">@Ui["Local storage is separate from cluster sharing. After rejoining, non-conflicting changes are merged; conflicting changes must be compared and selected."]</p></div>
+        <button disabled="@busy" @onclick="()=>LoadAsync(false)">@Ui["Check unshared and pending changes"]</button>
+    </header>
     @if(loaded)
     {
         <p>@Ui.Format("{0} items · {1} / {2}", entries.Count, cluster, peer)</p>
+        @if(entries.Count>0)
+        {
         <div class="table-wrap"><table><thead><tr><th>Workflow</th><th>@Ui["Local revision"]</th><th>@Ui["Integration status"]</th><th></th></tr></thead><tbody>
         @foreach(var entry in entries)
         {
             <tr><td>@entry.Name</td><td class="mono small">@entry.LocalRevision</td><td>@Ui["Conflict"] @entry.ConflictCount · @(entry.IntegrationOutcome?.ToString()??Ui["Not integrated"])</td><td><button disabled="@(busy||!SameConnection)" @onclick="()=>OpenAsync(entry)">@Ui["Compare"]</button></td></tr>
         }
         </tbody></table></div>
+        }
         @if(cursor is not null){<button disabled="@(busy||!SameConnection)" @onclick="()=>LoadAsync(true)">@Ui["Next page"]</button>}
     }
     @if(message is not null){<p class="notice">@(message?.Invoke())</p>}

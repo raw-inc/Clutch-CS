@@ -4,7 +4,13 @@
 <h2>@Ui["Recorded operations and status queries"]</h2>
 <div class="toolbar"><select aria-label="@Ui["Operation type"]" @bind="kind"><option value="capture">@Ui["Capture snapshot"]</option><option value="restore">@Ui["Restore snapshot"]</option><option value="file">@Ui["File operation across all targets"]</option><option value="update">@Ui["Release update"]</option><option value="run">@Ui["Manual run"]</option><option value="cancel">@Ui["Cancel execution"]</option><option value="save">@Ui["Save operation"]</option><option value="conflict">@Ui["Resolve shared state conflicts"]</option><option value="script-package">@Ui["script-package"]</option><option value="script-runtime">@Ui["script-runtime"]</option></select><input aria-label="@Ui["Known operation ID"]" @bind="identity" @bind:event="oninput" placeholder="@Ui["Operation GUID"]" /><button @onclick="LookupAsync">@Ui["Query known ID"]</button></div>
 @if(problem is not null){<p class="notice error">@(problem?.Invoke())</p>}
-<div class="table-wrap"><table>
+@if(Journal.Items.Count==0)
+{
+    <p class="empty">@Ui["No operations recorded in this browser."]</p>
+}
+else
+{
+<div class="table-wrap"><table class="operation-history">
 <thead>
 <tr>
 <th>@Ui["Started / type"]</th>
@@ -33,6 +39,7 @@
 }
 </tbody>
 </table></div>
+}
 @if(Journal.LastOperation is not null){<p>@Ui["Operation"] @Journal.LastOperation · @Ui[OperationJournal.Outcome(Journal.LastResult)]</p>
 <JsonDetails Value="Journal.LastResult" />}
 </section>

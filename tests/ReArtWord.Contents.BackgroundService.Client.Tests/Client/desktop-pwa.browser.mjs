@@ -233,3 +233,43 @@ test('配色の保存と解除が別タブにも反映され、保存できな�
         await browser.close();
     }
 });
+
+test('published conflict cards keep their heading, explanation and action together at desktop and mobile widths', async context =>
+{
+    const browser = await chromium.launch();
+    context.after(() => browser.close());
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, serviceWorkers: 'block' });
+    await page.addInitScript(() =>
+    {
+        sessionStorage.setItem('contents.client.cluster', JSON.stringify('studio'));
+        sessionStorage.setItem('contents.client.peer', JSON.stringify('review'));
+    });
+    await page.goto(origin + '/dashboard');
+    await page.getByRole('tab', { name: 'Resolve conflicts' }).click();
+    for (const width of [1440, 390, 320])
+    {
+        await page.setViewportSize({ width, height: 900 });
+        const headings = page.locator('.dashboard-operations:visible section h2');
+        assert.equal(await headings.count(), 2);
+        for (const title of await headings.all())
+        {
+            const boxes = await title.evaluate(heading =>
+            {
+                const section = heading.closest('section');
+                return [heading, section.querySelector('p'), section.querySelector('button'), section].map(e => e.getBoundingClientRect().toJSON());
+            });
+            const [heading, help, action, section] = boxes;
+            assert.ok(heading.bottom <= help.top && action.right <= section.right);
+            if (width === 1440)
+            {
+                assert.ok(help.right < action.left);
+                assert.ok(Math.abs(heading.top + help.bottom - action.top - action.bottom) <= 2);
+            }
+            else
+            {
+                assert.ok(help.bottom < action.top);
+                assert.ok(Math.abs(heading.left - action.left) <= 1);
+            }
+        }
+    }
+});

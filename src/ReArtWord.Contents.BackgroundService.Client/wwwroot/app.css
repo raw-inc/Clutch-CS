@@ -533,7 +533,61 @@ details[open] > summary {
     margin-bottom: 8px;
 }
 
+.review-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 24px;
+}
+
+.review-heading > div {
+    flex: 1 1 22rem;
+    min-width: 0;
+}
+
+.review-heading h2,
+.review-heading p {
+    margin: 0;
+}
+
+.review-heading p {
+    max-width: 72ch;
+    margin-top: 6px;
+}
+
+.review-heading > button {
+    max-width: 100%;
+    flex: 0 0 auto;
+}
+
+.conflict-candidates {
+    display: grid;
+    gap: 10px;
+}
+
+.conflict-candidates summary > span {
+    min-width: 0;
+}
+
+.conflict-candidates code {
+    display: block;
+    overflow-wrap: anywhere;
+    color: var(--muted);
+    font-weight: normal;
+}
+
+.conflict-candidates details[open] {
+    padding-bottom: 12px;
+}
+
+.operation-history {
+    min-width: 42rem;
+}
+
 .section-heading {
+    flex-wrap: wrap;
+    gap: 8px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;

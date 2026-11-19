@@ -4,17 +4,23 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Nodes
 @using ReArtWord.Contents.BackgroundService.Contracts.Workflow
 <section class="card">
-    <div class="toolbar"><h2>@Ui["Shared state conflicts"]</h2><button disabled="@busy" @onclick="LoadAsync">@Ui["Review current candidates"]</button></div>
-    <p class="small muted">@Ui["Compare concurrently saved candidates. Resolution checks all reviewed revisions and does not rewrite an already-running occurrence."]</p>
+    <header class="review-heading">
+        <div><h2>@Ui["Shared state conflicts"]</h2>
+            <p class="small muted">@Ui["Compare concurrently saved candidates. Resolution checks all reviewed revisions and does not rewrite an already-running occurrence."]</p></div>
+        <button disabled="@busy" @onclick="LoadAsync">@Ui["Review current candidates"]</button>
+    </header>
     @if(loaded)
     {
         <p>@Ui.Format("{0} items · observed on {1} / {2}", conflicts.Count, cluster, peer)</p>
+        @if(conflicts.Count>0)
+        {
         <div class="table-wrap"><table><thead><tr><th>@Ui["Storage purpose / target"]</th><th>@Ui["Affected scope"]</th><th>@Ui["Candidates"]</th><th></th></tr></thead><tbody>
         @foreach(var conflict in conflicts)
         {
             <tr><td>@conflict.Scope / @conflict.Key</td><td>@string.Join(", ",conflict.WorkflowIds.Concat(conflict.OperationalFields))</td><td>@conflict.CandidateVersions.Count @(conflict.ValuesHidden?Ui["Content hidden"]:"")</td><td><button disabled="@(!SameConnection||busy||!conflict.DetailAvailable)" @onclick="()=>OpenAsync(conflict)">@Ui["Compare"]</button>@if(!conflict.DetailAvailable){<small>@conflict.DetailReason</small>}</td></tr>
         }
         </tbody></table></div>
+        }
         @if(cursor is not null){<button disabled="@(busy||!SameConnection)" @onclick="()=>LoadPageAsync(true)">@Ui["Show more candidates"]</button>}
     }
     @if(message is not null){<p class="notice">@(message?.Invoke())</p>}
@@ -36,13 +42,18 @@
         <p class="small mono">@Ui["Conflict ID"] @current.Id</p>
         @if(!current.Resolvable){<p class="notice error">@Ui["This purpose is unsupported or the candidate is invalid. Check diagnostics and stored artifacts instead of resolving here."]</p>}
         @if(current.ValuesHidden){<p>@Ui["Secret values are not displayed or saved on this device. Select a reviewed candidate revision."]</p>}
-        @foreach(var candidate in current.Candidates)
-        {
-            <details class="card"><summary>@candidate.Version @(candidate.Value is null&&!current.ValuesHidden?Ui["· Deletion candidate"]:"")</summary>
-                @if(!current.ValuesHidden){<pre>@Preview(candidate.Value)</pre>}
-                <button disabled="@(busy||!current.Resolvable)" @onclick="()=>Choose(candidate.Version)">@Ui["Choose this candidate"]</button>
-            </details>
-        }
+        <div class="conflict-candidates">
+            @for(var index=0;index<current.Candidates.Count;index++)
+            {
+                var candidate=current.Candidates[index];
+                <details class="secondary-details" @key="candidate.Version">
+                    <summary><span><strong>@Ui.Format("Candidate {0}", index+1)</strong>
+                        <code>@candidate.Version</code>@if(candidate.Value is null&&!current.ValuesHidden){<small>@Ui["· Deletion candidate"]</small>}</span></summary>
+                    @if(!current.ValuesHidden){<pre>@Preview(candidate.Value)</pre>}
+                    <button disabled="@(busy||!current.Resolvable)" @onclick="()=>Choose(candidate.Version)">@Ui["Choose this candidate"]</button>
+                </details>
+            }
+        </div>
         <p>@Ui["Selected candidate"]: @(version??Ui["Not selected"])</p>
         @if(CanEdit(current,SelectedCandidate))
         {

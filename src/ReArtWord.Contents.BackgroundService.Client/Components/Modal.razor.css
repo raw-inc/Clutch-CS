@@ -71,6 +71,7 @@
 }
 
 .dialog-content {
+    overflow-wrap: anywhere;
     min-height: 0;
     padding: 16px clamp(16px, 3vw, 28px);
     overflow: auto;

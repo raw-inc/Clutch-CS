@@ -1,12 +1,15 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Observability
 
 <section class="card section">
-    <div class="toolbar"><h2>@Ui["Normal policy and temporary tracing"]</h2><button @onclick="RefreshAsync">@Ui["Get status"]</button></div>
-    <p class="small muted">@Ui["Clearing temporary tracing restores the saved normal policy. Saved and effective policies are shown separately."]</p>
+    <header class="review-heading">
+        <div><h2>@Ui["Normal policy and temporary tracing"]</h2>
+            <p class="small muted">@Ui["Clearing temporary tracing restores the saved normal policy. Saved and effective policies are shown separately."]</p></div>
+        <button @onclick="RefreshAsync">@Ui["Get status"]</button>
+    </header>
     <p class="notice" role="status">@(message?.Invoke())</p>
     @if(state is not null)
     {
-        <table>
+        <div class="table-wrap"><table>
             <thead><tr><th>Workflow</th><th>@Ui["Saved normal"]</th><th>@Ui["Effective normal"]</th><th>@Ui["Current effective decision"]</th><th>@Ui["Temporary"]</th><th>@Ui["Retrieved"]</th></tr></thead>
             <tbody>
             @foreach(var item in state.States)
@@ -14,7 +17,7 @@
                 <tr><td>@item.WorkflowId</td><td>@Ui[(item.Saved.Enabled).ToString() ?? "Unconfirmed"]</td><td>@Ui[(item.ActiveNormal?.Enabled).ToString() ?? "Unconfirmed"]</td><td>@Ui[(item.Effective.Enabled).ToString() ?? "Unconfirmed"]</td><td>@Ui[(item.Temporary).ToString() ?? "Unconfirmed"]</td><td>@Ui[(item.Loaded).ToString() ?? "Unconfirmed"] · @item.Reason</td></tr>
             }
             </tbody>
-        </table>
+        </table></div>
         <label>@Ui["Target workflow"]<select @bind="workflow">@foreach(var item in state.States){<option value="@item.WorkflowId">@item.WorkflowId</option>}</select></label>
         <div class="toolbar">
             <label><input type="checkbox" @bind="inputs" />@Ui["Record inputs"]</label>
