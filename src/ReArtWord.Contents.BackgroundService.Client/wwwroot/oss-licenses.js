@@ -78,7 +78,7 @@ export async function licensesView(root, ctx)
         {
             const link = document.createElement('a');
             link.href = entry.project;
-            link.textContent = ctx.t('Project website', 'プロジェクトサイト');
+            link.textContent = ctx.t('Project website (opens in a new tab)', 'プロジェクトサイトを新しいタブで開く');
             link.target = '_blank';
             link.rel = 'noopener noreferrer';
             section.append(link);

@@ -497,6 +497,12 @@
     background: rgb(0 0 0 / 55%);
 }
 
+.file-name-error {
+    margin-block: 4px 12px;
+    color: var(--danger);
+    overflow-wrap: anywhere;
+}
+
 .file-action-dialog h2 {
     margin-top: 0;
 }

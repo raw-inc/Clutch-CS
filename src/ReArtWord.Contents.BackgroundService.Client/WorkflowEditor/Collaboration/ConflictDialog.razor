@@ -23,9 +23,9 @@
 </div>
 </div>
         }
-        <select aria-label="@Ui["Value to keep"]" value="@(choices.TryGetValue(group.Key,out var chosen)?chosen.ToString(CultureInfo.InvariantCulture):string.Empty)" @onchange="e=>Choose(group.Key,e)">
+        <label>@Ui["Value to keep"]<select value="@(choices.TryGetValue(group.Key,out var chosen)?chosen.ToString(CultureInfo.InvariantCulture):string.Empty)" @onchange="e=>Choose(group.Key,e)">
 <option value="">@Ui["Choose a value"]</option>
-<option value="-1">@Ui["Keep current value"]</option>@foreach(var item in group){<option value="@item.index">@Ui.Format("Use candidate {0}",item.index+1)</option>}</select>
+<option value="-1">@Ui["Keep current value"]</option>@foreach(var item in group){<option value="@item.index">@Ui.Format("Use candidate {0}",item.index+1)</option>}</select></label>
 </section>
     }
     @if(problem is not null){<p class="notice error">@problem</p>}

@@ -112,9 +112,25 @@ export function fileActionControls(root, ctx, actions)
                 name.required = true;
                 name.maxLength = 255;
                 name.autofocus = true;
-                name.oninput = () => name.setCustomValidity('');
+                const error = document.createElement('p');
+                error.id = title.id + '-name-error';
+                error.className = 'file-name-error';
+                error.hidden = true;
+                name.setAttribute('aria-describedby', error.id);
+                name.oninvalid = () =>
+                {
+                    error.textContent = name.validationMessage;
+                    error.hidden = false;
+                    name.setAttribute('aria-invalid', 'true');
+                };
+                name.oninput = () =>
+                {
+                    name.setCustomValidity('');
+                    name.removeAttribute('aria-invalid');
+                    error.hidden = true;
+                };
                 label.append(name);
-                form.append(label);
+                form.append(label, error);
             }
             else
             {

@@ -10,7 +10,7 @@
                 <button type="button" class="quiet" disabled="@busy" @onclick="()=>LoadAsync(directory,0,UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh"]</button>
             </div>
             <form class="file-picker-location" @onsubmit="()=>LoadAsync(string.IsNullOrWhiteSpace(address)?null:address.Trim(),0,UiCancellation)" @onsubmit:preventDefault="true">
-                <input aria-label='@Ui["Folder path"]' @bind="address" @bind:event="oninput" disabled="@busy" placeholder='@Ui["Drives / enter a folder path"]' />
+                <label class="field-label">@Ui["Folder path"]<input @bind="address" @bind:event="oninput" disabled="@busy" placeholder='@Ui["Drives / enter a folder path"]' /></label>
                 <button type="submit" class="quiet" disabled="@busy">@Ui["Go to folder"]</button>
             </form>
             <div class="file-picker-list" aria-label='@Ui["Files and folders"]' aria-busy="@(busy?"true":"false")">

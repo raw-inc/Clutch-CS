@@ -150,9 +150,8 @@ else
     <button disabled="@(busy||LocalContext)" @onclick="()=>{collaborationOpen=false;forceSaveOpen=true;}">@Ui["Force save current draft"]</button>
 </Modal>
 <Modal Open="importOpen" Title="@Ui["Import workflow"]" Close="()=>importOpen=false">
-<InputFile OnChange="ReadImportAsync" accept=".json,.yaml,.yml" />
-<textarea aria-label="@Ui["YAML or JSON"]" @bind="importText" @bind:event="oninput">
-</textarea>
+    <label>@Ui["Workflow file"]<InputFile OnChange="ReadImportAsync" accept=".json,.yaml,.yml" /></label>
+    <label>@Ui["YAML or JSON"]<textarea @bind="importText" @bind:event="oninput"></textarea></label>
 <button @onclick="ImportAsync">@Ui["Import as draft"]</button>
 </Modal>
 <ConflictDialog Open="conflictOpen" Conflicts="conflicts" Close="()=>conflictOpen=false" Apply="ResolveAsync" />

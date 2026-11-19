@@ -146,6 +146,15 @@ for (const [name, engine] of [['Chrome', chromium], ['Firefox', firefox]])
         });
         assert.deepEqual([style[0], style[1], style[3], style[4]], [true, 'none', '6px', '12px']);
         assert.ok(style[2].includes('inset'));
+        await field.fill('../invalid');
+        await dialog.getByRole('button', { name: 'Create folder', exact: true }).click();
+        const problem = dialog.locator('.file-name-error');
+        await problem.waitFor();
+        assert.equal(await field.getAttribute('aria-invalid'), 'true');
+        assert.equal(await field.getAttribute('aria-describedby'), await problem.getAttribute('id'));
+        await field.fill('valid');
+        assert.equal(await problem.isHidden(), true);
+        assert.equal(await field.getAttribute('aria-invalid'), null);
         await page.keyboard.press('Escape');
         await dialog.waitFor({ state: 'detached' });
         assert.ok(await opener.evaluate(e => e === document.activeElement));

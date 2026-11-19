@@ -15,8 +15,8 @@
     @if(inputProblem is not null){<p class="notice" role="status">@inputProblem()</p>}
     <div class="log-search">
         <div class="log-search-main">
-            <div class="search-field"><UiIcon Name="search" /><input aria-label="@Ui["Log content"]" placeholder="@Ui["Search log content"]" @bind="text" @bind:event="oninput" @onkeydown="args => string.Equals(args.Key, EnterKey, StringComparison.Ordinal) ? SearchAsync(0) : Task.CompletedTask" /></div>
-            <select aria-label="@Ui["Severity"]" @bind="level"><option value="">@Ui["All severities"]</option>@foreach(var value in new[]{"DEBUG","INFO","WARN","ERROR","FATAL"}){<option value="@value">@value</option>}</select>
+            <label>@Ui["Log content"]<span class="search-field"><UiIcon Name="search" /><input placeholder="@Ui["Search log content"]" @bind="text" @bind:event="oninput" @onkeydown="args => string.Equals(args.Key, EnterKey, StringComparison.Ordinal) ? SearchAsync(0) : Task.CompletedTask" /></span></label>
+            <label>@Ui["Severity"]<select @bind="level"><option value="">@Ui["All severities"]</option>@foreach(var value in new[]{"DEBUG","INFO","WARN","ERROR","FATAL"}){<option value="@value">@value</option>}</select></label>
             <button class="primary" @onclick="()=>SearchAsync(0)" disabled="@loading"><UiIcon Name="search" />@(loading ? Ui["Searching…"] : Ui["Search"])</button>
         </div>
         <div class="log-observation-controls">

@@ -76,6 +76,7 @@
   "局所編集です。共有草稿への同期は保留しています。": "Editing locally. The shared draft has not been updated.",
   "共同編集・操作記録の表示名": "Name shown to collaborators and in operation history",
   "定義を読み込む": "Import workflow",
+  "ワークフローファイル": "Workflow file",
   "YAMLまたはJSON": "YAML or JSON",
   "草稿へ読み込む": "Import as draft",
   "保存版を有効化": "Activate saved version",

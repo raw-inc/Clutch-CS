@@ -9,11 +9,16 @@
 
 .log-search-main {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 12px;
 }
 
-.log-search-main .search-field {
+.log-search-main > label {
+    margin: 0;
+    min-width: 0;
+}
+
+.log-search-main > label:first-child {
     flex: 1;
 }
 
@@ -155,7 +160,7 @@
         flex-wrap: wrap;
     }
 
-    .log-search-main .search-field {
+    .log-search-main > label:first-child {
         flex-basis: 100%;
     }
 

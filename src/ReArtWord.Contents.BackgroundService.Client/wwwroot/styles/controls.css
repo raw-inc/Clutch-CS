@@ -385,3 +385,14 @@ clutch-card-rows:not([data-measuring]) > :first-child > [data-stretch] {
 clutch-card-rows:not([data-measuring]) > :first-child > * > [data-card-inset] {
     margin-block-start: calc(var(--card-inset-margin, 0px) + var(--card-inset-offset, 0px));
 }
+
+.field-actions {
+    align-items: end;
+    margin-block: 12px;
+}
+
+.field-actions > label,
+.field-label {
+    min-width: 0;
+    margin: 0;
+}

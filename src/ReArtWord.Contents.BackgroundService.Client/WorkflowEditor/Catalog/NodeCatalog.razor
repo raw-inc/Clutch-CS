@@ -8,7 +8,7 @@
     var searching=!string.IsNullOrWhiteSpace(search);
 <div class="catalog-heading"><h2>@Ui["Nodes"]</h2><span class="count">@filtered.Count</span><button class="quiet icon-button" aria-label="@Ui["Close node catalog"]" @onclick="()=>Close.InvokeAsync()"><UiIcon Name="close" /></button></div>
 <div class="catalog-filters">
-    <div class="search-field"><UiIcon Name="search" /><input aria-label="@Ui["Search nodes"]" placeholder="@Ui["Search nodes"]" @bind="search" @bind:event="oninput" /></div>
+    <label class="field-label">@Ui["Search nodes"]<span class="search-field"><UiIcon Name="search" /><input type="search" @bind="search" @bind:event="oninput" /></span></label>
     <label class="sr-only" for="catalog-category">@Ui["Node category"]</label><select id="catalog-category" @bind="category"><option value="">@Ui["All categories"]</option>@foreach(var name in Catalog.Select(item=>item.Category).Distinct().OrderBy(GraphPresentation.CategoryOrder)){<option value="@name">@Ui[GraphPresentation.CategoryName(name)]</option>}</select>
 </div>
 <div class="catalog-view" role="group" aria-label="@Ui["Catalog view"]">

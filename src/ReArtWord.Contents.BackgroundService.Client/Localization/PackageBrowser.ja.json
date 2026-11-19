@@ -7,7 +7,7 @@
   "Loading package details…": "パッケージの詳細を取得しています…",
   "Installed": "導入済み",
   "Downloads": "ダウンロード数",
-  "View on package registry": "公式の配布ページを開く",
+  "View on package registry": "公式の配布ページを新しいタブで開く",
   "Version to install": "インストールするバージョン",
   "Up to 500 versions are shown. Use exact package entry for another published version.": "バージョンは最大500件を表示します。ほかの公開版はパッケージ名と固定バージョンを直接指定できます。",
   "Select a package to choose its version and install it.": "検索結果からパッケージを選び、バージョンを確認してインストールしてください。",
