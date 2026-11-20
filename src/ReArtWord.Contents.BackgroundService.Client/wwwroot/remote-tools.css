@@ -364,28 +364,24 @@
     background: var(--accent-soft);
 }
 
-.terminal-keys {
-    display: block;
+.terminal-key-scroll {
     flex-shrink: 0;
-    border-top: 1px solid var(--line);
-    padding-top: 8px;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
+    border-block-start: 1px solid var(--line);
+    padding-block-start: 8px;
+}
+
+.terminal-keys {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(max-content, 1fr));
+    gap: 4px;
 }
 
 .terminal-keys > div {
-    grid-template-columns: repeat(8, minmax(44px, 1fr));
-    gap: 4px;
-    display: flex;
-    flex-wrap: wrap;
-    min-width: 0;
-}
-
-.terminal-keys > div + div {
-    margin-top: 4px;
+    display: contents;
 }
 
 .terminal-keys button {
+    min-inline-size: 44px;
     min-height: 44px;
     padding: 4px;
     touch-action: manipulation;
@@ -1014,19 +1010,6 @@
     color: var(--danger);
 }
 
-@media (max-width: 680px) {
-    .terminal-keys > div {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        min-width: 0;
-        gap: 4px;
-    }
-
-    .terminal-keys button {
-        min-height: 40px;
-    }
-}
-
 .file-pane-title,
 .transfer-jobs h2 {
     font-size: 18px;
@@ -1549,11 +1532,6 @@
     .file-pane :is(.file-picker-control, .file-picker-control > span:first-child, button.local-folder) {
         min-height: 44px;
     }
-}
-
-.terminal-keys > div > button {
-    flex: 1 1 auto;
-    min-width: 36px;
 }
 
 @media (max-width: 650px), (max-height: 650px) {

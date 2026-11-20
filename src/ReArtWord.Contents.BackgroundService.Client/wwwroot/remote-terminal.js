@@ -71,7 +71,11 @@ export async function terminalView(root, ctx)
         focus: () => term?.focus(),
 
         applicationCursor: () => !!term?.modes?.applicationCursorKeysMode });
-    panel.append(keys.element);
+    const keyScroll = document.createElement('clutch-scroll-area');
+    keyScroll.className = 'terminal-key-scroll';
+    keyScroll.dataset.scrollAxis = 'inline';
+    keyScroll.append(keys.element);
+    panel.append(keyScroll);
     host.addEventListener('paste', () => keys.reset(), { capture: true, signal: ctx.signal });
 
     /** xtermはCanvasに描画するため、端末面に適用された配色を渡します。

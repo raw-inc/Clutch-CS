@@ -275,3 +275,34 @@ test('横スクロールの端と一覧の行ボタンを通常操作と区別�
     });
     await page.locator('clutch-scroll-area[data-scroll-before]:not([data-scroll-after])').waitFor();
 });
+
+test('Terminal の補助キーを上下二段に保ち、狭い幅ではキー列だけを送れる', async context =>
+{
+    const page = await browser.newPage({ viewport: { width: 320, height: 720 } });
+    context.after(() => page.close());
+    await page.setContent(`
+        <clutch-scroll-area data-scroll-axis="inline" class="terminal-key-scroll"><div class="terminal-keys" role="toolbar">
+            <div>${['Ctrl', 'Alt', 'Shift', 'Esc', 'Tab', 'Del', 'Backspace', 'Enter'].map(text => '<button>' + text + '</button>').join('')}</div>
+            <div>${['Left', 'Up', 'Down', 'Right', 'Home', 'End', 'PgUp', 'PgDn'].map(text => '<button>' + text + '</button>').join('')}</div>
+        </div></clutch-scroll-area>
+    `);
+    await page.addStyleTag({ content: styles.css });
+    const toolbar = page.getByRole('toolbar');
+    const dimensions = await toolbar.evaluate(element =>
+    {
+        const [upper, lower] = [...element.children].map(row => [...row.children].map(button => button.getBoundingClientRect()));
+        const joined = [...upper, ...lower];
+        return { lines: new Set(joined.map(box => box.top)).size,
+            aligned: upper.every((box, index) => box.left === lower[index].left && box.width === lower[index].width),
+            keyHeight: Math.min(...joined.map(box => box.height)),
+            keyOverflow: element.scrollWidth - element.clientWidth,
+            pageOverflow: document.documentElement.scrollWidth - innerWidth };
+    });
+    assert.equal(dimensions.lines, 2);
+    assert.ok(dimensions.aligned);
+    assert.ok(44 <= dimensions.keyHeight);
+    assert.ok(0 < dimensions.keyOverflow);
+    assert.equal(dimensions.pageOverflow, 0);
+    await toolbar.getByRole('button', { name: 'PgDn' }).focus();
+    assert.ok(0 < await toolbar.evaluate(element => element.scrollLeft));
+});

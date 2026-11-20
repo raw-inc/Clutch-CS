@@ -77,6 +77,7 @@ export function createTerminalKeys(ctx, options)
 {
     const element = document.createElement('div');
     element.className = 'terminal-keys';
+    element.tabIndex = 0;
     element.setAttribute('role', 'toolbar');
     element.setAttribute('aria-label', ctx.t('Terminal keys', 'ターミナル補助キー'));
     const modifiers = { ctrl: false, alt: false, shift: false }, buttons = [], toggles = [];
