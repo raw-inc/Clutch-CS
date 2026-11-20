@@ -1,9 +1,9 @@
-import { node, select, field, heading, action, badge } from './dom.js';
+import { node, select, field, heading, action, badge, details } from './dom.js';
 import { noSelection } from './loader.js';
 import { powerScheduleForm } from './power-schedule-form.js';
 import { powerScheduleBulk } from './power-schedules-bulk.js';
 
-export const powerScheduleKeys = ['powerSchedule.title', 'powerSchedule.help', 'powerSchedule.cluster', 'powerSchedule.add', 'powerSchedule.save',
+export const powerScheduleKeys = ['powerSchedule.title', 'powerSchedule.help', 'powerSchedule.helpTitle', 'powerSchedule.more', 'powerSchedule.cluster', 'powerSchedule.add', 'powerSchedule.save',
     'powerSchedule.wake', 'powerSchedule.shutdown', 'powerSchedule.time', 'powerSchedule.zone', 'powerSchedule.daily', 'powerSchedule.weekdays',
     'powerSchedule.enabled', 'powerSchedule.remove', 'powerSchedule.next', 'powerSchedule.last', 'powerSchedule.active', 'powerSchedule.inactive',
     'powerSchedule.wakeAvailable', 'powerSchedule.wakeMissing', 'powerSchedule.saved', 'powerSchedule.invalid', 'powerSchedule.readUnavailable',
@@ -11,7 +11,7 @@ export const powerScheduleKeys = ['powerSchedule.title', 'powerSchedule.help', '
     'powerSchedule.unconfirmed', 'powerSchedule.resultUnconfirmed', 'powerSchedule.noTarget', 'powerSchedule.missed',
     'powerSchedule.bulk', 'powerSchedule.bulkHelp', 'powerSchedule.bulkEnable', 'powerSchedule.bulkDisable', 'powerSchedule.bulkToggleHelp',
     'powerSchedule.bulkSource', 'powerSchedule.bulkCopy', 'powerSchedule.bulkApply', 'powerSchedule.bulkUnavailable', 'powerSchedule.bulkDrafts',
-    'powerSchedule.bulkChanged', 'powerSchedule.bulkComplete', 'powerSchedule.pending', 'powerSchedule.saving', 'powerSchedule.succeeded',
+    'powerSchedule.confirmEnable', 'powerSchedule.confirmDisable', 'powerSchedule.changing', 'powerSchedule.bulkChanged', 'powerSchedule.bulkComplete', 'powerSchedule.pending', 'powerSchedule.saving', 'powerSchedule.succeeded',
     'powerSchedule.notExecuted', 'powerSchedule.failed', 'powerSchedule.unchanged', 'powerSchedule.enabledCount', 'powerSchedule.targets',
     'powerSchedule.day0', 'powerSchedule.day1', 'powerSchedule.day2', 'powerSchedule.day3', 'powerSchedule.day4', 'powerSchedule.day5', 'powerSchedule.day6',
     'host.power.scheduleExpired', 'host.power.scheduleAlreadyAccepted', 'host.power.scheduleClaimUnconfirmed', 'Offline', 'Action', 'Repeat'];
@@ -51,15 +51,17 @@ function hostPanel(root, ctx, host, signal, actionArea)
     function render()
     {
         form.reset(view.schedules);
-        status.replaceChildren(badge(ctx.t(view.active ? 'powerSchedule.active' : 'powerSchedule.inactive')),
-            node('p', `${ctx.t('powerSchedule.enabledCount')}: ${view.schedules.filter(item => item.enabled).length} / ${view.schedules.length}`),
-            node('p', ctx.t(view.wakeProfileAvailable ? 'powerSchedule.wakeAvailable' : 'powerSchedule.wakeMissing')));
+        const facts = node('div', '', 'hm-schedule-summary'), extra = node('div');
+        facts.append(badge(ctx.t(view.active ? 'powerSchedule.active' : 'powerSchedule.inactive')),
+            node('span', `${ctx.t('powerSchedule.enabledCount')}: ${view.schedules.filter(item => item.enabled).length} / ${view.schedules.length}`));
+        status.replaceChildren(facts, details(ctx.t('powerSchedule.more'), extra));
+        extra.append(node('p', ctx.t(view.wakeProfileAvailable ? 'powerSchedule.wakeAvailable' : 'powerSchedule.wakeMissing')));
         for (const item of view.status)
         {
             const wake = 'wake';
             const definition = view.schedules.find(row => row.id === item.id);
             const label = ctx.t(definition?.action === wake ? 'powerSchedule.wake' : 'powerSchedule.shutdown');
-            status.append(node('p', `${label} · ${ctx.t('powerSchedule.next')}: ${instant(item.nextAt)} · ${ctx.t('powerSchedule.last')}: ${instant(item.lastAt)} · ${ctx.t(item.reason ?? item.outcome ?? '')}`));
+            extra.append(node('p', `${label} · ${ctx.t('powerSchedule.next')}: ${instant(item.nextAt)} · ${ctx.t('powerSchedule.last')}: ${instant(item.lastAt)} · ${ctx.t(item.reason ?? item.outcome ?? '')}`));
         }
     }
 
@@ -170,7 +172,9 @@ function hostPanel(root, ctx, host, signal, actionArea)
     controls.append(node('strong', ctx.t('Target hosts') + ': ' + host.target.hostId), save);
     actionArea.append(controls);
     title.append(refresh);
-    section.append(title, field(ctx.t('powerSchedule.cluster'), cluster), status, form.root, resultStatus);
+    const settings = node('div', '', 'hm-schedule-settings');
+    settings.append(field(ctx.t('powerSchedule.cluster'), cluster), status);
+    section.append(title, settings, form.root, resultStatus);
     root.append(section);
     updateControls();
     cluster.onchange = () =>
@@ -254,8 +258,8 @@ export function powerSchedulesView(root, ctx, actionArea = root)
         return noSelection(root, ctx);
     }
     const abort = new AbortController(), signal = AbortSignal.any([ctx.signal, abort.signal]), toolbar = node('div', '', 'hm-toolbar');
-    root.append(heading(ctx.t('powerSchedule.title'), ctx.t('powerSchedule.help')));
-    root.append(toolbar);
+    root.append(heading(ctx.t('powerSchedule.title')), toolbar,
+        details(ctx.t('powerSchedule.helpTitle'), node('p', ctx.t('powerSchedule.help'), 'hm-muted')));
     const panels = hosts.map(host => hostPanel(root, ctx, host, signal, actionArea));
     powerScheduleBulk(toolbar, ctx, panels, signal);
     ctx.guard(async () =>

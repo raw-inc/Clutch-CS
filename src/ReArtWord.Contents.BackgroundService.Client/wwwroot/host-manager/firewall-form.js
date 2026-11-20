@@ -1,11 +1,11 @@
-import { node, input, select, checkbox, values, field, section, details, action } from './dom.js';
+import { node, input, select, checkbox, values, field, section, details, action, hostCount } from './dom.js';
 
 /** ファイアウォール規則の入力と検証を構成します。 */
 export function firewallForm(ctx, hosts)
 {
     const dialog = ctx.dialog('Add rule'), basic = section(ctx.t('Rule')), grid = node('div', '', 'hm-grid');
     const name = input(''), direction = select(['Inbound', 'Outbound'].map(value => [value, ctx.t(value)]), 'Inbound'), effect = select(['Allow', 'Block'].map(value => [value, ctx.t(value)]), 'Allow'), enabled = checkbox(ctx.t('Enabled'), true);
-    dialog.root.append(node('p', `${ctx.t('Target hosts')}: ${hosts.map(host => host.target.hostId).join(', ')} (${hosts.length})`));
+    dialog.root.append(node('p', `${ctx.t('Target hosts')}: ${hosts.map(host => host.target.hostId).join(', ')} (${hostCount(ctx, hosts.length)})`));
     basic.append(field(ctx.t('Name'), name));
     grid.append(field(ctx.t('Direction'), direction), field(ctx.t('Action'), effect));
     basic.append(grid, enabled.root);
@@ -35,6 +35,7 @@ export function firewallForm(ctx, hosts)
     {
         advanced.append(field(ctx.t(label), control));
     }
+    dialog.root.classList.add('hm-firewall-form');
     dialog.root.append(basic, traffic, scope, details(ctx.t('Advanced conditions'), advanced));
     dialog.footer.append(ctx.button('Cancel', dialog.close), action(ctx, 'Preview changes', 'check', () =>
     {

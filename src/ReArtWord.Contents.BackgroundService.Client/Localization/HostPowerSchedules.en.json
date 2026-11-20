@@ -58,5 +58,10 @@
   "powerSchedule.day6": "Sat",
   "host.power.scheduleExpired": "The expired power schedule was not executed",
   "host.power.scheduleAlreadyAccepted": "This shutdown time was already accepted on this PC",
-  "host.power.scheduleClaimUnconfirmed": "The PC could not persist the schedule claim and was not shut down"
+  "host.power.scheduleClaimUnconfirmed": "The PC could not persist the schedule claim and was not shut down",
+  "powerSchedule.helpTitle": "When schedules run",
+  "powerSchedule.more": "Wake requirements and history",
+  "powerSchedule.changing": "Schedules changing",
+  "powerSchedule.confirmEnable": "Enable these schedules",
+  "powerSchedule.confirmDisable": "Disable these schedules"
 }

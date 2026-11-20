@@ -1,4 +1,4 @@
-import { node, select, input, field, heading, action, badge, table, empty, segmented } from './dom.js';
+import { node, select, input, field, heading, action, badge, table, empty, segmented, hostCount } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 import { environmentForm } from './environment-form.js';
 import { environmentBulk } from './environment-bulk.js';
@@ -15,7 +15,7 @@ export function environmentView(root, ctx, actionArea)
     }
     let scope = 'Machine', userSids = new Map(), reader = null;
     const bulk = (1) < (hosts.length) ? environmentBulk(ctx, hosts, query, actionArea) : null;
-    const title = heading(ctx.t('PATH and environment variables'), `${ctx.t('Selected hosts')}: ${hosts.length}`), status = node('div'), listing = node('div');
+    const title = heading(ctx.t('PATH and environment variables'), `${ctx.t('Selected hosts')}: ${hostCount(ctx, hosts.length)}`), status = node('div'), listing = node('div');
     const tools = node('div', '', 'hm-toolbar'), hostPick = select(hosts.map(host => [host.target.hostId, host.target.hostId]), hosts[0].target.hostId);
     const search = input('', 'search');
     search.className = 'hm-search';

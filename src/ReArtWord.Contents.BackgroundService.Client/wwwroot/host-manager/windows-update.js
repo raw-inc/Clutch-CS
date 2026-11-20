@@ -1,4 +1,4 @@
-import { node, heading, action, badge, table } from './dom.js';
+import { node, heading, action, badge, table, hostCount } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 
 /** 外部管理や期限による上書きを、手動更新の確認済み表示から分けます。
@@ -86,10 +86,10 @@ export function windowsUpdateView(root, ctx, actionArea)
     {
         return noSelection(root, ctx);
     }
-    const title = heading(ctx.t('Windows Update'), `${ctx.t('Selected hosts')}: ${hosts.length} ${ctx.t('hostCountUnit')}`), status = node('div'), listing = node('div');
+    const title = heading(ctx.t('Windows Update'), `${ctx.t('Selected hosts')}: ${hostCount(ctx, hosts.length)}`), status = node('div'), listing = node('div');
     const reader = createReader(ctx, hosts, () => ({ area: 'windowsUpdate' }), render);
     const manual = action(ctx, 'Require manual updates for selected hosts', 'settings', () => previewUpdate(ctx, [...reader.states.values()], true));
-    manual.append(document.createTextNode(` · ${ctx.t('Target hosts')}: ${hosts.length} ${ctx.t('hostCountUnit')}`));
+    manual.append(document.createTextNode(` · ${ctx.t('Target hosts')}: ${hostCount(ctx, hosts.length)}`));
     manual.disabled = true;
     title.append(action(ctx, 'Refresh settings', 'refresh', () => reader.load()));
     actionArea.append(manual);

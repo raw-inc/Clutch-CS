@@ -59,5 +59,10 @@
   "powerSchedule.day6": "土",
   "host.power.scheduleExpired": "期限切れの電源予定は実行しませんでした",
   "host.power.scheduleAlreadyAccepted": "同時刻の停止はこのPCで受付済みです",
-  "host.power.scheduleClaimUnconfirmed": "このPCの予定受付を保存できないため停止しませんでした"
+  "host.power.scheduleClaimUnconfirmed": "このPCの予定受付を保存できないため停止しませんでした",
+  "powerSchedule.helpTitle": "予定の実行条件",
+  "powerSchedule.more": "起動条件と実行状況",
+  "powerSchedule.changing": "変更する予定",
+  "powerSchedule.confirmEnable": "予定を有効にする",
+  "powerSchedule.confirmDisable": "予定を無効にする"
 }

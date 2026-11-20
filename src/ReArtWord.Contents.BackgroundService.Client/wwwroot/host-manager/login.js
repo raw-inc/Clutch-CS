@@ -1,4 +1,4 @@
-import { table, node, input, select, field, heading, action, badge, checkbox } from './dom.js';
+import { table, node, input, select, field, heading, action, badge, checkbox, hostCount } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 import { sealLoginCredentialAsync } from './login-credential.js';
 
@@ -166,7 +166,7 @@ export function loginView(root, ctx)
     {
         return noSelection(root, ctx);
     }
-    const title = heading(ctx.t('Login'), `${ctx.t('Selected hosts')}: ${hosts.length}`), status = node('div'), listing = node('div');
+    const title = heading(ctx.t('Login settings'), `${ctx.t('Selected hosts')}: ${hostCount(ctx, hosts.length)}`), status = node('div'), listing = node('div');
     const reader = createReader(ctx, hosts, () => ({ area: 'login' }), render);
     title.append(action(ctx, 'Refresh settings', 'refresh', () => reader.load()));
     root.append(title, node('p', ctx.t('Choose a local account for the next Windows login. Applying this setting does not sign out, restart the PC or register application startup entries.'), 'hm-muted'), status, listing);

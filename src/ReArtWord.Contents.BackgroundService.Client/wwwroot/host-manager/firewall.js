@@ -1,4 +1,4 @@
-import { node, field, input, select, table, details, heading, action, badge, empty } from './dom.js';
+import { node, field, input, select, table, details, heading, action, badge, empty, hostCount } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 import { firewallForm } from './firewall-form.js';
 import { firewallBulkView } from './firewall-bulk.js';
@@ -19,7 +19,7 @@ export function firewallView(root, ctx, actionArea)
     }
     let disposed = false;
     const pages = new Map(), requests = new Map();
-    const title = heading(ctx.t('Firewall rules'), `${ctx.t('Selected hosts')}: ${hosts.length}`), status = node('div'), profiles = node('div', '', 'hm-profile-grid');
+    const title = heading(ctx.t('Firewall rules'), `${ctx.t('Selected hosts')}: ${hostCount(ctx, hosts.length)}`), status = node('div'), profiles = node('div', '', 'hm-profile-grid');
     const hostPick = select(hosts.map(host => [host.target.hostId, host.target.hostId]), hosts[0].target.hostId), filter = input('', 'search');
     filter.className = 'hm-search';
     filter.placeholder = ctx.t('Search rules');
@@ -36,7 +36,7 @@ export function firewallView(root, ctx, actionArea)
     profileRows.append(profiles);
     const profileLabels = document.createElement('clutch-status-labels');
     profileLabels.append(profileRows);
-    root.append(title, status, profileLabels, node('h3', ctx.t('Rules')), tools, pager, listing);
+    root.append(title, status, profileLabels, node('h3', ctx.t('Rules'), 'hm-list-heading'), tools, pager, listing);
 
     /** 現在選択されている値を取得します。
      * @returns 呼出し元が使用する値です。
@@ -72,7 +72,7 @@ export function firewallView(root, ctx, actionArea)
                 dialog.footer.append(ctx.button('Cancel', dialog.close), preview);
             });
             change.disabled = !allLoaded || known.length !== hosts.length;
-            card.append(heading, node('span', `${enabled} / ${hosts.length} · ${ctx.t('Enabled')}`, 'hm-muted'), change);
+            card.append(heading, node('span', `${enabled} / ${hostCount(ctx, hosts.length)} · ${ctx.t('Enabled')}`, 'hm-muted'), change);
             profiles.append(card);
         }
     }
@@ -116,7 +116,7 @@ export function firewallView(root, ctx, actionArea)
             const expectedAllow = 'Allow';
 
             const name = node('div');
-            name.append(ctx.button(rule.name, () => ruleDetails(host, rule), 'hm-link'), node('small', `${rule.protocol} · ${rule.localPorts.join(', ')}`));
+            name.append(ctx.button(rule.name, () => ruleDetails(host, rule), 'hm-record-link'), node('small', `${rule.protocol} · ${rule.localPorts.join(', ')}`));
             const behavior = node('div', '', 'hm-stacked');
             behavior.append(node('span', ctx.t(rule.direction)), badge(ctx.t(rule.action), rule.action === expectedAllow ? '' : 'warn'));
             const actions = node('div', '', 'hm-actions');

@@ -313,5 +313,8 @@
   "Review pending changes": "Review pending changes",
   "Changed interfaces": "Changed interfaces",
   "hostCountUnit": "hosts",
-  "ruleCountUnit": "shown"
+  "ruleCountUnit": "shown",
+  "hostCountOne": "host",
+  "Login settings": "Login settings",
+  "No interfaces could be read. Refresh settings to try again.": "No interfaces could be read. Refresh settings to try again."
 }

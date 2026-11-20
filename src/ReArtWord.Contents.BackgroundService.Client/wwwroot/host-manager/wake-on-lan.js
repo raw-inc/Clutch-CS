@@ -32,7 +32,7 @@ function renderHost(root, ctx, state, draft, actionArea)
     const rows = [];
     const editable = state.host.capabilities.elevated === true;
     automatic.control.disabled = !editable;
-    section.append(node('h3', state.host.target.hostId), automatic.root, node('p', ctx.t('wake.overrideHint'), 'hm-muted'), list.root);
+    section.append(node('h3', state.host.target.hostId), automatic.root, node('p', ctx.t('wake.overrideHint'), 'hm-muted small'), list.root);
     for (const adapter of state.snapshot.data.inventory.interfaces)
     {
         const check = checkbox('', selected.has(adapter.id));

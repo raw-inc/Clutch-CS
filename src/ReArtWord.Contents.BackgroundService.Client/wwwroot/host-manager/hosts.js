@@ -1,4 +1,4 @@
-import { node, icon, select, field, heading, action, badge } from './dom.js';
+import { node, icon, select, field, heading, action, badge, hostCount } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 import { hostsEditor } from './hosts-editor.js';
 import { validateHostsText } from './hosts-model.js';
@@ -52,14 +52,14 @@ export function hostsView(root, ctx, actions)
         });
     }, true);
     const bar = node('div', '', 'hm-selection-bar');
-    bar.append(node('span', `${ctx.t('Affected hosts')}: ${hosts.map(host => host.target.hostId).join(', ')}`), preview);
+    bar.append(node('strong', `${ctx.t('Affected hosts')}: ${hostCount(ctx, hosts.length)} · ${hosts.map(host => host.target.hostId).join(', ')}`), preview);
     title.append(action(ctx, 'Refresh settings', 'refresh', () => ctx.discard(() =>
     {
         edited = false;
         return reader.load();
     }, edited)));
-    const warning = node('p', `${ctx.t('The complete hosts content will replace each selected host’s file. Review every difference below.')} · ${ctx.t('Target hosts')}: ${hosts.length} ${ctx.t('hostCountUnit')}`, 'hm-warning');
-    warning.prepend(icon('info'));
+    const warning = node('p', `${ctx.t('The complete hosts content will replace each selected host’s file. Review every difference below.')}`, 'hm-warning');
+    warning.prepend(icon('warning'));
     root.append(title, warning, status, grid);
     actions.append(bar);
 

@@ -1,4 +1,4 @@
-import { node, select, field, heading, action, badge, table, empty } from './dom.js';
+import { node, select, field, heading, action, badge, table, empty, hostCount } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 
 /** ドライバーが公開したモードを、表示設定で選ぶ説明に変換します。
@@ -32,7 +32,7 @@ export function displayView(root, ctx)
     {
         return noSelection(root, ctx);
     }
-    const title = heading(ctx.t('Display settings'), `${ctx.t('Selected hosts')}: ${hosts.length} ${ctx.t('hostCountUnit')}`), status = node('div'), listing = node('div');
+    const title = heading(ctx.t('Display settings'), `${ctx.t('Selected hosts')}: ${hostCount(ctx, hosts.length)}`), status = node('div'), listing = node('div');
     const reader = createReader(ctx, hosts, () => ({ area: 'display' }), render);
     title.append(action(ctx, 'Refresh settings', 'refresh', () => reader.load()));
     root.append(title, node('p', ctx.t('Choose a mode reported by the connected display. Desktop position, rotation and the primary display are retained.'), 'hm-muted'), status, listing);

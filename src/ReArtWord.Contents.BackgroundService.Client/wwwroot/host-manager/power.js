@@ -1,4 +1,4 @@
-import { node, input, select, field, heading, action, badge, table } from './dom.js';
+import { node, input, select, field, heading, action, badge, table, hostCount } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 import { powerTimers, powerActions, powerTime, powerStatus, powerMinutes, installationPowerChange } from './power-model.js';
 
@@ -65,7 +65,7 @@ function editPower(ctx, states, preset)
 {
     const ac = 'ac';
     const dialog = ctx.dialog('Edit power settings'), controls = {};
-    dialog.root.append(node('p', `${ctx.t('Target hosts')}: ${states.map(state => state.host.target.hostId).join(', ')} (${states.length})`));
+    dialog.root.append(node('p', `${ctx.t('Target hosts')}: ${states.map(state => state.host.target.hostId).join(', ')} (${hostCount(ctx, states.length)})`));
     dialog.root.append(node('p', ctx.t('Blank fields are unchanged. Time is in minutes; 0 disables the timer.'), 'hm-muted'));
     const grid = node('div', '', 'hm-grid');
     for (const supply of ['ac', 'dc'])
@@ -116,12 +116,19 @@ function renderPowerState(root, ctx, state)
     section.append(header, node('p', `${ctx.t('Active power plan')}: ${value.schemeName}`));
     const list = table([ctx.t('Setting'), ctx.t('AC power'), ctx.t('Battery power')]);
     list.root.classList.add('hm-facts');
+    const unconfirmedValue = ctx.t('Unconfirmed');
+
+    /** 未確認の値を、設定済みの値と区別します。
+     * @returns 設定値または未確認の状態表示です。
+     */
+    const valueCell = text => text === unconfirmedValue ? badge(text, 'warn') : text;
+
     for (const [key, label] of Object.entries(powerTimers))
     {
-        list.add([ctx.t(label), powerTime(value.ac[key], ctx.t), powerTime(value.dc[key], ctx.t)]);
+        list.add([ctx.t(label), valueCell(powerTime(value.ac[key], ctx.t)), valueCell(powerTime(value.dc[key], ctx.t))]);
     }
-    list.add([ctx.t('Idle shutdown (Clutch-CS)'), powerTime(value.idleShutdown.acSeconds, ctx.t), powerTime(value.idleShutdown.dcSeconds, ctx.t)]);
-    list.add([ctx.t('Power button action'), ctx.t(powerActions[value.ac.powerButtonAction] ?? 'Unconfirmed'), ctx.t(powerActions[value.dc.powerButtonAction] ?? 'Unconfirmed')]);
+    list.add([ctx.t('Idle shutdown (Clutch-CS)'), valueCell(powerTime(value.idleShutdown.acSeconds, ctx.t)), valueCell(powerTime(value.idleShutdown.dcSeconds, ctx.t))]);
+    list.add([ctx.t('Power button action'), valueCell(ctx.t(powerActions[value.ac.powerButtonAction] ?? 'Unconfirmed')), valueCell(ctx.t(powerActions[value.dc.powerButtonAction] ?? 'Unconfirmed'))]);
     section.append(list.root, node('p', `${ctx.t('Fast Startup')}: ${ctx.t(value.fastStartup == null ? 'Unconfirmed' : value.fastStartup ? 'Enabled' : 'Disabled')}`));
     if (!value.sleepAvailable || !value.hibernateAvailable)
     {
@@ -147,12 +154,12 @@ export function powerView(root, ctx)
     {
         return noSelection(root, ctx);
     }
-    const title = heading(ctx.t('Power settings'), `${ctx.t('Selected hosts')}: ${hosts.length} ${ctx.t('hostCountUnit')}`), status = node('div'), listing = node('div');
+    const title = heading(ctx.t('Power settings'), `${ctx.t('Selected hosts')}: ${hostCount(ctx, hosts.length)}`), status = node('div'), listing = node('div');
     const reader = createReader(ctx, hosts, () => ({ area: 'power' }), render);
     const edit = action(ctx, 'Edit selected hosts', 'settings', () => editPower(ctx, [...reader.states.values()], false));
     const preset = action(ctx, 'Prepare continuous operation settings', 'check', () => editPower(ctx, [...reader.states.values()], true));
-    edit.append(document.createTextNode(` · ${ctx.t('Target hosts')}: ${hosts.length} ${ctx.t('hostCountUnit')}`));
-    preset.append(document.createTextNode(` · ${ctx.t('Target hosts')}: ${hosts.length} ${ctx.t('hostCountUnit')}`));
+    edit.append(document.createTextNode(` · ${ctx.t('Target hosts')}: ${hostCount(ctx, hosts.length)}`));
+    preset.append(document.createTextNode(` · ${ctx.t('Target hosts')}: ${hostCount(ctx, hosts.length)}`));
     edit.disabled = true;
     preset.disabled = true;
     const buttons = node('div', '', 'hm-actions');

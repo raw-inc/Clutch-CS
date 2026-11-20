@@ -1,4 +1,4 @@
-import { node, input, field, select, checkbox, table, action, badge, heading, segmented, empty, details } from './dom.js';
+import { node, input, field, select, checkbox, table, action, badge, heading, segmented, empty, details, hostCount } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 import { subnet, canGroup } from './network-model.js';
 import { networkForm } from './network-form.js';
@@ -35,7 +35,7 @@ export function networkView(root, ctx, actions)
         renderList();
     }
 
-    const title = heading(ctx.t('Network settings'), `${ctx.t('Selected hosts')}: ${hosts.length}`), status = node('div');
+    const title = heading(ctx.t('Network settings'), `${ctx.t('Selected hosts')}: ${hostCount(ctx, hosts.length)}`), status = node('div');
     const listing = node('div'), virtual = node('div'), switches = node('div'), filters = node('div', '', 'hm-toolbar'), bulk = node('div', '', 'hm-selection-bar');
     const search = input('', 'search');
     search.className = 'hm-search';
@@ -78,6 +78,12 @@ export function networkView(root, ctx, actions)
     {
         staged.replaceChildren();
         const entries = [...pending.values()], changes = entries.reduce((sum, item) => sum + Object.keys(item.change).length, 0);
+        staged.append(bulk);
+        staged.hidden = !changes && bulk.hidden;
+        if (!changes)
+        {
+            return;
+        }
         const tools = node('div', '', 'hm-selection-bar');
         tools.append(node('strong', `${ctx.t('Pending protocol changes')}: ${changes} · ${ctx.t('Changed interfaces')}: ${entries.length}`));
         const actions = node('div', '', 'hm-actions'), clear = ctx.button('Clear all pending changes', resetPending), apply = action(ctx, 'Apply', 'check', async () =>
@@ -93,28 +99,23 @@ export function networkView(root, ctx, actions)
                 listing.inert = filters.inert = views.inert = staged.inert = false;
             }
         }, true);
-        clear.disabled = apply.disabled = !changes;
-        apply.classList.toggle('primary', !!changes);
         actions.append(clear, apply);
         tools.append(actions);
-        staged.append(bulk, tools);
-        if (changes)
+        staged.append(tools);
+        const rows = table(['Host', 'Network interface', 'Before', 'After'].map(ctx.t));
+        for (const { record, change } of entries)
         {
-            const rows = table(['Host', 'Network interface', 'Before', 'After'].map(ctx.t));
-            for (const { record, change } of entries)
+            for (const version of [4, 6])
             {
-                for (const version of [4, 6])
+                const value = change[`ipv${version}Enabled`];
+                if (value === undefined)
                 {
-                    const value = change[`ipv${version}Enabled`];
-                    if (value === undefined)
-                    {
-                        continue;
-                    }
-                    rows.add([record.host.target.hostId, `${record.nic.name} · IPv${version}`, ctx.t(record.nic[`ipv${version}`].enabled ? 'Enabled' : 'Disabled'), ctx.t(value ? 'Enabled' : 'Disabled')]);
+                    continue;
                 }
+                rows.add([record.host.target.hostId, `${record.nic.name} · IPv${version}`, ctx.t(record.nic[`ipv${version}`].enabled ? 'Enabled' : 'Disabled'), ctx.t(value ? 'Enabled' : 'Disabled')]);
             }
-            staged.append(details(ctx.t('Review pending changes'), rows.root));
         }
+        staged.append(details(ctx.t('Review pending changes'), rows.root));
     }
 
     /** 現在の値から適用する設定を組み立てます。
@@ -186,6 +187,13 @@ export function networkView(root, ctx, actions)
         for (const version of [4, 6])
         {
             const configuration = nic[version === 4 ? 'ipv4' : 'ipv6'];
+            if (!configuration)
+            {
+                protocols.append(badge(`IPv${version} · ${ctx.t('Unknown')}`, 'warn'));
+                continue;
+            }
+            const track = node('span', '', 'hm-protocol-track'), label = node('span');
+            track.setAttribute('aria-hidden', 'true');
             const property = `ipv${version}Enabled`, caption = node('small', '', 'hm-protocol-change');
 
             /** 現在の設定と状態から表示を更新します。 */
@@ -195,7 +203,7 @@ export function networkView(root, ctx, actions)
                 const enabled = value ?? configuration?.enabled === true;
                 toggle.setAttribute('aria-checked', String(enabled));
                 toggle.dataset.pending = String(changed);
-                toggle.textContent = `IPv${version} · ${ctx.t(configuration ? enabled ? 'Enabled' : 'Disabled' : 'Unknown')}`;
+                label.textContent = `IPv${version} · ${ctx.t(enabled ? 'Enabled' : 'Disabled')}`;
                 caption.textContent = changed ? `${ctx.t(configuration.enabled ? 'Enabled' : 'Disabled')} → ${ctx.t(value ? 'Enabled' : 'Disabled')}` : '';
                 caption.hidden = !changed;
                 toggle.title = changed ? `${ctx.t('Pending protocol changes')}: ${caption.textContent}` : `IPv${version}`;
@@ -226,7 +234,7 @@ export function networkView(root, ctx, actions)
             }, 'hm-protocol');
             toggle.setAttribute('role', 'switch');
             toggle.setAttribute('aria-label', `IPv${version} · ${nic.name} · ${host.target.hostId}`);
-            toggle.disabled = !configuration;
+            toggle.replaceChildren(track, label);
             update();
             const protocol = node('div');
             protocol.append(toggle, caption);
@@ -249,6 +257,7 @@ export function networkView(root, ctx, actions)
             }
             row.dataset.selected = String(pick.control.checked);
             renderBulk();
+            renderPending();
         };
     }
 
@@ -269,10 +278,13 @@ export function networkView(root, ctx, actions)
             {
                 listing.append(node('p', ctx.t('Reading interfaces…'), 'hm-read-state'));
             }
-            else if (!unavailable)
+            else
             {
-                listing.append(node('p', ctx.t('No network interfaces were reported.'), 'hm-muted'));
+                const text = unavailable ? 'No interfaces could be read. Refresh settings to try again.' : 'No network interfaces were reported.';
+                listing.append(node('p', ctx.t(text), 'hm-read-state'));
             }
+            renderBulk();
+            renderPending();
             updateMode();
             return;
         }
@@ -338,7 +350,7 @@ export function networkView(root, ctx, actions)
         switches.hidden = mode !== 'switches';
         status.hidden = mode === 'switches' || !status.childNodes.length;
         bulk.hidden = mode !== 'interfaces' || !selected.size;
-        staged.hidden = mode !== 'interfaces' && !hasChanges();
+        staged.hidden = !hasChanges() && bulk.hidden;
         if (mode === expectedSwitches2 && !switchView)
         {
             switchView = virtualSwitchesView(switches, ctx);
@@ -366,6 +378,7 @@ export function networkView(root, ctx, actions)
         selected.clear();
         renderList();
     };
+    renderBulk();
     renderPending();
     updateMode();
     ctx.guard(reader.load);

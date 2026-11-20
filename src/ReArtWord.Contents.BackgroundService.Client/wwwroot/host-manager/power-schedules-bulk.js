@@ -1,4 +1,4 @@
-import { node, select, field, action, table, same } from './dom.js';
+import { node, select, field, action, table, same, hostCount } from './dom.js';
 import { powerScheduleForm } from './power-schedule-form.js';
 
 /** 保存応答を、成功・未実行・失敗・結果不明に分けて表示します。
@@ -27,10 +27,17 @@ function openBulk(ctx, panels, signal, mode)
     }
     const snapshots = panels.map(panel => panel.snapshot()), replace = 'replace', enable = 'enable';
     const title = mode === replace ? 'powerSchedule.bulk' : mode === enable ? 'powerSchedule.bulkEnable' : 'powerSchedule.bulkDisable';
-    const dialog = ctx.dialog(title), editor = node('div'), statuses = [], counts = [], targets = table(['Host', 'powerSchedule.cluster', 'powerSchedule.enabledCount', 'Status'].map(ctx.t));
+    const dialog = ctx.dialog(title), editor = node('div'), statuses = [], counts = [], columns = ['Host', 'powerSchedule.cluster', 'powerSchedule.enabledCount'];
+    if (mode !== replace)
+    {
+        columns.push('powerSchedule.changing');
+    }
+    const targets = table([...columns, 'Status'].map(ctx.t));
+    const disable = 'disable';
+    const applyKey = mode === replace ? 'powerSchedule.bulkApply' : mode === enable ? 'powerSchedule.confirmEnable' : 'powerSchedule.confirmDisable';
     let submitted = false;
     dialog.root.append(node('p', ctx.t(mode === replace ? 'powerSchedule.bulkHelp' : 'powerSchedule.bulkToggleHelp'), 'hm-muted'), editor,
-        node('h3', `${ctx.t('powerSchedule.targets')}: ${snapshots.length}`), targets.root);
+        node('h3', `${ctx.t('powerSchedule.targets')}: ${hostCount(ctx, snapshots.length)}`), targets.root);
     const form = mode === replace ? editTemplate(editor, ctx, snapshots) : null;
     for (const snapshot of snapshots)
     {
@@ -39,9 +46,14 @@ function openBulk(ctx, panels, signal, mode)
         status.setAttribute('role', 'status');
         statuses.push(status);
         counts.push(count);
-        targets.add([snapshot.hostId, snapshot.clusterId, count, status]);
+        const cells = [snapshot.hostId, snapshot.clusterId, count];
+        if (mode !== replace)
+        {
+            cells.push(snapshot.schedules.filter(item => item.enabled !== (mode === enable)).length);
+        }
+        targets.add([...cells, status]);
     }
-    const apply = action(ctx, 'powerSchedule.bulkApply', 'check', async () =>
+    const apply = action(ctx, applyKey, mode === disable ? 'stop' : 'check', async () =>
     {
         if (submitted || signal.aborted)
         {
@@ -95,7 +107,8 @@ function openBulk(ctx, panels, signal, mode)
         {
             panels.forEach(panel => panel.setHeld(false));
         }
-    }, true);
+    }, mode !== disable);
+    apply.classList.toggle('danger', mode === disable);
     dialog.footer.append(ctx.button('Close', dialog.close), apply);
     signal.addEventListener('abort', dialog.close, { once: true });
     dialog.element.addEventListener('close', () => signal.removeEventListener('abort', dialog.close), { once: true });
@@ -126,7 +139,7 @@ function editTemplate(root, ctx, snapshots)
 export function powerScheduleBulk(root, ctx, panels, signal)
 {
     root.classList.add('hm-schedule-bulk');
-    root.append(node('span', `${ctx.t('powerSchedule.targets')}: ${panels.length}`),
+    root.append(node('span', `${ctx.t('powerSchedule.targets')}: ${hostCount(ctx, panels.length)}`),
         action(ctx, 'powerSchedule.bulk', 'settings', () => openBulk(ctx, panels, signal, 'replace')),
         action(ctx, 'powerSchedule.bulkEnable', 'check', () => openBulk(ctx, panels, signal, 'enable')),
         action(ctx, 'powerSchedule.bulkDisable', 'stop', () => openBulk(ctx, panels, signal, 'disable')));

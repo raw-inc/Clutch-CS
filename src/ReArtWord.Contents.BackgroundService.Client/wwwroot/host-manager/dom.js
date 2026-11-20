@@ -117,12 +117,20 @@ export function table(headings)
         } };
 }
 
+/** 選択したホストの台数を表示言語に合わせます。
+ * @returns 台数と単位です。
+ */
+export function hostCount(ctx, count)
+{
+    return count + ' ' + ctx.t(count === 1 ? 'hostCountOne' : 'hostCountUnit');
+}
+
 /** 折り畳み可能な詳細表示を構成します。
  * @returns 呼出し元が使用する値です。
  */
 export function details(label, content)
 {
-    const root = node('details');
+    const root = node('details', '', 'secondary-details');
     root.append(node('summary', label), content);
     return root;
 }
