@@ -151,7 +151,7 @@ public sealed class ConnectedValuePreviewTests
         }
         Assert.DoesNotContain("saved fallback", html, StringComparison.Ordinal);
         string expected = known ? "live preview"
-                                : "not available without execution";
+                                : "Value pending";
         Assert.Contains(expected, html, StringComparison.Ordinal);
         Assert.Equal(ContractJson.Hash(document), ContractJson.Hash(model.Draft.Document));
         Assert.False(model.Draft.Dirty);
