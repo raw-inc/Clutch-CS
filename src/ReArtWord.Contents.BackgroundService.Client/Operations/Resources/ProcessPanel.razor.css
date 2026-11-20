@@ -132,6 +132,10 @@
     padding-inline: 0;
 }
 
+.application-list .application-actions {
+    margin-block-start: 12px;
+}
+
 .application-actions .registration-remove {
     margin-inline-start: auto;
 }

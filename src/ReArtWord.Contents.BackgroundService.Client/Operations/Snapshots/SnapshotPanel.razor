@@ -62,7 +62,7 @@
 @foreach(var omitted in snapshots.Where(item=>item.DetailReason is not null)){<p class="notice">@Ui.Format("Candidate {0} metadata was omitted: {1}. Omitted scopes cannot be selected for restore.", omitted.IdentifierHash, omitted.DetailReason)</p>}
     </ChildContent>
     <Actions>
-        <button class="primary" disabled="@(SelectedRestoreCount == 0)" @onclick="RestoreAsync">@Ui.Format("Restore selected targets ({0})", SelectedRestoreCount)</button>
+        <button class="restore-action" disabled="@(SelectedRestoreCount == 0)" @onclick="RestoreAsync"><UiIcon Name="undo" /><span class="control-label">@Ui.Format("Review restore targets ({0})", SelectedRestoreCount)</span></button>
     </Actions>
 </Modal>
 <SnapshotRestoreReview Request="pendingRestore" Closed="()=>pendingRestore=null" />

@@ -18,7 +18,14 @@
         @foreach(var purpose in new[]{EStoragePurpose.Configuration,EStoragePurpose.Runtime})
         {
             var policy=page.Options.Purposes?.GetValueOrDefault(purpose)??new AvailabilityPolicy();
-            <p><strong>@Ui[purpose.ToString()]</strong> · @Ui["On save failure"]: @(policy.SaveFailure==EAvailabilitySaveFailure.UseUnsaved?Ui["UseUnsaved"]:Ui["KeepConfirmed"]) · @Ui["When disconnected"]: @Ui[Offline(policy.Offline)] · @Ui["Fallback storage"]: @(policy.FallbackBackend?.ToString()??Ui["Not configured"])</p>
+            <section class="storage-policy">
+                <h3>@Ui[purpose.ToString()]</h3>
+                <dl>
+                    <dt>@Ui["On save failure"]</dt><dd>@(policy.SaveFailure==EAvailabilitySaveFailure.UseUnsaved?Ui["UseUnsaved"]:Ui["KeepConfirmed"])</dd>
+                    <dt>@Ui["When disconnected"]</dt><dd>@Ui[Offline(policy.Offline)]</dd>
+                    <dt>@Ui["Fallback storage"]</dt><dd>@(policy.FallbackBackend?.ToString()??Ui["Not configured"])</dd>
+                </dl>
+            </section>
         }
         </details>
     }

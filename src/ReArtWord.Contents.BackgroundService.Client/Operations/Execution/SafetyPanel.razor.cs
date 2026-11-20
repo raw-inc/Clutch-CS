@@ -33,13 +33,15 @@ public sealed partial class SafetyPanel
     private Guid? lastOperation;
     private readonly List<(string Workflow, string Scope)> targets = [];
     private int selected;
+    private bool targetsLoaded;
     private ManualSafetyStatus? Current => targets.Count == 0 ? null
                                                               : status?.States.FirstOrDefault(item => string.Equals(item.WorkflowId, targets[selected].Workflow, StringComparison.Ordinal) && string.Equals(item.Scope, targets[selected].Scope, StringComparison.Ordinal));
 
     private string OverrideState => (status?.Loaded == true, targets.Count, Current) switch
     {
         (false, _, _) => "Not checked",
-        (_, 0, _) => "Select a target",
+        (_, 0, _) when targetsLoaded => "No eligible targets",
+        (_, 0, _) => "No target selected",
         (_, _, { Stopped: true }) => "New inputs stopped",
         (_, _, { Continued: true }) => "Temporary continuation past an automatic stop",
         _ => "No temporary override"
@@ -60,6 +62,7 @@ public sealed partial class SafetyPanel
             }
 
             targets.Clear();
+            targetsLoaded = false;
             selected = 0;
             preview = null;
             open = true;
@@ -96,11 +99,13 @@ public sealed partial class SafetyPanel
             }
 
             selected = 0;
+            targetsLoaded = true;
             preview = null;
         }
         catch (Exception exception) when (exception is HttpRequestException or JsonException or InvalidOperationException)
         {
             targets.Clear();
+            targetsLoaded = false;
             message = Ui.Deferred("The complete target node list could not be retrieved.{0}", exception.Message);
         }
     }

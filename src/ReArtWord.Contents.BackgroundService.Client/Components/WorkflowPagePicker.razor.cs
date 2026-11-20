@@ -29,20 +29,20 @@ public sealed partial class WorkflowPagePicker
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW170", Justification = "取得したスナップショットの参照を交換し、子画面や開始済み処理が保持する旧コレクションを変更しないため。")]
     private IReadOnlyList<WorkflowListSummary> entries = [];
     private string? cursor;
-    private Func<string>? message;
+    private bool failed, showLoaded;
     private bool busy;
 
     /// <summary>初回表示に必要なデータを取得し、画面の状態を準備します。</summary>
     /// <returns>要求処理と現時点の画面反映の完了です。</returns>
     // 抑制理由: BlazorまたはIAsyncDisposableの固定署名を実装し、取消しは画面が所有するトークンで制御します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "BlazorまたはIAsyncDisposableの固定署名を実装し、取消しは画面が所有するトークンで制御します。")]
-    protected override Task OnInitializedAsync() => LoadAsync(false);
+    protected override Task OnInitializedAsync() => LoadAsync(false, false);
 
     /// <summary>表示対象の一覧または状態を取得して画面へ反映します。</summary>
     /// <returns>要求処理と現時点の画面反映の完了です。</returns>
     // 抑制理由: UIコールバックの呼出し署名を維持し、取消可能なI/Oには画面が所有するトークンを渡します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "UIコールバックの呼出し署名を維持し、取消可能なI/Oには画面が所有するトークンを渡します。")]
-    private async Task LoadAsync(bool next)
+    private async Task LoadAsync(bool next, bool showResult)
     {
         busy = true;
         try
@@ -56,11 +56,13 @@ public sealed partial class WorkflowPagePicker
 
             entries = page.Entries;
             cursor = page.Cursor;
-            message = null;
+            failed = false;
+            showLoaded = showResult;
         }
         catch (Exception exception) when (exception is HttpRequestException or JsonException or OperationCanceledException or InvalidOperationException)
         {
-            message = Ui.Deferred("The workflow page could not be retrieved.");
+            failed = true;
+            showLoaded = false;
         }
         finally
         {

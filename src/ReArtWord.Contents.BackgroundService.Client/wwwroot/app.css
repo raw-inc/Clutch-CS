@@ -96,7 +96,7 @@ button.danger {
 }
 
 button.danger:enabled:hover,
-:is(.dialog > footer, .hm-dialog-actions, .file-action-dialog .toolbar) button.danger:enabled {
+:is(.dialog > footer, .hm-dialog-actions, .file-action-dialog .toolbar) button.danger:enabled:where(:not([data-confirm-entry])) {
     border-color: var(--danger);
     background: var(--danger-soft);
     color: var(--danger);
@@ -971,6 +971,7 @@ td details {
 }
 
 .operational-fields {
+    min-inline-size: 0;
     display: grid;
     gap: 16px;
 }
@@ -1297,14 +1298,27 @@ button.danger:disabled {
     box-shadow: none;
 }
 
+.restore-action.confirm:enabled {
+    background: var(--warn-soft);
+    font-weight: 600;
+}
+
 .restore-action:enabled:hover {
     background: var(--warn-soft);
 }
 
-.detail-expanded {
-    max-height: none;
+.json-details {
+    min-inline-size: 0;
+}
+
+.json-details > .detail {
     overflow-x: auto;
     white-space: pre;
+    scrollbar-color: var(--control) var(--paper);
+}
+
+.detail-expanded {
+    max-height: none;
 }
 
 @media (max-width: 680px) {
