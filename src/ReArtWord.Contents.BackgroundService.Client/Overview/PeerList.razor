@@ -2,7 +2,7 @@
 @using ReArtWord.Contents.BackgroundService.Client.Overview.Telemetry
 @using ReArtWord.Contents.BackgroundService.Contracts.Cluster
 <section aria-busy="@refreshing.ToString().ToLowerInvariant()" class="peer-list" aria-label='@Ui["Peer list"]'>
-    <div class="section-heading"><h2>@Ui["Peer list"]</h2><span>@Ui["Refresh every 3 seconds"] · @Ui.Format("{0} observed peers",telemetry?.Total??0)</span></div>
+    <div class="section-heading"><h2>@Ui["Peer list"]</h2><span>@Ui["Refresh every 3 seconds"] · @Ui.Format("Observed peers ({0})",telemetry?.Total??0)</span></div>
     @if(telemetry?.Problem is {} problem){<p class="notice" role="status">@Ui[problem]</p>}
     <div class="table-wrap"><table class="record-table" aria-label='@Ui["Peer list"]'>
         <thead><tr><th>PC</th><th>@Ui["Cluster"]</th><th>@Ui["Peer"]</th><th>@Ui["Status"]</th><th>@Ui["Version"]</th></tr></thead>

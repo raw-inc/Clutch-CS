@@ -9,7 +9,7 @@
     }
     else
     {
-    <div class="overview-heading"><h2 title='@Ui["Health uses confirmed peer status. Peers outside the polling range or with stale or failed reads remain unconfirmed."]'>@Ui["Cluster health"]</h2><div><span class="scope">@Ui.Format("{0} clusters · {1} observed peers",telemetry?.Clusters.Count??0,telemetry?.KnownPeers??0)</span>@if(telemetry?.KnownPeers>DashboardTelemetry.MaximumPeers){<button class="quiet" @onclick="NextAsync" disabled="@refreshing">@Ui["Next PCs"]</button>}</div></div>
+    <div class="overview-heading"><h2 title='@Ui["Health uses confirmed peer status. Peers outside the polling range or with stale or failed reads remain unconfirmed."]'>@Ui["Cluster health"]</h2><div><span class="scope">@Ui.Format("Clusters ({0}) · Observed peers ({1})",telemetry?.Clusters.Count??0,telemetry?.KnownPeers??0)</span>@if(telemetry?.KnownPeers>DashboardTelemetry.MaximumPeers){<button class="quiet" @onclick="NextAsync" disabled="@refreshing">@Ui["Next PCs"]</button>}</div></div>
     @if(telemetry?.Problem is {} problem){<p class="range-note warn">@Ui[problem]</p>}
     @if(telemetry is not null && telemetry.Clusters.Count>0)
     {
