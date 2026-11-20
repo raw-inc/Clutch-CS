@@ -57,4 +57,5 @@
   <symbol id="leave" viewBox="0 0 24 24"><path d="M3 3h11v2H5v14h9v2H3V3Zm14 4 5 5-5 5-1.4-1.4 2.6-2.6H9v-2h9.2l-2.6-2.6L17 7Z"/></symbol>
   <symbol id="plug" viewBox="0 0 24 24"><path d="M8 3h2v5h4V3h2v5h3v2h-2v1a5 5 0 0 1-4 4.9V21h-2v-5.1A5 5 0 0 1 7 11v-1H5V8h3V3Zm1 7v1a3 3 0 0 0 6 0v-1H9Z"/></symbol>
   <symbol id="arrow-right" viewBox="0 0 24 24"><path d="M4 11h12.6l-4.3-4.3 1.4-1.4L20.4 12l-6.7 6.7-1.4-1.4 4.3-4.3H4v-2Z"/></symbol>
+  <symbol id="pause" viewBox="0 0 24 24"><path d="M7 5h4v14H7zm6 0h4v14h-4z"/></symbol>
 </svg>

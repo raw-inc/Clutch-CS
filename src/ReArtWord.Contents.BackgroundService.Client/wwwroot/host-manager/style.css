@@ -1259,9 +1259,8 @@
 .host-manager summary {
     cursor: pointer;
     color: var(--muted);
-    font-size: 11px;
+    font-size: 13px;
     line-height: 1.6;
-    padding: 10px 0;
 }
 
 .host-manager details[open] > summary {
@@ -1277,7 +1276,7 @@
 
 .hm-history-entry > summary {
     font-size: 12px;
-    padding: 13px 0;
+    padding-block: 13px;
 }
 
 .hm-history-entry > div {
@@ -2094,8 +2093,8 @@
     min-height: 34px;
 }
 
-.hm-view .record-table td button.danger,
-.hm-dialog .hm-button.danger {
+.hm-view .hm-button.danger:not(:disabled),
+.hm-dialog .hm-button.danger:not(:disabled) {
     border-color: var(--danger);
     color: var(--danger);
 }
