@@ -1,4 +1,4 @@
-import { node, select, field, heading, action, badge, details } from './dom.js';
+import { node, select, field, heading, action, badge, details, hostCount } from './dom.js';
 import { noSelection } from './loader.js';
 import { powerScheduleForm } from './power-schedule-form.js';
 import { powerScheduleBulk } from './power-schedules-bulk.js';
@@ -258,7 +258,7 @@ export function powerSchedulesView(root, ctx, actionArea = root)
         return noSelection(root, ctx);
     }
     const abort = new AbortController(), signal = AbortSignal.any([ctx.signal, abort.signal]), toolbar = node('div', '', 'hm-toolbar');
-    const title = heading(ctx.t('powerSchedule.title'));
+    const title = heading(ctx.t('powerSchedule.title'), `${ctx.t('Selected hosts')}: ${hostCount(ctx, hosts.length)}`);
     title.append(toolbar);
     root.append(title);
     const panels = hosts.map(host => hostPanel(root, ctx, host, signal, actionArea));

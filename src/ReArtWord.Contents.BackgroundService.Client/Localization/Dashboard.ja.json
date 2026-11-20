@@ -81,7 +81,7 @@
   "per 60 sec": "回 / 60秒",
   "{0} non-success results": "成功以外 {0} 件",
   "Read {0}/{1} peers · latest 100 per peer": "取得 {0}/{1} ピア · 各最新100件",
-  "Partial range, not a cluster total": "一部の取得範囲です。クラスタ全体件数ではありません。",
+  "Activity within the retrieved range": "取得できた範囲の件数です。",
   "Showing 8/{0} workflows": "8/{0} ワークフローを表示",
   "Previous read: {0}": "前回取得: {0}",
   "Peer participation is unconfirmed": "参加状態を確認できません",

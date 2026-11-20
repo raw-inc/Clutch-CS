@@ -951,6 +951,10 @@
     min-height: 42px;
 }
 
+.license-filter label > select {
+    min-height: 42px;
+}
+
 .file-action-dialog form > :not(header, .toolbar) {
     margin-inline: clamp(16px, 3vw, 28px);
 }
@@ -1417,6 +1421,13 @@
 
 .terminal-sources .terminal-sidebar {
     overflow: visible;
+    border-inline-end: 0;
+}
+
+@media (min-width: 651px) {
+    .terminal-sources {
+        border-inline-end: 1px solid var(--line);
+    }
 }
 
 .terminal-sidebar-heading {

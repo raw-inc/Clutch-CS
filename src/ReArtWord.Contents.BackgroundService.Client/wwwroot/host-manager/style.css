@@ -2301,6 +2301,14 @@
     height: 40px;
 }
 
+.hm-dialog-body .hm-power-timers .hm-field {
+    gap: 2px;
+}
+
+.hm-dialog-body .hm-power-timers .hm-field + .hm-field {
+    margin-block-start: 14px;
+}
+
 .hm-schedule-row-actions {
     display: flex;
     flex-wrap: wrap;
@@ -2357,6 +2365,8 @@
 .hm-list-skeleton .skeleton-line {
     min-height: 24px;
     margin: 0;
+    border-radius: var(--radius-control);
+    background: var(--raised);
 }
 
 .hm-selection-bar details .record-table,

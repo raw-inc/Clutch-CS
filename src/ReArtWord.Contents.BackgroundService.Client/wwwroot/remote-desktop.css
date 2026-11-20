@@ -1075,7 +1075,7 @@
     font-size: 13px;
 }
 
-.desktop-rail summary > .control-label {
+.desktop-rail :is(summary, button.desktop-labeled) > .control-label {
     display: none;
 }
 
@@ -1083,10 +1083,6 @@
     min-width: 32px;
     width: auto;
     padding-inline: 6px;
-}
-
-.desktop-workspace[data-state="connected"] .desktop-rail button.desktop-labeled > .control-label {
-    display: none;
 }
 
 @media (min-width: 1280px) and (min-height: 620px) {

@@ -6,8 +6,8 @@
         <div class="application-fields">
             <label>@Ui["Application name"]<input @bind="draft.Name" @bind:event="oninput" maxlength="160" /></label>
             <label>@Ui["Management mode"]<select @bind="draft.Mode"><option value="Managed">@Ui["Managed"]</option><option value="ObserveOnly">@Ui["ObserveOnly"]</option></select></label>
-            <div class="wide executable-field"><label>@Ui["Absolute executable path"]<input @bind="draft.Executable" @bind:event="oninput" placeholder="@Ui.Format("Example: {0}", @"C:\Apps\Player.exe")" /></label><button type="button" class="quiet" disabled="@(string.IsNullOrWhiteSpace(ClusterId)||string.IsNullOrWhiteSpace(PeerId))" @onclick="()=>browsing=true"><UiIcon Name="folder" /><span class="control-label">@Ui["Browse executable"]</span></button></div>
-            <label class="wide">@Ui["Working directory"]<input @bind="draft.Directory" @bind:event="oninput" placeholder="@Ui.Format("Example: {0}", @"C:\Apps")" /></label>
+            <div class="wide executable-field"><label>@Ui["Absolute executable path"]<input @bind="draft.Executable" @bind:event="oninput" placeholder="@(Ui["Example:"] + @" C:\Apps\Player.exe")" /></label><button type="button" class="quiet" disabled="@(string.IsNullOrWhiteSpace(ClusterId)||string.IsNullOrWhiteSpace(PeerId))" @onclick="()=>browsing=true"><UiIcon Name="folder" /><span class="control-label">@Ui["Browse executable"]</span></button></div>
+            <label class="wide">@Ui["Working directory"]<input @bind="draft.Directory" @bind:event="oninput" placeholder="@(Ui["Example:"] + @" C:\Apps")" /></label>
             @if(draft.Mode==EProcessMode.Managed)
             {
                 <label>@Ui["Application launch session"]<select @bind="draft.LaunchSession"><option value="Automatic">@Ui["Logged-in desktop"]</option><option value="CoreAccount">@Ui["Core account and session"]</option></select></label>

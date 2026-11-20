@@ -67,7 +67,7 @@ function editPower(ctx, states, preset)
     const dialog = ctx.dialog('Edit power settings'), controls = {};
     dialog.root.append(node('p', `${ctx.t('Target hosts')}: ${states.map(state => state.host.target.hostId).join(', ')} (${hostCount(ctx, states.length)})`));
     dialog.root.append(node('p', ctx.t('Blank fields are unchanged. Time is in minutes; 0 disables the timer.'), 'hm-muted'));
-    const grid = node('div', '', 'hm-grid');
+    const grid = node('div', '', 'hm-grid hm-power-timers');
     for (const supply of ['ac', 'dc'])
     {
         const panel = node('section'), values = {};

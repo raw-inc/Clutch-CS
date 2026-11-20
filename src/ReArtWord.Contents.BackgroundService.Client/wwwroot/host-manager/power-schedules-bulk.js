@@ -139,8 +139,7 @@ function editTemplate(root, ctx, snapshots)
 export function powerScheduleBulk(root, ctx, panels, signal)
 {
     root.classList.add('hm-schedule-bulk');
-    root.append(node('span', `${ctx.t('powerSchedule.targets')}: ${hostCount(ctx, panels.length)}`),
-        action(ctx, 'powerSchedule.bulk', 'settings', () => openBulk(ctx, panels, signal, 'replace')),
+    root.append(action(ctx, 'powerSchedule.bulk', 'settings', () => openBulk(ctx, panels, signal, 'replace')),
         action(ctx, 'powerSchedule.bulkEnable', 'check', () => openBulk(ctx, panels, signal, 'enable')),
         action(ctx, 'powerSchedule.bulkDisable', 'pause', () => openBulk(ctx, panels, signal, 'disable')));
 }

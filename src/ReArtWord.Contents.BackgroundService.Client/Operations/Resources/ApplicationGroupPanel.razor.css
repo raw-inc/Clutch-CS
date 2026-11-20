@@ -13,6 +13,15 @@
         display: block;
     }
 
+    .group-records .group-name {
+        grid-area: 1 / 1;
+    }
+
+    .group-records .group-state {
+        grid-area: 1 / 2;
+        justify-self: end;
+    }
+
     .group-records :is(.group-name, .group-state, .group-actions)::before {
         content: none;
     }

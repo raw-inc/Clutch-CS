@@ -293,7 +293,7 @@ export async function desktopView(root, ctx)
     const settingsNotice = document.createElement('p');
     settingsNotice.className = 'desktop-settings-notice';
     const settingsNoticeText = document.createElement('span');
-    settingsNoticeText.textContent = ctx.t('Disconnect to change connection settings.', '接続を解除すると設定を変更できます。');
+    settingsNoticeText.textContent = ctx.t('Disconnect to change connection settings.', '設定を変えるには接続を解除してください。');
     settingsNotice.append(ctx.icon('info'), settingsNoticeText);
     settingsNotice.hidden = true;
     settingsMenu.body.append(settingsNotice);
@@ -1611,7 +1611,7 @@ export async function desktopView(root, ctx)
         showInputPermission(encoders);
         if (appliedCodecSettings)
         {
-            status.textContent += `\nGOP ≤ ${encoders[0]?.effectiveKeyFrameInterval ?? '—'} · B ≤ ${appliedCodecSettings.maximumBFrames ?? '—'}` + (appliedCodecSettings.quality == null ? '' : ` · CRF/CQ ${appliedCodecSettings.quality}`);
+            status.textContent += `\n${ctx.t('Keyframe interval', 'キーフレーム間隔')}: ${encoders[0]?.effectiveKeyFrameInterval ?? '—'}\n${ctx.t('Maximum B-frames', '最大Bフレーム数')}: ${appliedCodecSettings.maximumBFrames ?? '—'}` + (appliedCodecSettings.quality == null ? '' : ` · CRF/CQ ${appliedCodecSettings.quality}`);
         }
         if (videoSettings.variableBitrate)
         {

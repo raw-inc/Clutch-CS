@@ -17,3 +17,8 @@
 .zone-entry {
     width: min(100%, 21rem);
 }
+
+.retention-time {
+    width: min(100%, 9rem);
+    min-height: 38px;
+}
