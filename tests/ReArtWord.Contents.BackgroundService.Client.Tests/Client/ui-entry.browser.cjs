@@ -16,7 +16,7 @@ const worker = readFileSync(join(root, 'service-worker.published.js'));
 test('root UI entry', async t =>
 {
     let version = 'one', broken = false, unavailable = false;
-    const requests = [];
+    const requests = [], firstInstall = Promise.withResolvers();
 
     /** 試験に必要な配信資材を用意します。
      * @returns 呼出し元が使用する値です。
@@ -84,7 +84,11 @@ test('root UI entry', async t =>
                 }
                 break;
         }
-        if (path.startsWith('/chunk-'))
+        if (path === '/chunk-11.json' && revision === 'one')
+        {
+            void firstInstall.promise.then(() => response.end(body));
+        }
+        else if (path.startsWith('/chunk-'))
         {
             setTimeout(() => response.end(body), 180);
         }
@@ -140,8 +144,9 @@ test('root UI entry', async t =>
         assert.equal(await page.evaluate(async () => (await navigator.serviceWorker.getRegistration()).waiting), null);
     });
 
-    await t.test('first visit installs verified assets, shows the download status and reaches Dashboard', async () =>
+    await t.test('first visit installs verified assets, shows the download status and reaches Dashboard', async step =>
     {
+        step.after(firstInstall.resolve);
         await page.goto(base + '/');
         await page.locator('#splash').waitFor({ state: 'visible' });
         assert.equal(await page.title(), 'Clutch-CS');
@@ -154,7 +159,18 @@ test('root UI entry', async t =>
         {
             await page.screenshot({ path: process.env.CONTENTS_TEST_UI_ENTRY_SCREENSHOT });
         }
+        const lastFilePending = await page.evaluate(async () =>
+        {
+            const { installing } = await navigator.serviceWorker.getRegistration();
+            navigator.serviceWorker.dispatchEvent(new MessageEvent('message', {
+                source: installing,
+                data: { type: 'contents.pwa.progress', completed: 208, total: 209 },
+            }));
+            return document.querySelector('#status').textContent;
+        });
+        firstInstall.resolve();
         await dashboardAsync('one');
+        assert.match(lastFilePending, /208 \/ 209 \(99\u00a0%\)/);
         const fontRequests = requests.filter(item => item.path.endsWith('.woff2'));
         assert.ok(fontRequests.some(item => item.version === 'one'));
         assert.ok(fontRequests.every(item => item.version === 'one'), '起動画面は更新対象のフォントの読込みを必要としません。');

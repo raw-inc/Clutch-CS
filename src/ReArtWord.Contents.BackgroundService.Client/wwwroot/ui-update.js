@@ -93,7 +93,7 @@ function updateProgress(data)
     }
     progress.max = data.total;
     progress.value = Math.max(progress.value, Math.min(data.completed, data.total));
-    const percent = Math.round(progress.value / progress.max * 100);
+    const percent = Math.floor(progress.value / progress.max * 100);
     status.replaceChildren(
         '画面を読み込んでいます / Loading UI files',
         document.createElement('br'),
