@@ -3,13 +3,6 @@
     user-select: none;
 }
 
-.node-box {
-    fill: var(--raised);
-    stroke: var(--control);
-    stroke-width: 1;
-    filter: drop-shadow(0 3px 5px #0003);
-}
-
 .graph-node {
     cursor: grab;
     outline: none;
@@ -139,10 +132,9 @@
 
 .graph-node .node-box {
     fill: var(--panel);
-    stroke: var(--control);
-    filter: none;
+    stroke: var(--line);
     rx: var(--radius-panel);
-    stroke-width: 1.5px;
+    stroke-width: 1px;
     vector-effect: non-scaling-stroke;
 }
 
