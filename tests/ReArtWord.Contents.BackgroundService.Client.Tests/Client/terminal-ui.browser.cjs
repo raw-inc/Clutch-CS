@@ -124,6 +124,12 @@ window.inputs=[];window.WebSocket=class{
         assert.ok(bounds.hintEnd <= bounds.controlsTop, JSON.stringify(bounds));
         await page.setViewportSize({ width: 1280, height: 800 });
     });
+    await t.test('広い画面では起動操作と端末操作を同じ高さに置く', async() =>
+    {
+        const toolbar = page.locator('.terminal-toolbar');
+        const [session, controls] = await toolbar.locator(':scope > div').evaluateAll(elements => elements.map(element => element.getBoundingClientRect().top));
+        assert.ok(Math.abs(session - controls) <= 1);
+    });
     await button('ユーザー実行').click();
     await page.waitForFunction(() => (0) < (window.inputs.length));
 
