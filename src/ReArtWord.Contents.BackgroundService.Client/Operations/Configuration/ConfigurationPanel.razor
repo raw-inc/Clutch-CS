@@ -57,7 +57,7 @@
         <button @onclick="ActivateAsync" disabled="@(activationImpact is null)">@Ui["Confirm impact and apply the saved revision"]</button>
     }
     <p class="notice">@(message?.Invoke())</p>
-    <JsonDetails Value="state" Title="@Ui["Exact saved and effective settings"]" />
+    <JsonDetails Value="state" Title="@Ui["Exact saved and effective settings"]" ExpandBody="true" />
     </fieldset>
     </ChildContent>
     <Actions>

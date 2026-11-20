@@ -672,9 +672,7 @@
 }
 
 .graph-legend {
-    border-top: 1px solid var(--line);
-    margin-top: 20px;
-    padding-top: 5px;
+    margin-block: 16px 0;
 }
 
 .graph-legend-types,
@@ -1080,11 +1078,11 @@
     display: inline-flex;
     gap: 6px;
     align-items: center;
-    color: var(--warn);
+    color: var(--muted);
     font-size: 12px;
 }
 
-.workflow-input-switch + :is(button, .toolbar-spacer) {
+.editor-toolbar .debug-next-input {
     border-inline-start: 1px solid var(--line);
 }
 
@@ -1109,4 +1107,17 @@
 
 .code-edit-sheet ::deep .cm-content {
     font-size: 16px;
+    padding-inline: 8px;
+}
+
+.collaborator-swatch {
+    width: 8px;
+    height: 8px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--editor-color);
+}
+
+.code-draft-note {
+    margin-block: 6px 0;
 }

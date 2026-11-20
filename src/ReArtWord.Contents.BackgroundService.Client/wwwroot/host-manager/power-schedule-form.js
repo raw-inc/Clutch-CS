@@ -5,7 +5,7 @@ import { node, input, select, checkbox, field, action } from './dom.js';
  */
 function scheduleRow(ctx, definition, changed, remove)
 {
-    const root = node('section', '', 'hm-section hm-schedule-row'), grid = node('div', '', 'hm-grid');
+    const root = node('section', '', 'hm-schedule-row'), grid = node('div', '', 'hm-grid');
     const kind = select([['wake', ctx.t('powerSchedule.wake')], ['shutdown', ctx.t('powerSchedule.shutdown')]], definition.action);
     const time = input(definition.time, 'time'), zone = input(definition.timeZoneId);
     time.step = '1';
@@ -58,7 +58,7 @@ function scheduleRow(ctx, definition, changed, remove)
  */
 export function powerScheduleForm(ctx, definitions, changed)
 {
-    const root = node('div'), rowsRoot = node('div');
+    const root = node('div'), rowsRoot = node('div', '', 'hm-schedule-rows');
     let rows = [];
 
     /** 一行を追加し、削除も未保存の変更として扱います。

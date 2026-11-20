@@ -52,7 +52,8 @@ export async function signalScopeViewAsync(container, ctx)
 
     const emptyPackets = document.createElement('p');
     emptyPackets.className = 'scope-empty';
-    emptyPackets.textContent = ctx.t('Select a source and start capturing packets.', '取得元を選び、取得開始を押してください。');
+    emptyPackets.setAttribute('role', 'status');
+    let packetCount = 0, retainedCount = 0;
     const sources = scopeSources(selection, ctx, send, updateControls);
     const start = ctx.button(ctx.t('Start', '取得開始'), () =>
     {
@@ -128,7 +129,9 @@ export async function signalScopeViewAsync(container, ctx)
     const table = scopeTable(results, ctx, send, (view, following) =>
     {
         latest.setAttribute('aria-pressed', String(following));
-        emptyPackets.hidden = (0) < (view.retained) || sources.running;
+        packetCount = view.total;
+        retainedCount = view.retained;
+        updateEmpty();
         status.classList.toggle('warn', (0) < (view.backendDropped) || (0) < (view.deliveryDropped));
         clear.disabled = view.retained === 0;
         matched.textContent = view.total.toLocaleString() + ' / ' + view.retained.toLocaleString();
@@ -143,16 +146,26 @@ export async function signalScopeViewAsync(container, ctx)
     search.addEventListener('input', () => send({ type: 'search', query: search.value }), { signal: ctx.signal });
     display.onchange = () => table.names(display.value === 'host');
 
+    /** 取得の待機中と絞り込み結果が空の状態を、一覧の位置で区別します。 */
+    function updateEmpty()
+    {
+        emptyPackets.hidden = 0 < packetCount;
+        const text = 0 < retainedCount ? ctx.t('No packets match this filter.', '条件に一致するパケットはありません。')
+            : sources.running ? ctx.t('Capturing. Waiting for packets.', '取得中です。パケットを待っています。')
+                : ctx.t('Select a source and start capturing packets.', '取得元を選び、取得開始を押してください。');
+        if (emptyPackets.textContent !== text)
+        {
+            emptyPackets.textContent = text;
+        }
+    }
+
     /** 未選択・応答待ち・取得中を区別します。 */
     function updateControls()
     {
         start.disabled = sources.running || !sources.selected().length;
         stop.disabled = !sources.running;
         reload.disabled = sources.running;
-        if (sources.running)
-        {
-            emptyPackets.hidden = true;
-        }
+        updateEmpty();
         captureState.textContent = sources.running ? ctx.t('Capturing', '取得中') : ctx.t('Stopped', '停止中');
         captureState.classList.toggle('good', sources.running);
         container.classList.toggle('capturing', sources.running);

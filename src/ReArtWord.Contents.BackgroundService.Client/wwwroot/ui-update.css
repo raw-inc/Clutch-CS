@@ -85,7 +85,6 @@ progress::-webkit-progress-bar {
 progress::-webkit-progress-value {
     background: var(--accent);
     border-radius: var(--radius-chart);
-    transition: width 0.18s ease-out;
 }
 
 progress::-moz-progress-bar {
@@ -141,12 +140,6 @@ button:disabled {
     margin: 36px auto;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    progress::-webkit-progress-value {
-        transition: none;
-    }
-}
-
 .manual > a {
     display: inline-block;
     margin-block: 10px;
@@ -165,4 +158,9 @@ button:disabled {
 .update-progress-count {
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
+}
+
+.save-reminder p:lang(ja) {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
 }

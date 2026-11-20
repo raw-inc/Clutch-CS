@@ -217,7 +217,7 @@ export async function mount(element, labels)
         dialog(label)
         {
             const dialog = node('dialog', '', 'hm-dialog'), header = node('div', '', 'hm-dialog-title'), body = node('div', '', 'hm-dialog-body'), footer = node('div', '', 'hm-dialog-actions');
-            const previous = document.activeElement;
+            const previous = document.activeElement, left = window.scrollX, top = window.scrollY;
 
             /** 対象を閉じ、関連する状態を整理します。 */
             const close = () =>
@@ -232,7 +232,7 @@ export async function mount(element, labels)
             };
 
             const dismiss = action(ctx, 'Close', 'close', close);
-            dismiss.classList.add('hm-icon-button');
+            dismiss.classList.add('hm-icon-button', 'quiet');
             dismiss.setAttribute('aria-label', ctx.t('Close'));
             dismiss.title = ctx.t('Close');
             const heading = node('h2', ctx.t(label));
@@ -243,7 +243,9 @@ export async function mount(element, labels)
             feedback.dataset.hmFeedback = '';
             feedback.setAttribute('role', 'status');
             body.append(feedback);
-            dialog.append(header, body, footer);
+            const scroll = node('clutch-scroll-area');
+            scroll.append(body);
+            dialog.append(header, scroll, footer);
             element.append(dialog);
             screen.dialogs.add(dialog);
             dialog.addEventListener('cancel', event =>
@@ -252,11 +254,15 @@ export async function mount(element, labels)
                 close();
             });
             dialog.showModal();
+            if (window.scrollX !== left || window.scrollY !== top)
+            {
+                window.scrollTo({ left, top, behavior: 'instant' });
+            }
             queueMicrotask(() =>
             {
                 if (dialog.open)
                 {
-                    body.querySelector('input:not(:disabled),textarea:not(:disabled),select:not(:disabled)')?.focus();
+                    body.querySelector('input:not(:disabled),textarea:not(:disabled),select:not(:disabled)')?.focus({ preventScroll: true });
                 }
             });
             return { root: body, footer, element: dialog, close };

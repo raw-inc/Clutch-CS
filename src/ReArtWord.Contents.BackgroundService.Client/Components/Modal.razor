@@ -2,7 +2,7 @@
 {
     <dialog @ref="dialog" class="@(Wide?"dialog dialog-wide":Compact?"dialog dialog-compact":"dialog")" aria-modal="true" data-confirm-discard="@(ConfirmDiscard ? string.Empty : null)" aria-label="@Ui[Title]" tabindex="-1" @onkeydown="KeyAsync" @onkeydown:stopPropagation="true">
         <div class="dialog-heading"><h2>@Ui[Title]</h2><button class="quiet icon-button" aria-label="@Ui["Close dialog"]" @onclick="()=>RequestCloseAsync(UiCancellation)"><UiIcon Name="close" /></button></div>
-        <div class="dialog-content">@ChildContent</div>
+        <clutch-scroll-area><div class="dialog-content">@ChildContent</div></clutch-scroll-area>
         @if (Actions is not null)
         {
             <footer class="toolbar">@ActionFields<button type="button" @onclick="()=>RequestCloseAsync(UiCancellation)">@Ui[ShowCloseAction?"Close":"Cancel"]</button>@Actions</footer>

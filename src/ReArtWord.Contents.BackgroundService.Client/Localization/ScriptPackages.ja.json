@@ -1,6 +1,6 @@
 {
   "Specify this only if npm-cli.js is outside its usual location.": "npm-cli.js が標準の場所にない場合に指定してください。",
-  "Python requires venv": "PyPIのパッケージには、venvを使えるPython 3.10以降が必要です。スクリプトのPythonパスが空欄の場合は、管理中の環境を使います。",
+  "Python requires venv": "PyPI のパッケージには、venv が使える Python 3.10 以降が必要です。スクリプトに Python のパスを指定しない場合は、管理中の環境を使います。",
   "Script packages": "スクリプトパッケージ",
   "Package destination: {0} / {1}": "インストール先：{0} / {1}",
   "Packages are installed on this peer. Analyze and save a script to adopt the current package configuration. Existing saved scripts keep their previous configuration.": "パッケージは選択中のピアにインストールされます。保存済みのスクリプトに反映するには、再解析して保存してください。",

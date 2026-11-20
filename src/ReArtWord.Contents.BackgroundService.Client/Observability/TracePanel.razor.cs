@@ -43,7 +43,7 @@ public sealed partial class TracePanel
     private bool outputs = true;
     private bool raw = true;
     private string rawLimit = string.Empty;
-    private bool stopOpen;
+    private TraceView? pendingStop;
 
     /// <summary>通常設定をまだ確認できない行では、設定が無効と表示しません。</summary>
     /// <returns>確認できた値に対応する表示です。</returns>
@@ -126,13 +126,13 @@ public sealed partial class TracePanel
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "UIコールバックの呼出し署名を維持し、取消可能なI/Oには画面が所有するトークンを渡します。")]
     private async Task StopAsync()
     {
-        if (state?.Loaded != true)
+        if (pendingStop is not { Loaded: true, Targets.Count: > 0 } confirmed)
         {
             return;
         }
 
-        TraceClusterStopRequest? request = new TraceClusterStopRequest(Guid.NewGuid(), state.Version, state.Targets);
-        stopOpen = false;
+        TraceClusterStopRequest request = new(Guid.NewGuid(), confirmed.Version, confirmed.Targets);
+        pendingStop = null;
         await SendAsync(request.OperationId, "Request cluster stop", "/api/v2/trace/cluster-stop", "/api/trace/cluster-stop/", request).ConfigureAwait(true);
     }
 

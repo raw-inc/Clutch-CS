@@ -3,6 +3,8 @@
   "count.operations": "Operations ({0})",
   "count.variables": "Variables ({0})",
   "count.interfaces": "NICs ({0})",
+  "count.protocolChanges": "{0} pending changes",
+  "count.changedInterfaces": "{0} affected NICs",
   "Settings category": "Settings category",
   "Device.SettingsChanged": "Settings changed. Refresh before editing again.",
   "Static addresses require DHCP to be disabled explicitly or already disabled.": "Static addresses require DHCP to be disabled explicitly or already disabled.",

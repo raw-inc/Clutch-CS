@@ -11,7 +11,7 @@
   "Automatic detection": "自動検出",
   "Runtime choices could not be retrieved. Check the execution peer and refresh.": "実行環境の候補を取得できません。実行先ピアを確認して再取得してください。",
   "Runtime change could not be confirmed. Refresh before retrying.": "実行環境の変更を確認できません。再試行前に現在の設定を再取得してください。",
-  "Install {0} runtime": "{0}をインストール",
+  "Install {0} runtime": "{0} をインストール",
   "Install script runtime": "スクリプト実行環境をインストール",
   "Install an official runtime in the logged-in user's home. Existing versions are kept. A successful installation becomes this peer's default.": "ログイン中のユーザーのホームへ公式実行環境を配置します。既存のバージョンは残し、成功した環境をこのピアの既定にします。",
   "Runtime version": "実行環境のバージョン",

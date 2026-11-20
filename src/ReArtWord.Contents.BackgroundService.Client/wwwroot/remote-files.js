@@ -25,7 +25,7 @@ export async function filesView(root, ctx)
     const queue = document.createElement('section');
     queue.className = 'transfer-jobs';
     const toolbar = document.createElement('div');
-    toolbar.className = 'tool-toolbar file-transfer-scope';
+    toolbar.className = 'tool-toolbar file-transfer-scope tool-connection';
     const help = document.createElement('details');
     help.className = 'tool-help';
     const summary = document.createElement('summary');
@@ -395,7 +395,7 @@ export async function filesView(root, ctx)
     }
 
     panes.push(pane(0), pane(1));
-    toolbar.append(reload, clusterStatus);
+    toolbar.append(clusterStatus, reload);
 
     /** 処理結果を照会し、進捗の表示へ反映します。
      * @returns 処理の完了と結果を伝えるPromiseです。
@@ -445,6 +445,7 @@ export async function filesView(root, ctx)
         if (!jobs.length)
         {
             const empty = document.createElement('p');
+            empty.className = 'remote-empty';
             empty.textContent = ctx.t('No queued copies.', 'コピー待ちはありません。');
             queue.append(empty);
         }

@@ -14,13 +14,14 @@
 }
 
 .inspector-section {
-    border-top: 1px solid var(--line);
-    margin-top: 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    margin-top: 10px;
     padding-top: 1px;
 }
 
 .inspector-section > summary {
-    color: var(--muted);
+    color: var(--ink);
     font-size: 13px;
 }
 

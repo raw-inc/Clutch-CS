@@ -171,6 +171,7 @@
     text-decoration: underline;
     text-underline-offset: 3px;
     font: inherit;
+    box-shadow: none;
 }
 
 .statusbar-left ::deep button.statusbar-action.warn {
@@ -274,9 +275,10 @@
     max-height: min(70dvh, 420px);
     overflow: auto;
     background: var(--panel);
-    border: 1px solid var(--control);
+    border: 1px solid var(--line);
     border-radius: var(--radius-control);
     padding: 6px;
+    box-shadow: 0 8px 24px #0002;
 }
 
 .navigation .route-menu a {

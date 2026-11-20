@@ -1,4 +1,4 @@
-import { node, select, field, heading, action, badge, details, hostCount } from './dom.js';
+import { node, select, field, heading, action, badge, details, hostCount, targetHosts } from './dom.js';
 import { noSelection } from './loader.js';
 import { powerScheduleForm } from './power-schedule-form.js';
 import { powerScheduleBulk } from './power-schedules-bulk.js';
@@ -169,7 +169,7 @@ function hostPanel(root, ctx, host, signal, actionArea)
         ctx.say(ctx.t(result.outcome === succeeded && result.view ? 'powerSchedule.saved' : result.reason ?? 'powerSchedule.saveUnconfirmed'));
     }, true);
     const refresh = action(ctx, 'Refresh settings', 'refresh', () => ctx.discard(loadAsync));
-    controls.append(node('strong', ctx.t('Target hosts') + ': ' + host.target.hostId), save);
+    controls.append(node('strong', targetHosts(ctx, [host])), save);
     actionArea.append(controls);
     title.append(refresh);
     const settings = node('div', '', 'hm-schedule-settings');

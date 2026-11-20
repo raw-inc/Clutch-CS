@@ -1,4 +1,5 @@
 import { after, before, test } from 'node:test';
+import { readFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -87,7 +88,7 @@ test('ホスト設定の編集可能な欄はフォーカス前でも隣接す�
     }
 });
 
-test('通常の操作ボタンは面と見分けられ、操作中と無効状態も区別できる', async context =>
+test.skip('通常の操作ボタンは面と見分けられ、操作中と無効状態も区別できる（旧仕様では全画面切替にも通常ボタンの面を使う）', async context =>
 {
     const page = await browser.newPage();
     context.after(() => page.close());
@@ -145,4 +146,99 @@ test('通常の操作ボタンは面と見分けられ、操作中と無効状�
         assert.ok(await action.evaluate(e => e.matches(':focus-visible') && getComputedStyle(e).boxShadow.includes('inset')));
         assert.notEqual(face, await background(action));
     }
+});
+
+test('副ボタンと無効な操作を面と影で区別し、選択や危険操作を示す', async context =>
+{
+    const page = await browser.newPage();
+    context.after(() => page.close());
+    await page.setContent(`
+        <section class="card">
+            <button>操作</button><button disabled>準備中</button>
+            <button aria-disabled="true">電源操作</button><button class="primary">保存</button>
+            <div class="desktop-workspace">
+                <div class="desktop-quick-controls"><button class="desktop-action quiet" aria-label="全画面"></button></div>
+                <div class="desktop-targets"><button class="desktop-action desktop-labeled quiet">接続を解除</button></div>
+            </div>
+            <span class="file-picker-control"><span>ファイルを選ぶ</span><input aria-label="ファイル" type="file"></span>
+        </section>
+        <div class="pc-display-toggle"><button class="active" aria-pressed="true">概要</button><button aria-pressed="false">詳細</button></div>
+        <section class="dialog"><footer><button>キャンセル</button><button class="danger">停止する</button></footer></section>
+    `);
+    await page.addStyleTag({ content: styles.css });
+    const action = page.getByRole('button', { name: '操作', exact: true });
+
+    /** 面・文字色・影をブラウザーの算出結果で読む。
+     * @returns 表示中のスタイルです。
+     */
+    const style = element => element.evaluate(e =>
+    {
+        const current = getComputedStyle(e);
+        return { face: current.backgroundColor, ink: current.color, shadow: current.boxShadow };
+    });
+
+    for (const colorScheme of ['light', 'dark'])
+    {
+        await page.emulateMedia({ colorScheme });
+        await action.blur();
+        await page.mouse.move(0, 0);
+        const enabled = await style(action);
+        const disabled = await style(page.getByRole('button', { name: '準備中' }));
+        assert.notEqual(enabled.face, disabled.face);
+        assert.notEqual(enabled.face, (await style(page.locator('.card'))).face);
+        assert.notEqual(enabled.shadow, 'none');
+        assert.equal(disabled.shadow, 'none');
+        assert.deepEqual(disabled, await style(page.getByRole('button', { name: '電源操作' })));
+        assert.equal(enabled.face, (await style(page.getByRole('button', { name: '接続を解除' }))).face);
+        assert.deepEqual(enabled, await style(page.locator('.file-picker-control > span')));
+        assert.notEqual(enabled.face, (await style(page.getByRole('button', { name: '保存' }))).face);
+        assert.equal((await style(page.getByRole('button', { name: '全画面' }))).shadow, 'none');
+        assert.equal((await style(page.getByRole('button', { name: '詳細' }))).face, 'rgba(0, 0, 0, 0)');
+        assert.notEqual((await style(page.getByRole('button', { name: '概要' }))).face, 'rgba(0, 0, 0, 0)');
+        assert.notEqual((await style(page.getByRole('button', { name: '停止する' }))).face,
+            (await style(page.getByRole('button', { name: 'キャンセル' }))).face);
+
+        await action.hover();
+        assert.notEqual((await style(action)).face, enabled.face);
+        await page.mouse.down();
+        assert.equal((await style(action)).shadow, 'none');
+        await page.mouse.up();
+        await page.mouse.move(0, 0);
+        await page.keyboard.press('Tab');
+        await action.focus();
+        assert.ok((await style(action)).shadow.includes('inset'));
+    }
+});
+
+test('スクロールできる方向にだけ続きの影を表示する', async context =>
+{
+    const page = await browser.newPage();
+    context.after(() => page.close());
+    await page.setContent('<clutch-scroll-area style="height: 140px"><div><div id="content">確認</div></div></clutch-scroll-area>');
+    await page.addStyleTag({ content: styles.css });
+    const script = new URL('../../../src/ReArtWord.Contents.BackgroundService.Client/wwwroot/scroll-area.js', import.meta.url);
+    await page.addScriptTag({ content: await readFile(script, 'utf8') });
+    const area = page.locator('clutch-scroll-area'), content = page.locator('#content');
+    await area.evaluate(e => customElements.whenDefined(e.localName));
+    assert.equal(await area.getAttribute('data-scroll-before'), null);
+    assert.equal(await area.getAttribute('data-scroll-after'), null);
+
+    await content.evaluate(e =>
+    {
+        e.style.height = '600px';
+        e.textContent = '長い本文';
+    });
+    await page.locator('clutch-scroll-area[data-scroll-after]:not([data-scroll-before])').waitFor();
+    await area.locator('div').first().evaluate(e =>
+    {
+        e.scrollTop = e.scrollHeight;
+    });
+    await page.locator('clutch-scroll-area[data-scroll-before]:not([data-scroll-after])').waitFor();
+
+    await content.evaluate(e =>
+    {
+        e.style.height = '';
+        e.textContent = '確認';
+    });
+    await page.locator('clutch-scroll-area:not([data-scroll-before], [data-scroll-after])').waitFor();
 });

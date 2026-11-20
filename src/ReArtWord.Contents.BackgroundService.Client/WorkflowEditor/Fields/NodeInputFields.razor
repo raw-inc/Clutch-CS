@@ -14,7 +14,7 @@
     }
     @if(port.ValueKind == EPortValueKind.PcSelection)
     {
-        <div class="@(Inline ? "node-inline-field" : null)"><strong>@Ui["Execution PCs"]</strong><small>@Ui["Connect PC selection nodes; multiple connections are allowed."]</small></div>
+        <div class="@(Inline ? "node-inline-field" : null)"><strong>@Ui["Execution PCs"]</strong><small class="pc-selection-note">@Ui["Connect PC selection nodes; multiple connections are allowed."]</small></div>
         continue;
     }
     var connected = Model.Draft.Document.Wires.Any(wire => wire.ToNode == Node.Id && wire.ToPort == port.Name);

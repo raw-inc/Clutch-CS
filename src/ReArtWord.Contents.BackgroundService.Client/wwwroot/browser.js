@@ -238,6 +238,7 @@ window.contentsBrowser.openDialog = (element, id) =>
         return;
     }
     const previous = document.activeElement;
+    const left = window.scrollX, top = window.scrollY;
     if (element.hasAttribute('data-confirm-discard'))
     {
         dialogValues.set(element, editableValues(element));
@@ -288,7 +289,11 @@ window.contentsBrowser.openDialog = (element, id) =>
     element.addEventListener('keydown', trap);
     element.addEventListener('cancel', cancel);
     contentsDialogFocus.set(id, { element, previous, trap, cancel });
-    (controls()[0] ?? element).focus();
+    (controls()[0] ?? element).focus({ preventScroll: true });
+    if (window.scrollX !== left || window.scrollY !== top)
+    {
+        window.scrollTo({ left, top, behavior: 'instant' });
+    }
 };
 window.contentsBrowser.closeDialog = id =>
 {
@@ -306,7 +311,7 @@ window.contentsBrowser.closeDialog = id =>
     }
     if (state.previous?.isConnected)
     {
-        state.previous.focus();
+        state.previous.focus({ preventScroll: true });
     }
 };
 

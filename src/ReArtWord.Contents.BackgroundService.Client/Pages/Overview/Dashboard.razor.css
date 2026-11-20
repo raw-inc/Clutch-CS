@@ -224,6 +224,7 @@
 
 .dashboard-operations > .internal-data-card > ::deep :not(summary) {
     margin-inline: 0;
+    padding-inline: 0;
 }
 
 .workflow-revision-caption {
@@ -308,6 +309,7 @@
         grid-template-columns: minmax(0, 1fr) auto;
         align-items: start;
         border: 1px solid var(--line);
+        background: var(--panel);
     }
 
     .workflow-records .record-table td[data-field] {

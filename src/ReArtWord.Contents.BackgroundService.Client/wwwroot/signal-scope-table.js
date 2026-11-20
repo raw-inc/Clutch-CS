@@ -3,7 +3,7 @@
  */
 export function scopeTable(container, ctx, send, report)
 {
-    const height = 26, viewport = document.createElement('div'), table = document.createElement('table');
+    const height = 26, overscan = 6, viewport = document.createElement('div'), table = document.createElement('table');
     const header = document.createElement('thead'), labels = document.createElement('tr'), body = document.createElement('tbody');
     viewport.className = 'scope-list record-detail-scroll';
     viewport.tabIndex = 0;
@@ -33,7 +33,8 @@ export function scopeTable(container, ctx, send, report)
         panels.append(section);
     }
     container.append(viewport, panels);
-    let follow = true, hostNames = false, selected = null, request = 0, programmedScroll = -1, anchor = null, anchorOffset = 0, requestedAnchor = null;
+    let follow = true, hostNames = false, selected = null, request = 0, programmedScroll = -1, anchor = null;
+    let firstRendered = 0, requestedOffset = 0, requestedAnchor = null;
     let format;
     try
     {
@@ -47,8 +48,12 @@ export function scopeTable(container, ctx, send, report)
     /** スクロールのたびに保持データを再転送せず、表示範囲だけ要求します。 */
     function refresh()
     {
+        const firstVisible = Math.floor(viewport.scrollTop / height);
+        const start = Math.max(0, firstVisible - overscan);
+        const count = Math.min(200, Math.ceil(viewport.clientHeight / height) + 2 * overscan);
         requestedAnchor = anchor;
-        send({ type: 'view', request: ++request, start: Math.max(0, Math.floor(viewport.scrollTop / height)), anchor, count: Math.min(200, Math.ceil(viewport.clientHeight / height) + 5), follow });
+        requestedOffset = Math.max(0, viewport.scrollTop - firstRendered * height);
+        send({ type: 'view', request: ++request, start, anchor, count, follow });
     }
 
     /** ポートを常に残し、名前が解決できない場合はIPへ戻します。
@@ -80,7 +85,7 @@ export function scopeTable(container, ctx, send, report)
         {
             return;
         }
-        anchorOffset = viewport.scrollTop % height;
+        firstRendered = view.first;
         const fragment = document.createDocumentFragment();
         fragment.append(spacer(view.first * height));
         for (const packet of view.rows)
@@ -105,7 +110,7 @@ export function scopeTable(container, ctx, send, report)
         anchor = view.rows[0]?.id ?? null;
         if (follow || requestedAnchor !== null)
         {
-            const target = follow ? viewport.scrollHeight : view.first * height + anchorOffset;
+            const target = follow ? viewport.scrollHeight : view.first * height + requestedOffset;
             if (viewport.scrollTop !== target)
             {
                 viewport.scrollTop = target;

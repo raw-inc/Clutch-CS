@@ -58,8 +58,8 @@ else
         {
             <tr>
                 <td data-field="@Ui["Captured at"]">@FormatTime(point.CreatedAt)</td>
-                <td data-field="@Ui["Committed event position"]" class="numeric">@point.Sequence</td>
-                <td data-field="@Ui["Storage used"]" class="numeric">@point.StoredBytes.ToString("N0",CultureInfo.CurrentCulture) @Ui["bytes"]</td>
+                <td data-field="@Ui["Committed event position"]" class="numeric">@point.Sequence.ToString("N0",CultureInfo.CurrentCulture)</td>
+                <td data-field="@Ui["Storage used"]" class="numeric">@point.StoredBytes.ToString("N0",CultureInfo.CurrentCulture)&nbsp;@Ui["bytes"]</td>
                 <td data-field="@Ui["Compressed"]">@Ui[point.Compressed ? "Yes" : "No"]</td>
             </tr>
         }

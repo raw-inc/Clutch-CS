@@ -62,7 +62,7 @@ else
             </label>
             @if(LivePolicy.Enabled){<span class="badge">@Ui["Live apply · cluster"]</span>}
             <span class="toolbar-spacer"></span>
-            @if(ExperimentalEnabled){<button class="quiet" disabled="@(busy||LocalContext||Model.Draft.BaseRevision is null)" @onclick="()=>debugOpen=true">@Ui["Debug next input"]</button>}
+            @if(ExperimentalEnabled){<button class="quiet debug-next-input" disabled="@(busy||LocalContext||Model.Draft.BaseRevision is null)" @onclick="()=>debugOpen=true">@Ui["Debug next input"]</button>}
             <button class="quiet @(showDetails?"active":string.Empty)" aria-label="@Ui["Show values in nodes"]" aria-pressed="@(showDetails?"true":"false")" title="@Ui["Show or collapse node values"]" @onclick="()=>showDetails=!showDetails">@Ui["Show values in nodes"]</button>
             <button class="quiet" @onclick="()=>viewOptionsOpen=true"><UiIcon Name="settings" /><span class="control-label">@Ui["View"]</span></button>
             <button class="quiet @(inspectorOpen?"active":string.Empty)" aria-pressed="@(inspectorOpen?"true":"false")" @onclick="()=>TogglePanelAsync(false,lifetime.Token)"><UiIcon Name="panel" /><span class="control-label">@Ui["Inspector"]</span></button>
@@ -85,7 +85,18 @@ else
                     @if(collaborators.Length>0)
                     {
                         <details class="editor-participants">
-                            <summary>@(collaborators.Length==1?Ui.Format("{0} is editing",collaborators[0].Presence.DisplayName):Ui.Format("{0} editors",collaborators.Length))</summary>
+                            <summary>
+        @if(collaborators.Length==1)
+        {
+            var peer=collaborators[0];
+            <span class="collaborator-swatch" style="@("--editor-color:"+CollaborationOverlay.Color(peer.Presence.UiInstanceId))" aria-hidden="true"></span>
+            <span>@Ui.Format("{0} is editing", $"{peer.Presence.DisplayName} ({peer.PeerId})")</span>
+        }
+        else
+        {
+            <span>@Ui.Format("{0} editors",collaborators.Length)</span>
+        }
+    </summary>
                             <ul>
                             @foreach(var peer in collaborators)
                             {
@@ -107,7 +118,7 @@ else
             @if(Model.SelectedNode is not null){<NodeInspector ToggleState="@ToggleStates.Find(Model.ClusterId,Model.Draft.Document.Id).GetValueOrDefault(Model.SelectedNode)" ButtonPressed="RunCoreAsync" @key="Model.SelectedNode" Visible="inspectorOpen" Catalog="catalog" InvalidChanged="value=>invalid=value" />}else{<WorkflowInspector Visible="inspectorOpen" Routes="@(inspectorOpen?AllRoutes:[])" Catalog="catalog" />}
         </aside>
     </div>
-    <div class="editor-statusbar"><button class="arrange-nodes @(nodesOverlap?"warn":null)" title="@Ui["Separate overlapping nodes. Use Undo to restore the previous layout."]" disabled="@(busy||!nodesOverlap||Model.Locks.Whole(Model.Draft.Document.Id))" @onclick="()=>graph?.SeparateCards()"><UiIcon Name="arrange" /><span class="control-label">@Ui["Space nodes"]</span></button>@if(nodesOverlap){<span class="node-overlap-notice" role="status">@Ui["Overlapping nodes spaced in this view"]</span>}<span>@Ui.Format("{0} nodes",Model.Draft.Document.Nodes.Count)<span class="status-separator">/</span>@Ui.Format("{0} connections",Model.Draft.Document.Wires.Count)</span><span class="statusbar-spacer"></span><div class="zoom-tools"><button class="quiet" aria-label="@Ui["Zoom out"]" @onclick="()=>zoom=Math.Max(.05,Math.Round(zoom-.05,2))">−</button><span>@((int)Math.Round(zoom*100))&nbsp;%</span><button class="quiet" aria-label="@Ui["Zoom in"]" @onclick="()=>zoom=Math.Min(1.5,Math.Round(zoom+.05,2))">＋</button></div><span class="toolbar-divider"></span><button class="quiet" title="@(LocalContext?Ui["Local editing · not shared"]:Ui[Collaboration.Status])" @onclick="()=>collaborationOpen=true"><span class="dot"></span><span id="collaboration-status" class="collaboration-status">@(LocalContext?Ui["Local editing"]:Collaboration.Active?Ui["Checking draft"]:Collaboration.Pending?Ui["Draft synchronization pending"]:Ui["Collaboration"])</span>@if(Model.Draft.Conflicts.Count!=0){<span class="badge warn">@Ui.Format("{0} conflicts",Model.Draft.Conflicts.Count)</span>}</button></div>
+    <div class="editor-statusbar"><button class="arrange-nodes" title="@Ui["Separate overlapping nodes. Use Undo to restore the previous layout."]" disabled="@(busy||!nodesOverlap||Model.Locks.Whole(Model.Draft.Document.Id))" @onclick="()=>graph?.SeparateCards()"><UiIcon Name="arrange" /><span class="control-label">@Ui["Space nodes"]</span></button>@if(nodesOverlap){<span class="node-overlap-notice" role="status">@Ui["Overlapping nodes spaced in this view"]</span>}<span>@Ui.Format("{0} nodes",Model.Draft.Document.Nodes.Count)<span class="status-separator">/</span>@Ui.Format("{0} connections",Model.Draft.Document.Wires.Count)</span><span class="statusbar-spacer"></span><div class="zoom-tools"><button class="quiet" aria-label="@Ui["Zoom out"]" @onclick="()=>zoom=Math.Max(.05,Math.Round(zoom-.05,2))">−</button><span>@((int)Math.Round(zoom*100))&nbsp;%</span><button class="quiet" aria-label="@Ui["Zoom in"]" @onclick="()=>zoom=Math.Min(1.5,Math.Round(zoom+.05,2))">＋</button></div><span class="toolbar-divider"></span><button class="quiet" title="@(LocalContext?Ui["Local editing · not shared"]:Ui[Collaboration.Status])" @onclick="()=>collaborationOpen=true"><span class="dot"></span><span id="collaboration-status" class="collaboration-status">@(LocalContext?Ui["Local editing"]:Collaboration.Active?Ui["Checking draft"]:Collaboration.Pending?Ui["Draft synchronization pending"]:Ui["Collaboration"])</span>@if(Model.Draft.Conflicts.Count!=0){<span class="badge warn">@Ui.Format("{0} conflicts",Model.Draft.Conflicts.Count)</span>}</button></div>
     }
 </main>
 @if(CodeEditorNode is {} editorNode)
@@ -116,6 +127,7 @@ else
         <fieldset class="code-edit-sheet" disabled="@Model.Locks.Node(Model.Draft.Document.Id,editorNode.Id)">
             <CodeBlockFields NodeId="@editorNode.Id" />
         </fieldset>
+        <p class="small muted code-draft-note">@Ui["Code edits update the draft as you type. Save the workflow to keep them."]</p>
     </Modal>
 }
 <Modal Open="@(automaticInputGeneration is not null)" Title="@Ui["Enable automatic workflow execution"]" Close="()=>automaticInputGeneration=null" Compact="true">
@@ -146,7 +158,7 @@ else
             <p class="muted small">@Ui.Format("Saved {0} / shared {1} / snapshot {2} / applied {3}",Ui[applied.Saved.Outcome.ToString()],Ui[applied.Shared.Outcome.ToString()],Ui[applied.Snapshot.Outcome.ToString()],Ui[applied.Activation.Outcome.ToString()]) · <code>@applied.OperationId</code></p>
             @foreach(var issue in applied.Validation){<p class="notice error">@issue.Message</p>}
         }
-        <details class="graph-legend"><summary>@Ui["Color legend"]</summary><div class="graph-legend-types">@foreach(var kind in new[]{("any","any"),("string","string"),("boolean","boolean"),("integer","integer"),("number","number"),("array","array"),("object","object"),("binary","binary"),("type-definition","type definition"),("pc-selection","pc-selection"),("trigger","trigger"),("result","result"),("source","source"),("transaction","transaction"),("loop","loop")}){<span class="kind-@kind.Item1"><i></i>@Ui["port.type."+kind.Item2]</span>}</div><div class="graph-legend-categories">@foreach(var category in catalog.Select(item=>item.Category).Distinct().OrderBy(GraphPresentation.CategoryOrder)){<span data-category="@GraphPresentation.CategoryKey(category)"><i></i>@Ui[GraphPresentation.CategoryName(category)]</span>}</div></details>
+        <details class="graph-legend secondary-details"><summary>@Ui["Color legend"]</summary><div class="graph-legend-types">@foreach(var kind in new[]{("any","any"),("string","string"),("boolean","boolean"),("integer","integer"),("number","number"),("array","array"),("object","object"),("binary","binary"),("type-definition","type definition"),("pc-selection","pc-selection"),("trigger","trigger"),("result","result"),("source","source"),("transaction","transaction"),("loop","loop")}){<span class="kind-@kind.Item1"><i></i>@Ui["port.type."+kind.Item2]</span>}</div><div class="graph-legend-categories">@foreach(var category in catalog.Select(item=>item.Category).Distinct().OrderBy(GraphPresentation.CategoryOrder)){<span data-category="@GraphPresentation.CategoryKey(category)"><i></i>@Ui[GraphPresentation.CategoryName(category)]</span>}</div></details>
         @if(viewProblem is not null){<p class="notice error">@viewProblem</p>}
     </div>
 </Modal>

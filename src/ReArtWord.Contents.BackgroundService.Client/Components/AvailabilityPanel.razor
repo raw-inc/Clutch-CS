@@ -6,7 +6,7 @@
     @if(page is not null)
     {
         <p class="small muted">@Ui.Format("{0} / {1} · checked at {2}", cluster, peer, FormatTime(observed,"HH:mm:ss"))</p>
-        <div class="table-wrap"><table class="record-table"><thead><tr><th>@Ui["Purpose / dataset"]</th><th>@Ui["Saved revision"]</th><th>@Ui["Effective revision"]</th><th>@Ui["Recovery revision"]</th><th>@Ui["Status"]</th></tr></thead><tbody>
+        <div class="table-wrap standalone-records"><table class="record-table"><thead><tr><th>@Ui["Purpose / dataset"]</th><th>@Ui["Saved revision"]</th><th>@Ui["Effective revision"]</th><th>@Ui["Recovery revision"]</th><th>@Ui["Status"]</th></tr></thead><tbody>
         @foreach(var item in page.Entries)
         {
             <tr><td data-field='@Ui["Purpose / dataset"]'>@Ui[item.Purpose.ToString()]<small class="dataset-id" title="@item.DatasetId">@item.DatasetId</small></td><td data-field='@Ui["Saved revision"]' class="mono" title="@item.SavedRevision">@Revision(item.SavedRevision)</td><td data-field='@Ui["Effective revision"]' class="mono" title="@item.EffectiveRevision">@Revision(item.EffectiveRevision)</td><td data-field='@Ui["Recovery revision"]' class="mono" title="@item.RecoveryRevision">@Revision(item.RecoveryRevision)</td><td data-field='@Ui["Status"]'>@(string.IsNullOrWhiteSpace(State(item)) ? "—" : State(item))<small class="muted">@item.Reason</small></td></tr>

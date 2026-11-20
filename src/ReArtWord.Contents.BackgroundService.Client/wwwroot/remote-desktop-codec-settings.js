@@ -38,10 +38,14 @@ export function createDesktopCodecSettings(body, ctx, numberSetting, apply, mode
     mode.setAttribute('aria-label', ctx.t('Quality target mode', '品質指定モード'));
     const quality = numberSetting(ctx.t('Quality value (lower is better)', '品質値（小さいほど高画質）'), 23, 1, 51);
     const pHelp = document.createElement('p'), bHelp = document.createElement('p'), qualityHelp = document.createElement('p');
-    pHelp.textContent = ctx.t('A P-frame limit also limits the keyframe interval to P + 1.', 'Pフレーム数を指定すると、キーフレーム間隔も最大「Pフレーム数＋1」になります。');
+    pHelp.textContent = ctx.t('A P-frame limit also limits the keyframe interval to P + 1.', 'キーフレーム間隔の上限は、Pフレーム数に1を加えた値です。');
     qualityHelp.textContent = ctx.t('CRF/CQ tracks quality. Traffic varies without a bitrate target or cap, and replay uses at most 16 frames. Quality values differ by encoder.',
-        'CRF／CQで画質を指定すると、ビットレートに上限がなく、映像に応じて通信量が変わります。再復号は最大16フレームです。同じ数値でもエンコーダーによって画質は異なります。');
+        'CRF／CQ は画質を指定します。通信量は映像に応じて変わり、ビットレートの上限はありません。再復号は最大 16 フレームです。値と画質の関係はエンコーダーによって異なります。');
     const capability = document.createElement('p');
+    for (const paragraph of [pHelp, bHelp, qualityHelp, capability])
+    {
+        paragraph.className = 'codec-field-note';
+    }
     capability.setAttribute('role', 'status');
     const commit = ctx.button(ctx.t('Apply codec settings', 'コーデック設定を反映'), apply);
     commit.className = 'primary codec-apply';

@@ -115,7 +115,7 @@ export function firewallView(root, ctx, actionArea)
         {
             const expectedAllow = 'Allow';
 
-            const name = node('div');
+            const name = node('div', '', 'hm-record-name');
             name.append(ctx.button(rule.name, () => ruleDetails(host, rule), 'hm-record-link'), node('small', `${rule.protocol} · ${rule.localPorts.join(', ')}`));
             const behavior = node('div', '', 'hm-stacked');
             behavior.append(node('span', ctx.t(rule.direction)), badge(ctx.t(rule.action), rule.action === expectedAllow ? '' : 'warn'));

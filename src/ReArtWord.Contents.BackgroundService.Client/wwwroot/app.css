@@ -43,7 +43,8 @@ button {
     justify-content: center;
     align-items: center;
     gap: 8px;
-    border: 1px solid var(--control);
+    border: 1px solid var(--button-line);
+    border-bottom-color: var(--button-line-bottom);
     border-radius: var(--radius-control);
     background: var(--button-face);
     padding: 9px 14px 7px;
@@ -54,13 +55,17 @@ button {
     white-space: nowrap;
 }
 
+button:where(:enabled:not(.primary, .quiet, .danger, [role="tab"], [role="switch"], [aria-pressed], [aria-disabled="true"])) {
+    box-shadow: var(--button-shadow);
+}
+
 button:hover:where(:enabled:not([aria-disabled="true"])) {
     background: var(--button-hover);
-    border-color: var(--control);
 }
 
 button:enabled:active:where(:not([aria-disabled="true"])) {
     background: var(--accent-soft);
+    box-shadow: none;
 }
 
 button:disabled,
@@ -70,6 +75,7 @@ button.primary:disabled {
     color: var(--disabled-ink);
     background-color: var(--disabled-face);
     border-color: var(--disabled-line);
+    box-shadow: none;
 }
 
 button.primary {
@@ -89,9 +95,11 @@ button.danger {
     color: var(--danger);
 }
 
-button.danger:enabled:hover {
+button.danger:enabled:hover,
+:is(.dialog > footer, .hm-dialog-actions, .file-action-dialog .toolbar) button.danger:enabled {
     border-color: var(--danger);
     background: var(--danger-soft);
+    color: var(--danger);
 }
 
 button.quiet {
@@ -756,12 +764,6 @@ td details {
     display: block;
 }
 
-.page :where(.section-heading, .page-title, .toolbar) > button,
-.dialog button {
-    white-space: normal;
-    overflow-wrap: anywhere;
-}
-
 .page label:has(> input[type="checkbox"]),
 .dialog label:has(> input[type="checkbox"]) {
     min-height: 36px;
@@ -782,8 +784,14 @@ td details {
 }
 
 .dialog-content .action-list button {
-    white-space: normal;
+    border-color: var(--line);
+    background: var(--panel);
+    box-shadow: none;
     text-align: start;
+}
+
+.dialog-content .action-list button:enabled:hover {
+    background: var(--button-hover);
 }
 
 .record-table tbody tr:last-child > * {
@@ -1051,10 +1059,6 @@ input[type="checkbox"] {
     }
 }
 
-.restore-action {
-    border-color: var(--warn);
-}
-
 button.danger:disabled {
     border-color: var(--disabled-line);
     color: var(--disabled-ink);
@@ -1183,8 +1187,6 @@ button.danger:disabled {
 
 .dialog-content {
     scrollbar-width: thin;
-    scrollbar-color: var(--control) transparent;
-    scrollbar-gutter: stable;
 }
 
 .configuration-save-mode {
@@ -1266,4 +1268,40 @@ button.danger:disabled {
 
 .dialog-content:has(.snapshot-target) {
     scrollbar-color: var(--control) var(--raised);
+}
+
+.log-source {
+    display: block;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+
+.log-source > span {
+    white-space: normal;
+}
+
+.restore-action:enabled,
+.restore-action:enabled:hover {
+    color: var(--warn);
+    border-color: var(--warn);
+    background: var(--warn-soft);
+    box-shadow: none;
+}
+
+.detail-expanded {
+    max-height: none;
+    overflow: visible;
+}
+
+@media (max-width: 680px) {
+    .table-wrap.standalone-records {
+        border: 0;
+        background: transparent;
+    }
+
+    .standalone-records .record-table tbody tr {
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--panel);
+    }
 }

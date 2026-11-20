@@ -77,7 +77,7 @@
             var location = LogLocation(selected);
             <aside class="log-detail" aria-labelledby="log-detail-title">
                 <div class="section-heading"><h2 id="log-detail-title">@Ui["Selected log"]</h2><button class="quiet icon-button" aria-label="@Ui["Close log details"]" @onclick="()=>selected=null"><UiIcon Name="close" /></button></div>
-                <div class="log-detail-body record-detail-scroll" tabindex="0">
+                <clutch-scroll-area class="log-detail-scroll"><div class="log-detail-body" tabindex="0">
                 <p class="log-detail-message">@selected.Entry.Message</p>
                 <dl class="log-facts">
                     <dt>@Ui.Format("display.timezone.time",DisplayTimeZone.Id)</dt><dd>@FormatTime(selected.Entry.Time)</dd>
@@ -92,7 +92,7 @@
                 @if (selected.Entry.Data is not null){<JsonDetails Value="selected.Entry.Data" Title="@Ui["Recorded data"]" />}
                 @if (selected.Entry.Raw is not null){<JsonDetails Value="selected.Entry.Raw" Title="@Ui["Communication capture"]" />}
                 <dl class="log-facts"><dt>@Ui["Log ID"]</dt><dd>@selected.Entry.Id</dd><dt>@Ui["Related log ID"]<br />(Causation ID)</dt><dd>@(selected.Entry.CausationId?.ToString() ?? Ui["Not recorded"])</dd></dl><JsonDetails Value="selected.Entry" Title="@Ui["Full record (JSON)"]" /></details>
-                </div>
+                </div></clutch-scroll-area>
                 @if (location is not null || selected.Entry.CausationId is not null)
                 {
                     <div class="log-detail-actions">

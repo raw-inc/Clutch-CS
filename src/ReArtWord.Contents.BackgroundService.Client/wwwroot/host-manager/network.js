@@ -5,6 +5,7 @@ import { networkForm } from './network-form.js';
 import { virtualNics } from './virtual-nics.js';
 import { virtualSwitchesView } from './virtual-switches.js';
 import { vlanLabel, vlanTone } from './vlan.js';
+import { uiIcon } from '../ui-icons.js';
 import { windowsDnsDefaults } from './dns.js';
 
 /** ネットワーク一覧と変更確認の画面を構成します。
@@ -85,7 +86,7 @@ export function networkView(root, ctx, actions)
             return;
         }
         const tools = node('div', '', 'hm-selection-bar');
-        tools.append(node('strong', `${ctx.t('Pending protocol changes')}: ${changes} · ${ctx.t('Changed interfaces')}: ${entries.length}`));
+        tools.append(node('strong', recordCount(ctx, 'count.protocolChanges', changes) + ' · ' + recordCount(ctx, 'count.changedInterfaces', entries.length)));
         const actions = node('div', '', 'hm-actions'), clear = ctx.button('Clear all pending changes', resetPending), apply = action(ctx, 'Apply', 'check', async () =>
         {
             const planned = entries.map(({ record, change, revision }) => ({ host: record.host, query: { area: 'network', resourceId: record.nic.id }, action: 'networkProtocols', change: { ...change }, baseRevision: revision, label: record.nic.name }));
@@ -204,9 +205,10 @@ export function networkView(root, ctx, actions)
                 toggle.setAttribute('aria-checked', String(enabled));
                 toggle.dataset.pending = String(changed);
                 label.textContent = `IPv${version} · ${ctx.t(enabled ? 'Enabled' : 'Disabled')}`;
-                caption.textContent = changed ? `${ctx.t(configuration.enabled ? 'Enabled' : 'Disabled')} → ${ctx.t(value ? 'Enabled' : 'Disabled')}` : '';
+                const before = ctx.t(configuration.enabled ? 'Enabled' : 'Disabled'), after = ctx.t(value ? 'Enabled' : 'Disabled');
+                caption.replaceChildren(node('span', before), uiIcon('arrow-right'), node('span', after));
                 caption.hidden = !changed;
-                toggle.title = changed ? `${ctx.t('Pending protocol changes')}: ${caption.textContent}` : `IPv${version}`;
+                toggle.title = changed ? `${ctx.t('Pending protocol changes')}: ${before} → ${after}` : `IPv${version}`;
             };
 
             const toggle = ctx.button(`IPv${version}`, () =>

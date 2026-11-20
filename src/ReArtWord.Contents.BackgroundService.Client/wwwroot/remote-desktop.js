@@ -96,7 +96,9 @@ export async function desktopView(root, ctx)
         close.replaceChildren(ctx.icon('close'));
         const header = document.createElement('header');
         header.append(heading, close);
-        body.append(header, content, actions);
+        const scroll = document.createElement('clutch-scroll-area');
+        scroll.append(content);
+        body.append(header, scroll, actions);
         element.append(trigger, body);
         rail.append(element);
         menus.push(element);
@@ -426,6 +428,9 @@ export async function desktopView(root, ctx)
     }
     detailsMenu.body.append(measurements);
     const deck = document.createElement('header'), targets = document.createElement('div'), connectedTarget = document.createElement('strong');
+    const connectedCluster = document.createElement('span'), connectedHost = document.createElement('span');
+    connectedCluster.className = 'desktop-connected-cluster';
+    connectedTarget.append(connectedCluster, connectedHost);
     connectedTarget.hidden = true;
     targets.className = 'desktop-targets';
     deck.className = 'desktop-deck';
@@ -456,6 +461,7 @@ export async function desktopView(root, ctx)
     const wheelPosition = new Int32Array(3);
     let wheel = 0, lastWheel = -Infinity;
     let audio, closing = Promise.resolve(), muted = false, autoMuted = false, audioReady = false, localConnection = false, targetLabel = '';
+    let targetHost = '', targetCluster = '';
     let selection = 0, watch = 0, lastMessage = 0, heartbeat = false, lastRefresh = -Infinity, refreshes = 0, lastStats = 0, lastDraw = 0, hidden = false, fullscreenEscape = false;
     const videoStatus = document.createElement('p');
     const videoTerm = document.createElement('dt'), videoDetail = document.createElement('dd');
@@ -539,7 +545,8 @@ export async function desktopView(root, ctx)
         const pending = 'pending';
         connection.className = 'badge desktop-connection' + (state === connectedState ? ' good' : state === pending ? ' pending' : '');
         root.dataset.state = state;
-        connectedTarget.textContent = targetLabel;
+        connectedCluster.textContent = targetCluster ? targetCluster + ' / ' : '';
+        connectedHost.textContent = targetHost;
         connectedTarget.title = targetLabel;
         connectedTarget.hidden = state !== 'connected';
         settingsNotice.hidden = state !== 'connected';
@@ -861,6 +868,7 @@ export async function desktopView(root, ctx)
         clearKeys();
         localConnection = false;
         targetLabel = '';
+        targetHost = targetCluster = '';
         audioRequested = false;
         cursorEnabled = hideCursor = cursorVisibilitySupported = selecting = false;
         codecDetailsSupported = viewOnlySupported = false;
@@ -1462,7 +1470,9 @@ export async function desktopView(root, ctx)
         delivery.enable(connection.timing === true);
         probeDeliveryTime();
         localConnection = !!connection.localAudioMuted;
-        targetLabel = connection.clusterId + ' / ' + connection.hostId;
+        targetHost = connection.hostId;
+        targetCluster = connection.clusterId;
+        targetLabel = targetCluster + ' / ' + targetHost;
         cursorRelay = connection.cursorShapes === true;
         clipboardSupported = connection.clipboardText === true;
         variableBitrateSupported = connection.variableBitrate === true;
@@ -1980,6 +1990,7 @@ export async function desktopView(root, ctx)
         {
             host.value = previous;
         }
+        updateControls();
     }
 
     /** 現在の状態を再確認して表示と操作を更新します。
@@ -2218,7 +2229,8 @@ export async function desktopView(root, ctx)
         const busy = !!socket || connecting || reconnectState.pending;
         reconnectButton.setAttribute('aria-pressed', String(reconnectState.enabled));
         reconnectDelays.disabled = busy;
-        start.disabled = busy;
+        start.disabled = busy || !host.value;
+        start.title = host.value ? '' : ctx.t('Select a host first.', '接続先を選んでください。');
         stop.disabled = !busy;
         cluster.disabled = host.disabled = busy;
         for (const button of keyButtons)
@@ -2315,6 +2327,7 @@ export async function desktopView(root, ctx)
     displayOptions.append(screens, reconnectButton, viewOnlyButton);
     toolbar.append(displayOptions, keyboardButton, keybar);
     cluster.onchange = hosts;
+    host.onchange = updateControls;
     rail.append(settingsMenu.element);
     if (codecMenu)
     {

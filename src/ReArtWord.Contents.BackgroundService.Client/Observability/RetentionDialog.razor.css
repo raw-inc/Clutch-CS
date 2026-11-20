@@ -22,3 +22,17 @@
     width: min(100%, 9rem);
     min-height: 38px;
 }
+
+@media (forced-colors: none) {
+    .zone-entry {
+        padding-inline-end: 32px;
+        background-image: var(--select-arrow);
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 12px 8px;
+    }
+
+    .zone-entry::-webkit-calendar-picker-indicator {
+        opacity: 0;
+    }
+}

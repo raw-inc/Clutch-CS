@@ -19,6 +19,9 @@
     width: 100%;
     text-align: left;
     padding: 10px;
+    border-color: var(--line);
+    background: var(--panel);
+    box-shadow: none;
 }
 
 .dashboard-catalog-item small,
@@ -34,4 +37,9 @@
 
 .dashboard-catalog .section-heading h2 {
     font-size: 16px;
+}
+
+.dashboard-catalog-item:enabled:hover {
+    border-color: var(--accent);
+    background: var(--button-hover);
 }

@@ -1,4 +1,4 @@
-import { node, heading, action, badge, table, hostCount } from './dom.js';
+import { node, heading, action, badge, table, hostCount, targetHosts } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 
 /** 外部管理や期限による上書きを、手動更新の確認済み表示から分けます。
@@ -91,7 +91,9 @@ export function windowsUpdateView(root, ctx, actionArea)
     const manual = action(ctx, 'Require manual updates for selected hosts', 'settings', () => previewUpdate(ctx, [...reader.states.values()], true));
     manual.disabled = true;
     title.append(action(ctx, 'Refresh settings', 'refresh', () => reader.load()));
-    actionArea.append(manual);
+    const actions = node('div', '', 'hm-selection-bar');
+    actions.append(node('strong', targetHosts(ctx, hosts)), manual);
+    actionArea.append(actions);
     root.append(title, node('p', ctx.t('Manual mode disables automatic Windows updates without an expiry. Install updates explicitly from Windows Settings. Existing installations or pending restarts are not canceled.'), 'hm-muted'),
         node('p', ctx.t('This controls Windows Update. Microsoft Store, Defender intelligence and other applications have separate update settings.'), 'hm-muted'), status, listing);
 

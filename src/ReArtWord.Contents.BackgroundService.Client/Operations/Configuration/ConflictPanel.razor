@@ -14,7 +14,7 @@
         <p role="status" class="lookup-status"><span class="badge @(conflicts.Count>0?"warn":"good")">@(conflicts.Count == 0 ? Ui["No conflicts"] : Ui.Format("Unresolved: {0}", conflicts.Count))</span> <small class="muted">@Ui.Format("Checked at {0}", FormatTime(checkedAt,"HH:mm"))</small></p>
         @if(conflicts.Count>0)
         {
-        <div class="table-wrap"><table class="record-table"><thead><tr><th>@Ui["Storage purpose / target"]</th><th>@Ui["Affected scope"]</th><th class="numeric">@Ui["Candidates"]</th><th>@Ui["Actions"]</th></tr></thead><tbody>
+        <div class="table-wrap standalone-records"><table class="record-table"><thead><tr><th>@Ui["Storage purpose / target"]</th><th>@Ui["Affected scope"]</th><th class="numeric">@Ui["Candidates"]</th><th>@Ui["Actions"]</th></tr></thead><tbody>
         @foreach(var conflict in conflicts)
         {
             <tr><td data-field='@Ui["Storage purpose / target"]'>@conflict.Scope / @conflict.Key</td><td data-field='@Ui["Affected scope"]'>@string.Join(", ",conflict.WorkflowIds.Concat(conflict.OperationalFields))</td><td class="numeric" data-field='@Ui["Candidates"]'>@conflict.CandidateVersions.Count @(conflict.ValuesHidden?Ui["Content hidden"]:"")</td><td data-field='@Ui["Actions"]'><button disabled="@(!SameConnection||busy||!conflict.DetailAvailable)" @onclick="()=>OpenAsync(conflict)">@Ui["Compare"]</button>@if(!conflict.DetailAvailable){<small>@conflict.DetailReason</small>}</td></tr>

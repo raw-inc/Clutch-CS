@@ -52,7 +52,7 @@
   "Waiting for the next update confirmation": "次の更新確認を待機中",
   "{0} updates need attention": "要確認・保留 {0} 件",
   "Update different PCs and clusters concurrently, confirming recovery before reusing each slot.": "異なるPC・クラスタを並列更新し、各ピアの復帰を確認してから次の更新を開始します。",
-  "The release must declare compatibility. Clusters with at least three peers must retain a Ready majority; smaller single-host clusters may disconnect temporarily.": "リリースには互換性の宣言が必要です。3 ピア以上のクラスタはReadyの過半数を維持します。2 ピア以下で単一PCのクラスタは一時切断を許容します。",
+  "The release must declare compatibility. Clusters with at least three peers must retain a Ready majority; smaller single-host clusters may disconnect temporarily.": "リリースには互換性の宣言が必要です。3 ピア以上のクラスタはReadyの過半数を維持します。2 ピア以下で単一PCのクラスタは一時切断を許容します。",
   "Maximum parallel peer updates": "最大並列更新数",
   "Preview update plan": "更新計画をプレビュー",
   "Start this update": "この計画で更新開始",

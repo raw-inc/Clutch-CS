@@ -40,10 +40,10 @@
                     </dl>
                     @if (item.Observed.Status?.RecoveryExhausted is true){<p class="notice">@Ui["Restart limit reached"]</p>}
                     @if (item.Observed.Status?.RecoverySuppressed is true){<p class="small muted">@Ui["Recovery suppressed"]</p>}
-                    <div class="toolbar">
+                    <div class="toolbar application-actions">
                         <button disabled="@(busy||target is null)" @onclick="()=>selected=item">@Ui["Details and actions"]</button>
-                        <button class="quiet" disabled="@(busy||target is null)" @onclick="()=>Edit(item)">@Ui["Edit"]</button>
-                        <button class="danger" disabled="@(busy||refreshing||target is null)" @onclick="()=>ConfirmRemoval(item)"><UiIcon Name="trash" /><span class="control-label">@Ui["Remove registration"]</span></button>
+                        <button disabled="@(busy||target is null)" @onclick="()=>Edit(item)">@Ui["Edit"]</button>
+                        <button class="danger registration-remove" disabled="@(busy||refreshing||target is null)" @onclick="()=>ConfirmRemoval(item)"><UiIcon Name="trash" /><span class="control-label">@Ui["Remove registration"]</span></button>
                     </div>
                 </li>
             }

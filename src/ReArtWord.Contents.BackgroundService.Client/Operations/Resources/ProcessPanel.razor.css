@@ -131,3 +131,8 @@
 .applications-panel > .section-heading button.quiet {
     padding-inline: 0;
 }
+
+.application-actions .registration-remove {
+    margin-inline-start: auto;
+    border-color: transparent;
+}

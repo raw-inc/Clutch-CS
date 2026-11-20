@@ -20,6 +20,9 @@ export async function terminalView(root, ctx)
     sidebarDetails.open = true;
     sidebarSummary.textContent = ctx.t('Peers and shared sessions', 'ピアと共有セッション');
     sidebarDetails.append(sidebarSummary, sidebar);
+    const sources = document.createElement('clutch-scroll-area');
+    sources.className = 'terminal-source-scroll';
+    sources.append(sidebarDetails);
     const narrow = window.matchMedia('(max-width: 650px)');
     narrow.addEventListener('change', () =>
     {
@@ -32,7 +35,7 @@ export async function terminalView(root, ctx)
     const panel = document.createElement('section');
     panel.className = 'terminal-panel';
     const toolbar = document.createElement('div');
-    toolbar.className = 'toolbar tool-toolbar terminal-toolbar';
+    toolbar.className = 'toolbar tool-toolbar terminal-toolbar tool-connection';
     const host = document.createElement('div');
     host.className = 'terminal-screen';
     const note = document.createElement('p');
@@ -44,7 +47,7 @@ export async function terminalView(root, ctx)
     connectionState.setAttribute('role', 'status');
     host.dataset.emptyHint = ctx.t('Select a peer and start a user session.', 'ピアを選んで端末を開きます。');
     panel.append(connectionState, note, host);
-    root.append(toolbar, sidebarDetails, panel);
+    root.append(toolbar, sources, panel);
     let peer, session, term, fit, stream, generation = 0, owner;
     let disposed = false;
     let peers = [], listTimer, listing, sessionSignature = '', peerSignature = '';
@@ -217,11 +220,12 @@ export async function terminalView(root, ctx)
                 sessions.append(row);
             }
         }
+        sessionTitle.textContent = ctx.t('Shared sessions', '共有セッション') + ' · ' + total;
         if (!total)
         {
             const empty = document.createElement('p');
             empty.className = 'remote-empty';
-            empty.textContent = ctx.t('No sessions confirmed. Select a peer to start a shell.', 'ピアを選ぶとシェルを開始できます。');
+            empty.textContent = ctx.t('No sessions confirmed. Select a peer to start a shell.', 'ピアを選んで端末を開けます。');
             sessions.append(empty);
         }
         if (failed)
@@ -784,8 +788,14 @@ export async function terminalView(root, ctx)
     peerTitle.textContent = ctx.t('Clusters & peers', 'クラスタ・ピア');
     sessionTitle.textContent = ctx.t('Shared sessions', '共有セッション');
     const refreshPeers = ctx.button(ctx.t('Refresh peers', 'ピア更新'), list);
-    setControlLabel(refreshPeers, ctx.icon('refresh'));
-    setControlLabel(refreshSessions, ctx.icon('refresh'));
+    for (const button of [refreshPeers, refreshSessions])
+    {
+        const label = button.textContent;
+        button.className = 'quiet icon-button';
+        button.title = label;
+        button.setAttribute('aria-label', label);
+        button.replaceChildren(ctx.icon('refresh'));
+    }
     peerHeading.append(peerTitle, refreshPeers);
     sessionHeading.append(sessionTitle, refreshSessions);
     peersTree.append(peerHeading);

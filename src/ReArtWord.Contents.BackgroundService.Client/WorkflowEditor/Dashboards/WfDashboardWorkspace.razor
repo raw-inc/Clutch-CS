@@ -16,14 +16,14 @@
         <small class="save-state"><span class="dot"></span>@Ui[Model.Draft.BaseRevision is null?"New · unsaved":Model.Draft.Dirty?"Unsaved":"Saved and shared"]</small>
     </div>
     <div class="toolbar dashboard-edit-tools">
-        @if(!editingLayout){<button type="button" class="quiet" @onclick="()=>editingLayout=true">@Ui["Edit board layout"]</button>}
+        @if(!editingLayout){<button type="button" @onclick="()=>editingLayout=true">@Ui["Edit board layout"]</button>}
         @if(editingLayout)
         {
-        <button type="button" class="quiet" aria-expanded="@(catalogOpen?"true":"false")" @onclick="()=>catalogOpen=!catalogOpen"><UiIcon Name="add" /><span class="control-label">@Ui["Add reference"]</span></button>
-        <button type="button" class="quiet" disabled="@LayoutLocked" @onclick="()=>AddCard(WfDashboardLayout.CommentType,WfDashboardLayout.CommentSettings(string.Empty))">@Ui["Add comment"]</button>
-        <button type="button" class="quiet" disabled="@LayoutLocked" @onclick="()=>AddCard(WfDashboardLayout.BreakType,WfDashboardLayout.BreakSettings())">@Ui["Add line break"]</button>
+        <button type="button" aria-expanded="@(catalogOpen?"true":"false")" @onclick="()=>catalogOpen=!catalogOpen"><UiIcon Name="add" /><span class="control-label">@Ui["Add reference"]</span></button>
+        <button type="button" disabled="@LayoutLocked" @onclick="()=>AddCard(WfDashboardLayout.CommentType,WfDashboardLayout.CommentSettings(string.Empty))">@Ui["Add comment"]</button>
+        <button type="button" disabled="@LayoutLocked" @onclick="()=>AddCard(WfDashboardLayout.BreakType,WfDashboardLayout.BreakSettings())">@Ui["Add line break"]</button>
         <button type="button" class="quiet icon-button" title="@Ui["Undo"]" aria-label="@Ui["Undo"]" disabled="@(LayoutLocked||!Model.CanUndo)" @onclick="Model.Undo"><UiIcon Name="undo" /></button>
-        <button type="button" class="quiet" title='@Ui["Layout edits remain in the draft until saved."]' @onclick="()=>{editingLayout=false;catalogOpen=false;}">@Ui["Finish layout editing"]</button>
+        <button type="button" title='@Ui["Layout edits remain in the draft until saved."]' @onclick="()=>{editingLayout=false;catalogOpen=false;}">@Ui["Finish layout editing"]</button>
         <button type="button" class="primary" disabled="@(LayoutLocked||Model.Draft.Conflicts.Count!=0)" @onclick="Save"><UiIcon Name="save" /><span class="control-label">@Ui["Save"]</span></button>
         }
         <button type="button" class="quiet icon-button" aria-label="@Ui["More actions"]" @onclick="Tools"><UiIcon Name="more" /></button>

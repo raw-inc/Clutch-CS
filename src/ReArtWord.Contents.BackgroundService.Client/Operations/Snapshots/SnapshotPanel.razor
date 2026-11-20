@@ -44,9 +44,10 @@
 </label>
 <label>@Ui["Peer"]<input @bind="peer" @bind:event="oninput" />
 </label>
-<label>@Ui["Target ID"]<input @bind="target" @bind:event="oninput" />
+<label>@Ui["Target ID"]<input @bind="target" @bind:event="oninput" placeholder="Workflow ID / workflow:ID / peer:Peer:ID" />
 </label>
-<button @onclick="AddTarget">@Ui["Add to scope"]</button>
+<button @onclick="AddTarget" disabled="@(string.IsNullOrWhiteSpace(peer)||string.IsNullOrWhiteSpace(target))">@Ui["Add to scope"]</button>
+@if(string.IsNullOrWhiteSpace(peer)||string.IsNullOrWhiteSpace(target)){<p class="small muted">@Ui["Specify a peer and target ID."]</p>}
 </details>
 <SnapshotScopePicker Selected="ExpandRestoreAsync" />
 @foreach(var row in rows)

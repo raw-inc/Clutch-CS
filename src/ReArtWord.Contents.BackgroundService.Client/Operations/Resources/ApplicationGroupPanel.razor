@@ -7,15 +7,15 @@
     @foreach(var item in groups)
     {
         <tr @key="item.Definition.Id"><td class="group-name" data-field="@Ui["Application group name"]"><div><strong>@item.Definition.Name</strong><div class="small muted">@string.Join(" → ",item.Definition.Members.Select(member=>Name(member.ApplicationId)))</div></div></td>
-            <td data-field="@Ui["Group recovery policy"]"><div>@Ui[Policy(item.Definition.RecoveryMode)]<div class="small muted">@Ui[item.Definition.AutomaticMonitoring?"Automatic monitoring":"Group automatic recovery disabled"]</div></div></td>
-            <td class="group-state" data-field="@Ui["Status"]"><div><span data-status-label class="badge">@Ui[Phase(item.Status)]</span>@if(item.Status.ApplicationId is {} active){<div>@Name(active)</div>}
+            <td class="group-policy" data-field="@Ui["Group recovery policy"]"><div>@Ui[Policy(item.Definition.RecoveryMode)]<div class="small muted">@Ui[item.Definition.AutomaticMonitoring?"Automatic monitoring":"Group automatic recovery disabled"]</div></div></td>
+            <td class="group-state" data-field="@Ui["Status"]"><div><span data-status-label class="badge process-status">@Ui[Phase(item.Status)]</span>@if(item.Status.ApplicationId is {} active){<div>@Name(active)</div>}
                 @if(item.Status.NextAt is {} due){<div class="small muted">@due.ToLocalTime().ToString("G",CultureInfo.CurrentCulture)</div>}
                 @if(item.Status.Reason is {} reason){<div class="small error">@Ui[reason]</div>}
                 @if(item.Status.Phase==EProcessGroupPhase.Paused){<p class="small">@Ui["Check the applications, resolve any unknown launch, then choose Start or Restart to continue."]</p>}
             </div></td>
-            <td class="group-actions" data-field="@Ui["Actions"]"><div><div class="toolbar group-run-actions"><button disabled="@(busy||!Available||Active(item))" @onclick="()=>CommandAsync(item,EProcessGroupCommand.Start,UiCancellation)">@Ui["Start group"]</button>
-                <button disabled="@(busy||!Available||Active(item))" @onclick="()=>Confirm(item,EProcessGroupCommand.Restart)">@Ui["Restart group"]</button>
-                <button disabled="@(busy||!Available)" @onclick="()=>Confirm(item,EProcessGroupCommand.Stop)">@Ui["Stop group"]</button></div>
+            <td class="group-actions" data-field="@Ui["Actions"]"><div><div class="toolbar group-run-actions"><button disabled="@(busy||!Available||Active(item))" @onclick="()=>CommandAsync(item,EProcessGroupCommand.Start,UiCancellation)">@Ui["Start"]</button>
+                <button disabled="@(busy||!Available||Active(item))" @onclick="()=>Confirm(item,EProcessGroupCommand.Restart)">@Ui["Restart"]</button>
+                <button disabled="@(busy||!Available)" @onclick="()=>Confirm(item,EProcessGroupCommand.Stop)">@Ui["Stop"]</button></div>
                 <div class="toolbar"><button class="quiet" disabled="@(busy||!Available||item.Status.Phase!=EProcessGroupPhase.Idle)" @onclick="()=>Edit(item)">@Ui["Edit"]</button><button class="danger" disabled="@(busy||!Available||Active(item))" @onclick="()=>removing=item"><UiIcon Name="trash" /><span class="control-label">@Ui["Remove group"]</span></button></div></div></td>
         </tr>
     }

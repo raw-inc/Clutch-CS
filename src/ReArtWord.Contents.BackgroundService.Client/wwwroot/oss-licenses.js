@@ -122,13 +122,14 @@ export async function licensesView(root, ctx)
         if (entry.project)
         {
             const link = document.createElement('a');
+            link.className = 'license-website';
             link.href = entry.project;
             link.textContent = ctx.t('Website', 'サイト');
             link.append(uiIcon('external-link'));
             link.setAttribute('aria-label', entry.name + ' · ' + ctx.t('Project website (opens in a new tab)', 'プロジェクトサイトを新しいタブで開く'));
             link.target = '_blank';
             link.rel = 'noopener noreferrer';
-            section.append(link);
+            meta.lastElementChild.append(link);
         }
         const notices = document.createElement('div');
         notices.className = 'license-notices';
@@ -144,7 +145,7 @@ export async function licensesView(root, ctx)
             const close = ctx.button(ctx.t('Close notice', '本文を閉じる'), () =>
             {
                 details.open = false;
-                summary.focus();
+                summary.focus({ preventScroll: false });
             }, 'quiet');
             content.append(text, close);
             details.append(summary, content);

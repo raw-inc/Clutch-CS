@@ -30,6 +30,12 @@
         grid-column: 1 / -1;
     }
 
+    .group-records .group-policy {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+
     .group-run-actions {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -37,7 +43,6 @@
     }
 
     .group-run-actions > button {
-        white-space: normal;
         padding-inline: 5px;
     }
 }

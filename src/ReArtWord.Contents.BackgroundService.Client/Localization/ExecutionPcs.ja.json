@@ -7,7 +7,7 @@
   "Run on one PC": "1 台で実行",
   "Run on every selected PC": "全候補PCで実行",
   "Connect PC selection nodes to the execution PC input. All-PC execution requires an explicit selection.": "実行PC入力へ選択ノードを接続します。全候補PCでの実行には、候補の明示が必要です。",
-  "Connect PC selection nodes; multiple connections are allowed.": "PC選択ノードを接続します。複数接続できます。",
+  "Connect PC selection nodes; multiple connections are allowed.": "PC選択ノードを接続できます（複数可）。",
   "Execution PC selection; multiple selections can be combined": "実行PCの選択条件です。複数の候補を合わせられます。",
   "Select execution PCs": "実行PCを選択",
   "Select PCs ({0})": "PCを選択（{0}台）",
@@ -26,5 +26,5 @@
   "selected": "選択したPC",
   "all": "すべて",
   "percent": "使用率",
-  "bytes": "使用量（バイト）"
+  "bytes": "バイト"
 }

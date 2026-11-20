@@ -1,8 +1,8 @@
 .state-picker {
     display: grid;
     gap: 8px;
-    border-bottom: 1px solid var(--line);
-    padding: 14px;
+    margin: 0 12px 12px;
+    padding: 0;
     font-size: 12px;
 }
 

@@ -28,7 +28,7 @@ public sealed partial class CollaborationOverlay
     /// <returns>テーマに合う明るさの色です。</returns>
     internal static string Color(Guid id)
     {
-        string hue = (BitConverter.ToUInt16(id.ToByteArray()) % 360).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        string hue = (140 + BitConverter.ToUInt16(id.ToByteArray()) % 166).ToString(System.Globalization.CultureInfo.InvariantCulture);
         return "light-dark(hsl(" + hue + " 62% 30%), hsl(" + hue + " 62% 72%))";
     }
 

@@ -1,4 +1,4 @@
-import { node, heading, action, checkbox, table } from './dom.js';
+import { node, heading, action, checkbox, table, targetHosts } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 
 /** 明示選択と物理NICの既定選択から、送信対象を決めます。
@@ -36,6 +36,7 @@ function renderHost(root, ctx, state, draft, actionArea)
     for (const adapter of state.snapshot.data.inventory.interfaces)
     {
         const check = checkbox('', selected.has(adapter.id));
+        check.root.classList.add('hm-row-check');
         check.control.setAttribute('aria-label', adapter.name);
         check.control.disabled = !editable;
         check.control.onchange = () =>
@@ -93,7 +94,7 @@ function renderHost(root, ctx, state, draft, actionArea)
 
     updateReview();
     const row = node('div', '', 'hm-selection-bar');
-    row.append(node('strong', ctx.t('Target hosts') + ': ' + state.host.target.hostId), save);
+    row.append(node('strong', targetHosts(ctx, [state.host])), save);
     actionArea.append(row);
     root.append(section);
 }

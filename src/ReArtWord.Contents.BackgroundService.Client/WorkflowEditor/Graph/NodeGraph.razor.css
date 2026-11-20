@@ -134,7 +134,7 @@
     fill: var(--panel);
     stroke: color-mix(in srgb, var(--control) 42%, var(--line));
     rx: var(--radius-panel);
-    stroke-width: 1px;
+    stroke-width: 1.5px;
     vector-effect: non-scaling-stroke;
 }
 
@@ -158,8 +158,8 @@
 
 .graph-node .node-kind {
     fill: var(--category-color);
-    font: 8px Consolas, monospace;
-    letter-spacing: 0.6px;
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.25px;
     pointer-events: none;
 }
 
@@ -177,7 +177,7 @@
 }
 
 .port-caption small {
-    font: 500 12px/12px var(--font-ui);
+    font: 500 13px/12px var(--font-ui);
     color: var(--muted);
 }
 

@@ -1,4 +1,7 @@
 {
+  "Stopping CoreService also clears temporary tracing. To keep it running, restore normal tracing.": "停止を要求すると一時追跡も解除されます。稼働を続ける場合は「通常の記録に戻す」を選んでください。",
+  "Request CoreService stop": "CoreService の停止を要求",
+  "Affected peers": "対象ピア",
   "Select scope by node or host": "ノード・ホストから設定範囲を選ぶ",
   "Missing": "値なし",
   "Resource": "リソース",

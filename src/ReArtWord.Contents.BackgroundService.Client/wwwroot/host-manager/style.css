@@ -82,12 +82,6 @@
     color: var(--on-accent);
 }
 
-.host-manager .danger {
-    color: var(--warn);
-    border-color: color-mix(in srgb, var(--warn) 35%, var(--line));
-    background: transparent;
-}
-
 .host-manager .hm-icon-button {
     font-size: 0;
     width: 30px;
@@ -890,10 +884,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 20px;
-    padding: 15px 22px;
+    gap: 12px;
+    padding: 14px 22px;
     border-bottom: 1px solid var(--line);
-    background: var(--panel);
+    background: var(--card);
     flex: none;
 }
 
@@ -950,9 +944,9 @@
     align-items: center;
     justify-content: flex-end;
     gap: 8px;
-    padding: 13px 22px;
+    padding: 10px 22px;
     border-top: 1px solid var(--line);
-    background: var(--panel);
+    background: var(--card);
     flex: none;
 }
 
@@ -1489,10 +1483,18 @@
     gap: 4px;
 }
 
-.hm-protocol-change {
+.hm-protocol-change:not([hidden]) {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     color: var(--muted);
     white-space: nowrap;
     font-size: 13px;
+}
+
+.hm-protocol-change .ui-icon {
+    width: 18px;
+    height: 18px;
 }
 
 .hm-protocol[data-pending="true"] {
@@ -1714,7 +1716,7 @@
 }
 
 .hm-host-list label:has(:checked) {
-    background: var(--accent-soft);
+    background: color-mix(in srgb, var(--accent) 17%, var(--card));
     border-color: var(--accent);
 }
 
@@ -1949,8 +1951,8 @@
     overflow-wrap: anywhere;
 }
 
-.hm-section .hm-actions .danger,
-.hm-hosts-editor .danger {
+.hm-section .hm-actions button.danger:enabled,
+.hm-hosts-editor button.danger:enabled {
     border-color: var(--danger);
 }
 
@@ -1963,7 +1965,7 @@
 }
 
 :root .hm-host:has(input:focus-visible):not(:has(input:checked)) {
-    background: var(--panel);
+    background: var(--card);
 }
 
 .hm-tabs.workspace-index button:focus-visible {
@@ -2103,6 +2105,12 @@
     min-height: 34px;
 }
 
+@media (max-width: 680px) {
+    .hm-view .record-table td > .hm-actions button {
+        min-height: 44px;
+    }
+}
+
 .hm-view .hm-button.danger:not(:disabled),
 .hm-dialog .hm-button.danger:not(:disabled) {
     border-color: var(--danger);
@@ -2157,6 +2165,7 @@
 }
 
 .hm-view .hm-record-link {
+    display: inline;
     color: var(--ink);
     text-decoration: underline;
     text-underline-offset: 3px;
@@ -2164,6 +2173,7 @@
     min-height: 0;
     border: 0;
     background: transparent;
+    box-shadow: none;
 }
 
 .hm-view .hm-record-link:hover {
@@ -2340,8 +2350,18 @@
     color: var(--disabled-ink);
 }
 
+.hm-schedule-rows {
+    display: grid;
+    gap: 12px;
+}
+
+.hm-schedule-rows:not(:empty) {
+    margin-block-end: 12px;
+}
+
 .hm-schedule-row {
     border: 1px solid var(--line);
+    border-radius: var(--radius-control);
     padding: 12px;
 }
 
@@ -2350,7 +2370,7 @@
 }
 
 .hm-view .hm-muted.hm-inline-hint {
-    margin-block: 0 12px;
+    margin-block: -10px 6px;
     color: var(--muted);
     font-size: 12px;
 }
@@ -2375,4 +2395,33 @@
 .hm-selection-bar details .record-table,
 .hm-view-actions .record-table {
     font-size: 13px;
+}
+
+.hm-dialog-title > button.quiet {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+}
+
+.hm-view select:disabled {
+    opacity: 1;
+}
+
+@media (max-width: 680px) {
+    .hm-table-wrap .record-table td:has(> .hm-record-name, > .hm-row-check) {
+        align-items: start;
+    }
+
+    .hm-row-check {
+        min-height: 0;
+        margin: 0;
+    }
+
+    .hm-firewall-form .hm-profile-scope {
+        gap: 0;
+    }
+
+    .hm-firewall-form .hm-profile-scope .hm-toolbar {
+        margin-block: 0;
+    }
 }

@@ -283,14 +283,7 @@
 }
 
 .log-technical {
-    margin-top: 16px;
-    padding-top: 12px;
-    border-top: 1px solid var(--line);
-}
-
-.log-technical > summary {
-    color: var(--muted);
-    font-size: 12px;
+    margin-top: 12px;
 }
 
 .log-missing {
@@ -309,9 +302,20 @@
     }
 
     .log-page .log-detail {
-        align-self: start;
+        align-self: stretch;
+        display: flex;
+        flex-direction: column;
         position: sticky;
         top: 16px;
+        max-height: min(76dvh, 49rem);
+    }
+
+    .log-detail-scroll {
+        flex: 1 1 auto;
+    }
+
+    .log-detail-actions {
+        flex-shrink: 0;
     }
 }
 

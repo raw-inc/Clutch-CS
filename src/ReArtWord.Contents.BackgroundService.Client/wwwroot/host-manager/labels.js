@@ -309,6 +309,8 @@ export const keys = [
     "Search hosts",
     "Target hosts",
     "count.interfaces",
+    "count.protocolChanges",
+    "count.changedInterfaces",
     "count.variables",
     "count.operations",
     "count.rules",

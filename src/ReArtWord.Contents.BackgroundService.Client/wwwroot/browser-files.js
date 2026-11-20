@@ -1,3 +1,4 @@
+import { setControlLabel } from './ui-icons.js';
 import { hostIds, resolveHosts, currentPeer } from './file-transfer-selection.js';
 import { uploadBrowserFile, uploadBrowserDirectory } from './browser-file-upload.js';
 import { appendFileRows } from './file-pane-rows.js';
@@ -13,7 +14,7 @@ export async function browserFilesView(root, ctx)
 {
     root.className = 'files-tool';
     const toolbar = document.createElement('div');
-    toolbar.className = 'tool-toolbar file-transfer-scope';
+    toolbar.className = 'tool-toolbar file-transfer-scope browser-file-scope tool-connection';
     const cluster = document.createElement('select'), host = document.createElement('select');
     cluster.setAttribute('aria-label', ctx.t('Cluster', 'クラスタ'));
     host.setAttribute('aria-label', ctx.t('Host', 'ホスト'));
@@ -35,13 +36,13 @@ export async function browserFilesView(root, ctx)
     let peers = [], target, localRoot, busy = false, disposed = false, transfer, drag, choosing = false, jobTimer;
     const jobs = [], panes = [];
     const reload = ctx.button(ctx.t('Refresh hosts', 'ホスト一覧を更新'), loadAsync);
-    reload.prepend(ctx.icon('refresh'));
+    setControlLabel(reload, ctx.icon('refresh'));
     const clusterLabel = document.createElement('label'), hostLabel = document.createElement('label');
     clusterLabel.textContent = ctx.t('Cluster', 'クラスタ');
     hostLabel.textContent = ctx.t('Host', 'ホスト');
     clusterLabel.append(cluster);
     hostLabel.append(host);
-    toolbar.append(clusterLabel, hostLabel, reload, status);
+    toolbar.append(clusterLabel, hostLabel, status, reload);
 
     /** 現在の接続・選択・処理中の状態を操作欄へ反映します。 */
     function updateControls()
@@ -349,7 +350,7 @@ export async function browserFilesView(root, ctx)
             {
                 const empty = document.createElement('p');
                 empty.className = 'remote-empty';
-                empty.textContent = local && !localRoot ? ctx.t('Choose a folder or files on this device.', 'この端末のフォルダーまたはファイルを選択してください。') : ctx.t('This folder is empty.', 'このフォルダーは空です。');
+                empty.textContent = local && !localRoot ? ctx.t('Choose a folder or files on this device.', 'フォルダーかファイルを選んでください。') : ctx.t('This folder is empty.', 'このフォルダーは空です。');
                 tree.append(empty);
             }
             drop(tree, state.directory);

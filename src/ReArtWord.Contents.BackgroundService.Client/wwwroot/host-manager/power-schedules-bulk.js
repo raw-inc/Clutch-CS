@@ -53,7 +53,8 @@ function openBulk(ctx, panels, signal, mode)
         }
         targets.add([...cells, status]);
     }
-    const apply = action(ctx, applyKey, mode === disable ? 'stop' : 'check', async () =>
+    const cancel = ctx.button('Cancel', dialog.close);
+    const apply = action(ctx, applyKey, mode === disable ? 'pause' : 'check', async () =>
     {
         if (submitted || signal.aborted)
         {
@@ -66,6 +67,7 @@ function openBulk(ctx, panels, signal, mode)
         const template = form?.read();
         const schedules = snapshots.map(snapshot => template ? structuredClone(template) : snapshot.schedules.map(item => ({ ...item, enabled: mode === enable })));
         submitted = true;
+        cancel.textContent = ctx.t('Close');
         apply.disabled = true;
         editor.inert = true;
         panels.forEach(panel => panel.setHeld(true));
@@ -109,7 +111,7 @@ function openBulk(ctx, panels, signal, mode)
         }
     }, mode !== disable);
     apply.classList.toggle('danger', mode === disable);
-    dialog.footer.append(ctx.button('Close', dialog.close), apply);
+    dialog.footer.append(cancel, apply);
     signal.addEventListener('abort', dialog.close, { once: true });
     dialog.element.addEventListener('close', () => signal.removeEventListener('abort', dialog.close), { once: true });
 }

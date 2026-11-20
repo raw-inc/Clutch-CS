@@ -125,6 +125,15 @@ export function hostCount(ctx, count)
     return count + ' ' + ctx.t(count === 1 ? 'hostCountOne' : 'hostCountUnit');
 }
 
+/** 下部の操作欄に、処理対象の台数と名前を示します。
+ * @returns 操作対象の表示名です。
+ */
+export function targetHosts(ctx, hosts)
+{
+    const names = hosts.map(host => host.target.hostId).join(', ');
+    return ctx.t('Target hosts') + ': ' + hostCount(ctx, hosts.length) + ' · ' + names;
+}
+
 /** 一覧の見出しに対象名と表示件数を示します。
  * @returns 言語に合わせた件数表記です。
  */

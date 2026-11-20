@@ -4,14 +4,46 @@
     inset-block-start: var(--control-label-offset);
 }
 
-:where(.dialog-content, .hm-dialog-body, .desktop-popover-content, .record-detail-scroll) {
-    scrollbar-color: var(--control) var(--panel);
-    background:
-        linear-gradient(var(--panel) 55%, transparent) center top / 100% 24px local,
-        linear-gradient(transparent, var(--panel) 45%) center bottom / 100% 24px local,
-        linear-gradient(color-mix(in srgb, var(--ink) 17%, transparent), transparent) center top / 100% 9px scroll,
-        linear-gradient(transparent, color-mix(in srgb, var(--ink) 17%, transparent)) center bottom / 100% 9px scroll;
-    background-repeat: no-repeat;
+clutch-scroll-area {
+    --scroll-edge: light-dark(rgb(23 24 29 / 20%), rgb(0 0 0 / 64%));
+
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+}
+
+clutch-scroll-area > :first-child {
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-color: var(--control) transparent;
+    overscroll-behavior: contain;
+}
+
+clutch-scroll-area::before,
+clutch-scroll-area::after {
+    position: absolute;
+    z-index: 2;
+    inset-inline: 0;
+    height: 10px;
+    pointer-events: none;
+}
+
+clutch-scroll-area[data-scroll-before]::before {
+    content: "";
+    inset-block-start: 0;
+    background: linear-gradient(var(--scroll-edge), transparent);
+}
+
+clutch-scroll-area[data-scroll-after]::after {
+    content: "";
+    inset-block-end: 0;
+    background: linear-gradient(transparent, var(--scroll-edge));
+}
+
+:lang(ja) :where(p, .help, .field-note, .empty, .empty-state) {
+    word-break: auto-phrase;
 }
 
 .search-field {
@@ -493,11 +525,14 @@ input[type="range"] {
 input[type="file"]::file-selector-button {
     margin-inline-end: 8px;
     padding: 5px 10px;
-    border: 1px solid var(--control);
+    border: 1px solid var(--button-line);
+    border-bottom-color: var(--button-line-bottom);
     border-radius: var(--radius-control);
     background: var(--button-face);
     color: var(--ink);
     font: inherit;
+    font-weight: 600;
+    box-shadow: var(--button-shadow);
 }
 
 @media (forced-colors: active) {
@@ -532,9 +567,14 @@ input[type="file"]::file-selector-button {
     align-items: center;
     min-height: 36px;
     padding-inline: 12px;
-    border: 1px solid var(--control);
+    border: 1px solid var(--button-line);
+    border-bottom-color: var(--button-line-bottom);
     border-radius: var(--radius-control);
     background: var(--button-face);
+    color: var(--ink);
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: var(--button-shadow);
 }
 
 .file-picker-control > span + span {
@@ -561,6 +601,7 @@ input[type="file"]:disabled::file-selector-button,
     border-color: var(--disabled-line);
     background: var(--disabled-face);
     color: var(--disabled-ink);
+    box-shadow: none;
 }
 
 .file-picker-control:focus-within > span:first-child {
@@ -599,6 +640,10 @@ select:not([multiple], [size]):enabled {
     border-radius: 0;
 }
 
+.pc-display-toggle button[aria-pressed="false"] {
+    background: transparent;
+}
+
 .pc-display-toggle button[aria-pressed="true"] {
     box-shadow: inset 0 -2px var(--accent);
 }
@@ -630,17 +675,16 @@ summary {
     position: absolute;
     inset-block-start: 50%;
     inset-inline-end: 12px;
-    translate: 0 calc(-50% + var(--control-label-offset));
-    width: 8px;
-    height: 8px;
-    border: solid currentcolor;
-    border-width: 0 2px 2px 0;
-    transform: rotate(-45deg);
+    translate: 0 -50%;
+    width: 12px;
+    height: 12px;
+    background: currentcolor;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='m4 2 4 4-4 4' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
     pointer-events: none;
 }
 
 :where(details:not(.route-menu, .desktop-menu))[open] > summary::after {
-    transform: rotate(45deg);
+    transform: rotate(90deg);
 }
 
 :where(details:not(.route-menu, .desktop-menu)) > summary:hover {

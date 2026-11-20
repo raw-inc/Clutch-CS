@@ -34,7 +34,7 @@
             <rect class="node-header" x="1" y="1" width="@(CardWidth(node)-2)" height="50" pointer-events="none" />
             <rect class="category-strip" x="1" y="9" width="4" height="33" rx="2" pointer-events="none" />
             <NodeNameLabel Node="node" Descriptor="descriptor" Width="@(CardWidth(node)-24)" />
-            <foreignObject x="12" y="32" width="@(CardWidth(node)-92)" height="18" class="node-identity">
+            <foreignObject x="12" y="32" width="@(CardWidth(node)-110)" height="18" class="node-identity">
                 <div xmlns="http://www.w3.org/1999/xhtml" title="@node.Id">@(string.IsNullOrWhiteSpace(node.LogicalName) ? node.Id : Ui.NodeName(descriptor))</div>
             </foreignObject>
             <text x="@(CardWidth(node)-12)" y="45" text-anchor="end" class="node-kind">@Ui[descriptor is null?"?":descriptor.IsValueOperation?"VALUE":descriptor.Kind==ENodeKind.Source?"SOURCE":"ACTION"]<title>@Ui[GraphPresentation.CategoryName(descriptor?.Category??string.Empty)]</title></text>
