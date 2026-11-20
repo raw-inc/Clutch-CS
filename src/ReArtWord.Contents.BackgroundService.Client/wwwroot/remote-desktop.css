@@ -52,34 +52,10 @@
 }
 
 .desktop-connection {
-    display: flex;
     flex: none;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-    margin: 0 6px;
-    color: var(--muted);
     align-self: center;
-    border-radius: var(--radius-control);
-    padding: 4px 8px;
-    font-size: 13px;
-}
-
-.desktop-connection::before {
-    content: '';
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--muted);
-    flex: none;
-}
-
-.desktop-connection[data-state="connected"]::before {
-    background: var(--green);
-}
-
-.desktop-connection[data-state="pending"]::before {
-    background: var(--warn);
+    justify-self: start;
+    margin: 0;
 }
 
 .desktop-keybar {
@@ -99,14 +75,6 @@
     border-radius: var(--radius-control);
     background: transparent;
     color: var(--muted);
-}
-
-.desktop-key-separator {
-    height: 22px;
-    width: 1px;
-    flex: none;
-    margin: 0 3px;
-    background: var(--line);
 }
 
 .desktop-rail {
@@ -176,7 +144,7 @@
     flex-direction: row-reverse;
 }
 
-.desktop-toolbar .desktop-action[data-muted="true"] {
+.desktop-quick-controls .desktop-action[data-muted="true"] {
     color: var(--warn);
     background: color-mix(in srgb, var(--warn) 12%, var(--panel));
     border-color: color-mix(in srgb, var(--warn) 40%, var(--line));
@@ -596,8 +564,7 @@
     }
 
     .desktop-targets .desktop-connection {
-        grid-column: 1 / -1;
-        display: inline-flex;
+        justify-self: start;
     }
 }
 
@@ -622,11 +589,6 @@
 
 .desktop-popover-content > p {
     white-space: pre-line;
-}
-
-.desktop-permission.warn {
-    border-inline-start: 3px solid var(--warn);
-    padding-inline-start: 10px;
 }
 
 .desktop-action .ui-icon {
@@ -663,7 +625,29 @@
 }
 
 .desktop-workspace[data-state="connected"] .desktop-targets {
-    padding-block: 0;
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding-block: 3px;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-targets > strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-targets .desktop-labeled {
+    min-height: 34px;
+    height: 34px;
+    padding-block: 4px;
+}
+
+.desktop-workspace .desktop-targets .desktop-reload {
+    min-width: 0;
 }
 
 .desktop-workspace[data-state="connected"] .desktop-targets label:has(:disabled) {
@@ -706,32 +690,23 @@
     min-height: 0;
     overflow-y: auto;
     padding: 4px 16px 16px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--control) transparent;
+    scrollbar-color: var(--control) var(--card);
     scrollbar-gutter: stable;
+    overscroll-behavior: contain;
 }
 
-.desktop-targets button,
-.desktop-targets .desktop-connection {
+.desktop-targets button {
     min-height: 40px;
 }
 
-.desktop-workspace[data-state="connected"] .desktop-connect:disabled {
+.desktop-workspace[data-state="connected"] :is(.desktop-connect, .desktop-reload):disabled {
     display: none;
 }
 
 .desktop-popover-content :is(select, input):disabled {
-    color: var(--muted);
+    color: var(--disabled-ink);
+    border-color: var(--disabled-line);
     opacity: 1;
-}
-
-.desktop-targets .desktop-connection {
-    align-self: center;
-    align-items: center;
-    display: inline-flex;
-    padding-inline: 8px;
-    border-radius: var(--radius-control);
-    background: var(--nested);
 }
 
 .desktop-workspace .desktop-targets > .desktop-connect,
@@ -741,9 +716,14 @@
 }
 
 .desktop-popover-content button[role="switch"] {
-    display: inline-flex;
+    display: flex;
     align-items: center;
+    justify-content: start;
+    width: 100%;
     gap: 8px;
+    background: transparent;
+    border-color: transparent;
+    padding-inline: 0;
 }
 
 .desktop-popover-content button[role="switch"]::before {
@@ -821,6 +801,7 @@
 
 .desktop-workspace[data-state="connected"] {
     grid-template-columns: auto minmax(0, 1fr);
+    background: var(--panel);
     border: 0;
     border-radius: 0;
 }
@@ -876,18 +857,11 @@
 
     .desktop-workspace[data-state="connected"] .desktop-targets {
         display: flex;
-        flex: 1 1 auto;
-        flex-wrap: nowrap;
-        align-items: center;
-        gap: 6px;
-        min-width: 0;
         padding: 2px 4px;
     }
 
     .desktop-workspace[data-state="connected"] .desktop-targets > strong {
         flex: 1;
-        min-width: 0;
-        overflow-wrap: anywhere;
         line-height: 1.15;
     }
 
@@ -944,21 +918,37 @@
     min-height: 40px;
 }
 
-.desktop-workspace:not([data-state="connected"]) .desktop-deck .desktop-targets .desktop-connection {
-    align-self: end;
+.desktop-workspace:not([data-state="connected"]) .desktop-targets .desktop-connection {
+    align-self: center;
 }
 
 .desktop-popover > footer:not(:empty) {
     background: var(--card);
-    padding: 8px;
+    padding: 8px 16px;
 }
 
 .desktop-permission.warn,
 .desktop-popover-content .desktop-settings-notice {
-    background: var(--warn-soft);
-    color: var(--warn);
+    display: flex;
+    align-items: start;
+    gap: 6px;
+    font-size: 13px;
     padding: 8px;
     border-radius: var(--radius-control);
+}
+
+.desktop-permission.warn {
+    background: var(--warn-soft);
+    color: var(--warn);
+}
+
+.desktop-popover-content .desktop-settings-notice {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.desktop-popover-content :is(.desktop-settings-notice, .desktop-permission) .ui-icon {
+    flex: none;
 }
 
 @media (max-width: 500px) {
@@ -981,7 +971,11 @@
     .desktop-workspace[data-state="connected"] .desktop-targets {
         grid-row: 1;
         grid-column: 1 / -1;
-        padding-inline: 8px;
+        padding-inline: 12px;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-viewport[data-single-monitor="true"][data-scale="fit"]:not(:fullscreen) {
+        align-items: start;
     }
 
     .desktop-workspace[data-state="connected"] .desktop-rail {
@@ -1019,4 +1013,59 @@
 
 .desktop-display-controls .desktop-screen-tabs {
     flex-wrap: wrap;
+}
+
+.desktop-quick-controls {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.desktop-workspace .desktop-quick-controls .desktop-action:not(:disabled) {
+    border-color: var(--line);
+}
+
+.desktop-toolbar .desktop-labeled[aria-pressed="false"]:not(:disabled) {
+    border-color: var(--control);
+}
+
+@media (min-width: 1001px) {
+    .desktop-workspace:not([data-state="connected"]) {
+        grid-template-columns: 164px minmax(0, 1fr);
+    }
+
+    .desktop-workspace:not([data-state="connected"]) .desktop-popover {
+        left: 168px;
+        width: min(320px, calc(100% - 172px));
+    }
+
+    .desktop-workspace:not([data-state="connected"]) .desktop-rail {
+        align-items: stretch;
+        padding-inline: 6px;
+    }
+
+    .desktop-workspace:not([data-state="connected"]) .desktop-rail :is(summary, button.desktop-action) {
+        justify-content: start;
+        width: 100%;
+        min-height: 36px;
+        font-size: 12px;
+        gap: 6px;
+    }
+
+    .desktop-workspace:not([data-state="connected"]) .desktop-rail :is(summary, button.desktop-action) .ui-icon {
+        order: -1;
+        flex: none;
+    }
+
+    .desktop-workspace:not([data-state="connected"]) .desktop-rail button.desktop-action::after {
+        content: attr(aria-label);
+    }
+}
+
+@media (max-width: 390px) {
+    .desktop-workspace[data-state="connected"] .desktop-rail :is(summary, .desktop-action) {
+        width: 28px;
+        height: 32px;
+        padding-inline: 3px;
+    }
 }

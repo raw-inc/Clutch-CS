@@ -37,12 +37,15 @@ export function createDesktopCodecSettings(body, ctx, numberSetting, apply, mode
     });
     mode.setAttribute('aria-label', ctx.t('Quality target mode', '品質指定モード'));
     const quality = numberSetting(ctx.t('Quality value (lower is better)', '品質値（小さいほど高画質）'), 23, 1, 51);
-    const explanation = document.createElement('p');
+    const pHelp = document.createElement('p'), bHelp = document.createElement('p'), qualityHelp = document.createElement('p');
+    pHelp.textContent = ctx.t('A P-frame limit also limits the keyframe interval to P + 1.', 'Pフレーム数を指定すると、キーフレーム間隔も最大「Pフレーム数＋1」になります。');
+    qualityHelp.textContent = ctx.t('CRF/CQ tracks quality. Traffic varies without a bitrate target or cap, and replay uses at most 16 frames. Quality values differ by encoder.',
+        'CRF／CQで画質を指定すると、ビットレートに上限がなく、映像に応じて通信量が変わります。再復号は最大16フレームです。同じ数値でもエンコーダーによって画質は異なります。');
     const capability = document.createElement('p');
     capability.setAttribute('role', 'status');
     const commit = ctx.button(ctx.t('Apply codec settings', 'コーデック設定を反映'), apply);
     commit.className = 'primary codec-apply';
-    body.append(custom, interval.wrapper, pMode, p.wrapper, bMode, b.wrapper, mode, quality.wrapper, explanation, capability);
+    body.append(custom, interval.wrapper, pMode, p.wrapper, pHelp, bMode, b.wrapper, bHelp, mode, quality.wrapper, qualityHelp, capability);
     actions.append(commit);
     for (const field of [interval.field, p.field, b.field, quality.field])
     {
@@ -72,12 +75,10 @@ export function createDesktopCodecSettings(body, ctx, numberSetting, apply, mode
         mode.disabled = unavailable || !enabled;
         showSwitch(mode, ctx.t('Quality target', '品質指定'), qualityMode);
         commit.disabled = unavailable;
-        explanation.textContent = (codec === expectedVp9 ? ctx.t('VP9: B-frame control is unavailable; P is the inter-frame limit. ', 'VP9ではBフレーム指定は使用しません。Pは非キーフレーム数の上限です。') :
-            ctx.t('B frames add delay and keep capturing even when the desktop is static. ', 'Bフレームは遅延を増やし、静止中も映像取得を続けるため負荷・通信量が増えます。')) +
-            ctx.t('P is automatic unless an explicit limit is selected. An explicit P limit also bounds the keyframe interval by P + 1. Quality mode uses CRF/CQ without a bitrate target or cap; bandwidth varies with the image. Replay is limited to 16 frames in quality mode. Values are not equivalent across encoders.',
-                'Pは自動が既定です。P上限を指定した場合はキーフレーム間隔をP上限＋1でも制限します。品質指定はCRF/CQで、ビットレートの目標・上限を使用せず、映像に応じて通信量が変わります。品質指定では再復号を最大16フレームに制限します。同じ数値でもエンコーダー間で画質は一致しません。');
+        bHelp.textContent = codec === expectedVp9 ? ctx.t('VP9 has no B-frame setting.', 'VP9ではBフレームを指定できません。') :
+            ctx.t('B frames add delay and keep capturing while the desktop is static.', 'Bフレームを使うと遅延が増え、画面が静止している間も映像を取得します。');
         capability.textContent = connected && !supported ? ctx.t('Update the Core and ClientHost to use codec details.', 'コーデック詳細設定を使用するにはCoreとClientHostを更新してください。') :
-            ctx.t('Apply restarts video capture only. Disable custom settings and apply to use the short-keyframe-interval mode.', '反映すると映像取得を切り替えます。詳細設定をOFFにして反映すると、短いキーフレーム間隔の設定へ戻ります。');
+            ctx.t('Apply restarts video capture only. Disable custom settings and apply to use the short-keyframe-interval mode.', '設定を反映すると映像の取得を再開します。詳細設定を無効にすると、短いキーフレーム間隔の設定に戻ります。');
     }
 
     /** 入力中の数値を読み、確定時だけ整数と範囲を検証します。
@@ -175,5 +176,5 @@ function showSwitch(button, label, enabled)
 {
     button.setAttribute('role', 'switch');
     button.setAttribute('aria-checked', String(enabled));
-    button.textContent = label + ' · ' + (enabled ? 'ON' : 'OFF');
+    button.textContent = label;
 }

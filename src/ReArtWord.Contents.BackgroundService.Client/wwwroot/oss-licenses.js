@@ -37,7 +37,9 @@ export async function licensesView(root, ctx)
     const searchField = document.createElement('span');
     searchField.className = 'search-field';
     searchField.append(uiIcon('search'), search);
-    filter.append(label, searchField, licenseLabel, license, count);
+    label.append(searchField);
+    licenseLabel.append(license);
+    filter.append(label, licenseLabel, count);
     root.append(filter);
     filter.id = 'license-filters';
     const cards = document.createElement('div');

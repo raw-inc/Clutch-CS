@@ -17,20 +17,20 @@ export async function filesView(root, ctx)
     const clusters = document.createElement('select');
     clusterLabel.append(clusters);
     const clusterStatus = document.createElement('p');
-    clusterStatus.className = 'small muted';
+    clusterStatus.className = 'tool-status';
     clusterStatus.setAttribute('role', 'status');
     const split = document.createElement('div');
     split.className = 'file-workspace';
     const queue = document.createElement('section');
     queue.className = 'transfer-jobs';
     const toolbar = document.createElement('div');
-    toolbar.className = 'tool-toolbar';
+    toolbar.className = 'tool-toolbar file-transfer-scope';
     const help = document.createElement('details');
     help.className = 'tool-help';
     const summary = document.createElement('summary');
     summary.textContent = ctx.t('Transfer help', '転送の使い方');
     help.append(summary, explanation);
-    toolbar.append(clusterLabel, clusterStatus);
+    toolbar.append(clusterLabel);
     root.append(toolbar, help, split, queue);
     let peers = await ctx.peers(), drag = null, disposed = false, timer, offset = 0;
     const panes = [];
@@ -73,7 +73,7 @@ export async function filesView(root, ctx)
         drag = null;
         const resolved = resolveHosts(peers, panes.map(pane => pane.hostId), clusters.value);
         clusterStatus.textContent = resolved.problem ? ctx.t('No available common cluster. Select hosts in the same cluster or refresh discovery.', '利用可能な共通クラスタがありません。同じクラスタのホストを選ぶか、一覧を更新してください。')
-            : resolved.clusterId ? ctx.t('Using cluster: ', '使用クラスタ: ') + resolved.clusterId : '';
+            : resolved.clusterId ? ctx.t('Using cluster: ', '転送に使用するクラスタ：') + resolved.clusterId : '';
         await Promise.all(panes.map((pane, index) => pane.bind(resolved.peers[index])));
     }
 
@@ -394,7 +394,7 @@ export async function filesView(root, ctx)
     }
 
     panes.push(pane(0), pane(1));
-    toolbar.append(reload);
+    toolbar.append(reload, clusterStatus);
 
     /** 処理結果を照会し、進捗の表示へ反映します。
      * @returns 処理の完了と結果を伝えるPromiseです。

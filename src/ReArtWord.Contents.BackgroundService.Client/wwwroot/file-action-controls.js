@@ -120,14 +120,15 @@ export function fileActionControls(root, ctx, actions)
                 name.required = true;
                 name.maxLength = 255;
                 name.autofocus = true;
-                const error = document.createElement('p');
+                const error = document.createElement('p'), problem = document.createElement('span');
+                error.append(ctx.icon('warning'), problem);
                 error.id = title.id + '-name-error';
                 error.className = 'file-name-error';
                 error.hidden = true;
                 name.setAttribute('aria-describedby', error.id);
                 name.oninvalid = () =>
                 {
-                    error.textContent = name.validationMessage;
+                    problem.textContent = name.validationMessage;
                     error.hidden = false;
                     name.setAttribute('aria-invalid', 'true');
                 };
@@ -167,7 +168,7 @@ export function fileActionControls(root, ctx, actions)
                 event.preventDefault();
                 if (creating && !validFolderName(name.value))
                 {
-                    name.setCustomValidity(ctx.t('Enter one folder name without path separators or reserved characters.', '「/」や「:」などの記号、予約名、末尾の空白やピリオドは使えません。'));
+                    name.setCustomValidity(ctx.t('Enter one folder name without path separators or reserved characters.', 'スラッシュやコロンなどの記号と予約名は使えません。末尾に空白やピリオドを付けることもできません。'));
                     name.checkValidity();
                     name.focus();
                     return;

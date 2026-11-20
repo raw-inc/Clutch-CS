@@ -20,7 +20,6 @@ export async function signalScopeViewAsync(container, ctx)
     toolbar.className = 'scope-toolbar';
     search.type = 'search';
     search.className = 'scope-search';
-    search.placeholder = 'OSC AND (192.168.10. OR 192.168.20.) AND "/address/to"';
     search.setAttribute('aria-label', ctx.t('Search captured packets', '取得したパケットを検索'));
     search.title = ctx.t('Search table information locally: AND / OR, parentheses and quoted text. Quoted "and" and "or" are literal text.', '一覧情報をブラウザ内で検索します。AND / OR・括弧・引用符に対応。引用符内の"and"や"or"は文字列です。');
     searchError.className = 'scope-search-error';
@@ -52,7 +51,7 @@ export async function signalScopeViewAsync(container, ctx)
 
     const emptyPackets = document.createElement('p');
     emptyPackets.className = 'scope-empty';
-    emptyPackets.textContent = ctx.t('Select a source and start capturing packets.', '取得元を選んでパケット取得を開始できます。');
+    emptyPackets.textContent = ctx.t('Select a source and start capturing packets.', '取得元を選び、取得開始を押してください。');
     const sources = scopeSources(selection, ctx, send, updateControls);
     const start = ctx.button(ctx.t('Start', '取得開始'), () =>
     {
@@ -61,7 +60,7 @@ export async function signalScopeViewAsync(container, ctx)
         sources.pending();
     });
     const stop = ctx.button(ctx.t('Stop', '取得停止'), () => send({ type: 'stop' }));
-    const clear = ctx.button(ctx.t('Clear', 'クリア'), () =>
+    const clear = ctx.button(ctx.t('Clear captured packets', '取得したパケットを消去'), () =>
     {
         send({ type: 'clear' });
         table.clear();
@@ -87,11 +86,20 @@ export async function signalScopeViewAsync(container, ctx)
     showColumns.onchange = () => container.classList.toggle('all-columns', showColumns.checked);
     columns.append(showColumns, document.createTextNode(ctx.t('All columns', 'すべての列')));
     filters.append(filterLabel, latest, display, columns);
+    const sample = document.createElement('p');
+    sample.className = 'scope-filter-example';
+    sample.textContent = ctx.t('Example: OSC AND "/stage"', '入力例：OSC AND "/stage"');
     clear.prepend(ctx.icon('trash'));
-    filters.append(clear);
+    clear.disabled = true;
+    const packetListHeading = document.createElement('div'), packetListTitle = document.createElement('h2'), scrollHint = document.createElement('span');
+    packetListHeading.className = 'scope-packet-heading';
+    packetListTitle.textContent = ctx.t('Captured packets', '取得したパケット');
+    scrollHint.className = 'scope-scroll-hint';
+    scrollHint.textContent = ctx.t('Scroll the list to see more.', '続きは一覧をスクロールして表示');
+    packetListHeading.append(packetListTitle, clear, scrollHint);
     toolbar.append(start, stop);
     selection.prepend(reload);
-    results.append(filters, searchError, status, emptyPackets);
+    results.append(filters, sample, searchError, packetListHeading, status, emptyPackets);
     workspace.append(selection, results);
     selection.prepend(toolbar);
     container.append(workspace);
@@ -121,6 +129,7 @@ export async function signalScopeViewAsync(container, ctx)
         latest.setAttribute('aria-pressed', String(following));
         emptyPackets.hidden = (0) < (view.retained) || sources.running;
         status.classList.toggle('warn', (0) < (view.backendDropped) || (0) < (view.deliveryDropped));
+        clear.disabled = view.retained === 0;
         matched.textContent = view.total.toLocaleString() + ' / ' + view.retained.toLocaleString();
         received.textContent = view.received.toLocaleString();
         merged.textContent = view.duplicates.toLocaleString();

@@ -101,6 +101,7 @@ export function scopeTable(container, ctx, send, report)
         }
         fragment.append(spacer((view.total - view.first - view.rows.length) * height));
         body.replaceChildren(fragment);
+        viewport.dataset.scrollable = String(viewport.clientHeight < viewport.scrollHeight);
         anchor = view.rows[0]?.id ?? null;
         if (follow || requestedAnchor !== null)
         {

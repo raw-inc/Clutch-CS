@@ -9,3 +9,9 @@
 .operation-lookup + .section {
     border-block-start: 1px solid var(--line);
 }
+
+.operation-lookup + .section > h3 {
+    margin-block: 12px 8px;
+    font-size: 16px;
+    letter-spacing: normal;
+}

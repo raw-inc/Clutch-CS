@@ -14,3 +14,23 @@
 .trace-settings .review-heading h2 {
     margin: 0;
 }
+
+@media (max-width: 680px) {
+    .trace-status tbody tr {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 4px 12px;
+    }
+
+    .trace-status tbody tr .trace-workflow {
+        grid-column: 1 / -1;
+        padding: 0 0 4px;
+        border-block-end: 1px solid var(--line);
+    }
+
+    .trace-status tbody tr > td[data-field] {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 2px 0;
+    }
+}

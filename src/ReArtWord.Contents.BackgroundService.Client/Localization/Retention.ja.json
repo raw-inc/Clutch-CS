@@ -34,5 +34,6 @@
   "Captured at": "取得日時",
   "Committed event position": "確定変更の位置",
   "Stored bytes": "保存容量（バイト）",
-  "Compressed": "圧縮済み"
+  "Compressed": "圧縮済み",
+  "Choose a suggestion or enter a time zone ID.": "候補から選ぶか、タイムゾーンIDを入力してください。"
 }

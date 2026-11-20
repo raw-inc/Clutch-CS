@@ -26,6 +26,8 @@ export async function terminalView(root, ctx)
     }, { signal: ctx.signal });
     const peersTree = document.createElement('div');
     const sessions = document.createElement('div');
+    const peerHeading = document.createElement('div'), sessionHeading = document.createElement('div');
+    peerHeading.className = sessionHeading.className = 'terminal-sidebar-heading';
     const panel = document.createElement('section');
     panel.className = 'terminal-panel';
     const toolbar = document.createElement('div');
@@ -141,9 +143,7 @@ export async function terminalView(root, ctx)
         }
         sessionSignature = signature;
         sessions.replaceChildren();
-        const title = document.createElement('h2');
-        title.textContent = ctx.t('Shared sessions', '共有セッション');
-        sessions.append(title);
+        sessions.append(sessionHeading);
         const hint = document.createElement('p');
         hint.className = 'muted';
         hint.textContent = ctx.t('All discovered peers · automatic refresh', '全検出ピア · 自動更新');
@@ -171,11 +171,23 @@ export async function terminalView(root, ctx)
             {
                 total++;
                 const row = document.createElement('div');
-                row.className = 'terminal-session' + (samePeer(peer, selected) && session?.sessionId === value.sessionId ? ' selected' : '');
+                const current = samePeer(peer, selected) && session?.sessionId === value.sessionId;
+                row.className = 'terminal-session' + (current ? ' selected' : '');
+                if (current)
+                {
+                    row.setAttribute('aria-current', 'true');
+                }
                 row.dataset.peer = peerKey(selected);
                 const name = document.createElement('span');
                 name.textContent = summary(value);
                 row.append(name);
+                if (current)
+                {
+                    const indicator = document.createElement('span');
+                    indicator.className = 'badge good';
+                    indicator.textContent = ctx.t('Current session', '接続中のセッション');
+                    row.append(indicator);
+                }
                 const claim = ctx.button(ctx.t('Take over', '接続を引き継ぐ'), () => connectAsync(value, false, selected));
                 const terminate = ctx.button(ctx.t('Terminate', 'セッションを終了'), async () =>
                 {
@@ -391,9 +403,7 @@ export async function terminalView(root, ctx)
         }
         peerSignature = signature;
         peersTree.replaceChildren();
-        const title = document.createElement('h2');
-        title.textContent = ctx.t('Clusters & peers', 'クラスタ・ピア');
-        peersTree.append(title);
+        peersTree.append(peerHeading);
         if (!peers.length)
         {
             const empty = document.createElement('p');
@@ -433,11 +443,7 @@ export async function terminalView(root, ctx)
      */
     function selectPeer()
     {
-        if (peer)
-        {
-            note.textContent = `${peer.clusterId} / ${peer.hostId} / ${peer.peerId}`;
-        }
-        peersTree.querySelectorAll('button').forEach(button => button.classList.toggle('selected', button.dataset.peer === peerKey(peer)));
+        peersTree.querySelectorAll('button[data-peer]').forEach(button => button.classList.toggle('selected', button.dataset.peer === peerKey(peer)));
         return Promise.all([loadShellsAsync(), loadCapabilities()]);
     }
 
@@ -722,7 +728,7 @@ export async function terminalView(root, ctx)
                 capabilities?.administratorReason === expectedCoreadministratorrequired ? ctx.t('Core must run as administrator or SYSTEM. Terminal does not request UAC elevation.', 'Coreを管理者またはSYSTEMで起動してください。TerminalからUAC昇格は行いません。') :
                     ctx.t('An elevated token could not be confirmed on this Core.', 'このCoreで昇格トークンを確認できません。');
         adminHint.hidden = !capabilities || !admin.disabled || unavailable;
-        adminHint.textContent = admin.title;
+        adminHint.textContent = ctx.t('Administrator: ', '管理者実行：') + admin.title;
         shellSelect.disabled = unavailable;
     }
 
@@ -736,6 +742,12 @@ export async function terminalView(root, ctx)
         const connected = !!stream?.ready && !!session && !session.exited;
         connectionState.textContent = connected ? ctx.t('Connected', '接続中') : ctx.t('Disconnected', '未接続');
         connectionState.classList.toggle('good', connected);
+        if (peer)
+        {
+            const target = `${peer.clusterId} / ${peer.hostId} / ${peer.peerId}`;
+            note.textContent = session ? target + ' · ' + ctx.t('Session ', 'セッション ') + session.sessionId.slice(0, 8) : target;
+            note.title = session ? session.sessionId : '';
+        }
         keys.refresh();
         fullscreen.update();
         if (tokenPolicy)
@@ -754,24 +766,24 @@ export async function terminalView(root, ctx)
     screenActions.className = 'terminal-screen-actions';
     sessionActions.append(shellLabel, user, admin, leave);
     screenActions.append(copy, paste, ...fullscreen.buttons);
-    toolbar.append(sessionActions, screenActions, adminHint);
+    toolbar.append(sessionActions, adminHint, screenActions);
     if (tokenPolicy)
     {
         sessionActions.append(tokenPolicy);
     }
-    const sessionHeading = document.createElement('h2');
-    sessionHeading.textContent = ctx.t('Shared sessions', '共有セッション');
+    const peerTitle = document.createElement('h2'), sessionTitle = document.createElement('h2');
+    peerTitle.textContent = ctx.t('Clusters & peers', 'クラスタ・ピア');
+    sessionTitle.textContent = ctx.t('Shared sessions', '共有セッション');
+    const refreshPeers = ctx.button(ctx.t('Refresh peers', 'ピア更新'), list);
+    refreshPeers.prepend(ctx.icon('refresh'));
+    refreshSessions.prepend(ctx.icon('refresh'));
+    peerHeading.append(peerTitle, refreshPeers);
+    sessionHeading.append(sessionTitle, refreshSessions);
+    peersTree.append(peerHeading);
     const empty = document.createElement('p');
     empty.className = 'remote-empty';
     empty.textContent = ctx.t('Loading shared sessions…', '共有セッションを取得中…');
     sessions.append(sessionHeading, empty);
-    const sidebarActions = document.createElement('div');
-    sidebarActions.className = 'toolbar';
-    refreshSessions.prepend(ctx.icon('refresh'));
-    const refreshPeers = ctx.button(ctx.t('Refresh peers', 'ピア更新'), list);
-    refreshPeers.prepend(ctx.icon('refresh'));
-    sidebarActions.append(refreshSessions, refreshPeers);
-    sidebar.prepend(sidebarActions);
     const menu = document.createElement('div');
     menu.className = 'terminal-context-menu';
     menu.hidden = true;

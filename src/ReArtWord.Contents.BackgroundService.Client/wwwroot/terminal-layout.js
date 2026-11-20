@@ -6,6 +6,7 @@
 export function createTerminalLayout(root, host, fit, signal)
 {
     let frame = 0, disposed = false;
+    const compact = window.matchMedia('(max-width: 650px), (max-height: 650px)');
 
     /** 現在の設定と状態から表示を更新します。 */
     function update()
@@ -19,10 +20,7 @@ export function createTerminalLayout(root, host, fit, signal)
         const footer = statusbar && getComputedStyle(statusbar).position === fixed ? statusbar.getBoundingClientRect().height : 0;
         const viewport = globalThis.visualViewport?.height ?? innerHeight;
         const height = document.fullscreenElement === root ? Math.floor(viewport) : Math.max(240, Math.floor(viewport - root.getBoundingClientRect().top - window.scrollY - footer - 12));
-        if (root.style.height !== height + 'px')
-        {
-            root.style.height = height + 'px';
-        }
+        root.style.height = compact.matches && document.fullscreenElement !== root ? '' : height + 'px';
         fit();
     }
 

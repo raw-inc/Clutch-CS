@@ -17,7 +17,7 @@
             @foreach(var item in state.States)
             {
                 <tr>
-                    <td data-field="@Ui["Workflow"]">@item.WorkflowId</td>
+                    <td class="trace-workflow"><strong>@item.WorkflowId</strong></td>
                     <td data-field="@Ui["Saved normal"]">@Flag(item.Saved.Enabled)</td>
                     <td data-field="@Ui["Effective normal"]">@Flag(item.ActiveNormal?.Enabled)</td>
                     <td data-field="@Ui["Current effective decision"]">@Flag(item.Effective.Enabled)</td>

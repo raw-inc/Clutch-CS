@@ -189,6 +189,7 @@
     height: clamp(220px, 40vh, 600px);
     overflow: auto;
     overflow-anchor: none;
+    scrollbar-color: var(--control) var(--raised);
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: var(--radius-control);
@@ -366,7 +367,6 @@
 @media (max-width: 680px) {
     .scope-list {
         overflow-x: auto;
-        scrollbar-gutter: stable;
     }
 
     .scope-packets {
@@ -590,5 +590,44 @@
 
     .scope-filters > :is(select, button) {
         flex: 0 1 auto;
+    }
+}
+
+.scope-packet-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    justify-content: space-between;
+    margin-block-start: 16px;
+}
+
+.scope-packet-heading h2 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.scope-filter-example,
+.scope-scroll-hint {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.scope-filter-example {
+    margin: 6px 12px 0;
+}
+
+.scope-scroll-hint {
+    display: none;
+    flex-basis: 100%;
+}
+
+.scope-results:has(.scope-list[data-scrollable="true"]) .scope-scroll-hint {
+    display: block;
+}
+
+@media (max-width: 680px) {
+    .scope-packet-heading button {
+        min-height: 44px;
     }
 }

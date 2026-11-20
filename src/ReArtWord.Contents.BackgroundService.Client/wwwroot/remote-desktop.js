@@ -60,6 +60,10 @@ export async function desktopView(root, ctx)
     rail.className = 'desktop-rail';
     rail.setAttribute('aria-label', ctx.t('Desktop controls', 'デスクトップ操作'));
     const menus = [];
+    const quickControls = document.createElement('div');
+    quickControls.className = 'desktop-quick-controls';
+    quickControls.setAttribute('role', 'group');
+    quickControls.setAttribute('aria-label', ctx.t('Quick controls', 'よく使う操作'));
 
     /** 設定項目を開閉するメニューを構成します。
      * @returns element・body・triggerを含む結果です。
@@ -77,6 +81,8 @@ export async function desktopView(root, ctx)
         body.className = 'desktop-popover';
         const content = document.createElement('div');
         content.className = 'desktop-popover-content';
+        content.tabIndex = 0;
+        content.setAttribute('aria-label', label);
         const actions = document.createElement('footer');
         const heading = document.createElement('h2');
         heading.textContent = label;
@@ -238,7 +244,6 @@ export async function desktopView(root, ctx)
     screens.setAttribute('role', 'group');
     screens.setAttribute('aria-label', ctx.t('Displays', 'ディスプレイ選択'));
     const connection = document.createElement('span');
-    connection.className = 'desktop-connection';
     connection.setAttribute('role', 'status');
     const empty = document.createElement('div');
     empty.className = 'desktop-empty';
@@ -280,8 +285,10 @@ export async function desktopView(root, ctx)
     audioStatus.setAttribute('role', 'status');
     const codecNote = document.createElement('p');
     const settingsNotice = document.createElement('p');
-    settingsNotice.className = 'small muted';
-    settingsNotice.textContent = ctx.t('Disconnect to change connection settings.', '接続を解除すると設定を変更できます。');
+    settingsNotice.className = 'desktop-settings-notice';
+    const settingsNoticeText = document.createElement('span');
+    settingsNoticeText.textContent = ctx.t('Disconnect to change connection settings.', '接続を解除すると設定を変更できます。');
+    settingsNotice.append(ctx.icon('info'), settingsNoticeText);
     settingsNotice.hidden = true;
     settingsMenu.body.append(settingsNotice);
     settingsMenu.body.append(labeled(ctx.t('Video codec', '映像コーデック'), codec), labeled(ctx.t('Video decoder', '映像デコーダー'), acceleration), fps.wrapper, bitrateMode, bitrate.wrapper, audioBuffer.wrapper);
@@ -403,7 +410,8 @@ export async function desktopView(root, ctx)
     permission.className = 'desktop-permission';
     const measurements = document.createElement('dl');
     measurements.className = 'desktop-details-list';
-    for (const [caption, value] of [[ctx.t('Connection', '接続'), status], [ctx.t('Input permission', '入力権限'), permission], [ctx.t('Audio', '音声'), audioStatus], [ctx.t('Codec', 'コーデック'), codecNote]])
+    const activeEncoder = document.createElement('p');
+    for (const [caption, value] of [[ctx.t('Connection', '接続'), status], [ctx.t('Input permission', '入力権限'), permission], [ctx.t('Audio', '音声'), audioStatus], [ctx.t('Encoder', 'エンコーダー'), activeEncoder], [ctx.t('Video compatibility', '映像の互換動作'), codecNote]])
     {
         const term = document.createElement('dt'), detail = document.createElement('dd');
         term.textContent = caption;
@@ -519,11 +527,14 @@ export async function desktopView(root, ctx)
         if (state !== root.dataset.state)
         {
             controls.open = state !== connectedState && !compactControls;
+            (state === connectedState ? rail : toolbar).append(quickControls);
         }
         connection.textContent = label;
-        connection.dataset.state = state;
+        const pending = 'pending';
+        connection.className = 'badge desktop-connection' + (state === connectedState ? ' good' : state === pending ? ' pending' : '');
         root.dataset.state = state;
         connectedTarget.textContent = targetLabel;
+        connectedTarget.title = targetLabel;
         connectedTarget.hidden = state !== 'connected';
         settingsNotice.hidden = state !== 'connected';
     }
@@ -855,6 +866,7 @@ export async function desktopView(root, ctx)
         watch = 0;
         heartbeat = false;
         videoStatus.textContent = '';
+        activeEncoder.textContent = '';
         refreshes = 0;
         receivedBytes = 0;
         for (const value of Object.values(metrics))
@@ -1372,7 +1384,7 @@ export async function desktopView(root, ctx)
             updateDeliveryDisplay(now);
             videoStatus.textContent = ctx.t('Receive-to-display: ', '受信から表示: ') + Math.round(delay) + ' ms\n' +
                 ctx.t('Decoder preference: ', 'デコーダー指定: ') + acceleration.options[acceleration.selectedIndex]?.textContent +
-                ' · ' + views.filter(Boolean).map(view => `${view.video.renderer} · Decode ${Math.round(view.video.decodeDelay)} ms · Draw ${view.video.drawCost.toFixed(1)} ms · Flush ${view.video.flushes} · Replay ${view.video.replays}`).join(' / ');
+                '\n' + views.filter(Boolean).map(view => `${view.video.renderer}\nDecode ${Math.round(view.video.decodeDelay)} ms · Draw ${view.video.drawCost.toFixed(1)} ms\nFlush ${view.video.flushes} · Replay ${view.video.replays}`).join('\n');
 
             // Recovery means images are displayed again; network/audio latency
             // is not evidence that the decoder still failed.
@@ -1543,6 +1555,21 @@ export async function desktopView(root, ctx)
         }
     }
 
+    /** 接続先が報告した入力権限を表示します。 */
+    function showInputPermission(encoders)
+    {
+        const elevated = (0) < (encoders.length) && encoders.every(value => value.administratorInput);
+        permission.className = elevated ? 'desktop-permission' : 'desktop-permission warn';
+        permission.textContent = elevated ? ctx.t('Administrator input', '管理者権限で操作')
+            : ctx.t('Standard input. Run Core as administrator to control elevated apps.', '通常の権限で操作中です。昇格したアプリを操作するには、Coreを管理者権限で起動してください。');
+        if (!elevated)
+        {
+            const text = document.createElement('span');
+            text.textContent = permission.textContent;
+            permission.replaceChildren(ctx.icon('warning'), text);
+        }
+    }
+
     /** 要求した映像設定と応答を照合して接続状態を更新します。 */
     function receiveEncoderInfo(payload)
     {
@@ -1572,13 +1599,10 @@ export async function desktopView(root, ctx)
         }
         status.textContent = [
             targetLabel,
-            ...encoders.map(value => `${monitors[value.id]?.name ?? '—'}: ${value.encoder ?? '—'}`),
             `${videoSettings.fps} fps · ` + (appliedCodecSettings?.quality != null ? ctx.t('Quality target (no bitrate cap)', '品質指定（ビットレート上限なし）') : `${videoSettings.bitrate} kbps`)
         ].join('\n');
-        const elevated = (0) < (encoders.length) && encoders.every(value => value.administratorInput);
-        permission.className = elevated ? 'desktop-permission' : 'desktop-permission warn';
-        permission.textContent = elevated ? ctx.t('Administrator input', '管理者権限で操作')
-            : ctx.t('Standard input. Run Core as administrator to control elevated apps.', '通常の権限で操作中です。昇格したアプリの操作には、Core の管理者権限が必要です。');
+        activeEncoder.textContent = encoders.filter(value => value.encoder).map(value => `${monitors[value.id]?.name ?? '—'} · ${value.encoder}`).join('\n');
+        showInputPermission(encoders);
         if (appliedCodecSettings)
         {
             status.textContent += `\nGOP ≤ ${encoders[0]?.effectiveKeyFrameInterval ?? '—'} · B ≤ ${appliedCodecSettings.maximumBFrames ?? '—'}` + (appliedCodecSettings.quality == null ? '' : ` · CRF/CQ ${appliedCodecSettings.quality}`);
@@ -2036,7 +2060,7 @@ export async function desktopView(root, ctx)
         updateControls();
         applyCursor();
     });
-    action(viewOnlyButton, ctx.t('View-only mode', '未操作モード'), 'view-only', ctx.t('View only', '未操作'));
+    action(viewOnlyButton, ctx.t('View-only mode', '表示専用モード'), 'view-only', ctx.t('View only', '表示専用'));
 
     /** リモート入力に対応する要素へフォーカスを移します。 */
     function focusInput()
@@ -2135,15 +2159,6 @@ export async function desktopView(root, ctx)
         keyButtons.push(button);
         keybar.append(button);
     }
-    const displaySeparator = document.createElement('span');
-    displaySeparator.className = 'desktop-key-separator';
-    displaySeparator.setAttribute('aria-hidden', 'true');
-    const keyboardSeparator = document.createElement('span');
-    keyboardSeparator.className = 'desktop-key-separator';
-    keyboardSeparator.setAttribute('aria-hidden', 'true');
-    const keySeparator = document.createElement('span');
-    keySeparator.className = 'desktop-key-separator';
-    keySeparator.setAttribute('aria-hidden', 'true');
     const statistics = ctx.button(ctx.t('Statistics overlay', '統計オーバーレイ'), () =>
     {
         overlay.hidden = !overlay.hidden;
@@ -2250,7 +2265,7 @@ export async function desktopView(root, ctx)
     cursorSync.setAttribute('aria-pressed', 'false');
     action(clipboardSync, ctx.t('Clipboard synchronization', 'クリップボード同期'), 'clipboard');
     clipboardSync.setAttribute('aria-pressed', String(clipboard.enabled));
-    clipboardSync.title = ctx.t('Synchronize text with the host. The client takes priority on re-entry and paste. Requires browser clipboard permission. Disabled for view-only and same-PC connections.', 'ホストとテキストを同期します。操作領域への再入場と貼り付け時はクライアントの内容を優先します。ブラウザーのクリップボード許可が必要です。未操作モードと同一PC接続では無効です。');
+    clipboardSync.title = ctx.t('Synchronize text with the host. The client takes priority on re-entry and paste. Requires browser clipboard permission. Disabled for view-only and same-PC connections.', 'ホストとテキストを同期します。操作領域への再入場と貼り付け時はクライアントの内容を優先します。ブラウザーのクリップボード許可が必要です。表示専用モードと同一PC接続では無効です。');
     audioCodec.append(option('f32le', ctx.t('PCM · Uncompressed', 'PCM · 非圧縮')));
     const opusSupported = await supportsDesktopOpus();
     if (opusSupported)
@@ -2272,7 +2287,8 @@ export async function desktopView(root, ctx)
     start.className = 'primary desktop-connect';
     start.append(ctx.icon('play'));
     action(stop, ctx.t('Disconnect', '接続解除'), 'close', ctx.t('Disconnect', '接続解除'));
-    action(reload, ctx.t('Refresh hosts', 'ホスト一覧を更新'), 'refresh');
+    action(reload, ctx.t('Refresh hosts', 'ホスト一覧を更新'), 'refresh', ctx.t('Refresh hosts', 'ホスト一覧を更新'));
+    reload.className += ' desktop-reload';
     updateSound();
     action(fullscreen, ctx.t('Fullscreen', '全画面表示'), 'fullscreen');
     action(videoFullscreen, ctx.t('Video fullscreen', '映像のみ全画面'), 'video-fullscreen');
@@ -2285,11 +2301,13 @@ export async function desktopView(root, ctx)
         targets.append(labeled(ctx.t('Cluster', 'クラスタ'), cluster));
     }
     targets.append(connectedTarget, labeled(ctx.t('Transmission preset', '伝送プリセット'), transmissionPreset), labeled(ctx.t('Host', '接続先'), host), start, stop, connection);
-    toolbar.append(sound, fullscreen, videoFullscreen, cursorSync, clipboardSync, sizing, follow);
+    targets.append(reload);
+    quickControls.append(sound, fullscreen);
+    toolbar.append(videoFullscreen, cursorSync, clipboardSync, sizing, follow);
     const displayOptions = document.createElement('div');
     displayOptions.className = 'desktop-display-controls';
-    displayOptions.append(screens, keyboardSeparator, reconnectButton, viewOnlyButton);
-    toolbar.append(displayOptions, keyboardButton, displaySeparator, keybar, keySeparator, reload);
+    displayOptions.append(screens, reconnectButton, viewOnlyButton);
+    toolbar.append(displayOptions, keyboardButton, keybar);
     cluster.onchange = hosts;
     rail.append(settingsMenu.element);
     if (codecMenu)

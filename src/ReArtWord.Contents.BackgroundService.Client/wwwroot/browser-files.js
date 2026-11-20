@@ -13,7 +13,7 @@ export async function browserFilesView(root, ctx)
 {
     root.className = 'files-tool';
     const toolbar = document.createElement('div');
-    toolbar.className = 'tool-toolbar';
+    toolbar.className = 'tool-toolbar file-transfer-scope';
     const cluster = document.createElement('select'), host = document.createElement('select');
     cluster.setAttribute('aria-label', ctx.t('Cluster', 'クラスタ'));
     host.setAttribute('aria-label', ctx.t('Host', 'ホスト'));
@@ -41,7 +41,7 @@ export async function browserFilesView(root, ctx)
     hostLabel.textContent = ctx.t('Host', 'ホスト');
     clusterLabel.append(cluster);
     hostLabel.append(host);
-    toolbar.append(clusterLabel, hostLabel, status, reload);
+    toolbar.append(clusterLabel, hostLabel, reload, status);
 
     /** 現在の接続・選択・処理中の状態を操作欄へ反映します。 */
     function updateControls()
@@ -150,9 +150,13 @@ export async function browserFilesView(root, ctx)
         up.prepend(ctx.icon('up'));
         const refresh = ctx.button(ctx.t('Refresh', '更新'), () => openAsync(state.directory));
         refresh.prepend(ctx.icon('refresh'));
+        const atRoot = document.createElement('p');
+        atRoot.className = 'file-root-note';
+        atRoot.textContent = ctx.t('Top of the permitted transfer folders.', 'このフォルダーが転送範囲の最上位です。');
+        atRoot.hidden = true;
         navigation.append(home, up, refresh);
         footer.append(count);
-        section.append(title, location, navigation, tree, footer);
+        section.append(title, location, navigation, atRoot, tree, footer);
         split.append(section);
         state.actions = fileActionControls(section, ctx, {
             read: () => ({ generation: state.generation, directory: state.directory, peer: target, root: localRoot,
@@ -215,6 +219,7 @@ export async function browserFilesView(root, ctx)
                     updateControls();
                 }
             });
+            picker.classList.add('local-folder');
             chooser = document.createElement('input');
             chooser.type = 'file';
             chooser.multiple = true;
@@ -467,7 +472,7 @@ export async function browserFilesView(root, ctx)
             const available = local ? !!localRoot : !!target, locked = busy || state.browsing || choosing || panes.some(pane => pane.actions?.busy);
             home.disabled = refresh.disabled = address.disabled = go.disabled = !available || locked;
             up.disabled = !available || state.parent === null || locked;
-            up.title = available && state.parent === null ? ctx.t('This is the configured transfer root.', 'このフォルダーが転送範囲の最上位です。') : ctx.t('Up', '上へ');
+            atRoot.hidden = !available || state.directory === null || state.parent !== null;
             if (picker)
             {
                 picker.disabled = locked || typeof globalThis.showDirectoryPicker !== 'function';
@@ -500,13 +505,17 @@ export async function browserFilesView(root, ctx)
         const hint = document.createElement('p');
         hint.className = 'small muted';
         hint.textContent = ctx.t('Keep this page open during transfers.', '転送が終わるまで、この画面を開いたままにしてください。');
-        queue.append(heading, hint);
+        queue.append(heading);
         if (!jobs.length)
         {
             const empty = document.createElement('p');
             empty.className = 'remote-empty';
             empty.textContent = ctx.t('No transfers.', '転送はありません。');
             queue.append(empty);
+        }
+        else
+        {
+            queue.append(hint);
         }
         for (const job of jobs)
         {

@@ -96,8 +96,11 @@
 }
 
 .tool-help summary {
-    cursor: pointer;
-    width: fit-content;
+    min-height: 38px;
+    font-size: 13px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    background: var(--panel);
 }
 
 .tool-help p {
@@ -385,10 +388,11 @@
 .terminal-keys button {
     min-height: 44px;
     padding: 4px;
-    font-size: 12px;
     touch-action: manipulation;
     background: var(--panel);
     color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
 }
 
 .terminal-keys button[aria-pressed="true"] {
@@ -892,19 +896,11 @@
 .license-filter {
     display: grid;
     grid-column: 1 / -1;
-    grid-template-columns: minmax(0, 26rem) auto;
-    align-items: center;
+    grid-template-columns: repeat(2, minmax(0, 24rem)) auto;
+    align-items: end;
     justify-content: start;
-    gap: 4px 12px;
+    gap: 8px 12px;
     margin: 0;
-}
-
-.license-filter > .search-field {
-    grid-column: 1 / -1;
-}
-
-.license-filter > label:not(:first-child) {
-    margin-block-start: 12px;
 }
 
 .license-back {
@@ -913,12 +909,26 @@
 
 .license-filter output {
     white-space: nowrap;
+    align-self: end;
+    padding-block-end: 8px;
+    font-size: 13px;
 }
 
 .license-filter label {
-    grid-column: 1 / -1;
     margin: 0;
+    min-width: 0;
     font-weight: 600;
+    font-size: 13px;
+}
+
+.license-filter label :is(input, select) {
+    width: 100%;
+    min-width: 0;
+    font-size: 14px;
+}
+
+.license-filter .search-field {
+    margin-block-start: 4px;
 }
 
 .file-action-dialog form > :not(header, .toolbar) {
@@ -943,8 +953,14 @@
     font-size: 14px;
 }
 
-.file-name-error:not([hidden])::before {
-    content: "⚠ ";
+.file-name-error:not([hidden]) {
+    display: flex;
+    align-items: start;
+    gap: 6px;
+}
+
+.file-name-error .ui-icon {
+    flex: none;
 }
 
 .transfer-jobs:empty {
@@ -1089,10 +1105,21 @@
     line-height: 1.35;
 }
 
-.terminal-keys .terminal-navigation-key {
-    font: 700 16px/1.2 system-ui, sans-serif;
-    font-weight: 750;
-    color: var(--ink);
+.terminal-keys button[data-direction] .ui-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.terminal-keys button[data-direction="up"] .ui-icon {
+    transform: rotate(-90deg);
+}
+
+.terminal-keys button[data-direction="down"] .ui-icon {
+    transform: rotate(90deg);
+}
+
+.terminal-keys button[data-direction="left"] .ui-icon {
+    transform: rotate(180deg);
 }
 
 .terminal-screen .xterm .xterm-viewport {
@@ -1138,6 +1165,7 @@
 .license-cards > section > p {
     grid-column: 1 / -1;
     margin: 0;
+    margin-block: 0;
     font-size: 13px;
 }
 
@@ -1203,7 +1231,15 @@
 }
 
 .transfer-jobs > .remote-empty {
-    padding-inline: 0;
+    padding: 0;
+    margin: 0 0 12px;
+    color: var(--ink);
+}
+
+.file-root-note {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
 }
 
 .file-pane .file-navigation button:not(:disabled) {
@@ -1218,7 +1254,7 @@
 .license-columns,
 .license-cards > section {
     display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(6rem, 0.75fr) minmax(6rem, 1fr) minmax(0, 2fr) 5.5rem;
+    grid-template-columns: minmax(0, 3fr) minmax(4.25rem, 0.65fr) minmax(5rem, 0.8fr) minmax(0, 1.4fr) 5rem;
     gap: 6px 16px;
     align-items: baseline;
     padding: 10px 12px;
@@ -1258,14 +1294,13 @@
 }
 
 .license-notices {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 12px;
+    display: grid;
+    gap: 4px;
     grid-column: 1 / -1;
 }
 
-.license-notices details[open] {
-    flex: 1 1 100%;
+.license-notices summary {
+    width: min(100%, 20rem);
 }
 
 @media (max-width: 760px) {
@@ -1319,12 +1354,25 @@
     overflow: visible;
 }
 
-.terminal-sidebar > .toolbar:first-child {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: var(--panel);
-    padding-block: 4px;
+.terminal-sidebar-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.terminal-sidebar-heading h2 {
+    margin: 0;
+    font-size: 13px;
+}
+
+.terminal-sidebar details > summary {
+    min-height: 36px;
+}
+
+.terminal-session.selected .badge {
+    width: fit-content;
 }
 
 .terminal-session-actions .terminal-shell-field {
@@ -1338,16 +1386,6 @@
     margin: 0;
     color: var(--muted);
     font-size: 13px;
-}
-
-.terminal-keys button,
-.terminal-keys .terminal-navigation-key {
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.terminal-keys .terminal-navigation-key:disabled {
-    color: var(--disabled-ink);
 }
 
 .terminal-sidebar .terminal-session > button {
@@ -1384,8 +1422,38 @@
     background: var(--panel);
 }
 
-.file-transfer-scope {
-    padding: 10px 14px;
+.files-tool > .file-transfer-scope {
+    align-items: end;
+    gap: 8px 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+}
+
+.file-transfer-scope > label {
+    display: grid;
+    gap: 4px;
+    font-size: 13px;
+    white-space: normal;
+}
+
+.file-transfer-scope > label select {
+    min-width: min(100%, 12rem);
+    min-height: 36px;
+    font-size: 13px;
+}
+
+.file-transfer-scope > button {
+    min-height: 36px;
+    font-size: 13px;
+}
+
+.file-transfer-scope > .tool-status {
+    flex: 1 0 100%;
+    font-size: 13px;
+}
+
+.file-transfer-scope > .tool-status:empty {
+    display: none;
 }
 
 @media (min-width: 651px) {
@@ -1401,11 +1469,11 @@
 
 @media (max-width: 650px) {
     .terminal-workspace {
-        grid-template-rows: auto auto minmax(0, 1fr);
+        grid-template-rows: auto auto auto;
     }
 
     .terminal-sources {
-        max-height: 34dvh;
+        max-height: 55dvh;
         border-block-end: 1px solid var(--line);
     }
 
@@ -1419,10 +1487,6 @@
         background: var(--panel);
     }
 
-    .terminal-sidebar > .toolbar:first-child {
-        top: 44px;
-    }
-
     .terminal-session-actions .terminal-shell-field {
         flex-basis: 100%;
     }
@@ -1431,7 +1495,10 @@
         max-width: 100%;
     }
 
-    .terminal-sidebar .terminal-session > button,
+    .terminal-sidebar button,
+    .terminal-sidebar details > summary,
+    .remote-tools .terminal-toolbar button,
+    .terminal-session-actions select,
     .file-pane :is(.file-picker-control, .file-picker-control > span:first-child, button.local-folder) {
         min-height: 44px;
     }
@@ -1440,4 +1507,40 @@
 .terminal-keys > div > button {
     flex: 1 1 auto;
     min-width: 36px;
+}
+
+@media (max-width: 650px), (max-height: 650px) {
+    .terminal-workspace .terminal-screen:not(:fullscreen) {
+        flex: 1 0 clamp(14rem, 36dvh, 25rem);
+    }
+
+    .terminal-workspace:fullscreen {
+        overflow-y: auto;
+    }
+}
+
+@media (max-width: 650px) {
+    .file-transfer-scope > label {
+        flex: 1 0 100%;
+    }
+
+    .file-transfer-scope > label select {
+        width: 100%;
+        max-width: none;
+    }
+
+    .files-tool .file-transfer-scope > button {
+        margin-inline: 0;
+    }
+
+    .file-transfer-scope > :is(button, label select),
+    .tool-help summary {
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 680px) {
+    .license-filter {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
