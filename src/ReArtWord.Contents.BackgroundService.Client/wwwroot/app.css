@@ -55,7 +55,7 @@ button {
     white-space: nowrap;
 }
 
-button:where(:enabled:not(.primary, .quiet, .danger, [role="tab"], [role="switch"], [aria-pressed], [aria-disabled="true"])) {
+button:where(:enabled:not(.primary, .quiet, .danger, .row-button, [role="tab"], [role="switch"], [aria-pressed="true"], [aria-disabled="true"])) {
     box-shadow: var(--button-shadow);
 }
 
@@ -111,6 +111,12 @@ button.quiet:hover,
 button.quiet.active {
     background: var(--raised);
     color: var(--accent);
+}
+
+button:where(.row-button) {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
 }
 
 button.icon-button {
@@ -881,6 +887,10 @@ td details {
     gap: 8px;
 }
 
+.discovery-binding > p {
+    margin-block: 0;
+}
+
 .discovery-binding .toolbar {
     gap: 10px;
 }
@@ -1280,17 +1290,21 @@ button.danger:disabled {
     white-space: normal;
 }
 
-.restore-action:enabled,
-.restore-action:enabled:hover {
+.restore-action:enabled {
     color: var(--warn);
     border-color: var(--warn);
-    background: var(--warn-soft);
+    background: transparent;
     box-shadow: none;
+}
+
+.restore-action:enabled:hover {
+    background: var(--warn-soft);
 }
 
 .detail-expanded {
     max-height: none;
-    overflow: visible;
+    overflow-x: auto;
+    white-space: pre;
 }
 
 @media (max-width: 680px) {

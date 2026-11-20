@@ -94,13 +94,14 @@ else
         }
         else
         {
+            <span class="collaborator-swatches" aria-hidden="true">@foreach(var peer in collaborators.Take(3)){<span class="collaborator-swatch" style="@("--editor-color:"+CollaborationOverlay.Color(peer.Presence.UiInstanceId))"></span>}</span>
             <span>@Ui.Format("{0} editors",collaborators.Length)</span>
         }
     </summary>
                             <ul>
                             @foreach(var peer in collaborators)
                             {
-                                <li style="@("--editor-color:"+CollaborationOverlay.Color(peer.Presence.UiInstanceId))"><strong>@peer.Presence.DisplayName</strong> <span>@peer.PeerId</span>@if(peer.Presence.Dirty){<span> · @Ui["Unsaved"]</span>}</li>
+                                <li style="@("--editor-color:"+CollaborationOverlay.Color(peer.Presence.UiInstanceId))"><strong>@peer.Presence.DisplayName</strong> <span>@peer.PeerId</span>@if(peer.Presence.Dirty){<span> · @Ui["Unsaved"]</span>}@if(peer.Presence.SelectedNodeIds.Count>0){<small class="collaborator-nodes">@string.Join(", ",peer.Presence.SelectedNodeIds)</small>}</li>
                             }
                             </ul>
                         </details>
@@ -118,7 +119,7 @@ else
             @if(Model.SelectedNode is not null){<NodeInspector ToggleState="@ToggleStates.Find(Model.ClusterId,Model.Draft.Document.Id).GetValueOrDefault(Model.SelectedNode)" ButtonPressed="RunCoreAsync" @key="Model.SelectedNode" Visible="inspectorOpen" Catalog="catalog" InvalidChanged="value=>invalid=value" />}else{<WorkflowInspector Visible="inspectorOpen" Routes="@(inspectorOpen?AllRoutes:[])" Catalog="catalog" />}
         </aside>
     </div>
-    <div class="editor-statusbar"><button class="arrange-nodes" title="@Ui["Separate overlapping nodes. Use Undo to restore the previous layout."]" disabled="@(busy||!nodesOverlap||Model.Locks.Whole(Model.Draft.Document.Id))" @onclick="()=>graph?.SeparateCards()"><UiIcon Name="arrange" /><span class="control-label">@Ui["Space nodes"]</span></button>@if(nodesOverlap){<span class="node-overlap-notice" role="status">@Ui["Overlapping nodes spaced in this view"]</span>}<span>@Ui.Format("{0} nodes",Model.Draft.Document.Nodes.Count)<span class="status-separator">/</span>@Ui.Format("{0} connections",Model.Draft.Document.Wires.Count)</span><span class="statusbar-spacer"></span><div class="zoom-tools"><button class="quiet" aria-label="@Ui["Zoom out"]" @onclick="()=>zoom=Math.Max(.05,Math.Round(zoom-.05,2))">−</button><span>@((int)Math.Round(zoom*100))&nbsp;%</span><button class="quiet" aria-label="@Ui["Zoom in"]" @onclick="()=>zoom=Math.Min(1.5,Math.Round(zoom+.05,2))">＋</button></div><span class="toolbar-divider"></span><button class="quiet" title="@(LocalContext?Ui["Local editing · not shared"]:Ui[Collaboration.Status])" @onclick="()=>collaborationOpen=true"><span class="dot"></span><span id="collaboration-status" class="collaboration-status">@(LocalContext?Ui["Local editing"]:Collaboration.Active?Ui["Checking draft"]:Collaboration.Pending?Ui["Draft synchronization pending"]:Ui["Collaboration"])</span>@if(Model.Draft.Conflicts.Count!=0){<span class="badge warn">@Ui.Format("{0} conflicts",Model.Draft.Conflicts.Count)</span>}</button></div>
+    <div class="editor-statusbar"><button class="arrange-nodes" title="@Ui["Separate overlapping nodes. Use Undo to restore the previous layout."]" disabled="@(busy||!nodesOverlap||Model.Locks.Whole(Model.Draft.Document.Id))" @onclick="()=>graph?.SeparateCards()"><UiIcon Name="arrange" /><span class="control-label">@Ui["Space nodes"]</span></button>@if(nodesOverlap){<span class="node-overlap-notice" role="status">@Ui["Overlapping nodes spaced in this view"]</span>}<span>@Ui.Format("{0} nodes",Model.Draft.Document.Nodes.Count)<span class="status-separator">/</span>@Ui.Format("{0} connections",Model.Draft.Document.Wires.Count)</span><span class="statusbar-spacer"></span><div class="zoom-tools"><button aria-label="@Ui["Zoom out"]" @onclick="()=>zoom=Math.Max(.05,Math.Round(zoom-.05,2))">−</button><span>@((int)Math.Round(zoom*100))&nbsp;%</span><button aria-label="@Ui["Zoom in"]" @onclick="()=>zoom=Math.Min(1.5,Math.Round(zoom+.05,2))">＋</button></div><span class="toolbar-divider"></span><button class="quiet" title="@(LocalContext?Ui["Local editing · not shared"]:Ui[Collaboration.Status])" @onclick="()=>collaborationOpen=true"><span class="dot"></span><span id="collaboration-status" class="collaboration-status">@(LocalContext?Ui["Local editing"]:Collaboration.Active?Ui["Checking draft"]:Collaboration.Pending?Ui["Draft synchronization pending"]:Ui["Collaboration"])</span>@if(Model.Draft.Conflicts.Count!=0){<span class="badge warn">@Ui.Format("{0} conflicts",Model.Draft.Conflicts.Count)</span>}</button></div>
     }
 </main>
 @if(CodeEditorNode is {} editorNode)
@@ -197,7 +198,7 @@ else
         }
         <button @onclick="()=>{documentToolsOpen=false;operationsOpen=true;}"><UiIcon Name="history" /><span class="control-label">@Ui["History and result lookup"]</span></button>
     </div>
-    <div class="destructive-action"><button class="quiet danger" disabled="@busy" @onclick="()=>{documentToolsOpen=false;deleteOpen=true;}"><UiIcon Name="trash" /><span class="control-label">@Ui["Delete workflow"]</span></button></div>
+    <div class="destructive-action"><button class="danger" disabled="@busy" @onclick="()=>{documentToolsOpen=false;deleteOpen=true;}"><UiIcon Name="trash" /><span class="control-label">@Ui["Delete workflow"]</span></button></div>
 </Modal>
 <WorkflowDeleteDialog Open="deleteOpen" Close="()=>deleteOpen=false" Deleted="DeletedWorkflowAsync" />
 <Modal Open="compatibilityOpen" Title="@Ui["Behavior contract compatibility"]" Close="()=>compatibilityOpen=false"><CompatibilityPanel @key="(Model.Draft.Document.Id,Api.SelectedClusterId,Api.SelectedPeerId)" WorkflowId="@Model.Draft.Document.Id" /></Modal>

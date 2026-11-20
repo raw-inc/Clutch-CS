@@ -1,0 +1,7 @@
+.snapshot-scope-fields {
+    padding-block: 12px 14px;
+}
+
+.snapshot-scope-fields > button:first-child {
+    margin-block-start: 0;
+}

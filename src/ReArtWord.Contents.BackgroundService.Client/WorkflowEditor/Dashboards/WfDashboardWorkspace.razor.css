@@ -215,11 +215,6 @@
     border-color: var(--accent);
 }
 
-.dashboard-edit-tools > button,
-.dashboard-heading .toolbar > .icon-button {
-    border: 1px solid var(--control);
-}
-
 @media (max-width: 680px) {
     .dashboard-workspace.with-catalog {
         overflow-y: auto;

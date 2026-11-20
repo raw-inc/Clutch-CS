@@ -215,8 +215,26 @@
     white-space: nowrap;
 }
 
-.log-page .selected-log {
+.log-page .log-table tr[data-select]:hover {
+    background: var(--nested);
+}
+
+.log-page .log-table tr.selected-log {
     background: var(--accent-soft);
+}
+
+.log-table .selected-log > td:first-child {
+    box-shadow: inset 3px 0 var(--accent);
+}
+
+@media (max-width: 680px) {
+    .log-page .log-table tr.selected-log {
+        box-shadow: inset 3px 0 var(--accent);
+    }
+
+    .log-table .selected-log > td:first-child {
+        box-shadow: none;
+    }
 }
 
 .log-origin {

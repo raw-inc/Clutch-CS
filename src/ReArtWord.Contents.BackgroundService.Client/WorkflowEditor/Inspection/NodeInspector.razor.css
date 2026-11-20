@@ -58,3 +58,21 @@
 .node-identifier {
     font-size: 13px;
 }
+
+.inspector-section > .inspector-fields {
+    min-width: 0;
+    margin: 0;
+    padding: 12px;
+}
+
+.inspector-section > .inspector-fields > :first-child {
+    margin-block-start: 0;
+}
+
+.inspector-section > .inspector-fields > :last-child {
+    margin-block-end: 0;
+}
+
+.destructive-action {
+    justify-content: start;
+}

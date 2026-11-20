@@ -270,9 +270,9 @@
   "Clear temporary tracing and request cluster stop": "一時追跡を解除してクラスタ停止を要求",
   "Trace scope and fixed targets": "追跡範囲と固定対象の詳細",
   "Clear tracing and request cluster stop": "一時追跡解除とクラスタ停止要求",
-  "Request stop for the displayed peer instances. Acceptance does not confirm every process has exited.": "表示したピア実体へ停止を要求します。受付成功は全プロセスの終了確認ではありません。",
+  "Request stop for the displayed peer instances. Acceptance does not confirm every process has exited.": "下のピアに CoreService の停止を要求します。停止までに時間がかかる場合があります。",
   "Instances fixed at the start": "開始時に固定する実体",
-  "Request stop for these instances": "この実体集合へ停止を要求する",
+  "Request stop for {0} peers": "{0} ピアに停止を要求",
   "The connected peer state was retrieved.": "接続先の状態を取得しました。",
   "Trace state is unconfirmed.": "追跡状態は未確認です。",
   "Trace state could not be retrieved.": "追跡状態を取得できません。",
@@ -609,5 +609,6 @@
   "Restore normal tracing": "通常の記録に戻す",
   "Start temporary tracing": "一時的な追跡を開始",
   "Pause or resume new inputs for a node or safety group.": "ノードや安全グループを選び、新規入力の受付を一時停止または再開できます。",
-  "Select a local release manifest and specify where the ClientHost can read the package files.": "手元のリリースマニフェストを選び、ClientHost が配布ファイルを読み込める場所を指定します。"
+  "Select a local release manifest and specify where the ClientHost can read the package files.": "手元のリリースマニフェストを選び、ClientHost が配布ファイルを読み込める場所を指定します。",
+  "Loading workflow list…": "ワークフロー一覧を取得中…"
 }

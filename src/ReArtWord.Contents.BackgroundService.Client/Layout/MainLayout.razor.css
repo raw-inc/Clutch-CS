@@ -262,8 +262,13 @@
     min-height: 44px;
     min-width: 44px;
     white-space: nowrap;
+    border-radius: var(--radius-control);
     font-size: 13px;
     font-weight: 600;
+}
+
+.route-menu[open] > summary {
+    background: var(--raised);
 }
 
 .route-menu > div {

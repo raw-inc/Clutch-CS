@@ -58,7 +58,7 @@
 <option value="exclude">@Ui["Explicitly exclude from scope"]</option>@foreach(var snapshot in snapshots.Where(item=>SnapshotSelectionRules.Covers(item,row.Target))){<option value="@snapshot.Id">@FormatTime(snapshot.CapturedAt) · @snapshot.Id</option>}</select>
 </label>
 }
-<button @onclick="NextSnapshotsAsync" disabled="@(snapshotCursor is null)">@Ui["Load the next snapshot page"]</button>
+@if(snapshotCursor is not null){<button @onclick="NextSnapshotsAsync">@Ui["Load the next snapshot page"]</button>}
 @foreach(var omitted in snapshots.Where(item=>item.DetailReason is not null)){<p class="notice">@Ui.Format("Candidate {0} metadata was omitted: {1}. Omitted scopes cannot be selected for restore.", omitted.IdentifierHash, omitted.DetailReason)</p>}
     </ChildContent>
     <Actions>

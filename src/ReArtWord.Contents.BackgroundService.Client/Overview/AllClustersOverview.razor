@@ -31,7 +31,7 @@
     @if(telemetry is not null)
     {
         @if(telemetry.Peers.Count<telemetry.KnownPeers){<p class="range-note warn">@Ui.Format("Showing peers {0}–{1} of {2}. Other peers are outside this polling range.",telemetry.Offset+1,telemetry.Offset+telemetry.Peers.Count,telemetry.KnownPeers)</p>}
-        <clutch-card-rows><div class="secondary-grid">
+        <div class="secondary-grid">
             <section><div class="panel-heading"><h2>@Ui["Workflow activity"]</h2><span>@Ui["Last 60 seconds"]</span></div>
                 <div class="health-card panel-content">
                 @{var activity=telemetry.Observations.SelectMany(pair=>pair.Value.Activity(Api.UtcNow).Select(row=>(Cluster:pair.Key,Row:row))).OrderByDescending(item=>item.Row.Completed).ToArray();}
@@ -49,7 +49,7 @@
                 <footer><span>@Ui["Up to 8 log entries per polled cluster; showing the latest 8 observed entries."]</span>@if(telemetry.Observations.Any(pair=>pair.Value.LogProblem is not null || pair.Value.Logs?.Complete!=true)){<span> · @Ui["Some results are omitted or unavailable. Open Log Viewer for details."]</span>}</footer>
                 </div>
             </section>
-        </div></clutch-card-rows>
+        </div>
     }
     }
 </section>

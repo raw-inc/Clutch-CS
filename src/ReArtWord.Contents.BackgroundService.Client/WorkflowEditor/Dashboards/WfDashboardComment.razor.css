@@ -47,3 +47,16 @@ p.comment-text {
     line-height: 1.6;
     cursor: text;
 }
+
+button.comment-text {
+    padding: 8px;
+}
+
+.comment-continuation {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+}
+
+.comment-continuation > p {
+    padding-inline: 12px;
+}

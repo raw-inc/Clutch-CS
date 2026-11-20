@@ -7,7 +7,7 @@
   "Package source": "配布方式",
   "Package name": "パッケージ名",
   "Exact version": "固定バージョン",
-  "Python executable on this peer": "Pythonの実行ファイル",
+  "Python executable on this peer": "Python の実行ファイル",
   "Install / update package": "インストール・更新",
   "Use an exact published version. NuGet uses nuget.org; pip uses PyPI and requires Python 3.10 or later with venv. A blank Python path in a script uses the managed environment.": "公開されているバージョンを指定してください。NuGetはnuget.org、pipはPyPIから取得します。pipにはvenvを使えるPython 3.10以降が必要です。スクリプト側のPythonパスが空欄の場合は管理中の環境を使います。",
   "Installing packages. The current configuration remains available until installation succeeds.": "パッケージを導入しています。成功するまで現在の構成を維持します。",

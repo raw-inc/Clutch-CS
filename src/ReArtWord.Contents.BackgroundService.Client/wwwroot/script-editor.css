@@ -13,6 +13,8 @@
 .script-editor-surface .cm-editor .cm-scroller {
     font-family: inherit;
     overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--control) var(--nested);
 }
 
 .script-editor-surface .cm-editor .cm-content {

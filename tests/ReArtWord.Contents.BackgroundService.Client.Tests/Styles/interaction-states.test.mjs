@@ -242,3 +242,36 @@ test('スクロールできる方向にだけ続きの影を表示する', async
     });
     await page.locator('clutch-scroll-area:not([data-scroll-before], [data-scroll-after])').waitFor();
 });
+
+test('横スクロールの端と一覧の行ボタンを通常操作と区別する', async context =>
+{
+    const page = await browser.newPage();
+    context.after(() => page.close());
+    await page.setContent(`
+        <clutch-scroll-area data-scroll-axis="inline" style="width: 180px"><nav><div style="width: 540px">
+            <button class="row-button">一覧の行</button><button>操作</button>
+        </div></nav></clutch-scroll-area>
+    `);
+    await page.addStyleTag({ content: styles.css });
+    const script = new URL('../../../src/ReArtWord.Contents.BackgroundService.Client/wwwroot/scroll-area.js', import.meta.url);
+    await page.addScriptTag({ content: await readFile(script, 'utf8') });
+    const area = page.locator('clutch-scroll-area');
+    await page.locator('clutch-scroll-area[data-scroll-after]:not([data-scroll-before])').waitFor();
+
+    const row = page.getByRole('button', { name: '一覧の行' });
+    const action = page.getByRole('button', { name: '操作' });
+    assert.equal(await row.evaluate(element => getComputedStyle(element).boxShadow), 'none');
+    assert.notEqual(await action.evaluate(element => getComputedStyle(element).boxShadow), 'none');
+
+    await area.locator('nav').evaluate(element =>
+    {
+        element.scrollLeft = element.scrollWidth / 3;
+    });
+    await page.locator('clutch-scroll-area[data-scroll-before][data-scroll-after]').waitFor();
+
+    await area.locator('nav').evaluate(element =>
+    {
+        element.scrollLeft = element.scrollWidth;
+    });
+    await page.locator('clutch-scroll-area[data-scroll-before]:not([data-scroll-after])').waitFor();
+});

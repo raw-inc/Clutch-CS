@@ -567,7 +567,6 @@
 .editor-statusbar .zoom-tools button {
     height: 22px;
     min-width: 30px;
-    border: 1px solid var(--control);
 }
 
 .studio .canvas-container {
@@ -874,7 +873,6 @@
     flex: none;
     min-height: 32px;
     padding-inline: 8px;
-    border-color: var(--control);
 }
 
 .studio .library,
@@ -1026,7 +1024,8 @@
 }
 
 .studio ::deep .node-button-reason {
-    font-size: 11px;
+    padding-block-end: 4px;
+    font-size: 12px;
     line-height: 1.35;
     color: var(--muted);
     word-break: auto-phrase;
@@ -1107,7 +1106,7 @@
 
 .code-edit-sheet ::deep .cm-content {
     font-size: 16px;
-    padding-inline: 8px;
+    padding-inline: 12px;
 }
 
 .collaborator-swatch {
@@ -1116,6 +1115,16 @@
     flex: none;
     border-radius: 50%;
     background: var(--editor-color);
+}
+
+.collaborator-swatches {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.collaborator-nodes {
+    display: block;
+    color: var(--muted);
 }
 
 .code-draft-note {

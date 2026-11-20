@@ -3,7 +3,7 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Management
 @using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor
 
-<button class="connection-button" @onclick="OpenAsync" title="@(ClusterId is null ? Ui["Select network, cluster and peer"] : ClusterId + " / " + PeerId + " · " + Ui[Connected?"Connected":"Disconnected"])" aria-label="@Ui["Select network, cluster and peer"]">
+<button class="connection-button" aria-haspopup="dialog" aria-expanded="@(open ? "true" : "false")" @onclick="OpenAsync" title="@(ClusterId is null ? Ui["Select network, cluster and peer"] : ClusterId + " / " + PeerId + " · " + Ui[Connected?"Connected":"Disconnected"])" aria-label="@Ui["Select network, cluster and peer"]">
     <span class="connection-symbol @(Connected?"online":null)" aria-hidden="true"><UiIcon Name="@(Connected?"check":"plug")" /></span>
     @if(ClusterId is not null){<span class="connection-name">@ClusterId <small>/ @PeerId</small></span>}
     else{<span class="connection-name">@Ui["Select connection"]</span>}

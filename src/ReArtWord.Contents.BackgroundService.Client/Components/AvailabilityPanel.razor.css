@@ -5,3 +5,9 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+@media (max-width: 680px) {
+    .standalone-records .record-table tbody tr {
+        background: var(--nested);
+    }
+}

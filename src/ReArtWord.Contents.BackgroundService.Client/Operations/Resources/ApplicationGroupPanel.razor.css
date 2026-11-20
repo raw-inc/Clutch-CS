@@ -1,3 +1,11 @@
+.group-edit-actions {
+    margin-block-start: 6px;
+}
+
+.group-edit-actions .danger {
+    margin-inline-start: auto;
+}
+
 @media (max-width: 680px) {
     .group-records {
         border: 0;

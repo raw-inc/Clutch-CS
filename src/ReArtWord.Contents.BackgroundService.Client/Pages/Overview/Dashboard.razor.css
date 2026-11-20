@@ -210,7 +210,7 @@
 
 .dashboard-operations > .internal-data-card {
     margin-block-start: 0;
-    padding: 0 18px;
+    padding: 0 28px;
     border: 0;
     border-radius: var(--radius-panel);
     background: var(--card);
@@ -237,13 +237,17 @@
         display: inline;
     }
 
+    .dashboard-operations > .internal-data-card {
+        padding-inline: 16px;
+    }
+
     .internal-data-card ::deep .field-actions {
         display: grid;
         grid-template-columns: minmax(0, 1fr);
     }
 
     .internal-data-card ::deep .field-actions > button {
-        justify-self: end;
+        justify-self: start;
     }
 }
 

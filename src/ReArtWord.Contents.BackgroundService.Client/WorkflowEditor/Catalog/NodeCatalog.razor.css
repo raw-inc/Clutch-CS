@@ -401,7 +401,7 @@
 }
 
 .catalog-view button[aria-pressed="true"] {
-    background: var(--accent-soft);
+    background: color-mix(in srgb, var(--accent) 14%, var(--panel));
     color: var(--ink);
     border-block-end: 2px solid var(--accent);
 }

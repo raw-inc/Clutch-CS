@@ -290,6 +290,11 @@ h3 {
     }
 }
 
+.metric-cell:has(.metric-unavailable) {
+    align-self: stretch;
+}
+
+.gpu-unavailable-reason,
 .gpu-name {
     color: var(--muted);
     overflow-wrap: anywhere;

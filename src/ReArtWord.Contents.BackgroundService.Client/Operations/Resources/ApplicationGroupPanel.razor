@@ -16,7 +16,7 @@
             <td class="group-actions" data-field="@Ui["Actions"]"><div><div class="toolbar group-run-actions"><button disabled="@(busy||!Available||Active(item))" @onclick="()=>CommandAsync(item,EProcessGroupCommand.Start,UiCancellation)">@Ui["Start"]</button>
                 <button disabled="@(busy||!Available||Active(item))" @onclick="()=>Confirm(item,EProcessGroupCommand.Restart)">@Ui["Restart"]</button>
                 <button disabled="@(busy||!Available)" @onclick="()=>Confirm(item,EProcessGroupCommand.Stop)">@Ui["Stop"]</button></div>
-                <div class="toolbar"><button class="quiet" disabled="@(busy||!Available||item.Status.Phase!=EProcessGroupPhase.Idle)" @onclick="()=>Edit(item)">@Ui["Edit"]</button><button class="danger" disabled="@(busy||!Available||Active(item))" @onclick="()=>removing=item"><UiIcon Name="trash" /><span class="control-label">@Ui["Remove group"]</span></button></div></div></td>
+                <div class="toolbar group-edit-actions"><button disabled="@(busy||!Available||item.Status.Phase!=EProcessGroupPhase.Idle)" @onclick="()=>Edit(item)">@Ui["Edit"]</button><button class="danger" disabled="@(busy||!Available||Active(item))" @onclick="()=>removing=item"><UiIcon Name="trash" /><span class="control-label">@Ui["Remove group"]</span></button></div></div></td>
         </tr>
     }
     </tbody></table>@if(groups.Count==0){<div class="empty">@Ui["No application groups registered."]</div>}</div></clutch-status-labels>

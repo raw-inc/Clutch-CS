@@ -37,9 +37,12 @@ class ScrollArea extends HTMLElement
         {
             this.#frame = 0;
             const port = this.firstElementChild;
-            const visible = 0 < (port?.clientHeight ?? 0);
-            this.toggleAttribute('data-scroll-before', visible && 1 < port.scrollTop);
-            this.toggleAttribute('data-scroll-after', visible && 1 < port.scrollHeight - port.clientHeight - port.scrollTop);
+            const inline = this.dataset.scrollAxis === 'inline';
+            const size = inline ? port?.clientWidth : port?.clientHeight;
+            const scrollable = (inline ? port?.scrollWidth : port?.scrollHeight) ?? 0;
+            const position = (inline ? Math.abs(port?.scrollLeft ?? 0) : port?.scrollTop) ?? 0;
+            this.toggleAttribute('data-scroll-before', 0 < size && 1 < position);
+            this.toggleAttribute('data-scroll-after', 0 < size && 1 < scrollable - size - position);
         });
     }
 }

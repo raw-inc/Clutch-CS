@@ -15,7 +15,7 @@
     <OverviewHosts Active="Active" ClusterId="@(Api.SelectedClusterId??string.Empty)" Detailed="detailedHosts" LivePeers="@(telemetry is { IsCurrent: true } ? telemetry.Peers.Select(peer=>peer with {ClusterId=Api.SelectedClusterId}).ToArray() : [])" />
     @if(telemetry is not null)
     {
-        <clutch-card-rows><div class="secondary-grid">
+        <div class="secondary-grid">
             <section class="activity-panel"><div class="panel-heading"><h2 title='@Ui["Completions · deduplicated by execution ID"]'>@Ui["Workflow activity"]</h2><span class="window-chip">@Ui["Last 60 seconds"]</span></div>
                 <div class="health-card panel-content">
                 @{var activity = telemetry.Activity(Api.UtcNow); var maximum = Math.Max(1, activity.Select(row=>row.Completed).DefaultIfEmpty(0).Max());}
@@ -31,6 +31,6 @@
                 @if(telemetry.LogProblem is not null){<p class="range-note warn">@Ui[telemetry.LogProblem] · @Ui.Format("Previous read: {0}",FormatTime(telemetry.LogsReceivedAt,"HH:mm:ss") ?? Ui["Not retrieved"])</p>}
                 </div>
             </section>
-        </div></clutch-card-rows>
+        </div>
     }
 </section>

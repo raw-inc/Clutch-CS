@@ -32,6 +32,10 @@
     line-height: 1.3;
 }
 
+.preview-view button[aria-pressed="false"] {
+    box-shadow: none;
+}
+
 .preview-view button:hover:enabled {
     background: var(--raised);
 }

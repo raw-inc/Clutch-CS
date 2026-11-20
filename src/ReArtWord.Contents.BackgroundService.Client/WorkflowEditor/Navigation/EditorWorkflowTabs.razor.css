@@ -170,7 +170,7 @@
     background: var(--paper);
 }
 
-.editor-workflow-strip > nav {
+.editor-workflow-strip > clutch-scroll-area {
     flex: 1;
     min-width: 0;
 }

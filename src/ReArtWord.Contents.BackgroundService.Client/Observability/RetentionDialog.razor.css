@@ -18,6 +18,11 @@
     width: min(100%, 21rem);
 }
 
+.retention-zone-help {
+    font-size: 13px;
+    line-height: 1.5;
+}
+
 .retention-time {
     width: min(100%, 9rem);
     min-height: 38px;

@@ -71,5 +71,5 @@
             </ul>
         }
     </ChildContent>
-    <Actions><button class="danger" @onclick="StopAsync"><UiIcon Name="stop-filled" /><span class="control-label">@Ui["Request stop for these instances"]</span></button></Actions>
+    <Actions><button class="danger" @onclick="StopAsync"><UiIcon Name="stop-filled" /><span class="control-label">@Ui.Format("Request stop for {0} peers",pendingStop?.Targets.Count??0)</span></button></Actions>
 </Modal>

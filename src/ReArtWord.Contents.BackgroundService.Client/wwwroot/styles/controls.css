@@ -5,7 +5,7 @@
 }
 
 clutch-scroll-area {
-    --scroll-edge: light-dark(rgb(23 24 29 / 20%), rgb(0 0 0 / 64%));
+    --scroll-edge: light-dark(rgb(23 24 29 / 20%), rgb(186 195 210 / 28%));
 
     position: relative;
     display: flex;
@@ -42,7 +42,29 @@ clutch-scroll-area[data-scroll-after]::after {
     background: linear-gradient(transparent, var(--scroll-edge));
 }
 
-:lang(ja) :where(p, .help, .field-note, .empty, .empty-state) {
+clutch-scroll-area[data-scroll-axis="inline"] > :first-child {
+    min-width: 0;
+    overflow: auto hidden;
+}
+
+clutch-scroll-area[data-scroll-axis="inline"]::before,
+clutch-scroll-area[data-scroll-axis="inline"]::after {
+    inset: 0 auto;
+    width: 16px;
+    height: auto;
+}
+
+clutch-scroll-area[data-scroll-axis="inline"][data-scroll-before]::before {
+    inset-inline-start: 0;
+    background: linear-gradient(to right, var(--scroll-edge), transparent);
+}
+
+clutch-scroll-area[data-scroll-axis="inline"][data-scroll-after]::after {
+    inset-inline-end: 0;
+    background: linear-gradient(to left, var(--scroll-edge), transparent);
+}
+
+:lang(ja) :where(p, .help, .field-note, .empty, .empty-state, .hm-dialog-body) {
     word-break: auto-phrase;
 }
 
@@ -403,6 +425,7 @@ meter::-moz-meter-bar {
 }
 
 .node-readout small {
+    font-size: 13px;
     color: var(--muted);
 }
 
@@ -642,6 +665,7 @@ select:not([multiple], [size]):enabled {
 
 .pc-display-toggle button[aria-pressed="false"] {
     background: transparent;
+    box-shadow: none;
 }
 
 .pc-display-toggle button[aria-pressed="true"] {
@@ -777,7 +801,7 @@ label:has(> input:is([type="checkbox"]:not([role="switch"]), [type="radio"])):no
 
 @media (pointer: coarse), (max-width: 600px) {
     label:has(> input:is([type="checkbox"]:not([role="switch"]), [type="radio"])):not(.choice-strip label) {
-        min-height: 44px;
+        min-height: var(--check-row-height, 44px);
     }
 }
 

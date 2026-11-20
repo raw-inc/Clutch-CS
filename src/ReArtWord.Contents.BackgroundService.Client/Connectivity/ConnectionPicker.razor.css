@@ -1,9 +1,12 @@
 .connection-button {
     font-size: 12px;
-    background: var(--raised);
-    border-color: var(--line);
     gap: 9px;
     max-width: 340px;
+}
+
+.connection-button[aria-expanded="true"] {
+    background: var(--raised);
+    box-shadow: none;
 }
 
 .connection-name {

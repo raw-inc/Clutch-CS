@@ -28,6 +28,7 @@
 
     .persistence-counts tbody tr {
         border: 1px solid var(--line);
+        background: var(--nested);
         margin: 0 0 10px;
     }
 }

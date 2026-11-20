@@ -105,8 +105,8 @@
 ::deep .node-inline-field > small,
 ::deep .node-inline-field > .small {
     display: block;
-    font-size: 11px;
-    line-height: 14px;
+    font-size: 13px;
+    line-height: 15px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -132,7 +132,7 @@
 
 .graph-node .node-box {
     fill: var(--panel);
-    stroke: color-mix(in srgb, var(--control) 42%, var(--line));
+    stroke: light-dark(color-mix(in srgb, var(--control) 60%, var(--line)), color-mix(in srgb, var(--control) 42%, var(--line)));
     rx: var(--radius-panel);
     stroke-width: 1.5px;
     vector-effect: non-scaling-stroke;
@@ -187,7 +187,7 @@
 
 .graph-node .port-group .port-type {
     fill: var(--port-color);
-    font: 8px Consolas, monospace;
+    font: 500 11px var(--font-ui);
     letter-spacing: 0.3px;
     pointer-events: none;
 }
@@ -229,11 +229,6 @@
     border-color: var(--line);
     border-bottom-color: var(--control);
     background-color: var(--panel);
-}
-
-.graph-node ::deep .node-inline-field > small {
-    font-size: 11px;
-    color: var(--muted);
 }
 
 .wire-group .wire {
