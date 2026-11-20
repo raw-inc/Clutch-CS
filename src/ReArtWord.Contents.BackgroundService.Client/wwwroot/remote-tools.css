@@ -1340,6 +1340,10 @@
         grid-template-columns: minmax(0, 1fr) auto;
     }
 
+    .license-cards > section > h2 {
+        grid-column: 1 / -1;
+    }
+
     .license-cards .license-metadata {
         display: flex;
         grid-column: 1 / -1;
@@ -1680,6 +1684,16 @@
     grid-column: -2;
     grid-row: 1;
     justify-self: end;
+}
+
+@media (max-width: 760px) {
+    .license-cards > section:has(> .license-notices > details:only-child:not([open])) > .license-metadata {
+        grid-column: 1;
+    }
+
+    .license-notices:has(> details:only-child:not([open])) {
+        grid-row: 2;
+    }
 }
 
 @media (max-width: 650px) {

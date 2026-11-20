@@ -1107,6 +1107,7 @@
 
     .desktop-workspace[data-state="connected"] .desktop-rail :is(summary, button.desktop-labeled) > .control-label {
         display: inline;
+        font-size: 12px;
     }
 }
 
@@ -1117,7 +1118,7 @@
     }
 }
 
-.desktop-deck > details:not([open]) > summary {
+.desktop-workspace .desktop-deck > details:not([open]) > summary {
     border-block-color: transparent;
 }
 
