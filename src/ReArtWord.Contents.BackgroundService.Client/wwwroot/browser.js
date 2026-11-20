@@ -350,20 +350,30 @@ function revealEditorTab(strip)
     }
 }
 
-let watchedTabWidth;
+let editorTabsResize;
+
+/** 送りボタンの表示後にタブ列が狭くなるため、ウィンドウではなく列の幅を監視します。 */
+function revealResizedEditorTabs(entries)
+{
+    for (const { target } of entries)
+    {
+        if (target.isConnected)
+        {
+            revealEditorTab(target);
+        }
+        else
+        {
+            editorTabsResize.unobserve(target);
+        }
+    }
+}
+
 window.contentsBrowser.revealTab = strip =>
 {
-    if (watchedTabWidth === undefined)
+    if (strip)
     {
-        watchedTabWidth = window.innerWidth;
-        window.addEventListener('resize', () =>
-        {
-            if (window.innerWidth !== watchedTabWidth)
-            {
-                watchedTabWidth = window.innerWidth;
-                revealEditorTab(document.querySelector('.editor-workflow-tabs'));
-            }
-        });
+        editorTabsResize ??= new ResizeObserver(revealResizedEditorTabs);
+        editorTabsResize.observe(strip);
+        revealEditorTab(strip);
     }
-    revealEditorTab(strip);
 };
