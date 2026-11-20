@@ -6,7 +6,7 @@ Clutch-CS は、複数の PC の稼働状況を監視し、各 PC の設定変�
 
 ![Clutch-CSの主な画面：Dashboard、WorkflowEditor、Terminal、RemoteDesktop](docs/images/product-overview.png)
 
-> ※ 画面は開発中のものです。
+> サンプルデータを使った画面例です。
 
 ## 使い始める
 
