@@ -120,7 +120,7 @@ test('root UI entry', async t =>
         assert.equal(await page.locator('#version').textContent(), expected);
     }
 
-    await t.test('first visit installs verified assets, shows slim progress and reaches Dashboard', async () =>
+    await t.test('first visit installs verified assets, shows slim progress and reaches Dashboard', { skip: '起動画面の進捗バーを8pxに変更したため、旧3px表示の検証を終了します。' }, async () =>
     {
         await page.goto(base + '/');
         await page.locator('#splash').waitFor({ state: 'visible' });
@@ -128,6 +128,27 @@ test('root UI entry', async t =>
         await page.waitForFunction(() => (0) < (document.querySelector('progress')?.value));
         const progress = await page.locator('progress').evaluate(element => ({ height: element.getBoundingClientRect().height, value: element.value, max: element.max }));
         assert.equal(progress.height, 3);
+        assert((0) < (progress.value) && progress.value <= progress.max);
+        if (process.env.CONTENTS_TEST_UI_ENTRY_SCREENSHOT)
+        {
+            await page.screenshot({ path: process.env.CONTENTS_TEST_UI_ENTRY_SCREENSHOT });
+        }
+        await dashboardAsync('one');
+        const fontRequests = requests.filter(item => item.path.endsWith('.woff2'));
+        assert.ok(fontRequests.some(item => item.version === 'one'));
+        assert.ok(fontRequests.every(item => item.version === 'one'), '起動画面は更新対象のフォントの読込みを必要としません。');
+        assert.equal(await page.evaluate(async () => (await navigator.serviceWorker.getRegistration()).waiting), null);
+    });
+
+    await t.test('first visit installs verified assets, shows the download status and reaches Dashboard', async () =>
+    {
+        await page.goto(base + '/');
+        await page.locator('#splash').waitFor({ state: 'visible' });
+        assert.equal(await page.title(), 'Clutch-CS');
+        await page.waitForFunction(() => (0) < (document.querySelector('progress')?.value));
+        const progress = await page.locator('progress').evaluate(element => ({ height: element.getBoundingClientRect().height, value: element.value, max: element.max }));
+        assert.equal(progress.height, 8);
+        assert.match(await page.locator('#status').textContent(), /Loading UI files/);
         assert((0) < (progress.value) && progress.value <= progress.max);
         if (process.env.CONTENTS_TEST_UI_ENTRY_SCREENSHOT)
         {
