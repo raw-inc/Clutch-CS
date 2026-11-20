@@ -6,7 +6,7 @@
 <main class="page log-page">
     <div class="page-title">
         <h1>LogViewer</h1>
-        <div class="toolbar"><button @onclick="()=>operationsOpen=true"><UiIcon Name="logs" />@Ui["Operation history"]</button><button @onclick="()=>traceOpen=true" disabled="@(!HasSelection)"><UiIcon Name="settings" />@Ui["Trace settings"]</button><RetentionDialog Disabled="@(!HasSelection)" /></div>
+        <div class="toolbar"><button @onclick="()=>operationsOpen=true"><UiIcon Name="logs" /><span class="control-label">@Ui["Operation history"]</span></button><button @onclick="()=>traceOpen=true" disabled="@(!HasSelection)"><UiIcon Name="settings" /><span class="control-label">@Ui["Trace settings"]</span></button><RetentionDialog Disabled="@(!HasSelection)" /></div>
     </div>
     @if(SearchAllClusters){<p class="log-settings-context muted">@Ui[HasSelection ? "log.viewer.settingsContext" : "log.viewer.selectForSettings"]</p>}
     @if (!string.IsNullOrWhiteSpace(message))

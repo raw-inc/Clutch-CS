@@ -1,3 +1,13 @@
+/* UIフォントの字面は行ボックスの中央より上に見えるため、図柄と並ぶ文字の位置を補正します。 */
+.control-label {
+    position: relative;
+    inset-block-start: var(--control-label-offset);
+}
+
+:where(.dialog-content, .hm-dialog-body, .desktop-popover-content) {
+    scrollbar-color: var(--control) var(--panel);
+}
+
 .search-field {
     display: flex;
     align-items: center;

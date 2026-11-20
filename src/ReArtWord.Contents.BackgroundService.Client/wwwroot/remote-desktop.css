@@ -47,7 +47,6 @@
     font-size: 11px;
     padding: 4px 10px;
     flex: none;
-    flex-direction: row-reverse;
     min-height: 36px;
 }
 
@@ -141,7 +140,6 @@
     padding: 6px 8px;
     gap: 6px;
     font-size: 11px;
-    flex-direction: row-reverse;
 }
 
 .desktop-quick-controls .desktop-action[data-muted="true"] {

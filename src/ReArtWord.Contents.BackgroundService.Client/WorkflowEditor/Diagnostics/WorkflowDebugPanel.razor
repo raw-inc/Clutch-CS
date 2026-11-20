@@ -10,7 +10,7 @@
     </div>
     <div class="debug-query section-heading">
         @if(problem is null){<p class="muted">@(state is null?Ui["No debug capture is reserved or retained on this connection."]:Ui["Debug state "+state.State])</p>}
-        <button class="debug-refresh" disabled="@busy" @onclick="()=>RefreshAsync(UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh"]</button>
+        <button class="debug-refresh" disabled="@busy" @onclick="()=>RefreshAsync(UiCancellation)"><UiIcon Name="refresh" /><span class="control-label">@Ui["Refresh"]</span></button>
     </div>
     @if(problem is not null){<p class="notice error" role="status">@Ui[problem]</p>}
     @if(state is not null)

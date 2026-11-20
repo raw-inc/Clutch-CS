@@ -1,6 +1,6 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Processes
 <section class="applications-panel">
-    <div class="section-heading"><h2>@Ui["Applications"]</h2><div class="toolbar"><button class="quiet" disabled="@busy" @onclick="()=>RefreshAsync(UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh applications"]</button><button class="primary" disabled="@(busy||target is null)" @onclick="()=>Edit(null)"><UiIcon Name="add" />@Ui["Register application"]</button></div></div>
+    <div class="section-heading"><h2>@Ui["Applications"]</h2><div class="toolbar"><button class="quiet" disabled="@busy" @onclick="()=>RefreshAsync(UiCancellation)"><UiIcon Name="refresh" /><span class="control-label">@Ui["Refresh applications"]</span></button><button class="primary" disabled="@(busy||target is null)" @onclick="()=>Edit(null)"><UiIcon Name="add" /><span class="control-label">@Ui["Register application"]</span></button></div></div>
     <div class="application-target">
         <label>@Ui["Application host"]<select value="@peer" disabled="@(busy||refreshing||registrationOpen||selected is not null||removing is not null)" @onchange="e=>SelectPeerAsync(e.Value?.ToString(),UiCancellation)">
             @foreach(var item in (Connection.Current?.Peers??[]).OrderBy(item=>item.HostId,StringComparer.CurrentCulture))
@@ -74,7 +74,7 @@
         @if(item.Definition.Mode==EProcessMode.Managed)
         {
             <fieldset disabled="@(busy||target is null)"><legend>@Ui["Process controls"]</legend><div class="toolbar">
-                <button class="primary" disabled="@(item.Observed.Status?.Running is true)" @onclick='()=>CommandAsync("process.start",new{processId=item.Definition.Id},UiCancellation)'><UiIcon Name="play" />@Ui["Start"]</button>
+                <button class="primary" disabled="@(item.Observed.Status?.Running is true)" @onclick='()=>CommandAsync("process.start",new{processId=item.Definition.Id},UiCancellation)'><UiIcon Name="play" /><span class="control-label">@Ui["Start"]</span></button>
                 <button class="danger" disabled="@(item.Observed.Status?.Running is false)" @onclick="()=>{restarting=false;stopOpen=true;}">@Ui["Stop"]</button>
                 <button disabled="@(item.Observed.Status?.Running is false)" @onclick="()=>{restarting=true;stopOpen=true;}">@Ui["Restart"]</button>
             </div>@if(item.Observed.Status?.Running is false){<p class="small muted">@Ui["The application is stopped. Use Start to run it."]</p>}<details class="secondary-details recovery-controls"><summary>@Ui["Recovery controls"]</summary><div class="action-list">
@@ -87,7 +87,7 @@
     }
     @if(selected is { } displayed)
     {
-        <div class="destructive-action"><button class="danger" disabled="@(busy||refreshing||target is null)" @onclick="()=>ConfirmRemoval(displayed)"><UiIcon Name="trash" />@Ui["Remove registration"]</button></div>
+        <div class="destructive-action"><button class="danger" disabled="@(busy||refreshing||target is null)" @onclick="()=>ConfirmRemoval(displayed)"><UiIcon Name="trash" /><span class="control-label">@Ui["Remove registration"]</span></button></div>
     }
     </ChildContent>
     <Actions>

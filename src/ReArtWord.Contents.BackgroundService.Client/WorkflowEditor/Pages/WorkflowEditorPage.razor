@@ -44,14 +44,14 @@ else
             <div class="document-title"><input aria-label="@Ui["Workflow name"]" title="@Model.Draft.Document.Name" value="@Model.Draft.Document.Name" @oninput="e=>Model.Change(document=>document with{Name=e.Value?.ToString()??string.Empty})" disabled="@(busy||Model.Locks.Whole(Model.Draft.Document.Id))" /></div>
             <span class="save-state @(Model.Draft.Dirty?"modified":string.Empty)"><span class="dot"></span>@(Model.Draft.BaseRevision is null?Ui["New · unsaved"]:Model.Draft.Dirty?Ui["Unsaved"]:Model.Draft.LocalOnly?Ui["Saved locally · not shared"]:Ui["Saved and shared"])</span>
             <div class="document-actions">
-                <button aria-label="@Ui["Validate workflow"]" title="@Ui["Validate"]" @onclick="ValidateAsync" disabled="@busy"><UiIcon Name="check" />@Ui["Validate"]</button>
-                <button @onclick="RunAsync" disabled="@busy" title="@Ui["Run the entire workflow once"]"><UiIcon Name="play" />@Ui["Run once"]</button>
+                <button aria-label="@Ui["Validate workflow"]" title="@Ui["Validate"]" @onclick="ValidateAsync" disabled="@busy"><UiIcon Name="check" /><span class="control-label">@Ui["Validate"]</span></button>
+                <button @onclick="RunAsync" disabled="@busy" title="@Ui["Run the entire workflow once"]"><UiIcon Name="play" /><span class="control-label">@Ui["Run once"]</span></button>
                 <div class="split-button"><button class="primary" @onclick="()=>SaveAsync()" disabled="@(busy||Model.Draft.Conflicts.Count!=0)"><UiIcon Name="save" />@(Detached?Ui["Save locally"]:Ui[activation==EActivationPolicy.Auto?"Save & apply":"Save"])</button><button class="primary icon-button" title="@Ui["Activation after saving"]" aria-label="@Ui["Save settings"]" @onclick="()=>saveOptionsOpen=true"><UiIcon Name="chevron" /></button></div>
                 <button class="icon-button quiet" title="@Ui["Import, export and operation history"]" aria-label="@Ui["More actions"]" @onclick="()=>documentToolsOpen=true"><UiIcon Name="more" /></button>
             </div>
         </div>
         <div class="editor-toolbar">
-            <button class="quiet @(catalogOpen?"active":string.Empty)" aria-pressed="@(catalogOpen?"true":"false")" aria-label="@Ui["Node catalog"]" @onclick="()=>TogglePanelAsync(true,lifetime.Token)"><UiIcon Name="add" />@Ui["Nodes"]</button>
+            <button class="quiet @(catalogOpen?"active":string.Empty)" aria-pressed="@(catalogOpen?"true":"false")" aria-label="@Ui["Node catalog"]" @onclick="()=>TogglePanelAsync(true,lifetime.Token)"><UiIcon Name="add" /><span class="control-label">@Ui["Nodes"]</span></button>
             <span class="toolbar-divider"></span><button class="quiet icon-button" aria-label="@Ui["Undo"]" title="@Ui["Undo"]" @onclick="Model.Undo" disabled="@(!Model.CanUndo||busy)"><UiIcon Name="undo" /></button>
             <span class="toolbar-divider"></span><span class="toolbar-spacer"></span>
             <label class="workflow-input-switch" title='@Ui["Edit automatic workflow inputs. Save and activate to apply. OFF stops automatic inputs after activation; manual runs remain available."]'>
@@ -63,8 +63,8 @@ else
             <span class="toolbar-spacer"></span>
             @if(ExperimentalEnabled){<button class="quiet" disabled="@(busy||LocalContext||Model.Draft.BaseRevision is null)" @onclick="()=>debugOpen=true">@Ui["Debug next input"]</button>}
             <button class="quiet @(showDetails?"active":string.Empty)" aria-label="@Ui["Show values in nodes"]" aria-pressed="@(showDetails?"true":"false")" title="@Ui["Show or collapse node values"]" @onclick="()=>showDetails=!showDetails">@Ui["Show values in nodes"]</button>
-            <button class="quiet" @onclick="()=>viewOptionsOpen=true"><UiIcon Name="settings" />@Ui["View"]</button>
-            <button class="quiet @(inspectorOpen?"active":string.Empty)" aria-pressed="@(inspectorOpen?"true":"false")" @onclick="()=>TogglePanelAsync(false,lifetime.Token)"><UiIcon Name="panel" />@Ui["Inspector"]</button>
+            <button class="quiet" @onclick="()=>viewOptionsOpen=true"><UiIcon Name="settings" /><span class="control-label">@Ui["View"]</span></button>
+            <button class="quiet @(inspectorOpen?"active":string.Empty)" aria-pressed="@(inspectorOpen?"true":"false")" @onclick="()=>TogglePanelAsync(false,lifetime.Token)"><UiIcon Name="panel" /><span class="control-label">@Ui["Inspector"]</span></button>
         </div>
     </div>
     @if(!string.IsNullOrWhiteSpace(Model.StorageProblem))
@@ -98,11 +98,11 @@ else
             </EditorNavigator>
             <section @ref="canvasContainer" class="canvas-container" tabindex="0" @ondragover:preventDefault="true" @ondrop="DropNodeAsync">
             <NodeGraph ToggleStates="@ToggleStates.Find(Model.ClusterId,Model.Draft.Document.Id)" ButtonPressed="RunCoreAsync" PreviewRequested="PreviewRecipe" ExtractRequested="ExtractSubworkflowAsync" @ref="graph" Catalog="catalog" SelectionChanged="StateHasChanged" OverlapChanged="value=>nodesOverlap=value" DragChanged="value=>dragging=value" ShowDetails="showDetails" Zoom="zoom" ZoomChanged="value=>zoom=value" View="EffectiveView" />
-            @if(Model.Draft.Document.Nodes.Count==0){<div class="canvas-empty"><button @onclick="()=>catalogOpen=true"><UiIcon Name="add" />@Ui["Add node"]</button></div>}
+            @if(Model.Draft.Document.Nodes.Count==0){<div class="canvas-empty"><button @onclick="()=>catalogOpen=true"><UiIcon Name="add" /><span class="control-label">@Ui["Add node"]</span></button></div>}
             </section>
         </div>
         <NodeQuickAdd CanvasHost="canvasContainer" Catalog="catalog" Disabled="@(busy||Model.Locks.Whole(Model.Draft.Document.Id))" Add="AddAtAsync" />
-        <aside class="inspector" hidden="@(!inspectorOpen)"><div class="inspector-heading"><h2>@(Model.SelectedWire is not null?Ui["Connection"]:Model.SelectedNode is not null?Ui["Selected node"]:Ui["Workflow settings"])</h2><div class="toolbar">@if(Model.SelectedNode is not null || Model.SelectedWire is not null){<button class="quiet" @onclick="SelectWorkflow"><UiIcon Name="settings" />@Ui["Workflow settings"]</button>}<button class="quiet icon-button" aria-label="@Ui["Close inspector"]" @onclick="()=>inspectorOpen=false"><UiIcon Name="close" /></button></div></div>
+        <aside class="inspector" hidden="@(!inspectorOpen)"><div class="inspector-heading"><h2>@(Model.SelectedWire is not null?Ui["Connection"]:Model.SelectedNode is not null?Ui["Selected node"]:Ui["Workflow settings"])</h2><div class="toolbar">@if(Model.SelectedNode is not null || Model.SelectedWire is not null){<button class="quiet" @onclick="SelectWorkflow"><UiIcon Name="settings" /><span class="control-label">@Ui["Workflow settings"]</span></button>}<button class="quiet icon-button" aria-label="@Ui["Close inspector"]" @onclick="()=>inspectorOpen=false"><UiIcon Name="close" /></button></div></div>
             @if(Model.SelectedNode is not null){<NodeInspector ToggleState="@ToggleStates.Find(Model.ClusterId,Model.Draft.Document.Id).GetValueOrDefault(Model.SelectedNode)" ButtonPressed="RunCoreAsync" @key="Model.SelectedNode" Visible="inspectorOpen" Catalog="catalog" InvalidChanged="value=>invalid=value" />}else{<WorkflowInspector Visible="inspectorOpen" Routes="@(inspectorOpen?AllRoutes:[])" Catalog="catalog" />}
         </aside>
     </div>
@@ -153,7 +153,7 @@ else
             <label><input type="radio" name="workflow-choice" checked="@(pickedWorkflow==draft.Id)" @onchange="()=>pickedWorkflow=draft.Id" /><span>@draft.Name @(draft.Dirty?Ui["Unsaved"]:string.Empty) @if(draft.Id == Model.Draft.Document.Id){<small class="badge">@Ui["Currently open"]</small>}</span></label>
         }
     </div>
-    <div class="toolbar"><span>@Ui.Format("{0} items", workflows.Count)</span>@if(workflowCursor is not null){<button @onclick="NextWorkflowsAsync" disabled="@busy">@Ui["Show more"]</button>}<button @onclick="NewWorkflowAsync" disabled="@busy"><UiIcon Name="add" />@Ui["New workflow"]</button></div>
+    <div class="toolbar"><span>@Ui.Format("{0} items", workflows.Count)</span>@if(workflowCursor is not null){<button @onclick="NextWorkflowsAsync" disabled="@busy">@Ui["Show more"]</button>}<button @onclick="NewWorkflowAsync" disabled="@busy"><UiIcon Name="add" /><span class="control-label">@Ui["New workflow"]</span></button></div>
     </ChildContent>
     <Actions>
         <button class="primary" disabled="@(busy||pickedWorkflow is null)" @onclick="()=>LoadAsync(new ChangeEventArgs { Value = pickedWorkflow })">@Ui["Open workflow"]</button>
@@ -163,20 +163,20 @@ else
 <Modal Open="documentToolsOpen" Title="@Ui["Workflow actions"]" Close="()=>documentToolsOpen=false">
     <h3>@Ui["Workflow files"]</h3>
     <div class="action-list file-actions-list">
-        <button @onclick="()=>{documentToolsOpen=false;importOpen=true;}"><UiIcon Name="folder" />@Ui["Import YAML / JSON"]</button>
-        <button @onclick="ExportAsync"><UiIcon Name="download" />@Ui["Export JSON"]</button>
-        <button disabled="@(busy||LocalContext)" title="@(LocalContext?Ui["Connect to a Core to export YAML."]:null)" @onclick="()=>ExportYamlAsync(lifetime.Token)"><UiIcon Name="download" />@Ui["Export YAML"]</button>
+        <button @onclick="()=>{documentToolsOpen=false;importOpen=true;}"><UiIcon Name="folder" /><span class="control-label">@Ui["Import YAML / JSON"]</span></button>
+        <button @onclick="ExportAsync"><UiIcon Name="download" /><span class="control-label">@Ui["Export JSON"]</span></button>
+        <button disabled="@(busy||LocalContext)" title="@(LocalContext?Ui["Connect to a Core to export YAML."]:null)" @onclick="()=>ExportYamlAsync(lifetime.Token)"><UiIcon Name="download" /><span class="control-label">@Ui["Export YAML"]</span></button>
     </div>
     <h3>@Ui["Execution and diagnostics"]</h3>
     <div class="action-list">
         @if (!Model.Draft.Document.IsDashboard)
         {
-            <button disabled="@(Model.SelectedNode is null||busy)" @onclick="RunSelectedAsync"><UiIcon Name="play" />@Ui["Run from selected node"]</button>
-            <button @onclick="()=>{documentToolsOpen=false;compatibilityOpen=true;}"><UiIcon Name="info" />@Ui["Check compatibility"]</button>
+            <button disabled="@(Model.SelectedNode is null||busy)" @onclick="RunSelectedAsync"><UiIcon Name="play" /><span class="control-label">@Ui["Run from selected node"]</span></button>
+            <button @onclick="()=>{documentToolsOpen=false;compatibilityOpen=true;}"><UiIcon Name="info" /><span class="control-label">@Ui["Check compatibility"]</span></button>
         }
-        <button @onclick="()=>{documentToolsOpen=false;operationsOpen=true;}"><UiIcon Name="history" />@Ui["History and result lookup"]</button>
+        <button @onclick="()=>{documentToolsOpen=false;operationsOpen=true;}"><UiIcon Name="history" /><span class="control-label">@Ui["History and result lookup"]</span></button>
     </div>
-    <div class="destructive-action"><button class="quiet danger" disabled="@busy" @onclick="()=>{documentToolsOpen=false;deleteOpen=true;}"><UiIcon Name="trash" />@Ui["Delete workflow"]</button></div>
+    <div class="destructive-action"><button class="quiet danger" disabled="@busy" @onclick="()=>{documentToolsOpen=false;deleteOpen=true;}"><UiIcon Name="trash" /><span class="control-label">@Ui["Delete workflow"]</span></button></div>
 </Modal>
 <WorkflowDeleteDialog Open="deleteOpen" Close="()=>deleteOpen=false" Deleted="DeletedWorkflowAsync" />
 <Modal Open="compatibilityOpen" Title="@Ui["Behavior contract compatibility"]" Close="()=>compatibilityOpen=false"><CompatibilityPanel @key="(Model.Draft.Document.Id,Api.SelectedClusterId,Api.SelectedPeerId)" WorkflowId="@Model.Draft.Document.Id" /></Modal>

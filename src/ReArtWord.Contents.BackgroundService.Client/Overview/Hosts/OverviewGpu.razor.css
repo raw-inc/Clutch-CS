@@ -4,6 +4,11 @@
     width: 100%;
     min-width: 0;
     padding: 8px 0;
+    container-type: inline-size;
+}
+
+.gpu + .gpu {
+    border-block-start: 1px solid var(--line);
 }
 
 .gpu-heading,
@@ -34,7 +39,6 @@
 }
 
 .gpu-memory {
-    flex-wrap: wrap;
     font-size: 13px;
     color: var(--muted);
     display: grid;
@@ -56,4 +60,18 @@
 .gpu-memory small {
     text-align: right;
     white-space: nowrap;
+}
+
+@container (min-width: 26rem) {
+    .gpu-memory {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 7ch;
+    }
+
+    .gpu-memory > span {
+        grid-column: auto;
+    }
+
+    .gpu-memory b {
+        text-align: end;
+    }
 }

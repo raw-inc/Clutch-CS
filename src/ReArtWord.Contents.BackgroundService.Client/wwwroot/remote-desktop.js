@@ -1,3 +1,4 @@
+import { setControlLabel } from './ui-icons.js';
 import { createDesktopCodecSettings, sameDesktopCodecSettings } from './remote-desktop-codec-settings.js';
 import { desktopTransmissionPresets, defaultDesktopTransmissionPreset, desktopPresetCodecSettings, findDesktopTransmissionPreset } from './remote-desktop-presets.js';
 import { supportsDesktopOpus } from './remote-desktop-opus.js';
@@ -130,8 +131,14 @@ export async function desktopView(root, ctx)
     /** 表示名とイベントを持つ操作ボタンを構成します。 */
     function action(button, label, icon, caption = null)
     {
-        button.textContent = caption ?? '';
-        button.append(ctx.icon(icon));
+        if (caption === null)
+        {
+            button.replaceChildren(ctx.icon(icon));
+        }
+        else
+        {
+            setControlLabel(button, icon, caption);
+        }
         button.title = label;
         button.setAttribute('aria-label', label);
         button.className = 'desktop-action quiet ' + (caption === null ? 'icon-button' : 'desktop-labeled');
@@ -2285,7 +2292,7 @@ export async function desktopView(root, ctx)
     action(follow, ctx.t('Follow pointer', 'マウス追従'), 'follow-pointer');
     follow.setAttribute('aria-pressed', 'true');
     start.className = 'primary desktop-connect';
-    start.append(ctx.icon('play'));
+    setControlLabel(start, 'play');
     action(stop, ctx.t('Disconnect', '接続解除'), 'close', ctx.t('Disconnect', '接続解除'));
     action(reload, ctx.t('Refresh hosts', 'ホスト一覧を更新'), 'refresh', ctx.t('Refresh hosts', 'ホスト一覧を更新'));
     reload.className += ' desktop-reload';

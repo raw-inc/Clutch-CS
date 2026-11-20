@@ -1,3 +1,4 @@
+import { setControlLabel } from './ui-icons.js';
 import { appendFileRows } from './file-pane-rows.js';
 import { hostIds, resolveHosts, samePeer, currentPeer } from './file-transfer-selection.js';
 import { fileActionControls } from './file-action-controls.js';
@@ -45,7 +46,7 @@ export async function filesView(root, ctx)
         clusterOptions();
         await selectHostsAsync();
     });
-    reload.prepend(ctx.icon('refresh'));
+    setControlLabel(reload, 'refresh');
 
     /** 到達可能なクラスタを選択肢へ反映します。 */
     function clusterOptions()
@@ -167,11 +168,11 @@ export async function filesView(root, ctx)
         });
         copy.className = 'primary';
         const drives = ctx.button(ctx.t('Drives', 'ドライブ'), () => openAsync(null));
-        drives.prepend(ctx.icon('drive'));
+        setControlLabel(drives, 'drive');
         const up = ctx.button(ctx.t('Up', '上へ'), () => openAsync(state.parent));
-        up.prepend(ctx.icon('up'));
+        setControlLabel(up, 'up');
         const refresh = ctx.button(ctx.t('Refresh', '更新'), () => openAsync(state.directory));
-        refresh.prepend(ctx.icon('refresh'));
+        setControlLabel(refresh, 'refresh');
         toolbar.append(drives, up, refresh);
         footer.append(count);
         section.append(label, location, toolbar, tree, footer);

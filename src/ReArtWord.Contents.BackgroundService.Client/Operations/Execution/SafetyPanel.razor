@@ -7,7 +7,7 @@
 <div class="lookup-status">
 <span class="badge @(Current is { Stopped: true } or { Continued: true } ? "warn" : targets.Count > 0 && status?.Loaded == true ? "good" : "pending")">@Ui[OverrideState]</span>
 </div>
-<button @onclick="OpenAsync"><UiIcon Name="search" />@Ui["Review effective state and targets"]</button>
+<button @onclick="OpenAsync"><UiIcon Name="search" /><span class="control-label">@Ui["Review effective state and targets"]</span></button>
 <p class="notice">@(message?.Invoke())</p>
 @if(lastOperation is Guid operation){<p>@Ui["Current operation"] @operation <button @onclick="ReadOperationAsync" disabled="@busy">@Ui["Query acceptance again"]</button></p>}
 </section>

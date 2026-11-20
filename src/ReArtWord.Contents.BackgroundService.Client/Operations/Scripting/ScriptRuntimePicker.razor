@@ -18,7 +18,7 @@
         <code class="runtime-current-path">@path</code>
     }
     <div class="runtime-actions">
-        <button type="button" disabled="@(Disabled||busy||PeerId is null)" title="@Ui["Refresh runtime choices"]" @onclick="()=>LoadAsync(true,UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh runtime choices"]</button>
+        <button type="button" disabled="@(Disabled||busy||PeerId is null)" title="@Ui["Refresh runtime choices"]" @onclick="()=>LoadAsync(true,UiCancellation)"><UiIcon Name="refresh" /><span class="control-label">@Ui["Refresh runtime choices"]</span></button>
         @if(Manage)
         {
             <button type="button" disabled="@(Disabled||busy||catalog is null||string.Equals(Value??string.Empty,catalog.DefaultPath??string.Empty,StringComparison.OrdinalIgnoreCase))" @onclick="()=>SetDefaultAsync(UiCancellation)">@Ui["Use selected runtime as default"]</button>

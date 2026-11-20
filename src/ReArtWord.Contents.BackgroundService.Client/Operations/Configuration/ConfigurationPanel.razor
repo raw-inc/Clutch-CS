@@ -9,7 +9,7 @@
 
 <section class="card section">
     <h2>@Ui["Cluster operational settings"]</h2>
-    <button @onclick="OpenAsync"><UiIcon Name="settings" />@Ui["Review saved and effective revisions"]</button>
+    <button @onclick="OpenAsync"><UiIcon Name="settings" /><span class="control-label">@Ui["Review saved and effective revisions"]</span></button>
     <p class="notice" role="status">@(message?.Invoke())</p>
 </section>
 <Modal Open="open" Title="@Ui["Operational settings"]" Close="()=>open=false">
@@ -17,8 +17,17 @@
     @if(open){<EditorRestoreProtection IsConfigurationParticipant="true" WorkflowId="cluster-operational" ReadOnlyChanged="value=>restoreReadOnly=value" />}
     <fieldset class="operational-fields" disabled="@restoreReadOnly">
     <p>@Ui["NIC, IP, storage paths and allowed roots are peer-specific. These shared settings apply to new inputs."]</p>
-    <dl class="revision-facts"><div><dt>@Ui["Saved revision"]</dt><dd>@(state?.Saved?.Revision??Ui["None"])</dd></div>
-    <div><dt>@Ui["Effective revision on this peer"]</dt><dd>@(state?.Effective?.Revision??Ui["Unconfirmed"])</dd></div></dl>
+    <dl class="revision-facts">
+        @if(state?.Saved?.Revision is { } savedRevision && savedRevision == state.Effective?.Revision)
+        {
+            <div><dt>@Ui["Saved and applied on this peer"]</dt><dd>@savedRevision</dd></div>
+        }
+        else
+        {
+            <div><dt>@Ui["Saved revision"]</dt><dd>@(state?.Saved?.Revision??Ui["None"])</dd></div>
+            <div><dt>@Ui["Effective revision on this peer"]</dt><dd>@(state?.Effective?.Revision??Ui["Unconfirmed"])</dd></div>
+        }
+    </dl>
     @if(state?.Effective?.DerivedFromVersions is {Count: > 0})
     {
         <div class="notice"><strong>@Ui["Some fields are waiting for conflict resolution."]</strong><p>@Ui["Only confirmed fields are applied. Work that depends on unresolved fields remains on hold."]</p><p>@Ui["Unresolved"]: @string.Join(", ",state.Effective.UnresolvedFields??[])</p><p class="small">@Ui["Compare the original candidates in Resolve conflicts."]</p></div>

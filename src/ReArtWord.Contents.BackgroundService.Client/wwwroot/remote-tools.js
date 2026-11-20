@@ -44,7 +44,7 @@ export async function mount(element, mode, language, timeZone = 'UTC')
         const modes = document.createElement('nav');
         modes.className = 'transfer-modes';
         modes.setAttribute('aria-label', 'FileTransfer');
-        for (const [value, path, label] of [['files', '/file-transfer', 'Cluster · Host ↔ Host (α)'], ['browser-files', '/browser-transfer', 'Browser ↔ Host (α)']])
+        for (const [value, path, label] of [['files', '/file-transfer', 'Cluster · Host ↔ Host'], ['browser-files', '/browser-transfer', 'Browser ↔ Host']])
         {
             const link = document.createElement('a');
             link.href = path;

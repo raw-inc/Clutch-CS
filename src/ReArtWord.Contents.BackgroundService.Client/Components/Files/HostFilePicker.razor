@@ -5,9 +5,9 @@
             <p class="small muted">@Ui["Open folders with a double-click or Enter. Select a file to use its absolute path."]</p>
             @if(problem is not null){<p class="notice error" role="alert">@problem()</p>}
             <div class="toolbar">
-                <button type="button" class="quiet" disabled="@busy" @onclick="()=>LoadAsync(null,0,UiCancellation)"><UiIcon Name="drive" />@Ui["Drives"]</button>
+                <button type="button" class="quiet" disabled="@busy" @onclick="()=>LoadAsync(null,0,UiCancellation)"><UiIcon Name="drive" /><span class="control-label">@Ui["Drives"]</span></button>
                 <button type="button" class="quiet" disabled="@(busy||directory is null)" @onclick="()=>LoadAsync(parent,0,UiCancellation)">@Ui["Parent folder"]</button>
-                <button type="button" class="quiet" disabled="@busy" @onclick="()=>LoadAsync(directory,0,UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh"]</button>
+                <button type="button" class="quiet" disabled="@busy" @onclick="()=>LoadAsync(directory,0,UiCancellation)"><UiIcon Name="refresh" /><span class="control-label">@Ui["Refresh"]</span></button>
             </div>
             <form class="file-picker-location" @onsubmit="()=>LoadAsync(string.IsNullOrWhiteSpace(address)?null:address.Trim(),0,UiCancellation)" @onsubmit:preventDefault="true">
                 <label class="field-label">@Ui["Folder path"]<input @bind="address" @bind:event="oninput" disabled="@busy" placeholder='@Ui["Drives / enter a folder path"]' /></label>

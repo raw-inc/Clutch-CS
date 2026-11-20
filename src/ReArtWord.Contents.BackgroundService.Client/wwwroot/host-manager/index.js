@@ -1,3 +1,4 @@
+import { setControlLabel } from '../ui-icons.js';
 import { keys } from './labels.js';
 import { node, input, field, checkbox, icon, action, empty } from './dom.js';
 import { networkView } from './network.js';
@@ -184,7 +185,7 @@ export async function mount(element, labels)
             button.type = 'button';
             if (className.split(' ').includes('danger'))
             {
-                button.prepend(icon('trash'));
+                setControlLabel(button, 'trash');
             }
             button.onclick = () =>
             {

@@ -1,3 +1,4 @@
+import { setControlLabel } from './ui-icons.js';
 import { createTerminalStream } from './terminal-stream.js';
 import { createTerminalLayout } from './terminal-layout.js';
 import { createTerminalKeys } from './terminal-keys.js';
@@ -56,6 +57,7 @@ export async function terminalView(root, ctx)
     shellLabel.append(shellSelect);
     const adminHint = document.createElement('p');
     adminHint.className = 'terminal-launch-hint';
+    adminHint.id = 'terminal-launch-hint';
     adminHint.hidden = true;
     const shellCatalogs = new Map();
     let shellTarget = '', shells = [], shellLoading = false, shellGeneration = 0;
@@ -203,7 +205,7 @@ export async function terminalView(root, ctx)
                     await list();
                 });
                 terminate.className = 'danger';
-                terminate.prepend(ctx.icon('stop'));
+                setControlLabel(terminate, 'stop');
                 claim.disabled = terminate.disabled = item.failed;
                 row.append(claim, terminate);
                 sessions.append(row);
@@ -430,7 +432,7 @@ export async function terminalView(root, ctx)
                     renderSessions();
                 });
                 button.dataset.peer = peerKey(target);
-                button.prepend(ctx.icon('monitor'));
+                setControlLabel(button, 'monitor');
                 branch.append(button);
             }
             peersTree.append(branch);
@@ -671,6 +673,7 @@ export async function terminalView(root, ctx)
     });
 
     const user = create(false), admin = create(true);
+    admin.setAttribute('aria-describedby', adminHint.id);
     user.className = 'primary';
     const copy = ctx.button(ctx.t('Copy', 'コピー'), copySelectionAsync), paste = ctx.button(ctx.t('Paste', '貼り付け'), pasteClipboardAsync);
     copy.title = 'Ctrl+Shift+C';
@@ -683,7 +686,7 @@ export async function terminalView(root, ctx)
         fit: () => layout.update() });
     for (const [button, icon] of [[user, 'play'], [admin, 'settings'], [copy, 'copy'], [paste, 'clipboard'], [leave, 'close']])
     {
-        button.prepend(ctx.icon(icon));
+        setControlLabel(button, icon);
     }
     const refreshSessions = ctx.button(ctx.t('Refresh sessions', 'セッション更新'), list);
     const tokenPolicy = experimental ? ctx.button('', async() =>
@@ -720,8 +723,7 @@ export async function terminalView(root, ctx)
         const unavailable = !peer || shellLoading || !shells.length || !peers.some(item => samePeer(item, peer));
         user.disabled = unavailable || capabilities?.userAvailable !== true;
         admin.disabled = unavailable || capabilities?.administratorAvailable !== true;
-        admin.textContent = capabilities?.administratorUsesSystem ? ctx.t('SYSTEM session', 'SYSTEM 実行') : ctx.t('Administrator', '管理者実行');
-        admin.prepend(ctx.icon('shield'));
+        setControlLabel(admin, 'shield', capabilities?.administratorUsesSystem ? ctx.t('SYSTEM session', 'SYSTEM 実行') : ctx.t('Administrator', '管理者実行'));
         user.title = capabilities?.userAvailable ? '' : ctx.t('No non-elevated user token is available.', '通常ユーザーのトークンを取得できません。');
         admin.title = capabilities?.administratorUsesSystem ? ctx.t('No user is logged on. Start as SYSTEM.', '未ログオンのためSYSTEMとして起動します。') :
             capabilities?.administratorAvailable ? ctx.t('Start as this user with administrator privileges', 'ユーザー本人の管理者権限で起動') :
@@ -766,17 +768,18 @@ export async function terminalView(root, ctx)
     screenActions.className = 'terminal-screen-actions';
     sessionActions.append(shellLabel, user, admin, leave);
     screenActions.append(copy, paste, ...fullscreen.buttons);
-    toolbar.append(sessionActions, adminHint, screenActions);
+    toolbar.append(sessionActions, screenActions);
     if (tokenPolicy)
     {
         sessionActions.append(tokenPolicy);
     }
+    sessionActions.append(adminHint);
     const peerTitle = document.createElement('h2'), sessionTitle = document.createElement('h2');
     peerTitle.textContent = ctx.t('Clusters & peers', 'クラスタ・ピア');
     sessionTitle.textContent = ctx.t('Shared sessions', '共有セッション');
     const refreshPeers = ctx.button(ctx.t('Refresh peers', 'ピア更新'), list);
-    refreshPeers.prepend(ctx.icon('refresh'));
-    refreshSessions.prepend(ctx.icon('refresh'));
+    setControlLabel(refreshPeers, 'refresh');
+    setControlLabel(refreshSessions, 'refresh');
     peerHeading.append(peerTitle, refreshPeers);
     sessionHeading.append(sessionTitle, refreshSessions);
     peersTree.append(peerHeading);

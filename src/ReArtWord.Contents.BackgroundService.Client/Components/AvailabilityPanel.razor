@@ -1,7 +1,7 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Persistence.Availability
 @using ReArtWord.Contents.BackgroundService.Contracts.Persistence
 <section class="section">
-    <div class="section-heading"><h2>@Ui["Connected peer storage status"]</h2><button disabled="@busy" @onclick="()=>LoadAsync(false)"><UiIcon Name="refresh" />@Ui["Refresh"]</button></div>
+    <div class="section-heading"><h2>@Ui["Connected peer storage status"]</h2><button disabled="@busy" @onclick="()=>LoadAsync(false)"><UiIcon Name="refresh" /><span class="control-label">@Ui["Refresh"]</span></button></div>
     @if(message is not null){<p class="notice">@(message?.Invoke())</p>}
     @if(page is not null)
     {

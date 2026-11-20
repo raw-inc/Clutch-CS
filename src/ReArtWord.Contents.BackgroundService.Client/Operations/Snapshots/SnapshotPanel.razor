@@ -6,7 +6,7 @@
 <h2>@Ui["Snapshots"]</h2>
 @if(snapshotCheckedAt is {} checkedAt){<p class="small muted">@Ui.Format("Snapshots retrieved: {0}", snapshots.Count) · @FormatTime(checkedAt,"HH:mm:ss")</p>}
 <p class="small muted">@Ui["Restore settings and explicitly included runtime state. External effects that already occurred are not undone."]</p>
-<div class="toolbar"><button class="primary" @onclick="OpenCapture"><UiIcon Name="save" />@Ui["Capture current state"]</button><button class="restore-action" @onclick="OpenRestoreAsync"><UiIcon Name="undo" />@Ui["Restore by target"]</button></div>
+<div class="toolbar"><button class="primary" @onclick="OpenCapture"><UiIcon Name="save" /><span class="control-label">@Ui["Capture current state"]</span></button><button class="restore-action" @onclick="OpenRestoreAsync"><UiIcon Name="undo" /><span class="control-label">@Ui["Restore by target"]</span></button></div>
 <p class="notice">@(message?.Invoke())</p>
 </section>
 <Modal Open="captureOpen" Title="@Ui["Capture current state"]" Close="()=>captureOpen=false">

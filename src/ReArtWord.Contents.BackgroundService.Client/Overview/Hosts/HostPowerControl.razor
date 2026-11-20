@@ -2,8 +2,8 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Cluster
 <div class="host-power-control" @ref="root">
     <button type="button" class="power-menu-trigger" aria-label="@Ui.Format("Power actions for {0}",HostId)" aria-expanded="false" aria-controls="@panelId" aria-disabled="@((Busy || !CanAct) ? "true" : "false")" data-power-trigger>
-        <svg class="power-symbol" data-power-animation="@(!Offline && Status == EPeerStatus.Ready ? "ready" : "none")" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><use href="/icons/controls.svg#power" fill="currentColor" /></svg>
-        <span>@Ui["Power actions"]</span>
+        <svg class="ui-icon power-symbol" data-power-animation="@(!Offline && Status == EPeerStatus.Ready ? "ready" : "none")" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><use href="/icons/controls.svg#power" fill="currentColor" /></svg>
+        <span class="control-label">@Ui["Power actions"]</span>
     </button>
     <div id="@panelId" class="power-panel" role="group" aria-label="@Ui.Format("Power actions for {0}",HostId)" hidden>
         <div data-power-choices>

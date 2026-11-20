@@ -1,6 +1,6 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Processes
 <section class="section applications-panel">
-    <div class="section-heading"><h2>@Ui["Application groups"]</h2><button disabled="@(busy || !Available)" @onclick="()=>Edit(null)"><UiIcon Name="add" />@Ui["Create application group"]</button></div>
+    <div class="section-heading"><h2>@Ui["Application groups"]</h2><button disabled="@(busy || !Available)" @onclick="()=>Edit(null)"><UiIcon Name="add" /><span class="control-label">@Ui["Create application group"]</span></button></div>
     <p class="small muted">@Ui["Combine registered applications on this PC and choose how to recover them."]</p>
     @if(message is not null){<p class="notice" role="status">@message()</p>}
     <clutch-status-labels><div class="table-wrap"><table><thead><tr><th>@Ui["Application group name"]</th><th>@Ui["Group recovery policy"]</th><th>@Ui["Status"]</th><th>@Ui["Actions"]</th></tr></thead><tbody>

@@ -11,7 +11,7 @@
     else if(State == "Syncing"){<ActivityRing Identity="@Identity" Active="true" />}
     else if(State == "Offline"){<UiIcon Name="offline" />}
     else{<span class="power-unknown" aria-hidden="true">?</span>}
-    <span class="health-label">@Ui[State]</span>
+    <span class="health-label control-label">@Ui[State]</span>
     @if(State == "Ready" && History is { Pending: > 0 } history)
     {
         <span class="background-sync" role="progressbar" aria-label='@Ui["Background Sync"]' aria-valuemin="0" aria-valuemax="100" aria-valuenow="@Percent" title="@Description">@Ui["Background Sync"] @Percent %@if(history.Problem is not null){<span> · @Ui["Waiting"]</span>}</span>

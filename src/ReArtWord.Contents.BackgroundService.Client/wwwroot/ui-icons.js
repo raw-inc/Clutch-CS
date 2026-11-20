@@ -13,3 +13,12 @@ export function uiIcon(name)
     svg.append(use);
     return svg;
 }
+
+/** 図柄とラベルを独立させ、Razorの操作ボタンと同じ配置に揃えます。 */
+export function setControlLabel(control, icon, text = control.textContent)
+{
+    const label = document.createElement('span');
+    label.className = 'control-label';
+    label.textContent = text;
+    control.replaceChildren(uiIcon(icon), label);
+}

@@ -16,15 +16,15 @@
         <div class="navigation-links">
         @foreach (var item in navigationItems)
         {
-            <a href="@item.Route" class="@(NavigationRoute == item.Route ? "active" : null)" aria-current="@(NavigationRoute == item.Route ? "page" : null)"><UiIcon Name="@item.Icon" />@item.Name</a>
+            <a href="@item.Route" class="@(NavigationRoute == item.Route ? "active" : null)" aria-current="@(NavigationRoute == item.Route ? "page" : null)"><UiIcon Name="@item.Icon" /><span class="control-label">@item.Name</span></a>
         }
         </div>
         <details class="route-menu" @key="Navigation.Uri">
-            <summary aria-label='@Ui["Main navigation"]'><UiIcon Name="menu" /><span>@(navigationItems.FirstOrDefault(item=>item.Route==NavigationRoute).Name ?? Ui["Menu"])</span></summary>
+            <summary aria-label='@Ui["Main navigation"]'><UiIcon Name="menu" /><span class="control-label">@(navigationItems.FirstOrDefault(item=>item.Route==NavigationRoute).Name ?? Ui["Menu"])</span></summary>
             <div>
                 @foreach (var item in navigationItems)
                 {
-                    <a href="@item.Route" aria-current="@(NavigationRoute == item.Route ? "page" : null)"><UiIcon Name="@item.Icon" />@item.Name</a>
+                    <a href="@item.Route" aria-current="@(NavigationRoute == item.Route ? "page" : null)"><UiIcon Name="@item.Icon" /><span class="control-label">@item.Name</span></a>
                 }
             </div>
         </details>

@@ -1,4 +1,4 @@
-import { uiIcon } from '../ui-icons.js';
+import { setControlLabel, uiIcon } from '../ui-icons.js';
 
 // All OS values enter the document as text or form values, never HTML.
 /** 指定した属性を持つ画面要素を作成します。
@@ -184,7 +184,7 @@ export function action(ctx, label, glyph, run, primary = false)
     {
         button.classList.add('danger');
     }
-    button.prepend(icon(glyph));
+    setControlLabel(button, glyph);
     return button;
 }
 

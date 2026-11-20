@@ -23,7 +23,7 @@
         }
         @if(cursor is not null){<button disabled="@(busy||!SameConnection)" @onclick="()=>LoadPageAsync(true)">@Ui["Show more candidates"]</button>}
     }
-    <button disabled="@busy" @onclick="LoadAsync"><UiIcon Name="@(loaded?"refresh":"search")" />@Ui[loaded?"Check again":"Show candidates"]</button>
+    <button disabled="@busy" @onclick="LoadAsync"><UiIcon Name="@(loaded?"refresh":"search")" /><span class="control-label">@Ui[loaded?"Check again":"Show candidates"]</span></button>
     @if(message is not null){<p class="notice">@(message?.Invoke())</p>}
     @if(lastId is Guid id)
     {

@@ -43,7 +43,7 @@
         {
             <div class="discovery-binding"><p class="small muted">@(network.Interfaces.FirstOrDefault(item=>item.InterfaceId==status.Binding.InterfaceId)?.Name??status.Binding.InterfaceId) / @status.Binding.BindAddress → @status.Binding.BroadcastAddress : @status.Binding.Port · @Ui[status.Listening?"Listening":"Not listening"] @status.Problem
                 </p><div class="toolbar"><button @onclick="()=>EditBinding(status.Binding)" disabled="@busy">@Ui["Edit"]</button>
-                <button class="danger" @onclick="()=>removingBinding=status.Binding" disabled="@busy"><UiIcon Name="offline" />@Ui["Stop discovery"]</button>
+                <button class="danger" @onclick="()=>removingBinding=status.Binding" disabled="@busy"><UiIcon Name="offline" /><span class="control-label">@Ui["Stop discovery"]</span></button>
             </div></div>
         }
         <label>NIC<select value="@interfaceId" @onchange="InterfaceChanged">
@@ -85,5 +85,5 @@
             <p class="notice warning"><UiIcon Name="warning" />@Ui.Format("Stopping observation for {0} can remove clusters only visible through it.", name)</p>
         }
     </ChildContent>
-    <Actions><button class="danger" disabled="@busy" @onclick="()=>ConfirmRemovalAsync(UiCancellation)"><UiIcon Name="offline" />@Ui["Stop discovery"]</button></Actions>
+    <Actions><button class="danger" disabled="@busy" @onclick="()=>ConfirmRemovalAsync(UiCancellation)"><UiIcon Name="offline" /><span class="control-label">@Ui["Stop discovery"]</span></button></Actions>
 </Modal>

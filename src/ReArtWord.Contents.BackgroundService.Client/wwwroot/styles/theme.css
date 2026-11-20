@@ -31,6 +31,7 @@
     --motion-close: 320ms;
     --ease-action: cubic-bezier(0.2, 0, 0, 1);
     --ease-panel: cubic-bezier(0.22, 0.69, 0.4, 1);
+    --control-label-offset: 0.16em;
     --radius-control: 6px;
     --radius-panel: 12px;
     --panel-inset: 8px;

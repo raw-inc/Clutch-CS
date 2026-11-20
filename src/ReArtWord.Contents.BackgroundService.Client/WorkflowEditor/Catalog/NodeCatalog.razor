@@ -38,7 +38,7 @@
         <code class="node-identifier">@descriptor.Type</code><p>@Ui.NodeDescription(descriptor)</p>
         <div class="catalog-port-list">@foreach(var port in EditorNodeDescriptor.VisibleInputs(descriptor,[]).Where(port=>!port.IsLegacy)){var info=GraphPresentation.Port(descriptor,port.Name,false);<div class="kind-@info.Key"><span>@Ui["Inputs"]</span><strong>@Ui.PortName(descriptor.Type,port.Name,false)</strong><code title="@Ui[info.Description]">@info.DisplayLabel(Ui)</code></div>}@foreach(var port in EditorNodeDescriptor.VisibleOutputs(descriptor,[]).Where(port=>!port.IsLegacy)){var info=GraphPresentation.Port(descriptor,port.Name,true);<div class="kind-@info.Key"><span>@Ui["Outputs"]</span><strong>@Ui.PortName(descriptor.Type,port.Name,true)</strong><code title="@Ui[info.Description]">@info.DisplayLabel(Ui)</code></div>}</div>
         </div>
-        <button class="primary" @onclick="()=>Add.InvokeAsync(descriptor)"><UiIcon Name="add" />@Ui["Add"]</button>
+        <button class="primary" @onclick="()=>Add.InvokeAsync(descriptor)"><UiIcon Name="add" /><span class="control-label">@Ui["Add"]</span></button>
 </div>
 }
 

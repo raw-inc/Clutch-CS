@@ -20,7 +20,8 @@
 }
 
 .power-symbol {
-    flex: none;
+    width: 16px;
+    height: 16px;
     overflow: visible;
     transform-origin: center;
 }

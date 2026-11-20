@@ -6,7 +6,7 @@
         <div class="application-fields">
             <label>@Ui["Application name"]<input @bind="draft.Name" @bind:event="oninput" maxlength="160" /></label>
             <label>@Ui["Management mode"]<select @bind="draft.Mode"><option value="Managed">@Ui["Managed"]</option><option value="ObserveOnly">@Ui["ObserveOnly"]</option></select></label>
-            <div class="wide executable-field"><label>@Ui["Absolute executable path"]<input @bind="draft.Executable" @bind:event="oninput" placeholder="C:\Apps\Player.exe" /></label><button type="button" class="quiet" disabled="@(string.IsNullOrWhiteSpace(ClusterId)||string.IsNullOrWhiteSpace(PeerId))" @onclick="()=>browsing=true"><UiIcon Name="folder" />@Ui["Browse executable"]</button></div>
+            <div class="wide executable-field"><label>@Ui["Absolute executable path"]<input @bind="draft.Executable" @bind:event="oninput" placeholder="C:\Apps\Player.exe" /></label><button type="button" class="quiet" disabled="@(string.IsNullOrWhiteSpace(ClusterId)||string.IsNullOrWhiteSpace(PeerId))" @onclick="()=>browsing=true"><UiIcon Name="folder" /><span class="control-label">@Ui["Browse executable"]</span></button></div>
             <label class="wide">@Ui["Working directory"]<input @bind="draft.Directory" @bind:event="oninput" placeholder="C:\Apps" /></label>
             @if(draft.Mode==EProcessMode.Managed)
             {
@@ -22,7 +22,7 @@
             {
                 <div class="argument-row" @key="argument.EditorId"><input aria-label='@Ui["Argument"]' @bind="argument.Value" @bind:event="oninput" /><button type="button" class="quiet" @onclick="()=>draft.Arguments.Remove(argument)">@Ui["Remove"]</button></div>
             }
-            <button type="button" class="quiet" @onclick='()=>draft.Arguments.Add(new(string.Empty))'><UiIcon Name="add" />@Ui["Add argument"]</button>
+            <button type="button" class="quiet" @onclick='()=>draft.Arguments.Add(new(string.Empty))'><UiIcon Name="add" /><span class="control-label">@Ui["Add argument"]</span></button>
         </section>
         <section class="application-section">
             <h3>@Ui["Automatic monitoring"]</h3>
@@ -88,7 +88,7 @@
                     </div>
                 </div>
             }
-            <button type="button" class="quiet" disabled="@(32<=draft.Schedules.Count)" @onclick="()=>draft.Schedules.Add(new())"><UiIcon Name="add" />@Ui["Add schedule"]</button>
+            <button type="button" class="quiet" disabled="@(32<=draft.Schedules.Count)" @onclick="()=>draft.Schedules.Add(new())"><UiIcon Name="add" /><span class="control-label">@Ui["Add schedule"]</span></button>
         </section>
         <details class="secondary-details" open="@(draft.Mode==EProcessMode.ObserveOnly)"><summary>@Ui["Existing process and registration ID"]</summary>
             <p class="small muted">@Ui["Registration ID"]: <code>@draft.Id</code></p>

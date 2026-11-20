@@ -7,6 +7,7 @@
   "Connected peer storage status": "接続先の保存状態",
   "Purpose / dataset": "用途・対象",
   "Saved revision": "保存版",
+  "Saved and applied on this peer": "このピアで保存・反映済みの版",
   "Effective revision": "有効版",
   "Recovery revision": "復旧版",
   "Status": "状態",

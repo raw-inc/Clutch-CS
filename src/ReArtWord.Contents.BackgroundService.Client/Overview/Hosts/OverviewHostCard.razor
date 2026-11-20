@@ -4,18 +4,25 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Resources
 @using ReArtWord.Contents.BackgroundService.Contracts.Cluster
 
+@{
+    var aboveThreshold = stale ? 0 : DashboardMetrics.AboveThreshold(sample);
+}
                 <article class="health-card host-card @(Detailed ? "detailed" : "summary") @(stale ? "stale" : "")">
                     <header>
                         <div class="host-name">
                             <span class="host-icon"><UiIcon Name="monitor" /></span>
-                            <div>
-                                <div class="host-heading">
-                                    <h3>@item.Peer.HostId</h3>
-                                    <PeerStateLabel State="@HealthState" Identity="@item.Peer.HostId" History="item.HistorySynchronization" />
-                                </div>
-                                @if(!stale && DashboardMetrics.AboveThreshold(sample) is var above && above != 0)
+                            <div class="host-heading">
+                                <h3>@item.Peer.HostId</h3>
+                                <PeerStateLabel State="@HealthState" Identity="@item.Peer.HostId" History="item.HistorySynchronization" />
+                            </div>
+                        </div>
+                        <HostPowerControl HostId="@item.Peer.HostId" TargetIdentity="@TargetIdentity" Status="@(PowerTarget?.Peer.Status??item.Peer.Status)" Stale="stale" Offline="Offline" Busy="powerBusy" Problem="@powerProblem" ActionConfirmed="ActAsync" />
+                        @if(aboveThreshold != 0 || (stale && sample is not null) || Detailed)
+                        {
+                            <div class="host-context">
+                                @if(aboveThreshold != 0)
                                 {
-                                    <small class="metric-alert">@Ui.Format("{0} measurements over 80%", above)</small>
+                                    <small class="metric-alert">@Ui.Format("{0} measurements over 80%", aboveThreshold)</small>
                                 }
                                 @if(stale && sample is not null)
                                 {
@@ -26,8 +33,7 @@
                                     <small class="host-membership" title="@Memberships">@(Memberships ?? item.Peer.PeerId) · @item.Peer.Address@if(Peers.Count>1){<span> · @Ui.Format("{0} peers on this host", Peers.Count)</span>}</small>
                                 }
                             </div>
-                        </div>
-                        <HostPowerControl HostId="@item.Peer.HostId" TargetIdentity="@TargetIdentity" Status="@(PowerTarget?.Peer.Status??item.Peer.Status)" Stale="stale" Offline="Offline" Busy="powerBusy" Problem="@powerProblem" ActionConfirmed="ActAsync" />
+                        }
                     </header>
                     <clutch-card-rows><div class="primary-metrics">
                         <div class="metric-cell"><div class="metric-content"><span class="metric-label">CPU</span>@if(cpu > 80 && !stale){<span class="metric-alert">@Ui["Above 80%"]</span>}<div class="metric-number">@Percent(cpu)<small>@(cpu is null ? Ui["Not measured"] : "%")</small></div>@if(Detailed){<div data-card-caption class="metric-detail">@Ui.Format("{0} cores / {1} threads", Count(DashboardMetrics.Value(sample,"cpu.cores")), Count(DashboardMetrics.Value(sample,"cpu.threads")))<span class="cpu-name" title="@CpuName">@CpuName</span></div>}else{<div data-card-caption class="metric-detail"><span>@Ui.Format("{0} cores / {1} threads", Count(DashboardMetrics.Value(sample,"cpu.cores")), Count(DashboardMetrics.Value(sample,"cpu.threads")))</span><span class="cpu-name" title="@CpuName">@CpuName</span></div>}</div>

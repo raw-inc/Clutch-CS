@@ -997,10 +997,16 @@
 
 .license-list .license-cards {
     display: block;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-panel);
+    overflow: clip;
+}
+
+.license-cards > section:last-child {
+    border-block-end: 0;
 }
 
 .license-cards > section {
-    margin-block: 8px;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: baseline;
@@ -1382,10 +1388,11 @@
 }
 
 .terminal-launch-hint {
-    flex-basis: 100%;
+    flex: 0 0 100%;
     margin: 0;
     color: var(--muted);
     font-size: 13px;
+    overflow-wrap: anywhere;
 }
 
 .terminal-sidebar .terminal-session > button {

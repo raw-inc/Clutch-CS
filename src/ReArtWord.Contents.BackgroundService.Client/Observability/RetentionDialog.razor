@@ -1,6 +1,6 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Observability
 @using ReArtWord.Contents.BackgroundService.Contracts.Management
-<button @onclick="OpenAsync" disabled="@Disabled"><UiIcon Name="drive" />@Ui["Retention settings"]</button>
+<button @onclick="OpenAsync" disabled="@Disabled"><UiIcon Name="drive" /><span class="control-label">@Ui["Retention settings"]</span></button>
 <span>@(message?.Invoke())</span>
 <Modal Open="open" Title="@Ui["Log and history retention"]" Close="()=>open=false">
     <ChildContent>
