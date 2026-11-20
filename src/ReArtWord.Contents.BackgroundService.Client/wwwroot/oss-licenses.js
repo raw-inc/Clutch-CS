@@ -101,7 +101,7 @@ export async function licensesView(root, ctx)
         {
             const cell = document.createElement('span');
             cell.dataset.label = label;
-            cell.textContent = value;
+            appendLicenseMetadata(cell, value ?? '');
             meta.append(cell);
         }
         section.append(title, meta);
@@ -131,74 +131,9 @@ export async function licensesView(root, ctx)
             link.rel = 'noopener noreferrer';
             meta.lastElementChild.append(link);
         }
-        const notices = document.createElement('div');
-        notices.className = 'license-notices';
-        section.append(notices);
-        for (const notice of entry.notices)
+        if (entry.notices.length)
         {
-            const details = document.createElement('details'), summary = document.createElement('summary'), text = document.createElement('pre');
-            const caption = noticeCaption(notice.label, ctx);
-            summary.textContent = caption;
-            summary.setAttribute('aria-label', entry.name + ' · ' + caption);
-            const content = document.createElement('div');
-            content.className = 'license-text';
-            const close = ctx.button(ctx.t('Close notice', '本文を閉じる'), () =>
-            {
-                details.open = false;
-                summary.focus({ preventScroll: false });
-            }, 'quiet');
-            content.append(text, close);
-            details.append(summary, content);
-            notices.append(details);
-            let loaded = false;
-
-            /** 開いた通知本文を取得し、取消し後には表示を更新しません。
-             * @returns 通知本文の取得と表示の完了です。
-             */
-            async function loadNoticeAsync()
-            {
-                if (!details.open || loaded)
-                {
-                    return;
-                }
-                loaded = true;
-                try
-                {
-                    const response = await fetch(notice.href, { signal: ctx.signal });
-                    if (!response.ok)
-                    {
-                        throw new Error('License could not be loaded.');
-                    }
-                    text.textContent = await response.text();
-                    const bundledEditor = '@codemirror/autocomplete';
-                    if (entry.name === bundledEditor && text.textContent.includes('@codemirror/commands'))
-                    {
-                        const note = document.createElement('p');
-                        note.className = 'small muted';
-                        note.textContent = ctx.t('This file contains notices for the bundled editor packages.', 'この本文には、同梱しているエディター関連パッケージのライセンスをまとめて掲載しています。');
-                        content.prepend(note);
-                    }
-                }
-                catch(error)
-                {
-                    loaded = false;
-                    if (!ctx.signal.aborted)
-                    {
-                        text.textContent = error.message;
-                    }
-                }
-            }
-
-            details.addEventListener('toggle', () =>
-            {
-                loadNoticeAsync().catch(error =>
-                {
-                    if (!ctx.signal.aborted)
-                    {
-                        text.textContent = error.message;
-                    }
-                });
-            }, { signal: ctx.signal });
+            appendNotices(section, entry, ctx, components.length);
         }
         components.push({ name: entry.name.toLowerCase(), license: entry.license, section });
         cards.append(section);
@@ -213,6 +148,154 @@ export async function licensesView(root, ctx)
         /** 所有する監視・接続・表示資源を解放します。 */
         dispose()
         {} };
+}
+
+/** メールアドレス付きの作者名は、名前とアドレスの間でも折り返せるようにします。 */
+function appendLicenseMetadata(cell, value)
+{
+    for (const part of value.split(/(<[^<>\s]+@[^<>\s]+>)/u))
+    {
+        if (part.startsWith('<') && part.endsWith('>'))
+        {
+            const address = document.createElement('span');
+            address.className = 'license-author-address';
+            address.textContent = part;
+            cell.append(address);
+        }
+        else
+        {
+            cell.append(part);
+        }
+    }
+}
+
+/** ライブラリーごとに開閉位置を固定し、本文は開いたときに読み込みます。 */
+function appendNotices(section, entry, ctx, index)
+{
+    const toggle = document.createElement('button'), content = document.createElement('div'), actions = document.createElement('div');
+    const caption = entry.notices.length === 1 ? noticeCaption(entry.notices[0].label, ctx) : ctx.t('Licenses and notices', 'ライセンス・通知');
+    toggle.type = 'button';
+    toggle.className = 'license-toggle';
+    toggle.textContent = caption;
+    toggle.append(uiIcon('chevron'));
+    toggle.setAttribute('aria-label', entry.name + ' · ' + caption);
+    toggle.setAttribute('aria-expanded', 'false');
+    content.id = 'license-notices-' + index;
+    content.className = 'license-notices';
+    content.hidden = true;
+    toggle.setAttribute('aria-controls', content.id);
+    actions.className = 'license-notice-actions';
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.textContent = ctx.t('Close notice', '本文を閉じる');
+    actions.append(close);
+    content.append(actions);
+    section.append(toggle, content);
+
+    const notices = entry.notices.map(notice =>
+    {
+        const title = document.createElement('h3'), text = document.createElement('div'), source = document.createElement('a');
+        title.textContent = noticeCaption(notice.label, ctx);
+        text.className = 'license-notice-text';
+        source.textContent = ctx.t('Original text', '原文を開く');
+        source.href = notice.href;
+        source.target = '_blank';
+        source.rel = 'noopener noreferrer';
+        const noticeBody = document.createElement('div');
+        noticeBody.className = 'license-notice';
+        noticeBody.append(title, source, text);
+        content.append(noticeBody);
+        return { notice, text, loaded: false };
+    });
+
+    /** 本文を閉じたら、一覧で同じライブラリーの開閉ボタンに戻ります。 */
+    function collapse()
+    {
+        content.hidden = true;
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.focus({ preventScroll: true });
+        toggle.scrollIntoView({ block: 'nearest' });
+    }
+
+    toggle.addEventListener('click', () =>
+    {
+        if (!content.hidden)
+        {
+            collapse();
+            return;
+        }
+        content.hidden = false;
+        toggle.setAttribute('aria-expanded', 'true');
+        for (const item of notices.filter(item => !item.loaded))
+        {
+            loadNoticeAsync(entry.name, item, ctx).catch(() =>
+            {
+                item.loaded = false;
+                if (!ctx.signal.aborted)
+                {
+                    item.text.textContent = ctx.t('Could not load the notice. Close and reopen to retry.', '本文を読み込めませんでした。閉じて開き直すと再試行できます。');
+                }
+            });
+        }
+    }, { signal: ctx.signal });
+    close.addEventListener('click', collapse, { signal: ctx.signal });
+}
+
+/** 取得できなかった本文は、開き直したときに取得できるようにします。
+ * @returns 通知本文の表示が完了するまでの処理です。
+ */
+async function loadNoticeAsync(component, item, ctx)
+{
+    item.loaded = true;
+    item.text.textContent = ctx.t('Loading…', '読み込み中…');
+    const response = await fetch(item.notice.href, { signal: ctx.signal });
+    if (!response.ok)
+    {
+        throw new Error(String(response.status));
+    }
+    const source = await response.text();
+    if (!ctx.signal.aborted)
+    {
+        renderNotice(item.text, component, source);
+    }
+}
+
+/** 同梱エディターの通知では、配布ファイルのパッケージ名と版を見出しとして表示します。 */
+function renderNotice(container, component, source)
+{
+    const bundledEditor = '@codemirror/autocomplete';
+    const blocks = component === bundledEditor ? source.split(/^([@a-z][@a-z0-9_./-]* \d+\.\d+\.\d+)(?=\r?$)/gmu) : [source];
+    container.replaceChildren();
+    for (const [index, block] of blocks.entries())
+    {
+        if (index % 2)
+        {
+            const title = document.createElement('h4');
+            title.textContent = block;
+            container.append(title);
+            continue;
+        }
+        if (!block.trim())
+        {
+            continue;
+        }
+        const text = document.createElement('pre');
+        for (const paragraph of block.trim().split(/(\r?\n(?:[ \t]*\r?\n)+)/u))
+        {
+            if (/^(?:Permission is hereby granted, free of charge|The above copyright notice and this permission notice|THE SOFTWARE IS PROVIDED "AS IS")/u.test(paragraph))
+            {
+                const prose = document.createElement('span');
+                prose.className = 'license-prose';
+                prose.textContent = paragraph;
+                text.append(prose);
+            }
+            else
+            {
+                text.append(paragraph);
+            }
+        }
+        container.append(text);
+    }
 }
 
 /** 複数のライセンスから採用した条件を表示します。 */

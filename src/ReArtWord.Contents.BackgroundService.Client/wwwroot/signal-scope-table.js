@@ -32,7 +32,9 @@ export function scopeTable(container, ctx, send, report)
         section.append(title, empty, content);
         panels.append(section);
     }
-    container.append(viewport, panels);
+    const scrollArea = document.createElement('clutch-scroll-area');
+    scrollArea.append(viewport);
+    container.append(scrollArea, panels);
     let follow = true, hostNames = false, selected = null, request = 0, programmedScroll = -1, anchor = null;
     let firstRendered = 0, requestedOffset = 0, requestedAnchor = null;
     let format;

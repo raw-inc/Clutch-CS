@@ -256,7 +256,6 @@ export async function desktopView(root, ctx)
     const empty = document.createElement('div');
     empty.className = 'desktop-empty';
     const emptyLabel = document.createElement('p');
-    emptyLabel.textContent = ctx.t('Select a host to connect', 'ホストを選択して接続');
     empty.append(ctx.icon('monitor'), emptyLabel);
     const viewport = document.createElement('div');
     viewport.className = 'desktop-viewport';
@@ -2229,6 +2228,8 @@ export async function desktopView(root, ctx)
         const busy = !!socket || connecting || reconnectState.pending;
         reconnectButton.setAttribute('aria-pressed', String(reconnectState.enabled));
         reconnectDelays.disabled = busy;
+        emptyLabel.textContent = host.value ? ctx.t('Select Connect to start viewing.', '「接続」で画面を表示します。')
+            : ctx.t('Choose a host to connect.', '接続先を選んでください。');
         start.disabled = busy || !host.value;
         start.title = host.value ? '' : ctx.t('Select a host first.', '接続先を選んでください。');
         stop.disabled = !busy;

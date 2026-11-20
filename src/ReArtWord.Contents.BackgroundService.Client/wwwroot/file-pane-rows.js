@@ -37,7 +37,7 @@ export function appendFileRows(tree, entries, ctx, options)
         check.onchange = change;
         const name = document.createElement('button');
         name.type = 'button';
-        name.className = 'file-name';
+        name.className = 'file-name row-button';
         name.textContent = entry.name;
         name.prepend(ctx.icon(!options.selectable ? 'drive' : entry.isDirectory ? 'folder' : 'file'));
         name.title = entry.path;

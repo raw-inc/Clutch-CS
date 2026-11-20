@@ -144,7 +144,6 @@ export async function filesView(root, ctx)
         location.className = 'file-location';
         const address = document.createElement('input');
         address.setAttribute('aria-label', ctx.t('Folder path', 'フォルダーパス'));
-        address.placeholder = ctx.t('Drives / enter a folder path', 'ドライブ / フォルダーパスを入力');
         const go = document.createElement('button');
         go.type = 'submit';
         go.textContent = ctx.t('Go', '移動');
@@ -175,7 +174,13 @@ export async function filesView(root, ctx)
         setControlLabel(refresh, ctx.icon('refresh'));
         toolbar.append(drives, up, refresh);
         footer.append(count);
-        section.append(label, location, toolbar, tree, footer);
+        const driveHint = document.createElement('p');
+        driveHint.className = 'file-root-note';
+        const hintText = document.createElement('span');
+        hintText.textContent = ctx.t('Open a drive to create folders.', 'ドライブを開くとフォルダーを作成できます。');
+        driveHint.append(ctx.icon('info'), hintText);
+        driveHint.hidden = true;
+        section.append(label, location, toolbar, driveHint, tree, footer);
         split.append(section);
         state.actions = fileActionControls(section, ctx, {
             read: () => ({ generation: state.generation, directory: state.directory, peer: state.peer, label: state.peer?.hostId ?? '',
@@ -197,6 +202,9 @@ export async function filesView(root, ctx)
         function update()
         {
             const locked = state.busy || panes.some(item => item.actions?.busy);
+            const drivesListed = !!state.peer && !state.busy && state.directory === null && state.entries.size !== 0;
+            address.placeholder = drivesListed ? ctx.t('Choose a drive or enter a folder path', 'ドライブを選ぶかパスを入力') : '';
+            driveHint.hidden = !drivesListed;
             count.textContent = ctx.t(state.selected.size + ' selected', state.selected.size + ' 件を選択');
             const destination = panes[1 - index]?.hostId;
             copy.textContent = destination ? ctx.t('Copy to ' + destination, destination + ' にコピー') : ctx.t('Copy selected files', '選択したファイルをコピー');

@@ -743,26 +743,6 @@
     margin-bottom: 6px;
 }
 
-.license-list details {
-    --card-inset-margin: 12px;
-
-    margin-top: 12px;
-    padding-inline: 10px;
-    background: var(--nested);
-    border-radius: var(--radius-control);
-}
-
-.license-list pre {
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    font-size: 12px;
-    line-height: 1.6;
-    padding: 16px;
-    background: var(--raised);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-control);
-}
-
 @media (max-width: 950px) {
     .terminal-workspace {
         grid-template-columns: 210px minmax(0, 1fr);
@@ -1010,16 +990,6 @@
     border-radius: 0;
 }
 
-.license-cards > section > :is(details,p:not(.muted)) {
-    grid-column: 1 / -1;
-}
-
-.license-cards summary {
-    min-height: 36px;
-    padding-block: 8px;
-    overflow-wrap: anywhere;
-}
-
 .license-cards pre {
     font: 14px/1.6 var(--font-body, system-ui);
     white-space: pre-wrap;
@@ -1029,12 +999,6 @@
     padding: 8px 0;
     border: 0;
     background: transparent;
-}
-
-@media (max-width: 680px) {
-    .license-cards > section {
-        display: block;
-    }
 }
 
 .terminal-keys button:disabled,
@@ -1166,17 +1130,6 @@
     font-size: 13px;
 }
 
-.license-cards details {
-    padding-block: 4px;
-}
-
-@media (max-width: 680px) {
-    .license-cards > section {
-        display: grid;
-        column-gap: 8px;
-    }
-}
-
 @media (max-width: 680px) {
     .terminal-panel .terminal-screen {
         min-height: 14rem;
@@ -1298,37 +1251,80 @@
     }
 }
 
+.license-toggle {
+    grid-column: -2;
+    grid-row: 1;
+    justify-self: end;
+    min-height: 38px;
+    max-width: 100%;
+    white-space: normal;
+    margin: 0;
+}
+
+.license-toggle[aria-expanded="true"] {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: none;
+}
+
+.license-toggle[aria-expanded="true"] > .ui-icon {
+    rotate: 180deg;
+}
+
 .license-notices {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 8px;
     grid-column: 1 / -1;
     min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
 }
 
-.license-notices > details:not([open]) {
-    width: fit-content;
-    max-width: 100%;
+.license-notice-actions {
+    position: sticky;
+    z-index: 1;
+    inset-block-start: 0;
+    display: flex;
+    justify-content: end;
+    padding: 6px 12px;
+    border-block-end: 1px solid var(--line);
+    background: var(--panel);
 }
 
-.license-notices > details[open] {
-    width: 100%;
+.license-notice-actions button {
+    margin: 0;
 }
 
-.license-notices summary {
-    width: fit-content;
-    min-height: 32px;
-    max-width: 100%;
-    padding-block: 4px;
+.license-notice {
+    padding: 12px;
 }
 
-.license-notices .license-text {
-    margin-block: 6px;
+.license-notice + .license-notice {
+    border-block-start: 1px solid var(--line);
 }
 
-.license-notices .license-text > pre {
+.license-notice > h3,
+.license-notice-text h4 {
+    font-size: 15px;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.license-notice-text h4 {
+    margin-block-start: 16px;
+    padding-block-start: 12px;
+    border-block-start: 1px solid var(--line);
+}
+
+.license-notice-text > pre {
     max-height: none;
+    margin: 0;
     overflow: visible;
+}
+
+.license-author-address {
+    display: inline-block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
 }
 
 @media (max-width: 760px) {
@@ -1338,6 +1334,16 @@
 
     .license-cards > section {
         grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: 8px;
+    }
+
+    .license-toggle {
+        grid-row: 2;
+        min-height: 44px;
+    }
+
+    .license-prose {
+        white-space: normal;
     }
 
     .license-cards > section > h2 {
@@ -1384,7 +1390,8 @@
 }
 
 @media (min-width: 651px) {
-    .terminal-sources {
+    .terminal-source-scroll {
+        align-self: stretch;
         border-inline-end: 1px solid var(--line);
     }
 }
@@ -1398,10 +1405,10 @@
 }
 
 .terminal-sidebar-heading h2 {
+    align-self: center;
     margin: 0;
     font-size: 13px;
     line-height: 1.35;
-    translate: 0 var(--control-label-offset);
 }
 
 .terminal-sidebar details > summary {
@@ -1466,13 +1473,10 @@
 .file-transfer-scope > label select {
     width: 100%;
     min-width: 0;
-    min-height: 36px;
-    font-size: 13px;
 }
 
 .file-transfer-scope > button {
-    min-height: 36px;
-    font-size: 13px;
+    justify-self: start;
 }
 
 .file-transfer-scope > .tool-status {
@@ -1489,6 +1493,11 @@
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         align-items: start;
+    }
+
+    .terminal-screen-actions {
+        margin-block-start: calc(7px + 1.5em);
+        font-size: 13px;
     }
 }
 
@@ -1514,13 +1523,15 @@
     }
 
     .terminal-sources > summary {
-        position: sticky;
-        inset-block-start: 0;
-        z-index: 2;
+        position: relative;
         font-size: 14px;
         padding-inline-start: 14px;
         min-height: 44px;
         background: var(--panel);
+    }
+
+    .terminal-sources > summary::after {
+        inset-inline-end: 22px;
     }
 
     .terminal-session-actions .terminal-shell-field {
@@ -1573,7 +1584,7 @@
         margin-inline: 0;
     }
 
-    .file-transfer-scope > :is(button, label select),
+    .file-pane :is(.file-navigation button, .file-location :is(input, button), .file-pane-footer button, .file-pane-title select, .file-row > .button-link),
     .tool-help summary {
         min-height: 44px;
     }
@@ -1583,11 +1594,6 @@
     .license-filter {
         grid-template-columns: minmax(0, 1fr);
     }
-}
-
-.terminal-session[aria-current="true"] > .danger {
-    grid-column: 1 / -1;
-    justify-self: start;
 }
 
 @media (min-width: 651px) {
@@ -1660,20 +1666,6 @@
     .terminal-source-scroll > .terminal-sources {
         overflow: visible;
     }
-
-    .terminal-sources > summary {
-        position: static;
-    }
-}
-
-.license-notices:has(> details:only-child:not([open])) {
-    grid-row: 1;
-    grid-column: -2;
-    justify-self: end;
-}
-
-.license-notices:has(> details:only-child:not([open])) > details {
-    margin: 0;
 }
 
 .files-tool > .browser-file-scope {
@@ -1684,16 +1676,6 @@
     grid-column: -2;
     grid-row: 1;
     justify-self: end;
-}
-
-@media (max-width: 760px) {
-    .license-cards > section:has(> .license-notices > details:only-child:not([open])) > .license-metadata {
-        grid-column: 1;
-    }
-
-    .license-notices:has(> details:only-child:not([open])) {
-        grid-row: 2;
-    }
 }
 
 @media (max-width: 650px) {

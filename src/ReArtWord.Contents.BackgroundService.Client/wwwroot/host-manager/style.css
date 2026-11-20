@@ -1964,10 +1964,6 @@
     min-height: 40px;
 }
 
-:root .hm-host:has(input:focus-visible):not(:has(input:checked)) {
-    background: var(--card);
-}
-
 .hm-tabs.workspace-index button:focus-visible {
     box-shadow: inset 0 0 0 2px var(--accent);
 }
@@ -2031,6 +2027,8 @@
 }
 
 .hm-profile-scope {
+    --check-row-height: 28px;
+
     display: grid;
     gap: 4px;
 }
@@ -2101,12 +2099,13 @@
     width: fit-content;
 }
 
-.hm-view .record-table td > .hm-actions button {
+.hm-view .record-table td :is(.hm-actions button, .hm-button):not(.hm-record-link) {
     min-height: 34px;
+    padding-inline: 12px;
 }
 
 @media (max-width: 680px) {
-    .hm-view .record-table td > .hm-actions button {
+    .hm-view .record-table td :is(.hm-actions button, .hm-button):not(.hm-record-link) {
         min-height: 44px;
     }
 }
@@ -2244,12 +2243,12 @@
 }
 
 :root .hm-workspace label.hm-host:has(input:focus-visible):not(:has(input:checked)) {
-    background-color: var(--panel);
+    background: var(--nested);
     box-shadow: inset 0 -2px var(--accent);
 }
 
 :root .hm-workspace label.hm-host:has(input:checked) {
-    background-color: var(--accent-soft);
+    background-color: color-mix(in srgb, var(--accent) 16%, var(--panel));
     border-color: var(--accent);
 }
 
@@ -2384,10 +2383,26 @@
     min-block-size: 40px;
 }
 
-.hm-view .hm-muted.hm-inline-hint {
-    margin-block: -10px 6px;
-    color: var(--muted);
-    font-size: 12px;
+.hm-view .hm-wake-selection {
+    --check-row-height: 28px;
+
+    display: grid;
+    gap: 4px;
+}
+
+.hm-view .hm-wake-selection > .hm-check {
+    min-height: 28px;
+    padding-block: 0;
+}
+
+.hm-view .hm-wake-selection :is(.hm-check, p) {
+    margin: 0;
+}
+
+.hm-view .hm-wake-selection p {
+    padding-inline-start: 23px;
+    font-size: 13px;
+    word-break: auto-phrase;
 }
 
 .hm-view .hm-toolbar input.hm-search:disabled {
@@ -2428,16 +2443,31 @@
         margin: 0;
     }
 
-    .hm-row-check {
+    .hm-view .hm-table-wrap label.hm-check.hm-row-check {
+        display: flex;
+        align-items: center;
         min-height: 0;
+        padding: 0;
         margin: 0;
     }
 
     .hm-firewall-form .hm-profile-scope {
-        gap: 0;
+        gap: 2px;
     }
 
     .hm-firewall-form .hm-profile-scope .hm-toolbar {
-        margin-block: 0;
+        display: flex;
+        margin: 0;
+    }
+
+    .hm-firewall-form .hm-profile-scope .hm-check {
+        min-height: 28px;
+        padding-block: 0;
+    }
+
+    .hm-section .hm-toolbar > .hm-actions {
+        flex: 1 0 100%;
+        justify-content: flex-start;
+        margin-inline: 0;
     }
 }

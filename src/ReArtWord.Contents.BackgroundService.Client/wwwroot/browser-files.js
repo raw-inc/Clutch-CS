@@ -154,7 +154,6 @@ export async function browserFilesView(root, ctx)
         const atRoot = document.createElement('p');
         atRoot.className = 'file-root-note';
         const rootText = document.createElement('span');
-        rootText.textContent = ctx.t('Top of the permitted transfer folders.', 'このフォルダーが転送範囲の最上位です。');
         atRoot.append(ctx.icon('info'), rootText);
         atRoot.hidden = true;
         navigation.append(home, up, refresh);
@@ -471,12 +470,22 @@ export async function browserFilesView(root, ctx)
             return !locked && !!target && !!state.selected.size && destination?.directory != null && !destination?.browsing && (local || !!localRoot);
         }
 
+        /** 現在表示している場所に合わせて、パス欄と操作の補足を更新します。 */
+        function updatePathHint(available)
+        {
+            const drivesListed = !local && !state.browsing && state.directory === null && state.entries.size !== 0;
+            address.placeholder = drivesListed ? ctx.t('Choose a drive or enter a folder path', 'ドライブを選ぶかパスを入力') : '';
+            rootText.textContent = drivesListed ? ctx.t('Open a drive to create folders.', 'ドライブを開くとフォルダーを作成できます。')
+                : ctx.t('Top of the permitted transfer folders.', 'このフォルダーが転送範囲の最上位です。');
+            atRoot.hidden = !available || (!drivesListed && (state.directory === null || state.parent !== null));
+        }
+
         state.update = () =>
         {
             const available = local ? !!localRoot : !!target, locked = busy || state.browsing || choosing || panes.some(pane => pane.actions?.busy);
             home.disabled = refresh.disabled = address.disabled = go.disabled = !available || locked;
             up.disabled = !available || state.parent === null || locked;
-            atRoot.hidden = !available || state.directory === null || state.parent !== null;
+            updatePathHint(available);
             if (picker)
             {
                 picker.disabled = locked || typeof globalThis.showDirectoryPicker !== 'function';

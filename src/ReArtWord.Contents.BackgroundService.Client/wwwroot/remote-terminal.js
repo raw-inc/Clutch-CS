@@ -45,7 +45,6 @@ export async function terminalView(root, ctx)
     const connectionState = document.createElement('span');
     connectionState.className = 'badge terminal-state';
     connectionState.setAttribute('role', 'status');
-    host.dataset.emptyHint = ctx.t('Select a peer and start a user session.', 'ピアを選んで端末を開きます。');
     panel.append(connectionState, note, host);
     root.append(toolbar, sources, panel);
     let peer, session, term, fit, stream, generation = 0, owner;
@@ -190,7 +189,7 @@ export async function terminalView(root, ctx)
                 {
                     const indicator = document.createElement('span');
                     indicator.className = 'badge good';
-                    indicator.textContent = ctx.t('Current session', '接続中のセッション');
+                    indicator.textContent = ctx.t('Connected', '接続中');
                     row.append(indicator);
                 }
                 const claim = current ? null : ctx.button(ctx.t('Take over', '引き継ぐ'), () => connectAsync(value, false, selected));
@@ -225,7 +224,7 @@ export async function terminalView(root, ctx)
         {
             const empty = document.createElement('p');
             empty.className = 'remote-empty';
-            empty.textContent = ctx.t('No sessions confirmed. Select a peer to start a shell.', 'ピアを選んで端末を開けます。');
+            empty.textContent = ctx.t('No shared sessions.', '共有セッションはありません。');
             sessions.append(empty);
         }
         if (failed)
@@ -441,6 +440,7 @@ export async function terminalView(root, ctx)
                     updateControls();
                     renderSessions();
                 });
+                button.className = 'row-button';
                 button.dataset.peer = peerKey(target);
                 setControlLabel(button, ctx.icon('monitor'));
                 branch.append(button);
@@ -751,6 +751,8 @@ export async function terminalView(root, ctx)
         refreshSessions.disabled = disposed;
         copy.disabled = leave.disabled = !term;
         paste.disabled = !stream?.ready || !session || session.exited;
+        host.dataset.emptyHint = user.disabled ? ctx.t('Choose an available peer and shell.', '接続できるピアとシェルを選んでください。')
+            : ctx.t('Use Run as user to open the terminal.', '「ユーザー実行」で端末を開けます。');
         const connected = !!stream?.ready && !!session && !session.exited;
         connectionState.textContent = connected ? ctx.t('Connected', '接続中') : ctx.t('Disconnected', '未接続');
         connectionState.classList.toggle('good', connected);

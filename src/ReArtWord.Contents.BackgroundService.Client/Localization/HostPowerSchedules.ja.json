@@ -24,7 +24,7 @@
   "powerSchedule.bulkHelp": "以下の予定一覧で、選択ホストの予定をすべて置き換えます。時刻・曜日・有効無効を含め同じ内容を配布します。対象クラスタは各ホストで選択したものを維持します。保存するまで反映しません。",
   "powerSchedule.bulkEnable": "保存済み予定を一括有効化",
   "powerSchedule.bulkDisable": "保存済み予定を一括無効化",
-  "powerSchedule.bulkToggleHelp": "選択したホストで、保存済みの予定の有効設定を切り替えます。時刻や曜日などは引き継がれます。",
+  "powerSchedule.bulkToggleHelp": "選択したホストで、保存済み予定の有効・無効を変更します。",
   "powerSchedule.bulkSource": "コピー元Host",
   "powerSchedule.bulkCopy": "保存済み予定をコピー",
   "powerSchedule.bulkApply": "選択ホストへ保存",

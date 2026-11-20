@@ -98,10 +98,10 @@ export async function signalScopeViewAsync(container, ctx)
     packetListTitle.textContent = ctx.t('Captured packets', '取得したパケット');
     scrollHint.className = 'scope-scroll-hint';
     scrollHint.textContent = ctx.t('Scroll the list to see more.', '続きは一覧をスクロールして表示');
-    packetListHeading.append(packetListTitle, clear, scrollHint);
+    packetListHeading.append(packetListTitle, clear);
     toolbar.append(start, stop);
     selection.prepend(reload);
-    results.append(filters, sample, searchError, packetListHeading, status, emptyPackets);
+    results.append(filters, sample, searchError, packetListHeading, status, emptyPackets, scrollHint);
     workspace.append(selection, results);
     selection.prepend(toolbar);
     container.append(workspace);

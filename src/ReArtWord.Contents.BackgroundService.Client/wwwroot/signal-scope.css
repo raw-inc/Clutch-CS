@@ -526,10 +526,6 @@
     min-height: 40px;
 }
 
-.scope-filters > button[aria-pressed] {
-    border-color: var(--control);
-}
-
 .scope-filters > button[aria-pressed="true"] {
     background: var(--accent-soft);
     color: var(--accent);
@@ -626,7 +622,7 @@
 
 .scope-scroll-hint {
     display: none;
-    flex-basis: 100%;
+    margin: 0;
 }
 
 @media (max-width: 680px) {

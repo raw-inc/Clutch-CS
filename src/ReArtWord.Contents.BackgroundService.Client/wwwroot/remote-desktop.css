@@ -579,10 +579,12 @@
     gap: 12px;
 }
 
-.desktop-deck button:disabled,
-.desktop-key:disabled {
+.desktop-workspace :is(.desktop-toolbar, .desktop-targets, .desktop-keybar) button:disabled {
     color: var(--disabled-ink);
     background: var(--disabled-face);
+    border-color: var(--line);
+    box-shadow: none;
+    opacity: 1;
 }
 
 @media (max-width: 680px) {
@@ -602,13 +604,6 @@
 .desktop-bitrate-mode[data-quality="false"][aria-pressed="false"] span:first-child::before,
 .desktop-bitrate-mode[data-quality="false"][aria-pressed="true"] span:last-child::before {
     content: "✓ ";
-}
-
-.desktop-workspace .desktop-keybar .desktop-key:disabled {
-    color: var(--disabled-ink);
-    background: var(--disabled-face);
-    border-color: var(--line);
-    opacity: 1;
 }
 
 .desktop-workspace .desktop-labeled {
@@ -652,6 +647,12 @@
 
 .desktop-workspace .desktop-targets .desktop-reload {
     min-width: 0;
+}
+
+@media (min-width: 1001px) {
+    .desktop-workspace .desktop-targets .desktop-reload {
+        margin-inline-start: auto;
+    }
 }
 
 .desktop-workspace[data-state="connected"] .desktop-targets label:has(:disabled) {
@@ -912,10 +913,6 @@
     background: var(--panel);
 }
 
-.desktop-deck details[open] .desktop-toolbar .desktop-action.icon-button:not(:disabled) {
-    border-color: var(--control);
-}
-
 .desktop-workspace .desktop-deck > details > summary {
     padding-inline-end: 30px;
     min-height: 40px;
@@ -979,7 +976,7 @@
     .desktop-workspace[data-state="connected"] .desktop-targets {
         grid-row: 1;
         grid-column: 1 / -1;
-        padding-inline: 12px;
+        padding: 6px 16px 0;
     }
 
     .desktop-workspace[data-state="connected"] .desktop-viewport[data-single-monitor="true"][data-scale="fit"]:not(:fullscreen) {
@@ -1031,8 +1028,16 @@
     gap: 6px;
 }
 
-.desktop-toolbar .desktop-labeled[aria-pressed="false"]:enabled {
-    border-color: var(--line);
+.desktop-workspace .desktop-toolbar .desktop-action:enabled:not([aria-pressed="true"]) {
+    border-color: var(--button-line);
+    border-bottom-color: var(--button-line-bottom);
+    background: var(--button-face);
+    color: var(--ink);
+    box-shadow: var(--button-shadow);
+}
+
+.desktop-workspace .desktop-toolbar .desktop-action:enabled:not([aria-pressed="true"]):hover {
+    background: var(--button-hover);
 }
 
 @media (min-width: 1001px) {
