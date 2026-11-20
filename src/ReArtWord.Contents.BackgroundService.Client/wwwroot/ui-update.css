@@ -164,3 +164,7 @@ button:disabled {
     word-break: keep-all;
     overflow-wrap: anywhere;
 }
+
+.pwa-window {
+    white-space: nowrap;
+}

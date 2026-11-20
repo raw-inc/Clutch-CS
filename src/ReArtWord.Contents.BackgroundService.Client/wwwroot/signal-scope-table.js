@@ -33,7 +33,15 @@ export function scopeTable(container, ctx, send, report)
         panels.append(section);
     }
     const scrollArea = document.createElement('clutch-scroll-area');
+    scrollArea.dataset.scrollAxis = 'both';
     scrollArea.append(viewport);
+    for (const edge of ['before', 'after'])
+    {
+        const indicator = document.createElement('span');
+        indicator.className = 'scroll-inline-edge scroll-inline-' + edge;
+        indicator.setAttribute('aria-hidden', 'true');
+        scrollArea.append(indicator);
+    }
     container.append(scrollArea, panels);
     let follow = true, hostNames = false, selected = null, request = 0, programmedScroll = -1, anchor = null;
     let firstRendered = 0, requestedOffset = 0, requestedAnchor = null;

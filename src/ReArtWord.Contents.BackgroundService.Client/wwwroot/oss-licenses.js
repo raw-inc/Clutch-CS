@@ -56,6 +56,19 @@ export async function licensesView(root, ctx)
     cards.append(columns);
     root.append(cards);
     const components = [];
+    const pinnedToolbars = new WeakMap();
+    const noticeViewport = new IntersectionObserver(entries =>
+    {
+        for (const entry of entries)
+        {
+            const toolbar = pinnedToolbars.get(entry.target);
+            if (toolbar)
+            {
+                toolbar.hidden = !entry.rootBounds || entry.rootBounds.top < entry.boundingClientRect.bottom;
+            }
+        }
+    });
+    ctx.signal.addEventListener('abort', () => noticeViewport.disconnect(), { once: true });
 
     /** 絞り込み後の表示件数を読み上げの対象にも反映します。 */
     function showCount(visible)
@@ -133,7 +146,7 @@ export async function licensesView(root, ctx)
         }
         if (entry.notices.length)
         {
-            appendNotices(section, entry, ctx, components.length);
+            appendNotices(section, entry, ctx, components.length, noticeViewport, pinnedToolbars);
         }
         components.push({ name: entry.name.toLowerCase(), license: entry.license, section });
         cards.append(section);
@@ -170,10 +183,11 @@ function appendLicenseMetadata(cell, value)
 }
 
 /** ライブラリーごとに開閉位置を固定し、本文は開いたときに読み込みます。 */
-function appendNotices(section, entry, ctx, index)
+function appendNotices(section, entry, ctx, index, noticeViewport, pinnedToolbars)
 {
-    const toggle = document.createElement('button'), content = document.createElement('div'), actions = document.createElement('div');
-    const caption = entry.notices.length === 1 ? noticeCaption(entry.notices[0].label, ctx) : ctx.t('Licenses and notices', 'ライセンス・通知');
+    const toggle = document.createElement('button'), content = document.createElement('div');
+    const singleLicense = entry.notices.length === 1 && entry.notices[0].label === 'License';
+    const caption = singleLicense ? ctx.t('License text', 'ライセンス本文') : ctx.t('Licenses and notices', 'ライセンス・通知');
     toggle.type = 'button';
     toggle.className = 'license-toggle';
     toggle.textContent = caption;
@@ -184,12 +198,17 @@ function appendNotices(section, entry, ctx, index)
     content.className = 'license-notices';
     content.hidden = true;
     toggle.setAttribute('aria-controls', content.id);
+    const pinned = document.createElement('div'), actions = document.createElement('div'), name = document.createElement('strong');
+    pinned.className = 'license-notice-pin';
     actions.className = 'license-notice-actions';
+    actions.hidden = true;
+    name.textContent = entry.name;
     const close = document.createElement('button');
     close.type = 'button';
     close.textContent = ctx.t('Close notice', '本文を閉じる');
-    actions.append(close);
-    content.append(actions);
+    actions.append(name, close);
+    pinned.append(actions);
+    content.append(pinned);
     section.append(toggle, content);
 
     const notices = entry.notices.map(notice =>
@@ -211,6 +230,9 @@ function appendNotices(section, entry, ctx, index)
     /** 本文を閉じたら、一覧で同じライブラリーの開閉ボタンに戻ります。 */
     function collapse()
     {
+        noticeViewport.unobserve(toggle);
+        pinnedToolbars.delete(toggle);
+        actions.hidden = true;
         content.hidden = true;
         toggle.setAttribute('aria-expanded', 'false');
         toggle.focus({ preventScroll: true });
@@ -226,6 +248,8 @@ function appendNotices(section, entry, ctx, index)
         }
         content.hidden = false;
         toggle.setAttribute('aria-expanded', 'true');
+        pinnedToolbars.set(toggle, actions);
+        noticeViewport.observe(toggle);
         for (const item of notices.filter(item => !item.loaded))
         {
             loadNoticeAsync(entry.name, item, ctx).catch(() =>

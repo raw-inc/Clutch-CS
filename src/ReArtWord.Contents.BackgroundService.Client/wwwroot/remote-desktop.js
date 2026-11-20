@@ -2203,6 +2203,7 @@ export async function desktopView(root, ctx)
         }
         clipboardSync.disabled = !clipboard?.available;
         clipboardSync.setAttribute('aria-pressed', String(clipboard?.enabled === true));
+        clipboardSync.dataset.preference = clipboard?.enabled ? 'ON' : 'OFF';
     }
 
     /** 現在の接続・選択・処理中の状態を操作欄へ反映します。 */
@@ -2223,6 +2224,7 @@ export async function desktopView(root, ctx)
         softwareKeyboard?.update();
         codecPanel?.update(codec.value, !!socket, codecDetailsSupported, selecting);
         follow.disabled = scaleMode !== 'native';
+        follow.dataset.preference = followPointer ? 'ON' : 'OFF';
         cursorSync.disabled = !canControlCursor();
         cursorSync.setAttribute('aria-pressed', String(cursorEnabled));
         const busy = !!socket || connecting || reconnectState.pending;
@@ -2284,6 +2286,7 @@ export async function desktopView(root, ctx)
     cursorSync.setAttribute('aria-pressed', 'false');
     action(clipboardSync, ctx.t('Clipboard synchronization', 'クリップボード同期'), 'clipboard');
     clipboardSync.setAttribute('aria-pressed', String(clipboard.enabled));
+    clipboardSync.setAttribute('aria-description', ctx.t('Available on supported connections to another PC when remote input is enabled.', '操作できる別のPCに接続し、接続先がクリップボード同期に対応している場合に利用できます。'));
     clipboardSync.title = ctx.t('Synchronize text with the host. The client takes priority on re-entry and paste. Requires browser clipboard permission. Disabled for view-only and same-PC connections.', 'ホストとテキストを同期します。操作領域への再入場と貼り付け時はクライアントの内容を優先します。ブラウザーのクリップボード許可が必要です。表示専用モードと同一PC接続では無効です。');
     audioCodec.append(option('f32le', ctx.t('PCM · Uncompressed', 'PCM · 非圧縮')));
     const opusSupported = await supportsDesktopOpus();
@@ -2303,6 +2306,9 @@ export async function desktopView(root, ctx)
     sizing.setAttribute('aria-pressed', 'false');
     action(follow, ctx.t('Follow pointer', 'マウス追従'), 'follow-pointer');
     follow.setAttribute('aria-pressed', 'true');
+    const followHint = ctx.t('The pointer can be followed in Dot by dot mode.', 'Dot by dot 表示では、マウスの位置に合わせて表示範囲が移動します。');
+    follow.setAttribute('aria-description', followHint);
+    follow.title = follow.getAttribute('aria-label') + ' · ' + followHint;
     start.className = 'primary desktop-connect';
     setControlLabel(start, ctx.icon('play'));
     action(stop, ctx.t('Disconnect', '接続解除'), 'close', ctx.t('Disconnect', '接続解除'));

@@ -273,7 +273,7 @@
     min-width: 0;
     min-height: 34px;
     gap: 4px;
-    padding-inline: 4px;
+    padding-inline: 12px;
     white-space: normal;
     overflow-wrap: anywhere;
 }
@@ -546,6 +546,8 @@
 }
 
 .file-tree {
+    --file-download-width: 8.75rem;
+
     height: 44vh;
     min-height: 230px;
     overflow: auto;
@@ -1026,12 +1028,30 @@
 
 .file-row a[download] {
     display: inline-flex;
+    flex: none;
     gap: 6px;
     align-items: center;
-    border: 1px solid var(--control);
+    justify-content: center;
+    width: var(--file-download-width);
+    border: 1px solid var(--button-line);
+    border-bottom-color: var(--button-line-bottom);
     border-radius: var(--radius-control);
     padding: 4px 8px;
+    background: var(--button-face);
+    color: var(--ink);
+    box-shadow: var(--button-shadow);
+    font-weight: 600;
     text-decoration: none;
+}
+
+.file-row a[download]:hover {
+    background: var(--button-hover);
+}
+
+@media (min-width: 681px) {
+    .file-tree:has(a[download]) .file-row > .file-kind:last-child {
+        margin-inline-end: calc(var(--file-download-width) + 9px);
+    }
 }
 
 @media (max-width: 680px) {
@@ -1102,8 +1122,13 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    margin-inline-start: 10px;
     white-space: nowrap;
+}
+
+.license-metadata .license-website {
+    display: flex;
+    width: fit-content;
+    margin-block-start: 2px;
 }
 
 .license-cards > section > p {
@@ -1195,7 +1220,7 @@
 .license-columns,
 .license-cards > section {
     display: grid;
-    grid-template-columns: minmax(0, 3fr) minmax(4.25rem, 0.65fr) minmax(5rem, 0.8fr) minmax(0, 1.4fr) minmax(8rem, 1fr);
+    grid-template-columns: minmax(0, 3fr) minmax(4.25rem, 0.65fr) minmax(5rem, 0.8fr) minmax(0, 1.4fr) 11.5rem;
     gap: 4px 12px;
     align-items: center;
     padding: 7px 12px;
@@ -1239,8 +1264,9 @@
     grid-row: 1;
     justify-self: end;
     min-height: 38px;
+    width: 11.5rem;
     max-width: 100%;
-    white-space: normal;
+    white-space: nowrap;
     margin: 0;
 }
 
@@ -1262,18 +1288,32 @@
     border-radius: var(--radius-control);
 }
 
-.license-notice-actions {
+.license-notice-pin {
     position: sticky;
-    z-index: 1;
+    z-index: 2;
     inset-block-start: 0;
+    height: 0;
+}
+
+.license-notice-actions {
+    position: absolute;
+    inset-inline: 0;
     display: flex;
-    justify-content: end;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     padding: 6px 12px;
     border-block-end: 1px solid var(--line);
     background: var(--panel);
 }
 
+.license-notice-actions > strong {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+}
+
 .license-notice-actions button {
+    flex: none;
     margin: 0;
 }
 
@@ -1563,6 +1603,7 @@
     }
 
     .file-pane :is(.file-navigation button, .file-location :is(input, button), .file-pane-footer button, .file-pane-title select, .file-row > .button-link),
+    .file-pane > label select,
     .tool-help summary {
         min-height: 44px;
     }
@@ -1603,8 +1644,18 @@
     font-size: 13px;
 }
 
+:is(.tool-connection, .desktop-targets) label select {
+    font-size: 14px;
+}
+
 :is(.tool-connection, .desktop-targets) button {
     gap: 8px;
+}
+
+.file-location input::placeholder {
+    font: 13px var(--font-ui);
+    color: var(--muted);
+    opacity: 1;
 }
 
 :is(.tool-connection, .desktop-targets) button > .ui-icon {

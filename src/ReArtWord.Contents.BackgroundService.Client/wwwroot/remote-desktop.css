@@ -524,7 +524,6 @@
 .desktop-targets label select {
     width: 100%;
     height: 36px;
-    font-size: 13px;
 }
 
 .desktop-targets .desktop-labeled {
@@ -785,6 +784,17 @@
 .desktop-deck details[open] .desktop-toolbar .desktop-action.icon-button::after {
     content: attr(aria-label);
     font-size: 12px;
+}
+
+.desktop-deck details[open] .desktop-toolbar .desktop-action[data-preference]:disabled::before {
+    content: attr(data-preference);
+    order: 1;
+    margin-inline-start: 3px;
+    border-inline-start: 1px solid var(--line);
+    padding-inline-start: 5px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
 }
 
 .page.remote-tools:has(.desktop-workspace[data-state="connected"]) {

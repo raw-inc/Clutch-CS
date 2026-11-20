@@ -63,7 +63,7 @@
 </Modal>
 <Modal Open="@(pendingStop is not null)" Title="@Ui["Request CoreService stop"]" Close="()=>pendingStop=null">
     <ChildContent>
-        <p>@Ui["Request stop for the displayed peer instances. Acceptance does not confirm every process has exited."]</p>
+        <p class="notice warning trace-stop-message"><UiIcon Name="warning" /><span>@Ui["Request stop for the displayed peer instances. Acceptance does not confirm every process has exited."]</span></p>
         @if(pendingStop is {} confirmation)
         {
             <ul aria-label="@Ui["Affected peers"]">
