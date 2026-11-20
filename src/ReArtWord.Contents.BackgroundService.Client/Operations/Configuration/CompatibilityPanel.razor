@@ -9,10 +9,16 @@
         <p class="small">@Ui.Format("Saved: {0}; effective: {1}; snapshots inspected on this page: {2}.", report.SavedRevision, report.EffectiveRevision, report.InspectedSnapshots)</p>
         @if(report.Issues.Count==0 && !report.IssuesOmitted){<p class="notice">@Ui["No incompatibilities were found in the definitions and snapshot page inspected here."]</p>}
         @if(report.IssuesOmitted){<p class="notice error">@Ui["Some issue details were omitted. Inspect the affected definition and validate it in the editor."]</p>}
-        <div class="table-wrap"><table><thead><tr><th>@Ui["Scope"]</th><th>@Ui["Node"]</th><th>@Ui["Behavior contract"]</th><th>@Ui["Settings to check"]</th><th>@Ui["Reason"]</th></tr></thead><tbody>
+        <div class="table-wrap"><table class="record-table"><thead><tr><th>@Ui["Scope"]</th><th>@Ui["Node"]</th><th>@Ui["Behavior contract"]</th><th>@Ui["Settings to check"]</th><th>@Ui["Reason"]</th></tr></thead><tbody>
         @foreach(var item in report.Issues)
         {
-            <tr><td>@Ui[item.Area]<p class="mono small">@item.SnapshotId</p></td><td>@item.NodeId<p class="small">@item.NodeType</p></td><td>@item.ExpectedVersion → @item.ImplementationVersion</td><td>@string.Join(", ",item.SettingNames)</td><td>@item.Issue.Message<p class="mono small">@item.Issue.Code · @item.Issue.Path</p></td></tr>
+            <tr>
+                <td data-field="@Ui["Scope"]"><div>@Ui[item.Area]<p class="mono small">@item.SnapshotId</p></div></td>
+                <td data-field="@Ui["Node"]"><div>@item.NodeId<p class="small">@item.NodeType</p></div></td>
+                <td data-field="@Ui["Behavior contract"]">@item.ExpectedVersion → @item.ImplementationVersion</td>
+                <td data-field="@Ui["Settings to check"]">@string.Join(", ",item.SettingNames)</td>
+                <td data-field="@Ui["Reason"]"><div>@item.Issue.Message<p class="mono small">@item.Issue.Code · @item.Issue.Path</p></div></td>
+            </tr>
         }
         </tbody></table></div>
         @if(report.NextSnapshot is string next){<button disabled="@busy" @onclick="()=>LoadAsync(next,UiCancellation)">@Ui["Inspect next snapshot page"]</button>}

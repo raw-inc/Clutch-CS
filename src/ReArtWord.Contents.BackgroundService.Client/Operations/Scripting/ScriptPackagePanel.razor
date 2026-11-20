@@ -72,12 +72,12 @@
                 {
                     <p class="small">Node.js @environment.NodeVersion · @environment.NodePath</p>
                 }
-                <div class="table-wrap"><table>
+                <div class="table-wrap"><table class="record-table">
                     <thead><tr><th>@Ui["Package name"]</th><th>@Ui["Exact version"]</th><th>@Ui["Actions"]</th></tr></thead>
                     <tbody>
                         @foreach (var package in environment.Requested)
                         {
-                            <tr><td>@package.Id</td><td>@package.Version</td><td><button disabled="@Busy" @onclick="()=>ChangeAsync(kind, package, true, UiCancellation)">@Ui["Remove from new analysis"]</button></td></tr>
+                            <tr><td data-field="@Ui["Package name"]">@package.Id</td><td data-field="@Ui["Exact version"]">@package.Version</td><td data-field="@Ui["Actions"]"><button disabled="@Busy" @onclick="()=>ChangeAsync(kind, package, true, UiCancellation)">@Ui["Remove from new analysis"]</button></td></tr>
                         }
                     </tbody>
                 </table></div>
@@ -90,11 +90,17 @@
         </div>
         </div></clutch-card-rows>
         <details class="secondary-details"><summary>@Ui["Recent package operations"]</summary>
-        <div class="table-wrap"><table>
+        <div class="table-wrap"><table class="record-table">
             <thead><tr><th>@Ui["Operation ID"]</th><th>@Ui["Package name"]</th><th>@Ui["Operation"]</th><th>@Ui["State"]</th><th>@Ui["Reason"]</th></tr></thead>
             <tbody>@foreach (var operation in catalog.Operations)
                 {
-                    <tr><td class="mono">@operation.Request.OperationId</td><td>@operation.Request.Package.Id @operation.Request.Package.Version</td><td>@(operation.Request.Remove ? Ui["Remove from new analysis"] : Ui["Install / update package"])</td><td>@Ui["script.packages.phase." + operation.Phase]</td><td>@Reason(operation.Reason)</td></tr>
+                    <tr>
+                        <td data-field="@Ui["Operation ID"]" class="mono">@operation.Request.OperationId</td>
+                        <td data-field="@Ui["Package name"]">@operation.Request.Package.Id @operation.Request.Package.Version</td>
+                        <td data-field="@Ui["Operation"]">@(operation.Request.Remove ? Ui["Remove from new analysis"] : Ui["Install / update package"])</td>
+                        <td data-field="@Ui["State"]">@Ui["script.packages.phase." + operation.Phase]</td>
+                        <td data-field="@Ui["Reason"]">@Reason(operation.Reason)</td>
+                    </tr>
                 }</tbody>
         </table></div></details>
     }

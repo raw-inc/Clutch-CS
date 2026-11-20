@@ -17,14 +17,20 @@
         @if(problem is not null){<p class="notice" role="status">@Ui[problem]</p>}
         @if(status is not null)
         {
-            <div class="table-wrap"><table>
+            <div class="table-wrap"><table class="record-table">
                 <thead><tr><th>@Ui["Runtime version"]</th><th>@Ui["State"]</th><th>@Ui["Reason"]</th></tr></thead>
                 <tbody>@foreach(var operation in status.Operations.Where(item=>item.Request.Language==Language))
                 {
-                    <tr><td>@operation.Request.Version</td><td>@Ui["script.runtime.phase."+operation.Phase]
-                        @if(!operation.Completed && operation.TotalBytes is >0){<progress value="@operation.DownloadedBytes" max="@operation.TotalBytes" aria-label="@Ui["Download progress"]"></progress>}
-                        @if(operation.DefaultApplied){<small>@Ui["Default runtime updated"]</small>}
-                    </td><td>@(operation.Reason is null?string.Empty:Ui[operation.Reason])<details><summary>@Ui["Operation ID"]</summary><span class="mono">@operation.Request.OperationId</span><p class="runtime-path">@operation.ExecutablePath</p></details></td></tr>
+                    <tr>
+                        <td data-field="@Ui["Runtime version"]">@operation.Request.Version</td>
+                        <td data-field="@Ui["State"]"><div>@Ui["script.runtime.phase."+operation.Phase]
+                            @if(!operation.Completed && operation.TotalBytes is >0){<progress value="@operation.DownloadedBytes" max="@operation.TotalBytes" aria-label="@Ui["Download progress"]"></progress>}
+                            @if(operation.DefaultApplied){<small>@Ui["Default runtime updated"]</small>}
+                        </div></td>
+                        <td data-field="@Ui["Reason"]"><div>@(operation.Reason is null?string.Empty:Ui[operation.Reason])
+                            <details><summary>@Ui["Operation ID"]</summary><span class="mono">@operation.Request.OperationId</span><p class="runtime-path">@operation.ExecutablePath</p></details>
+                        </div></td>
+                    </tr>
                 }</tbody>
             </table></div>
         }

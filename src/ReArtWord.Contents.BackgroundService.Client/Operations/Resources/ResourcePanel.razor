@@ -18,12 +18,12 @@
 </dl></clutch-card-rows>
 <details class="secondary-details resource-detail">
     <summary>@Ui["NIC, disk, GPU and collection details"]</summary>
-    <div class="table-wrap"><table>
-        <thead><tr><th>@Ui["Measurement"]</th><th>@Ui["Target"]</th><th>@Ui["Measured value"]</th></tr></thead>
+    <div class="table-wrap"><table class="record-table">
+        <thead><tr><th>@Ui["Measurement"]</th><th>@Ui["Target"]</th><th class="numeric">@Ui["Measured value"]</th></tr></thead>
         <tbody>
             @foreach (var metric in sample.Metrics)
             {
-                <tr><th scope="row">@metric.Name</th><td>@metric.Target</td><td>@Value(metric)</td></tr>
+                <tr><th scope="row" data-field="@Ui["Measurement"]">@metric.Name</th><td data-field="@Ui["Target"]">@metric.Target</td><td class="numeric" data-field="@Ui["Measured value"]">@Value(metric)</td></tr>
             }
         </tbody>
     </table></div>
@@ -31,22 +31,22 @@
 <p class="notice">@(problem?.Invoke())</p>
 </section>
 <Modal Open="historyOpen" Title="@Ui["Saved resource samples"]" Close="()=>historyOpen=false">
-<table>
+<table class="record-table" aria-label="@Ui["Saved resource samples"]">
 <thead>
 <tr>
 <th>@Ui["Observed at"]</th>
-<th>Peer</th>
+<th>@Ui["Peer"]</th>
 <th>CPU</th>
-<th>memory</th>
+<th>MEM</th>
 <th>@Ui["Details"]</th>
 </tr>
 </thead>
 <tbody>@foreach(var item in history){<tr>
-<td>@FormatTime(item.ObservedAt)</td>
-<td>@item.PeerId</td>
-<td>@Value(item.Metrics.FirstOrDefault(metric=>metric.Name=="cpu.usage"))</td>
-<td>@Value(item.Metrics.FirstOrDefault(metric=>metric.Name=="memory.usage"))</td>
-<td>
+<td data-field="@Ui["Observed at"]">@FormatTime(item.ObservedAt)</td>
+<td data-field="@Ui["Peer"]">@item.PeerId</td>
+<td data-field="CPU">@Value(item.Metrics.FirstOrDefault(metric=>metric.Name=="cpu.usage"))</td>
+<td data-field="MEM">@Value(item.Metrics.FirstOrDefault(metric=>metric.Name=="memory.usage"))</td>
+<td data-field="@Ui["Details"]">
 <JsonDetails Value="item" />
 </td>
 </tr>}</tbody>

@@ -41,8 +41,41 @@
             <small>@update.OperationId</small>
             @if(update.Client is {} client){<p class="small muted">@Ui["ClientHost update"]: @Ui[client.State] @if(client.Reason is not null){<span>@Ui[client.Reason]</span>}</p>}
             @if(update.Reason is not null){<p class="notice">@Ui[update.Reason]</p>}
-            <table><thead><tr><th>@Ui["PC"]</th><th>@Ui["Cluster"] / @Ui["Peer"]</th><th>@Ui["Status"]</th><th>@Ui["Attempts"]</th></tr></thead>
-            <tbody>@foreach(var progress in update.Peers.GroupBy(peer=>peer.Target.Peer.HostId,StringComparer.Ordinal).SelectMany(host=>host)){<tr><td>@progress.Target.Peer.HostId</td><td>@progress.Target.ClusterId / @progress.Target.Peer.PeerId</td><td>@Ui[progress.State] @if(progress.Reason is not null){<p class="small muted">@Ui[progress.Reason]</p>}</td><td>@progress.Attempts.Count / @update.MaximumAttempts @foreach(var attempt in progress.Attempts){<details><summary>@attempt.OperationId</summary>@if(attempt.Problem is {} diagnostic){<p class="small mono">@diagnostic</p>}@if(attempt.Result is {} result){<p class="small muted">@Ui[result.Phase.ToString()] · @Ui[result.Outcome.ToString()]</p><p>@result.Reason</p>}</details>}</td></tr>}</tbody></table>
+            <div class="table-wrap">
+                <table class="record-table">
+                    <thead><tr><th>@Ui["PC"]</th><th>@Ui["Cluster"] / @Ui["Peer"]</th><th>@Ui["Status"]</th><th>@Ui["Attempts"]</th></tr></thead>
+                    <tbody>
+                    @foreach(var progress in update.Peers.GroupBy(peer=>peer.Target.Peer.HostId,StringComparer.Ordinal).SelectMany(host=>host))
+                    {
+                        <tr>
+                            <td data-field="@Ui["PC"]">@progress.Target.Peer.HostId</td>
+                            <td data-field="@(Ui["Cluster"] + " / " + Ui["Peer"])">@progress.Target.ClusterId / @progress.Target.Peer.PeerId</td>
+                            <td data-field="@Ui["Status"]">
+                                <div>@Ui[progress.State]
+                                    @if(progress.Reason is not null){<p class="small muted">@Ui[progress.Reason]</p>}
+                                </div>
+                            </td>
+                            <td data-field="@Ui["Attempts"]">
+                                <div>@progress.Attempts.Count / @update.MaximumAttempts
+                                    @foreach(var attempt in progress.Attempts)
+                                    {
+                                        <details>
+                                            <summary>@attempt.OperationId</summary>
+                                            @if(attempt.Problem is {} diagnostic){<p class="small mono">@diagnostic</p>}
+                                            @if(attempt.Result is {} result)
+                                            {
+                                                <p class="small muted">@Ui[result.Phase.ToString()] · @Ui[result.Outcome.ToString()]</p>
+                                                <p>@result.Reason</p>
+                                            }
+                                        </details>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
             @if(update.Completed && update.Outcome==EOutcome.Unknown){<button @onclick="()=>ReconcileAsync(update.OperationId)" disabled="@busy">@Ui["Recheck saved updater results"]</button>}
         </details>
     }

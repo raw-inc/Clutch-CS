@@ -21,7 +21,27 @@
 <button @onclick="()=>ChangeAsync(false,false)" disabled="@(busy||targets.Count==0)">@Ui["Clear the override and return to normal decisions"]</button>
 <p>@Ui["Temporary continuation also clears the manual stop on the same target. It does not clear manual stops on other nodes or groups. Clearing the override restores the current normal safety decision."]</p>
 <p class="notice">@(message?.Invoke())</p>
-@if(preview is not null){<p>@preview.Impact</p><table><thead><tr><th>Node</th><th>@Ui["Effective stop"]</th><th>@Ui["Automatic stop"]</th><th>@Ui["Manual stop"]</th><th>@Ui["Temporary continuation"]</th></tr></thead><tbody>@foreach(var item in preview.Targets){<tr><td>@item.NodeId</td><td>@Ui[(item.Stopped).ToString() ?? "Unconfirmed"] · @(item.StopReason??Ui["Reason unconfirmed"])</td><td>@Ui[(item.AutomaticallyStopped).ToString() ?? "Unconfirmed"] · @(item.AutomaticStopReason??Ui["Reason unconfirmed"])</td><td>@Ui[(item.ManuallyStopped).ToString() ?? "Unconfirmed"]</td><td>@Ui[(item.Continued).ToString() ?? "Unconfirmed"]</td></tr>}</tbody></table>}
+@if(preview is not null)
+{
+    <p>@preview.Impact</p>
+    <div class="table-wrap">
+        <table class="record-table">
+            <thead><tr><th>@Ui["Node"]</th><th>@Ui["Effective stop"]</th><th>@Ui["Automatic stop"]</th><th>@Ui["Manual stop"]</th><th>@Ui["Temporary continuation"]</th></tr></thead>
+            <tbody>
+            @foreach(var item in preview.Targets)
+            {
+                <tr>
+                    <td data-field="@Ui["Node"]">@item.NodeId</td>
+                    <td data-field="@Ui["Effective stop"]">@Ui[item.Stopped.ToString() ?? "Unconfirmed"] · @(item.StopReason??Ui["Reason unconfirmed"])</td>
+                    <td data-field="@Ui["Automatic stop"]">@Ui[item.AutomaticallyStopped.ToString() ?? "Unconfirmed"] · @(item.AutomaticStopReason??Ui["Reason unconfirmed"])</td>
+                    <td data-field="@Ui["Manual stop"]">@Ui[item.ManuallyStopped.ToString() ?? "Unconfirmed"]</td>
+                    <td data-field="@Ui["Temporary continuation"]">@Ui[item.Continued.ToString() ?? "Unconfirmed"]</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}
 <JsonDetails Value="result" Title="@Ui["Result of this operation"]" />
 </Modal>
 <Modal Open="confirmOpen" Title="@Ui["Review targets and impact"]" Close="CancelConfirmation">

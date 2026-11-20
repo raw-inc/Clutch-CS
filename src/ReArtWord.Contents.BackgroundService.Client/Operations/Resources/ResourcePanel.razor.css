@@ -32,11 +32,6 @@
     border: 0;
 }
 
-.resource-detail td:last-child {
-    text-align: end;
-    font-variant-numeric: tabular-nums;
-}
-
 .resource-metrics meter::-webkit-meter-bar {
     background: var(--raised);
     border: 0;

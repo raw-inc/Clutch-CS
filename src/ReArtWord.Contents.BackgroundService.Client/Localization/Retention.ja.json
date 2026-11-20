@@ -3,7 +3,7 @@
   "Rolling time zone": "日付切替のタイムゾーン",
   "Inspect retention on peer": "保持方針の反映を確認するPeer",
   "Applied retention hash": "反映済み保持方針の識別子",
-  "Maintenance held": "圧縮・削除を保留中",
+  "Maintenance held": "圧縮・削除の保留",
   "Peer retention state": "ピアの保持方針の状態",
   "The peer retention state could not be confirmed.": "ピアの保持方針の反映を確認できませんでした。",
   "Save shared log retention": "共通のログ・履歴保持方針を保存",

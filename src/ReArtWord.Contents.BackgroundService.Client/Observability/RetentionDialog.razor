@@ -33,13 +33,37 @@
 <p>@Ui["Saved revision"]: @shared?.Configuration.Saved?.Revision</p>
 <p>@Ui["Effective revision"]: @shared?.Configuration.Effective?.Revision</p>
 <label>@Ui["Inspect retention on peer"]<select value="@statusPeer" @onchange="args=>InspectPeerAsync(args,UiCancellation)">@foreach(var peer in Connection.Current?.Peers??[]){<option value="@peer.PeerId">@peer.PeerId</option>}</select></label>
-@if(observed?.Local is { } local){<p>@Ui["Applied retention hash"]: @local.AppliedHash</p><p>@Ui["Maintenance held"]: @local.MaintenanceHeld · @local.Problem</p><JsonDetails Value="observed" Title="@Ui["Peer retention state"]" />}else{<p class="notice">@Ui["The peer retention state could not be confirmed."]</p>}
+@if(observed?.Local is { } local)
+{
+    <p>@Ui["Applied retention hash"]: @local.AppliedHash</p>
+    <p>@Ui["Maintenance held"]: @Ui[local.MaintenanceHeld ? "Yes" : "No"]</p>
+    @if(!string.IsNullOrWhiteSpace(local.Problem)){<p class="notice">@local.Problem</p>}
+    <JsonDetails Value="observed" Title="@Ui["Peer retention state"]" />
+}
+else
+{
+    <p class="notice">@Ui["The peer retention state could not be confirmed."]</p>
+}
 
 @if(historyStatus is not null){<JsonDetails Value="historyStatus" Title="@Ui["History storage state"]" />}
 @if(checkpoints.Count!=0){
 <h3>@Ui["Automatic checkpoints"]</h3>
-<table><thead><tr><th>@Ui["Captured at"]</th><th>@Ui["Committed event position"]</th><th>@Ui["Stored bytes"]</th><th>@Ui["Compressed"]</th></tr></thead>
-<tbody>@foreach(var point in checkpoints){<tr><td>@FormatTime(point.CreatedAt)</td><td>@point.Sequence</td><td>@point.StoredBytes</td><td>@point.Compressed</td></tr>}</tbody></table>
+<div class="table-wrap">
+    <table class="record-table" aria-label="@Ui["Automatic checkpoints"]">
+        <thead><tr><th>@Ui["Captured at"]</th><th class="numeric">@Ui["Committed event position"]</th><th class="numeric">@Ui["Stored bytes"]</th><th>@Ui["Compressed"]</th></tr></thead>
+        <tbody>
+        @foreach(var point in checkpoints)
+        {
+            <tr>
+                <td data-field="@Ui["Captured at"]">@FormatTime(point.CreatedAt)</td>
+                <td data-field="@Ui["Committed event position"]" class="numeric">@point.Sequence</td>
+                <td data-field="@Ui["Stored bytes"]" class="numeric">@point.StoredBytes</td>
+                <td data-field="@Ui["Compressed"]">@Ui[point.Compressed ? "Yes" : "No"]</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
 }
 <p class="notice">@(message?.Invoke())</p>
     </ChildContent>
