@@ -32,7 +32,7 @@
 <div class="dashboard-workspace @(catalogOpen?"with-catalog":null)">
     @if(catalogOpen){<aside class="dashboard-library"><WfDashboardCatalogPanel Add="AddCard" Close="()=>catalogOpen=false" /><WfDashboardStatePicker Added="reference=>AddCard(WfDashboardStateReference.CardType,reference.ToSettings())" /></aside>}
     <WfDashboardStateFeed Nodes="Cards" Cluster="@Model.ClusterId" Peer="@Model.PeerId" Instance="@(Connection.Connected?Connection.Current?.InstanceId:null)" Context="stateFeed">
-    <section @ref="board" class="dashboard-board" aria-label="WFDashboard" @ondrop:preventDefault="true" @ondrop="DropAsync">
+    <clutch-scroll-area class="dashboard-board-scroll"><section @ref="board" class="dashboard-board" aria-label="WFDashboard" @ondrop:preventDefault="true" @ondrop="DropAsync">
         <clutch-card-rows data-balance-short-cards><div class="dashboard-cards">
             @foreach(var card in Cards)
             {
@@ -60,6 +60,6 @@
         </div></clutch-card-rows>
         @if(Cards.Length==0 && editingLayout){<div class="dashboard-empty"><UiIcon Name="dashboard" /><p>@Ui["Add supported nodes from workflows in this cluster."]</p><button type="button" @onclick="()=>catalogOpen=true">@Ui["Add reference"]</button></div>}
         <div class="dashboard-notifications"><EditorNotifications Compact="true" /></div>
-    </section>
+    </section></clutch-scroll-area>
     </WfDashboardStateFeed>
 </div>

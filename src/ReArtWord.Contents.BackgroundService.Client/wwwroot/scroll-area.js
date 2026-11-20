@@ -7,11 +7,39 @@ class ScrollArea extends HTMLElement
 
     #onScroll = () => this.#schedule();
 
+    /** 矢印を押したときは、直前に表示されていたタブが少し残る幅だけ送る。 */
+    #onClick = (event) =>
+    {
+        const control = event.target.closest('button[data-scroll-control]');
+        const port = this.firstElementChild;
+        if (control?.parentElement !== this || !port)
+        {
+            return;
+        }
+
+        const towardStart = control.dataset.scrollControl === 'before';
+        const direction = towardStart ? -1 : 1;
+        port.scrollBy({ left: direction * Math.max(32, port.clientWidth - 32) });
+    };
+
     /** スクロール位置と内容の変化から、続きがある端だけを示す。 */
     connectedCallback()
     {
         this.addEventListener('scroll', this.#onScroll, true);
+        if (this.hasAttribute('data-scroll-controls'))
+        {
+            this.addEventListener('click', this.#onClick);
+        }
         this.#resize.observe(this);
+        const combinedAxis = 'both';
+        if (this.dataset.scrollAxis === combinedAxis)
+        {
+            const header = this.querySelector('thead');
+            if (header)
+            {
+                this.#resize.observe(header);
+            }
+        }
         this.#content.observe(this, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['hidden', 'open'] });
         this.#schedule();
     }
@@ -20,6 +48,7 @@ class ScrollArea extends HTMLElement
     disconnectedCallback()
     {
         this.removeEventListener('scroll', this.#onScroll, true);
+        this.removeEventListener('click', this.#onClick);
         this.#resize.disconnect();
         this.#content.disconnect();
         cancelAnimationFrame(this.#frame);
@@ -37,13 +66,54 @@ class ScrollArea extends HTMLElement
         {
             this.#frame = 0;
             const port = this.firstElementChild;
-            const inline = this.dataset.scrollAxis === 'inline';
-            const size = inline ? port?.clientWidth : port?.clientHeight;
-            const scrollable = (inline ? port?.scrollWidth : port?.scrollHeight) ?? 0;
-            const position = (inline ? Math.abs(port?.scrollLeft ?? 0) : port?.scrollTop) ?? 0;
-            this.toggleAttribute('data-scroll-before', 0 < size && 1 < position);
-            this.toggleAttribute('data-scroll-after', 0 < size && 1 < scrollable - size - position);
+            if (!port)
+            {
+                return;
+            }
+
+            this.#update(port);
         });
+    }
+
+    /** 両方向の表では固定見出しを避け、データ行に続きがあることを示す。 */
+    #update(port)
+    {
+        const axis = this.dataset.scrollAxis;
+        if (this.hasAttribute('data-scroll-controls'))
+        {
+            this.toggleAttribute('data-scroll-overflow', 1 < port.scrollWidth - this.clientWidth);
+        }
+
+        const inlineAxis = 'inline', combinedAxis = 'both';
+        const inline = axis === inlineAxis;
+        this.#setEdges(port, inline, 'data-scroll-');
+        if (axis === combinedAxis)
+        {
+            const header = port.querySelector('thead');
+            this.style.setProperty('--scroll-edge-block-start', (header?.offsetHeight ?? 0) + 'px');
+            this.#setEdges(port, true, 'data-scroll-inline-');
+        }
+    }
+
+    /** スクロール位置から、各方向へ進めるかどうかを更新する。 */
+    #setEdges(port, inline, prefix)
+    {
+        const size = inline ? port.clientWidth : port.clientHeight;
+        const scrollable = inline ? port.scrollWidth : port.scrollHeight;
+        const position = inline ? Math.abs(port.scrollLeft) : port.scrollTop;
+        const before = 0 < size && 1 < position;
+        const after = 0 < size && 1 < scrollable - size - position;
+        this.toggleAttribute(prefix + 'before', before);
+        this.toggleAttribute(prefix + 'after', after);
+        if (!this.hasAttribute('data-scroll-controls'))
+        {
+            return;
+        }
+        for (const control of this.querySelectorAll(':scope > button[data-scroll-control]'))
+        {
+            const towardStart = control.dataset.scrollControl === 'before';
+            control.disabled = !(towardStart ? before : after);
+        }
     }
 }
 

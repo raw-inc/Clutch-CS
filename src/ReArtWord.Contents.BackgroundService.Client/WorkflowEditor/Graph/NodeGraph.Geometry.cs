@@ -278,7 +278,7 @@ public sealed partial class NodeGraph
 
     /// <summary>設定入力ポートの縦位置を求めます。</summary>
     /// <returns>カード内の設定ポートのY座標です。</returns>
-    private double SettingY(int inputs, int outputs, int index) => GraphSettingPorts.Y(inputs, outputs, index, View);
+    private double SettingY(int inputs, int outputs, int index, string? nodeType) => GraphSettingPorts.Y(inputs, outputs, index, nodeType, View);
 
     /// <summary>固定入力欄に渡すポートの表示情報を組み立てます。</summary>
     /// <returns>設定入力または推測した入力型に対応する表示情報です。</returns>
@@ -301,7 +301,7 @@ public sealed partial class NodeGraph
             int settingIndex = SettingProperties(descriptor).Select(item => item.Name).ToList().IndexOf(property);
             if (0 <= settingIndex)
             {
-                return new(position.X, position.Y + SettingY(Ports(descriptor, false, id).Count, Ports(descriptor, true, id).Count, settingIndex));
+                return new(position.X, position.Y + SettingY(Ports(descriptor, false, id).Count, Ports(descriptor, true, id).Count, settingIndex, descriptor?.Type));
             }
         }
 

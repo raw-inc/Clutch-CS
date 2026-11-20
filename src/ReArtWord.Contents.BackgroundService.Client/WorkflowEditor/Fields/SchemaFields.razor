@@ -93,7 +93,7 @@
     }
     else if (Inline && connected && type is "string" or "number" or "integer" or "boolean")
     {
-        <NodeReadout Text='@(value.ValueKind == JsonValueKind.Undefined ? Ui["Connected value is not available without execution"] : raw)' />
+        <NodeReadout Text='@(value.ValueKind == JsonValueKind.Undefined ? Ui["Value pending"] : raw)' />
     }
     else if(type=="boolean")
     {
@@ -119,7 +119,7 @@
     }
     @if(!connected&&(schema.TryGetProperty("enum",out var options)&&Missing(raw,options)||type=="boolean"&&raw.Length!=0&&raw is not ("true" or "false"))){<small class="error">@Ui["The saved value is not in the current choices."]</small>}
     @if(!connected && !Required(key) && value.ValueKind==JsonValueKind.Undefined && schema.TryGetProperty("default",out var defaultValue)){<small>@Ui.Format("Default: {0}",Text(defaultValue))</small>}
-    @if(connected){<small class="node-inline-reason" title="@Ui["Input overrides setting · saved value retained"]">@Ui[value.ValueKind==JsonValueKind.Undefined?"Connected value is not available without execution":"Connected value preview · read-only"]</small>}
+    @if(connected){<small class="node-inline-reason" title="@Ui["Input overrides setting · saved value retained"]">@Ui[value.ValueKind==JsonValueKind.Undefined?"Value pending":"Connected value preview · read-only"]</small>}
     @if(!connected&&Model.ReadInput(NodeId+"/settings/"+key) is not null){<span class="small error">@Ui["Check the value type and JSON format."]</span>}
     @if(!Inline && schema.TryGetProperty("description",out var description)){<small>@Ui[description.GetString()??string.Empty]</small>}
     @if(!Inline && guidance is not null){<small>@Ui[guidance]</small>}

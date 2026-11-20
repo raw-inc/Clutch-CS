@@ -197,15 +197,14 @@
 
 .inspector {
     border-left: 1px solid var(--line);
-    overflow: auto;
-    padding: 0 18px 22px;
+    display: flex;
+    flex-direction: column;
 }
 
 .inspector-heading {
     display: flex;
     align-items: center;
-    position: sticky;
-    top: 0;
+    flex: none;
     margin-bottom: 6px;
     background: var(--panel);
     z-index: 2;
@@ -263,7 +262,9 @@
 
 .inspector ::deep .danger {
     margin-top: 20px;
-    width: 100%;
+    width: fit-content;
+    max-inline-size: 100%;
+    white-space: normal;
     background: transparent;
 }
 
@@ -587,7 +588,7 @@
 }
 
 .studio .inspector {
-    padding: 0 15px 18px;
+    padding-inline: 15px;
     background: var(--card);
     border-inline-start: 1px solid var(--line);
 }
@@ -596,9 +597,6 @@
     padding: 9px 12px;
     margin-bottom: 12px;
     border-radius: var(--radius-control);
-    position: sticky;
-    top: 0;
-    z-index: 1;
     background: var(--panel);
 }
 
@@ -931,10 +929,28 @@
     list-style: none;
 }
 
+.inspector > clutch-scroll-area {
+    flex: 1;
+}
+
+.inspector-content {
+    padding-block-end: 18px;
+}
+
 .editor-participants li {
-    padding: 6px;
+    display: grid;
+    gap: 2px;
+    padding: 6px 8px;
     border-inline-start: 3px dashed var(--editor-color, var(--control));
     overflow-wrap: anywhere;
+}
+
+.editor-participants li + li {
+    margin-block-start: 6px;
+}
+
+.roster-swatch {
+    --editor-color: var(--muted);
 }
 
 .editor-view-options .live-policy.unavailable {
@@ -1024,7 +1040,6 @@
 }
 
 .studio ::deep .node-button-reason {
-    padding-block-end: 4px;
     font-size: 12px;
     line-height: 1.35;
     color: var(--muted);

@@ -14,7 +14,7 @@
 <div class="catalog-view" role="group" aria-label="@Ui["Catalog view"]">
     @foreach(var option in new[]{ECatalogLayout.Category,ECatalogLayout.Kind,ECatalogLayout.Name}){<button class="quiet" aria-pressed="@(layout==option?"true":"false")" @onclick="()=>layout=option">@Ui[LayoutLabel(option)]</button>}
 </div>
-<div class="catalog-list">
+<clutch-scroll-area class="catalog-scroll"><div class="catalog-list">
     @foreach(var group in CatalogPresentation.Groups(filtered,layout,Ui.NodeName,Ui.Language,ranked:searching))
     {
         var expanded=searching || layout==ECatalogLayout.Name || CatalogPresentation.IsExpanded(group.Key,search,collapsed);
@@ -29,7 +29,7 @@
         }
     }
     @if(filtered.Count==0){<div class="empty">@Ui["No matches"]</div>}
-</div>
+</div></clutch-scroll-area>
 @if(selected is {} descriptor)
 {
 <div class="catalog-preview" data-category="@GraphPresentation.CategoryKey(descriptor.Category)">

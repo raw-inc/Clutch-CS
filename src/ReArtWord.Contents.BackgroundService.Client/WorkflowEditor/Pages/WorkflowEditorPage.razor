@@ -48,7 +48,7 @@ else
                 <button aria-label="@Ui["Validate workflow"]" title="@Ui["Validate"]" @onclick="ValidateAsync" disabled="@busy"><UiIcon Name="check" /><span class="control-label">@Ui["Validate"]</span></button>
                 <button @onclick="RunAsync" disabled="@busy" title="@Ui["Run the entire workflow once"]"><UiIcon Name="play" /><span class="control-label">@Ui["Run once"]</span></button>
                 <div class="split-button"><button class="primary" @onclick="()=>SaveAsync()" disabled="@(busy||Model.Draft.Conflicts.Count!=0)"><UiIcon Name="save" />@(Detached?Ui["Save locally"]:Ui[activation==EActivationPolicy.Auto?"Save & apply":"Save"])</button><button class="primary icon-button" title="@Ui["Activation after saving"]" aria-label="@Ui["Save settings"]" @onclick="()=>saveOptionsOpen=true"><UiIcon Name="chevron" /></button></div>
-                <button class="icon-button quiet" title="@Ui["Import, export and operation history"]" aria-label="@Ui["More actions"]" @onclick="()=>documentToolsOpen=true"><UiIcon Name="more" /></button>
+                <button class="icon-button" title="@Ui["Import, export and operation history"]" aria-label="@Ui["More actions"]" @onclick="()=>documentToolsOpen=true"><UiIcon Name="more" /></button>
             </div>
         </div>
         <div class="editor-toolbar">
@@ -62,7 +62,7 @@ else
             </label>
             @if(LivePolicy.Enabled){<span class="badge">@Ui["Live apply · cluster"]</span>}
             <span class="toolbar-spacer"></span>
-            @if(ExperimentalEnabled){<button class="quiet debug-next-input" disabled="@(busy||LocalContext||Model.Draft.BaseRevision is null)" @onclick="()=>debugOpen=true">@Ui["Debug next input"]</button>}
+            @if(ExperimentalEnabled){<button class="debug-next-input" disabled="@(busy||LocalContext||Model.Draft.BaseRevision is null)" @onclick="()=>debugOpen=true">@Ui["Debug next input"]</button>}
             <button class="quiet @(showDetails?"active":string.Empty)" aria-label="@Ui["Show values in nodes"]" aria-pressed="@(showDetails?"true":"false")" title="@Ui["Show or collapse node values"]" @onclick="()=>showDetails=!showDetails">@Ui["Show values in nodes"]</button>
             <button class="quiet" @onclick="()=>viewOptionsOpen=true"><UiIcon Name="settings" /><span class="control-label">@Ui["View"]</span></button>
             <button class="quiet @(inspectorOpen?"active":string.Empty)" aria-pressed="@(inspectorOpen?"true":"false")" @onclick="()=>TogglePanelAsync(false,lifetime.Token)"><UiIcon Name="panel" /><span class="control-label">@Ui["Inspector"]</span></button>
@@ -80,7 +80,7 @@ else
             <EditorNavigator @ref="navigator" CompactCanvasChanged="AdjustCompactPanels" CanvasHost="canvasContainer" Catalog="catalog" ZoomChanged="value=>zoom=value" Disabled="@(busy||dragging)" InitialNodeId="@(string.Equals(initialWorkflow,Model.Draft.Document.Id,StringComparison.Ordinal)?initialNode:null)">
                 <Participants>
                     @{
-                        var collaborators = Collaboration.Presence.Where(item=>item.Presence.WorkflowId==Model.Draft.Document.Id && item.Presence.UiInstanceId!=Collaboration.UiInstanceId).ToArray();
+                        var collaborators = Collaboration.OtherEditors(Model.Draft.Document.Id).ToArray();
                     }
                     @if(collaborators.Length>0)
                     {
@@ -89,19 +89,26 @@ else
         @if(collaborators.Length==1)
         {
             var peer=collaborators[0];
-            <span class="collaborator-swatch" style="@("--editor-color:"+CollaborationOverlay.Color(peer.Presence.UiInstanceId))" aria-hidden="true"></span>
+            <span class="collaborator-swatch" style="@("--editor-color:"+CollaborationOverlay.Color(0))" aria-hidden="true"></span>
             <span>@Ui.Format("{0} is editing", $"{peer.Presence.DisplayName} ({peer.PeerId})")</span>
         }
         else
         {
-            <span class="collaborator-swatches" aria-hidden="true">@foreach(var peer in collaborators.Take(3)){<span class="collaborator-swatch" style="@("--editor-color:"+CollaborationOverlay.Color(peer.Presence.UiInstanceId))"></span>}</span>
+            <span class="collaborator-swatch roster-swatch" aria-hidden="true"></span>
             <span>@Ui.Format("{0} editors",collaborators.Length)</span>
         }
     </summary>
                             <ul>
-                            @foreach(var peer in collaborators)
+                            @foreach(var (peer,index) in collaborators.Select((peer,index)=>(peer,index)))
                             {
-                                <li style="@("--editor-color:"+CollaborationOverlay.Color(peer.Presence.UiInstanceId))"><strong>@peer.Presence.DisplayName</strong> <span>@peer.PeerId</span>@if(peer.Presence.Dirty){<span> · @Ui["Unsaved"]</span>}@if(peer.Presence.SelectedNodeIds.Count>0){<small class="collaborator-nodes">@string.Join(", ",peer.Presence.SelectedNodeIds)</small>}</li>
+                                <li style="@("--editor-color:"+CollaborationOverlay.Color(index))">
+                                    <strong>@CollaborationOverlay.Label(peer.Presence)</strong>
+                                    <span class="muted">@peer.PeerId @if(peer.Presence.Dirty){<span>· @Ui["Unsaved"]</span>}</span>
+                                    @if(peer.Presence.SelectedNodeIds.Count>0)
+                                    {
+                                        <small class="collaborator-nodes">@Ui.Format("Selected nodes: {0}", string.Join(", ", peer.Presence.SelectedNodeIds.Select(SelectedNodeName)))</small>
+                                    }
+                                </li>
                             }
                             </ul>
                         </details>
@@ -116,7 +123,9 @@ else
         </div>
         <NodeQuickAdd CanvasHost="canvasContainer" Catalog="catalog" Disabled="@(busy||Model.Locks.Whole(Model.Draft.Document.Id))" Add="AddAtAsync" />
         <aside class="inspector" hidden="@(!inspectorOpen)"><div class="inspector-heading"><h2>@(Model.SelectedWire is not null?Ui["Connection"]:Model.SelectedNode is not null?Ui["Selected node"]:Ui["Workflow settings"])</h2><div class="toolbar">@if(Model.SelectedNode is not null || Model.SelectedWire is not null){<button class="quiet" @onclick="SelectWorkflow"><UiIcon Name="settings" /><span class="control-label">@Ui["Workflow settings"]</span></button>}<button class="quiet icon-button" aria-label="@Ui["Close inspector"]" @onclick="()=>inspectorOpen=false"><UiIcon Name="close" /></button></div></div>
+            <clutch-scroll-area><div class="inspector-content">
             @if(Model.SelectedNode is not null){<NodeInspector ToggleState="@ToggleStates.Find(Model.ClusterId,Model.Draft.Document.Id).GetValueOrDefault(Model.SelectedNode)" ButtonPressed="RunCoreAsync" @key="Model.SelectedNode" Visible="inspectorOpen" Catalog="catalog" InvalidChanged="value=>invalid=value" />}else{<WorkflowInspector Visible="inspectorOpen" Routes="@(inspectorOpen?AllRoutes:[])" Catalog="catalog" />}
+            </div></clutch-scroll-area>
         </aside>
     </div>
     <div class="editor-statusbar"><button class="arrange-nodes" title="@Ui["Separate overlapping nodes. Use Undo to restore the previous layout."]" disabled="@(busy||!nodesOverlap||Model.Locks.Whole(Model.Draft.Document.Id))" @onclick="()=>graph?.SeparateCards()"><UiIcon Name="arrange" /><span class="control-label">@Ui["Space nodes"]</span></button>@if(nodesOverlap){<span class="node-overlap-notice" role="status">@Ui["Overlapping nodes spaced in this view"]</span>}<span>@Ui.Format("{0} nodes",Model.Draft.Document.Nodes.Count)<span class="status-separator">/</span>@Ui.Format("{0} connections",Model.Draft.Document.Wires.Count)</span><span class="statusbar-spacer"></span><div class="zoom-tools"><button aria-label="@Ui["Zoom out"]" @onclick="()=>zoom=Math.Max(.05,Math.Round(zoom-.05,2))">−</button><span>@((int)Math.Round(zoom*100))&nbsp;%</span><button aria-label="@Ui["Zoom in"]" @onclick="()=>zoom=Math.Min(1.5,Math.Round(zoom+.05,2))">＋</button></div><span class="toolbar-divider"></span><button class="quiet" title="@(LocalContext?Ui["Local editing · not shared"]:Ui[Collaboration.Status])" @onclick="()=>collaborationOpen=true"><span class="dot"></span><span id="collaboration-status" class="collaboration-status">@(LocalContext?Ui["Local editing"]:Collaboration.Active?Ui["Checking draft"]:Collaboration.Pending?Ui["Draft synchronization pending"]:Ui["Collaboration"])</span>@if(Model.Draft.Conflicts.Count!=0){<span class="badge warn">@Ui.Format("{0} conflicts",Model.Draft.Conflicts.Count)</span>}</button></div>

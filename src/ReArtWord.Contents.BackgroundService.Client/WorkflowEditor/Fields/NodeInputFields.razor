@@ -35,7 +35,7 @@
     var kind = connected ? declaredKind : focusedKinds.GetValueOrDefault(port.Name,declaredKind);
     var key = Node.Id + "/inputs/" + port.Name;
     var raw = (connected?null:Model.ReadInput(key)) ?? (binary ? Convert.ToBase64String(value?.Binary.ToArray() ?? []) : kind == JsonValueKind.String && value?.Json.ValueKind==JsonValueKind.String ? value.Json.GetString() ?? string.Empty : value?.Json.GetRawText() ?? string.Empty);
-    var reason = connected ? Ui[value is null?"Connected value is not available without execution":"Connected value preview · read-only"] : Inline && binary ? Ui["Edit in inspector"] : null;
+    var reason = connected ? Ui[value is null?"Value pending":"Connected value preview · read-only"] : Inline && binary ? Ui["Edit in inspector"] : null;
     <label @key="port.Name" @onfocusin="()=>BeginInput(port.Name,kind)" @onfocusout="()=>EndInput(port.Name)" class="@(Inline ? "node-inline-field" : null)">
         <span class="field-caption" title="@Ui.PortName(Node.Type,port.Name,false)">@Ui.PortName(Node.Type,port.Name,false) @(port.Required ? "*" : "")</span>
         @if(expected?.Type=="type definition")

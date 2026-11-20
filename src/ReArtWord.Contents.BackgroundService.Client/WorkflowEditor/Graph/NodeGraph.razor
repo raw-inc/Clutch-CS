@@ -28,6 +28,7 @@
         var position=Position(node);var descriptor=inference.EditorDescriptor(node.Id);var inputs=Ports(descriptor,false,node.Id);var outputs=Ports(descriptor,true);
         bounds[node.Id]=(position,new(CardWidth(node),NodeHeight(node,descriptor,inputs.Count,outputs.Count)));
         var nodeError=string.Join("\n",nodeIssues[node.Id].Select(issue=>Ui[issue.Message]));
+        var buttonHeight = GraphPresentation.ButtonControlHeight(node.Type);
         <g @key="node.Id" data-node-id="@node.Id" data-selected-scope="@regions.SelectedScope(node.Id)" data-scope-membership="@regions.Membership(node.Id)" data-running="@(running.Contains(node.Id)?"true":null)" @onpointerdown="e=>BeginAsync(node,e)" role="button" tabindex="0" aria-label="@(Ui.NodeName(node,descriptor)+" "+node.Id)" @onkeydown="e=>NodeKeyAsync(node.Id,e)" transform="@FormattableString.Invariant($"translate({position.X} {position.Y})")" class="graph-node @(Model.Selection.Nodes.Contains(node.Id)?"selected":null) @(nodeError.Length>0?"has-error":null)" aria-invalid="@(nodeError.Length>0?"true":"false")" data-category="@GraphPresentation.CategoryKey(descriptor?.Category??string.Empty)">
             @if(nodeError.Length>0){<title>@nodeError</title>}
             <rect class="node-box" width="@CardWidth(node)" height="@(NodeHeight(node,descriptor,inputs.Count,outputs.Count))" />
@@ -67,9 +68,9 @@
                     </foreignObject>
                 </g>
             }
-            @if(node.Type is "control.button" or "control.toggleButton")
+            @if(buttonHeight > 0)
             {
-                <foreignObject x="12" y="@(90+Math.Max(inputs.Count,outputs.Count)*GraphPresentation.PortSpacing(View))" width="266" height="72">
+                <foreignObject x="12" y="@(90+Math.Max(inputs.Count,outputs.Count)*GraphPresentation.PortSpacing(View))" width="266" height="@buttonHeight">
                     <div xmlns="http://www.w3.org/1999/xhtml" @onpointerdown:stopPropagation="true" @onpointerup:stopPropagation="true" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
                         <ButtonNodeControl Node="node" Pressed="ButtonPressed" ToggleState="@ToggleStates.GetValueOrDefault(node.Id)" />
                     </div>
@@ -92,10 +93,10 @@
             }
             else if(ShowDetails && descriptor is not null && (GraphPresentation.SettingsCount(descriptor)>0 || descriptor.Inputs.Count>0))
             {
-                var top=90+Math.Max(inputs.Count,outputs.Count)*GraphPresentation.PortSpacing(View)+(node.Type is "control.button" or "control.toggleButton"?56:0);
+                var top=90+Math.Max(inputs.Count,outputs.Count)*GraphPresentation.PortSpacing(View)+buttonHeight;
                 @foreach(var setting in SettingProperties(descriptor).Select((property,index)=>(property,index)))
                 {
-                    var settingPort=SettingPorts.Name(setting.property.Name);var settingInfo=inference.Port(node.Id,settingPort,false);var settingY=SettingY(inputs.Count,outputs.Count,setting.index);
+                    var settingPort=SettingPorts.Name(setting.property.Name);var settingInfo=inference.Port(node.Id,settingPort,false);var settingY=SettingY(inputs.Count,outputs.Count,setting.index,node.Type);
                     @if(GraphSettingPorts.Visible(Model.Draft.Document,node.Id,descriptor,settingPort))
                     {
                     <g class="port-group kind-@settingInfo.Key" @onpointerdown:stopPropagation="true" data-wire-node="@node.Id" data-wire-port="@settingPort" data-wire-output="false" @onclick="()=>Input(node.Id,settingPort)">

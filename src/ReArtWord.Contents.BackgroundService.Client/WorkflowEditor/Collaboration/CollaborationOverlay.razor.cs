@@ -24,17 +24,18 @@ public sealed partial class CollaborationOverlay
         get; set;
     }
 
-    /// <summary>ブラウザー実体ごとに識別色を固定します。</summary>
-    /// <returns>テーマに合う明るさの色です。</returns>
-    internal static string Color(Guid id)
+    /// <summary>同じ画面で見分けやすい順序で編集者の識別色を割り当てます。</summary>
+    /// <returns>各テーマで使う識別色です。</returns>
+    internal static string Color(int index)
     {
-        string hue = (140 + BitConverter.ToUInt16(id.ToByteArray()) % 166).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        ReadOnlySpan<int> hues = [160, 22, 322, 196, 84, 260];
+        string hue = hues[index % hues.Length].ToString(System.Globalization.CultureInfo.InvariantCulture);
         return "light-dark(hsl(" + hue + " 62% 30%), hsl(" + hue + " 62% 72%))";
     }
 
     /// <summary>同じ表示名のブラウザーも区別できるようにします。</summary>
     /// <returns>短い実体識別を添えた編集者名です。</returns>
-    private static string Label(PresenceUpdate presence) => presence.DisplayName + " · " + presence.UiInstanceId.ToString("N")[..4];
+    internal static string Label(PresenceUpdate presence) => presence.DisplayName + " · " + presence.UiInstanceId.ToString("N")[..4];
 
     /// <summary>他の編集者の位置更新をこの表示だけで購読します。</summary>
     protected override void OnInitialized()

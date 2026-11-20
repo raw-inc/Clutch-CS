@@ -6,8 +6,8 @@
     display: block;
     width: 100%;
     min-height: 36px;
-    padding: 2px;
-    border: 0;
+    padding: 8px;
+    border: 1px solid transparent;
     border-radius: var(--radius-control);
     background: transparent;
     color: var(--ink);
@@ -32,6 +32,10 @@
 
 .dashboard-comment textarea {
     width: 100%;
+    padding: 8px;
+    font: inherit;
+    font-size: 16px;
+    line-height: 1.6;
     min-height: 96px;
     resize: vertical;
 }
@@ -48,8 +52,8 @@ p.comment-text {
     cursor: text;
 }
 
-button.comment-text {
-    padding: 8px;
+:lang(ja) :is(.comment-text, .dashboard-comment textarea) {
+    word-break: auto-phrase;
 }
 
 .comment-continuation {

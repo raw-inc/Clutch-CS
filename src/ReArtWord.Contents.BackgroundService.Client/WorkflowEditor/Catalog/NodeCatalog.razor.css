@@ -30,6 +30,10 @@
     padding-block: 6px;
 }
 
+.catalog-scroll {
+    flex: 1;
+}
+
 .catalog-list {
     flex: 1;
     min-height: 80px;

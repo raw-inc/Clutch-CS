@@ -127,6 +127,7 @@ public sealed partial class WorkflowEditorPage : IAsyncDisposable
     private Func<string>? message;
 
     private double zoom = .9;
+
     private bool catalogOpen, inspectorOpen, showDetails = true;
     private string? pickedWorkflow;
     private bool documentsOpen, documentToolsOpen, saveOptionsOpen, collaborationOpen, viewOptionsOpen, compatibilityOpen, debugOpen;
@@ -145,6 +146,15 @@ public sealed partial class WorkflowEditorPage : IAsyncDisposable
     private IReadOnlyList<EditConflict> conflicts = [];
     private bool Detached => Connection.Current?.Status == EPeerStatus.Detached;
     private bool LocalContext => Detached || Model.Draft.LocalOnly;
+
+    /// <summary>共同編集の一覧でキャンバスと同じノード名を表示します。</summary>
+    /// <returns>現在の草稿にないノードは元のIDを返します。</returns>
+    private string SelectedNodeName(string id)
+    {
+        NodeDefinition? node = Model.Draft.Document.Nodes.FirstOrDefault(item => string.Equals(item.Id, id, StringComparison.Ordinal));
+        return node is null ? id
+                            : Ui.NodeName(node, catalog.FirstOrDefault(item => string.Equals(item.Type, node.Type, StringComparison.Ordinal)));
+    }
 
     /// <summary>操作結果の変更だけを通知し、通常の再描画で同じ結果を出し直しません。</summary>
     private void PublishNotice()

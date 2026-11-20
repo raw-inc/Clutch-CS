@@ -1,7 +1,7 @@
 @using ReArtWord.Contents.BackgroundService.Client.Components
 @using ReArtWord.Contents.BackgroundService.Contracts.Workflow
 <div class="editor-workflow-strip">
-<clutch-scroll-area data-scroll-axis="inline">
+<clutch-scroll-area data-scroll-axis="inline" data-scroll-controls>
 <nav @ref="tabStrip" class="editor-workflow-tabs" aria-label="@Ui["Workflows in the selected cluster"]">
     @foreach(var item in tabs)
     {
@@ -11,6 +11,8 @@
     }
     <div class="tabs-actions"><EditorCreateMenu Experimental="Experimental" Busy="Busy" New="New" NewDashboard="NewDashboard" />@if(HasMore){<button class="quiet" disabled="@Busy" @onclick="Next">@Ui["Next page"]</button>}</div>
 </nav>
+<button class="icon-button scroll-workflows-back" type="button" data-scroll-control="before" aria-label="@Ui["Scroll workflows left"]" title="@Ui["Scroll workflows left"]" disabled><UiIcon Name="chevron" /></button>
+<button class="icon-button scroll-workflows-forward" type="button" data-scroll-control="after" aria-label="@Ui["Scroll workflows right"]" title="@Ui["Scroll workflows right"]" disabled><UiIcon Name="chevron" /></button>
 </clutch-scroll-area>
 @{var otherDrafts = tabs.Count(item => item.Dirty && item.Id != SelectedId);}
 @if(otherDrafts > 0){<span class="badge warn other-drafts" role="status">@Ui.Format("{0} other unsaved workflows", otherDrafts)</span>}

@@ -35,6 +35,7 @@
 }
 
 .dashboard-board {
+    flex: 1;
     overflow: auto;
     min-width: 0;
     padding: 22px;
@@ -231,7 +232,7 @@
 
 .dashboard-card > .board-action-note {
     padding-inline: 12px;
-    margin-block-end: 8px;
+    margin-block-end: 16px;
     line-height: 1.5;
 }
 
@@ -250,7 +251,7 @@
         flex-direction: column;
     }
 
-    .dashboard-workspace.with-catalog :is(.dashboard-library, .dashboard-board) {
+    .dashboard-workspace.with-catalog :is(.dashboard-library, .dashboard-board, .dashboard-board-scroll) {
         flex: 0 0 auto;
         overflow: visible;
     }

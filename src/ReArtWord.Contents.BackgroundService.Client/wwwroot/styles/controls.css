@@ -32,7 +32,7 @@ clutch-scroll-area::after {
 
 clutch-scroll-area[data-scroll-before]::before {
     content: "";
-    inset-block-start: 0;
+    inset-block-start: var(--scroll-edge-block-start, 0);
     background: linear-gradient(var(--scroll-edge), transparent);
 }
 
@@ -54,12 +54,33 @@ clutch-scroll-area[data-scroll-axis="inline"]::after {
     height: auto;
 }
 
-clutch-scroll-area[data-scroll-axis="inline"][data-scroll-before]::before {
+clutch-scroll-area[data-scroll-axis="inline"]:not([data-scroll-controls])[data-scroll-before]::before {
     inset-inline-start: 0;
     background: linear-gradient(to right, var(--scroll-edge), transparent);
 }
 
-clutch-scroll-area[data-scroll-axis="inline"][data-scroll-after]::after {
+clutch-scroll-area[data-scroll-axis="inline"]:not([data-scroll-controls])[data-scroll-after]::after {
+    inset-inline-end: 0;
+    background: linear-gradient(to left, var(--scroll-edge), transparent);
+}
+
+clutch-scroll-area[data-scroll-axis="both"] > .scroll-inline-edge {
+    display: none;
+    position: absolute;
+    z-index: 2;
+    inset-block: var(--scroll-edge-block-start, 0) 0;
+    width: 12px;
+    pointer-events: none;
+}
+
+clutch-scroll-area[data-scroll-inline-before] > .scroll-inline-before {
+    display: block;
+    inset-inline-start: 0;
+    background: linear-gradient(to right, var(--scroll-edge), transparent);
+}
+
+clutch-scroll-area[data-scroll-inline-after] > .scroll-inline-after {
+    display: block;
     inset-inline-end: 0;
     background: linear-gradient(to left, var(--scroll-edge), transparent);
 }

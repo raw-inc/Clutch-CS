@@ -4,10 +4,10 @@
 @inject EditorDocument Model
 @inject EditorNodeActivity Activity
 <g class="collaboration-overlay" pointer-events="none">
-    @foreach(var peer in Collaboration.Presence.Where(item=>item.Presence.UiInstanceId!=Collaboration.UiInstanceId && string.Equals(item.Presence.WorkflowId,Model.Draft.Document.Id,StringComparison.Ordinal)))
+    @foreach(var (peer,index) in Collaboration.OtherEditors(Model.Draft.Document.Id).Select((peer,index)=>(peer,index)))
     {
         var presence=peer.Presence;
-        var color=Color(presence.UiInstanceId);
+        var color=Color(index);
         @foreach(var selected in presence.SelectedNodeIds)
         {
             @if(Bounds.TryGetValue(selected,out var box))
