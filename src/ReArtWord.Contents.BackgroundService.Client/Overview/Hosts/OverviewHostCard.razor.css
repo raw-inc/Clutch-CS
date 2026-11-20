@@ -292,9 +292,8 @@ h3 {
 
 .gpu-name {
     color: var(--muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow-wrap: anywhere;
+    word-break: auto-phrase;
 }
 
 .host-card.summary .cpu-name {

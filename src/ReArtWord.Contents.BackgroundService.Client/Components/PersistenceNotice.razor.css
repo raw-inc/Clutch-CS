@@ -19,3 +19,15 @@
 .persistence-counts td {
     align-items: baseline;
 }
+
+@media (max-width: 680px) {
+    .table-wrap:has(.persistence-counts) {
+        border: 0;
+        background: transparent;
+    }
+
+    .persistence-counts tbody tr {
+        border: 1px solid var(--line);
+        margin: 0 0 10px;
+    }
+}

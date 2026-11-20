@@ -38,16 +38,6 @@
 <p>@Ui["Choose one snapshot per target. Targets with no snapshot at that time are not applied but remain in the original compensation scope. Explicitly excluded targets are also excluded from compensation."]</p>
 <label>@Ui.Format("display.timezone.point",DisplayTimeZone.Id)<input type="datetime-local" value="@at" @oninput="TimeChanged" />
 </label>
-@foreach(var row in rows)
-{
-    <label class="snapshot-target @(row.Choice == MatchOmit ? null : "included-target")">@row.Target.PeerId / @row.Target.Id (@Ui[row.Target.Kind.ToString()]) · @(row.Target.NodeIds is null?Ui["Whole scope"]:string.Join(", ",row.Target.NodeIds))<select @bind="row.Choice">
-<option value="omit">@Ui["Do not include in this request"]</option>
-<option value="at">@Ui["Latest at the specified time"]</option>
-<option value="exclude">@Ui["Explicitly exclude from scope"]</option>@foreach(var snapshot in snapshots.Where(item=>SnapshotSelectionRules.Covers(item,row.Target))){<option value="@snapshot.Id">@FormatTime(snapshot.CapturedAt) · @snapshot.Id</option>}</select>
-</label>
-}
-<button @onclick="NextSnapshotsAsync" disabled="@(snapshotCursor is null)">@Ui["Load the next snapshot page"]</button>
-@foreach(var omitted in snapshots.Where(item=>item.DetailReason is not null)){<p class="notice">@Ui.Format("Candidate {0} metadata was omitted: {1}. Omitted scopes cannot be selected for restore.", omitted.IdentifierHash, omitted.DetailReason)</p>}
 <details class="secondary-details">
 <summary>@Ui["Add a target not listed"]</summary>
 <label>@Ui["Kind"]<select @bind="kind">@foreach(var value in Enum.GetValues<ESnapshotKind>()){<option value="@value">@Ui[value.ToString()]</option>}</select>
@@ -59,6 +49,16 @@
 <button @onclick="AddTarget">@Ui["Add to scope"]</button>
 </details>
 <SnapshotScopePicker Selected="ExpandRestoreAsync" />
+@foreach(var row in rows)
+{
+    <label class="snapshot-target @(row.Choice == MatchOmit ? null : "included-target")">@row.Target.PeerId / @row.Target.Id (@Ui[row.Target.Kind.ToString()]) · @(row.Target.NodeIds is null?Ui["Whole scope"]:string.Join(", ",row.Target.NodeIds))<select @bind="row.Choice">
+<option value="omit">@Ui["Do not include in this request"]</option>
+<option value="at">@Ui["Latest at the specified time"]</option>
+<option value="exclude">@Ui["Explicitly exclude from scope"]</option>@foreach(var snapshot in snapshots.Where(item=>SnapshotSelectionRules.Covers(item,row.Target))){<option value="@snapshot.Id">@FormatTime(snapshot.CapturedAt) · @snapshot.Id</option>}</select>
+</label>
+}
+<button @onclick="NextSnapshotsAsync" disabled="@(snapshotCursor is null)">@Ui["Load the next snapshot page"]</button>
+@foreach(var omitted in snapshots.Where(item=>item.DetailReason is not null)){<p class="notice">@Ui.Format("Candidate {0} metadata was omitted: {1}. Omitted scopes cannot be selected for restore.", omitted.IdentifierHash, omitted.DetailReason)</p>}
     </ChildContent>
     <Actions>
         <button class="primary" disabled="@(SelectedRestoreCount == 0)" @onclick="RestoreAsync">@Ui.Format("Restore selected targets ({0})", SelectedRestoreCount)</button>

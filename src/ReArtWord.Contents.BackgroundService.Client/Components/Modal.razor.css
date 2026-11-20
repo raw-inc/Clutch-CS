@@ -107,7 +107,7 @@
 }
 
 .dialog > footer.toolbar {
-    border-block-start: 1px solid var(--control);
+    border-block-start: 1px solid var(--line);
 }
 
 .dialog-content ::deep .maintenance-form > label,
@@ -147,4 +147,8 @@
 
 .dialog-content ::deep .group-settings-fields small {
     font-size: 13px;
+}
+
+.dialog-content ::deep .operational-options {
+    row-gap: 24px;
 }

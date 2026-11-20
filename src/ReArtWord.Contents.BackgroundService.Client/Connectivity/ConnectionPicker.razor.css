@@ -16,16 +16,14 @@
     font-size: 11px;
 }
 
-.connection-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--warn);
-    flex-shrink: 0;
+.connection-symbol {
+    display: inline-flex;
+    flex: none;
+    color: var(--warn);
 }
 
-.connection-dot.online {
-    background: var(--green);
+.connection-symbol.online {
+    color: var(--green);
 }
 
 .connection-chevron ::deep .ui-icon {
@@ -98,8 +96,4 @@
     .peer-connections td:last-child button {
         min-height: 44px;
     }
-}
-
-.connection-button:has(.connection-dot.online) .connection-symbol {
-    color: var(--green);
 }

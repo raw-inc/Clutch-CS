@@ -33,7 +33,7 @@
             @if (kind == EScriptPackageKind.Npm)
             {
                 <div class="package-runtime"><strong>@Ui["Node.js executable on this peer"]</strong><ScriptRuntimePicker @key="runtimeGeneration" Language="javascript" PeerId="@peer" ClusterId="@cluster" @bind-Value="nodePath" Disabled="Busy" Manage="true" /></div>
-                <label class="package-runtime">@Ui["npm-cli.js path (optional)"]<input @bind="npmPath" @bind:event="oninput" maxlength="4096" disabled="@Busy" placeholder="@catalog.Npm?.NpmPath" /></label>
+                <label class="package-runtime">@Ui["npm-cli.js path (optional)"]<input @bind="npmPath" @bind:event="oninput" maxlength="4096" disabled="@Busy" placeholder="@catalog.Npm?.NpmPath" /><small>@Ui["Specify this only if npm-cli.js is outside its usual location."]</small></label>
             }
         </div>
             <ScriptRuntimeInstallPanel @key='("runtime",kind)' Language='@(kind==EScriptPackageKind.Pip?"python":"javascript")' PeerId="@peer" ClusterId="@cluster" Disabled="Busy" DefaultUpdated="RuntimeInstalled" />

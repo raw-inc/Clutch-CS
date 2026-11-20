@@ -285,10 +285,6 @@
     padding: 8px 12px;
 }
 
-.connection ::deep .connection-symbol {
-    display: none;
-}
-
 @media (max-width: 1100px) {
     .topbar {
         gap: 8px;
@@ -356,7 +352,4 @@
         height: 12px;
     }
 
-    .connection ::deep .connection-dot {
-        display: none;
-    }
 }

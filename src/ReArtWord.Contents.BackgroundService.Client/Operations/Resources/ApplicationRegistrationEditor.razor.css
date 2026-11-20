@@ -82,3 +82,19 @@
 .application-fields label:has(input[type="checkbox"]) {
     align-self: start;
 }
+
+.application-fields > label,
+.application-restart-conditions > label {
+    margin: 0;
+}
+
+.application-restart-conditions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 20px;
+    align-items: center;
+}
+
+.application-section .section-start-action {
+    margin-inline-start: -12px;
+}

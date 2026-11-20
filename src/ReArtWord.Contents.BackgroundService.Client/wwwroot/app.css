@@ -83,7 +83,13 @@ button.primary:enabled:hover {
 }
 
 button.danger {
+    border-color: var(--danger);
     color: var(--danger);
+}
+
+button.danger:enabled:hover {
+    border-color: var(--danger);
+    background: var(--danger-soft);
 }
 
 button.quiet {
@@ -554,6 +560,11 @@ td details {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
     gap: 16px;
     margin-block-start: 12px;
+}
+
+.conflict-candidates details > summary {
+    padding-inline-start: 0;
+    gap: 4px;
 }
 
 .conflict-candidates details > code {
@@ -1043,8 +1054,14 @@ input[type="checkbox"] {
 }
 
 button.danger:disabled {
+    border-color: var(--disabled-line);
     color: var(--disabled-ink);
     background: var(--disabled-face);
+}
+
+.lookup-status .badge.pending {
+    border-color: var(--line);
+    background: var(--nested);
 }
 
 .notice.warning,
@@ -1060,9 +1077,14 @@ button.danger:disabled {
     color: var(--green);
 }
 
+.notice:has(> .ui-icon) {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
 .notice > .ui-icon {
-    margin-inline-end: 6px;
-    vertical-align: middle;
+    margin-block-start: 1px;
 }
 
 .debug-query {
@@ -1110,13 +1132,13 @@ button.danger:disabled {
 .dialog-content .snapshot-target {
     display: grid;
     min-width: 0;
-    padding: 8px 12px;
+    padding-block: 8px;
     border-radius: var(--radius-control);
 }
 
 .snapshot-target.included-target {
     background: var(--accent-soft);
-    box-shadow: inset 3px 0 var(--accent);
+    box-shadow: 8px 0 var(--accent-soft), -8px 0 var(--accent-soft), -11px 0 var(--accent);
 }
 
 .fleet-update .file-picker-control,
@@ -1231,6 +1253,7 @@ button.danger:disabled {
 
 .dialog-content > .notice.warning {
     width: 100%;
+    max-width: none;
 }
 
 @media (max-width: 760px) {

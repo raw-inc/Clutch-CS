@@ -54,7 +54,7 @@
                     <label><input type="radio" name="conflict-choice" checked="@(version==candidate.Version)" disabled="@(busy||!current.Resolvable)" @onchange="()=>Choose(candidate.Version)" />
                         <strong>@Ui.Format("Candidate {0}", index+1)</strong>@if(candidate.Version==version){<span>@Ui["Selected"]</span>}
                     </label>
-                    <details><summary><code>@candidate.Version[..Math.Min(12,candidate.Version.Length)]</code> · @Ui["Revision"]</summary><code>@candidate.Version</code></details>
+                    <details><summary><code>@candidate.Version[..Math.Min(12,candidate.Version.Length)]</code><span>· @Ui["Revision"]</span></summary><code>@candidate.Version</code></details>
                     @if(candidate.Value is null&&!current.ValuesHidden){<small>@Ui["· Deletion candidate"]</small>}
                     @if(!current.ValuesHidden)
                     {

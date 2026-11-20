@@ -7,7 +7,7 @@
     flex-wrap: wrap;
     gap: 1rem;
     align-items: flex-end;
-    margin-block: 1rem;
+    margin: 0 0 1rem;
 }
 
 .package-form label {
@@ -111,7 +111,7 @@
     font-size: 13px;
     font-weight: 400;
     border: 0;
-    background: var(--raised);
+    background: var(--nested);
     text-align: start;
 }
 
@@ -170,4 +170,8 @@
     font-weight: 500;
     color: var(--muted);
     word-break: auto-phrase;
+}
+
+.script-packages > .section-heading button.quiet {
+    margin-inline-start: -14px;
 }

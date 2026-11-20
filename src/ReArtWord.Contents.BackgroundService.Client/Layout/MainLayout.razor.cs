@@ -99,7 +99,7 @@ public sealed partial class MainLayout : IAsyncDisposable
     private static readonly (string Route, string Icon, string Name)[] navigationItems =
     [
         ("dashboard", "dashboard", "Dashboard"), ("editor", "nodes", "WorkflowEditor"),
-        ("host-manager", "monitor", "HostManager"), ("file-transfer", "folder", "FileTransfer"),
+        ("host-manager", "hosts", "HostManager"), ("file-transfer", "folder", "FileTransfer"),
         ("terminal", "terminal", "Terminal"), ("desktop", "monitor", "RemoteDesktop"),
         ("signal-scope", "signal", "SignalScope"), ("logs", "logs", "LogViewer")
     ];

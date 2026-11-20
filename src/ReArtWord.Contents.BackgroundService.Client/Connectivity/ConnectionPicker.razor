@@ -4,8 +4,7 @@
 @using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor
 
 <button class="connection-button" @onclick="OpenAsync" title="@(ClusterId is null ? Ui["Select network, cluster and peer"] : ClusterId + " / " + PeerId + " · " + Ui[Connected?"Connected":"Disconnected"])" aria-label="@Ui["Select network, cluster and peer"]">
-    <span class="connection-dot @(Connected?"online":string.Empty)" aria-hidden="true"></span>
-    <span class="connection-symbol" aria-hidden="true"><UiIcon Name="@(Connected?"check":"plug")" /></span>
+    <span class="connection-symbol @(Connected?"online":null)" aria-hidden="true"><UiIcon Name="@(Connected?"check":"plug")" /></span>
     @if(ClusterId is not null){<span class="connection-name">@ClusterId <small>/ @PeerId</small></span>}
     else{<span class="connection-name">@Ui["Select connection"]</span>}
     <span class="connection-chevron" aria-hidden="true"><UiIcon Name="chevron" /></span>

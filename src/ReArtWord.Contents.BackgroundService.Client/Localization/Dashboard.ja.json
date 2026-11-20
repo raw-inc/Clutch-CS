@@ -1,4 +1,5 @@
 {
+  "Saved and applied": "保存版と有効版は同じ",
   "Above 80%": "80 % 超",
   "Browser preferences": "ブラウザー設定",
   "Cluster configuration": "クラスタ設定",
@@ -166,6 +167,8 @@
   "Coordinator disagreement": "担当の不一致",
   "Choose this PC’s network to discover reachable clusters. No cluster selection is required.": "このPCのネットワークを選ぶと、到達できるクラスタを表示します。クラスタの選択は不要です。",
   "Up to 8 log entries per polled cluster; showing the latest 8 observed entries.": "取得対象の各クラスタから最大 8 件を読み、取得できた最新 8 件を表示しています。",
+  "Reads up to 8 log entries per cluster.": "各クラスタから最大 8 件を取得します。",
+  "Shows the latest 8 entries received.": "取得したログのうち、最新 8 件を表示します。",
   "{0} cores / {1} threads": "{0} コア / {1} スレッド",
   "Dedicated GPU memory": "専用GPUメモリ",
   "Shared system memory": "共有システムメモリ",

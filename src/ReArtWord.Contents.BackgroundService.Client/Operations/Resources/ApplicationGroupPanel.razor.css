@@ -1,0 +1,34 @@
+@media (max-width: 680px) {
+    .group-records {
+        border: 0;
+        background: transparent;
+    }
+
+    .group-records tr {
+        grid-template-columns: minmax(0, 1fr) auto;
+        border: 1px solid var(--line);
+    }
+
+    .group-records :is(.group-name, .group-state, .group-actions) {
+        display: block;
+    }
+
+    .group-records :is(.group-name, .group-state, .group-actions)::before {
+        content: none;
+    }
+
+    .group-records td:not(.group-name, .group-state) {
+        grid-column: 1 / -1;
+    }
+
+    .group-run-actions {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin: 4px 0;
+    }
+
+    .group-run-actions > button {
+        white-space: normal;
+        padding-inline: 5px;
+    }
+}

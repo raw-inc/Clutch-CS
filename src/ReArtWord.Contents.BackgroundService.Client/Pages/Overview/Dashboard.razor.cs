@@ -65,7 +65,7 @@ public sealed partial class Dashboard : IAsyncDisposable
                                                                   : null;
     private static readonly (string Name, string Icon)[] views =
     [
-        ("All clusters", "dashboard"), ("Peer list", "monitor"), ("Selected cluster", "network"),
+        ("All clusters", "dashboard"), ("Peer list", "peer-list"), ("Selected cluster", "network"),
         ("Execution & processes", "play"), ("Applications", "windows"), ("Script packages", "code"),
         ("Snapshots", "save"), ("Resolve conflicts", "copy"), ("Safety", "shield"),
         ("Settings & maintenance", "settings"), ("Operations", "history")

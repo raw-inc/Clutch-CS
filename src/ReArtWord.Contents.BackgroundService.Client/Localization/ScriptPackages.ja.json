@@ -1,4 +1,5 @@
 {
+  "Specify this only if npm-cli.js is outside its usual location.": "npm-cli.js が標準の場所にない場合に指定してください。",
   "Python requires venv": "PyPIのパッケージには、venvを使えるPython 3.10以降が必要です。スクリプトのPythonパスが空欄の場合は、管理中の環境を使います。",
   "Script packages": "スクリプトパッケージ",
   "Package destination: {0} / {1}": "インストール先：{0} / {1}",

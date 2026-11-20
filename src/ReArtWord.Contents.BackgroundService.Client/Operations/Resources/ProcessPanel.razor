@@ -43,7 +43,7 @@
                     <div class="toolbar">
                         <button disabled="@(busy||target is null)" @onclick="()=>selected=item">@Ui["Details and actions"]</button>
                         <button class="quiet" disabled="@(busy||target is null)" @onclick="()=>Edit(item)">@Ui["Edit"]</button>
-                        <button class="quiet danger" disabled="@(busy||refreshing||target is null)" @onclick="()=>ConfirmRemoval(item)">@Ui["Remove registration"]</button>
+                        <button class="danger" disabled="@(busy||refreshing||target is null)" @onclick="()=>ConfirmRemoval(item)"><UiIcon Name="trash" /><span class="control-label">@Ui["Remove registration"]</span></button>
                     </div>
                 </li>
             }

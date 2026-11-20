@@ -81,3 +81,9 @@
         outline-offset: -2px;
     }
 }
+
+@media (forced-colors: none) {
+    :root button.lookup-action:focus-visible {
+        background-color: transparent;
+    }
+}

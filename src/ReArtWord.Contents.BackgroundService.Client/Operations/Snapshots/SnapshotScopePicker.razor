@@ -2,11 +2,11 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Configuration
 @using ReArtWord.Contents.BackgroundService.Contracts.Workflow
 <details class="secondary-details">
-    <summary>@Ui["Select configuration scope by node, subgraph, host or host group"]</summary>
+    <summary>@Ui["Select scope by node or host"]</summary>
     <button @onclick="LoadAsync">@Ui["Retrieve effective candidates"]</button>
     <p class="notice">@(message?.Invoke())</p>
     <WorkflowPagePicker Selected="SelectWorkflowAsync" />
-    <label>@Ui["Execution destination"]<select @bind="destination"><option value="peer">Peer</option><option value="host">Host</option><option value="group">Host Group</option></select></label>
+    <label>@Ui["Execution destination"]<select @bind="destination"><option value="peer">@Ui["Peer"]</option><option value="host">@Ui["Host"]</option><option value="group">@Ui["Host group"]</option></select></label>
     @foreach(var id in Destinations)
     {
         <label class="check-row"><input type="checkbox" checked="@chosen.Contains((destination,id))" @onchange="e=>ChooseDestination(id,(bool)e.Value!)" />@id</label>

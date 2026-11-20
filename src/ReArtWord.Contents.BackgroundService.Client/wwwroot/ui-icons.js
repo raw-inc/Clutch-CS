@@ -9,7 +9,7 @@ export function uiIcon(name)
     svg.setAttribute('fill', 'currentColor');
     svg.setAttribute('aria-hidden', 'true');
     const use = document.createElementNS(svg.namespaceURI, 'use');
-    use.setAttribute('href', '/icons/controls.svg#' + name);
+    use.setAttribute('href', '#clutch-icon-' + name);
     svg.append(use);
     return svg;
 }

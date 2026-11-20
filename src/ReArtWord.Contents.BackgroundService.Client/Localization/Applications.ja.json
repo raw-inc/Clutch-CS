@@ -14,7 +14,7 @@
   "Scheduled starts": "スケジュール起動",
   "This application is registered on this host and cluster peer only.": "このアプリの登録と監視は、選択したホストのピアが担当します。",
   "Launch arguments": "起動引数",
-  "One field is one argument. Spaces and quotes are passed literally. Leave the list empty for no arguments.": "1欄が1引数です。空白や引用符もそのまま渡します。引数なしの場合は欄を追加する必要はありません。",
+  "One field is one argument. Spaces and quotes are passed literally. Leave the list empty for no arguments.": "1 つの入力欄に引数を 1 つずつ指定します。空白や引用符は入力どおりに渡されます。",
   "Argument": "引数",
   "Monitor automatically while Core is running": "Core稼働中に自動で監視する",
   "Monitoring continues without an open browser or workflow. Existing applications are reattached after Core restarts; events missed while Core was stopped are not replayed.": "ブラウザやワークフローを開いていなくても監視します。Core再起動後は同じアプリケーションへ監視を再接続し、Core停止中に観測できなかった事象は後追いしません。",

@@ -208,9 +208,42 @@
     margin-block-start: 10px;
 }
 
+.dashboard-operations > .internal-data-card {
+    margin-block-start: 0;
+    padding: 0 18px;
+    border: 0;
+    border-radius: var(--radius-panel);
+    background: var(--card);
+}
+
 .dashboard-operations > .internal-data-card > summary {
-    min-height: 52px;
-    font-size: 18px;
+    min-height: 58px;
+    padding-inline-start: 0;
+    font: 700 18px/1.5 var(--font-title);
+}
+
+.dashboard-operations > .internal-data-card > ::deep :not(summary) {
+    margin-inline: 0;
+}
+
+.workflow-revision-caption {
+    display: none;
+    font-family: var(--font-ui);
+}
+
+@media (max-width: 680px) {
+    .workflow-revision-caption {
+        display: inline;
+    }
+
+    .internal-data-card ::deep .field-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .internal-data-card ::deep .field-actions > button {
+        justify-self: end;
+    }
 }
 
 .dashboard-operations ::deep .field-actions > label select {
@@ -234,7 +267,7 @@
 .settings-topic-compact {
     display: none;
     padding: 8px 12px;
-    border-inline-start: 2px solid var(--accent);
+    border-radius: var(--radius-panel);
     background: var(--card);
 }
 

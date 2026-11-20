@@ -50,7 +50,7 @@ th {
 @media (max-width: 760px) {
     .peer-list .record-table tbody tr {
         padding-block: 12px;
-        border-block-end: 1px solid var(--control);
+        border-block-end: 1px solid var(--line);
     }
 
     .version span {
@@ -75,7 +75,7 @@ th {
 
 @media (max-width: 760px) {
     .peer-list .record-table tbody tr {
-        border: 1px solid var(--control);
+        border: 1px solid var(--line);
         border-radius: var(--radius-control);
         background: var(--panel);
     }
