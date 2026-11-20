@@ -1,4 +1,4 @@
-import { node, checkbox, table, details, action, badge, empty } from './dom.js';
+import { node, checkbox, table, details, action, badge, empty, recordCount } from './dom.js';
 import { validateNetwork } from './network-model.js';
 import { vlanLabel, vlanTone } from './vlan.js';
 import { validateVirtualSwitch } from './virtual-switches.js';
@@ -485,7 +485,7 @@ export function showHistory(root, ctx, states, refresh)
     feedback.setAttribute('role', 'status');
     root.append(feedback);
     const tools = node('div', '', 'hm-toolbar');
-    tools.append(badge(`${states.length} ${ctx.t('operations')}`), action(ctx, 'Refresh results', 'refresh', refresh));
+    tools.append(badge(recordCount(ctx, 'count.operations', states.length)), action(ctx, 'Refresh results', 'refresh', refresh));
     root.append(tools);
     if (!states.length)
     {

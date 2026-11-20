@@ -1,4 +1,4 @@
-import { node, input, field, select, checkbox, table, action, badge, heading, segmented, empty, details, hostCount } from './dom.js';
+import { node, input, field, select, checkbox, table, action, badge, heading, segmented, empty, details, hostCount, recordCount } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 import { subnet, canGroup } from './network-model.js';
 import { networkForm } from './network-form.js';
@@ -266,7 +266,7 @@ export function networkView(root, ctx, actions)
     {
         listing.replaceChildren();
         const visible = visibleRecords();
-        count.textContent = awaitingRead ? ctx.t('Loading') : unavailable ? ctx.t('Unknown') : `${visible.length} ${ctx.t('interfaces')}`;
+        count.textContent = awaitingRead ? ctx.t('Loading') : unavailable ? ctx.t('Unknown') : recordCount(ctx, 'count.interfaces', visible.length);
         for (const control of filters.querySelectorAll('input, select, button'))
         {
             control.disabled = awaitingRead || unavailable;
@@ -276,7 +276,13 @@ export function networkView(root, ctx, actions)
         {
             if (awaitingRead)
             {
-                listing.append(node('p', ctx.t('Reading interfaces…'), 'hm-read-state'));
+                const skeleton = node('div', '', 'hm-list-skeleton');
+                skeleton.setAttribute('aria-hidden', 'true');
+                for (let row = 0; row < 3; row++)
+                {
+                    skeleton.append(node('div', '', 'skeleton skeleton-line'));
+                }
+                listing.append(skeleton);
             }
             else
             {

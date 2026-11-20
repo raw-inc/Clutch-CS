@@ -9,10 +9,6 @@ export function virtualNics(root, ctx, entries, showSwitches)
     const create = action(ctx, 'Create management OS vNIC', 'plus', () => form(available[0], null), true);
     create.disabled = !available.length;
     toolbar.append(node('span', ctx.t('Connect management OS adapters to an existing switch. Create or delete switches in Virtual switches.'), 'hm-muted'), create);
-    if (!available.length && entries.length)
-    {
-        toolbar.append(node('span', ctx.t('A virtual switch is required to create a virtual NIC.'), 'hm-muted'), ctx.button('Virtual switches', showSwitches));
-    }
     root.append(toolbar);
     if (!entries.length)
     {
@@ -47,7 +43,20 @@ export function virtualNics(root, ctx, entries, showSwitches)
             rows.add([ctx.button(adapter.name, () => previewNic(entry, null, adapter), 'hm-link'), host.target.hostId, badge(ctx.t('Unconfirmed'), 'warn'), badge(ctx.t('Read only'))]);
         }
     }
-    root.append(count ? rows.root : empty(ctx.t('No virtual interfaces'), ctx.t(available.length ? 'Create a management OS adapter on an existing virtual switch.' : 'Select a virtual switch before adding an adapter.'), 'network'));
+    if (count)
+    {
+        root.append(rows.root);
+    }
+    else
+    {
+        const description = available.length ? 'Create a management OS adapter on an existing virtual switch.' : 'A virtual switch is required to create a virtual NIC.';
+        const state = empty(ctx.t('No virtual interfaces'), ctx.t(description), 'network');
+        if (!available.length)
+        {
+            state.append(action(ctx, 'Virtual switches', 'network', showSwitches));
+        }
+        root.append(state);
+    }
     const switches = table(['Host', 'Virtual switch', 'Physical interface'].map(ctx.t));
     for (const { host, state } of entries)
     {

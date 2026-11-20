@@ -99,7 +99,7 @@ export function powerScheduleForm(ctx, definitions, changed)
         changed();
         row.scrollIntoView?.({ block: 'nearest' });
     });
-    root.append(add, rowsRoot);
+    root.append(rowsRoot, add);
     reset(definitions);
     return { root, reset,
 

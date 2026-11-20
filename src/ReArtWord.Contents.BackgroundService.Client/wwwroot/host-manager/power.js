@@ -158,8 +158,6 @@ export function powerView(root, ctx)
     const reader = createReader(ctx, hosts, () => ({ area: 'power' }), render);
     const edit = action(ctx, 'Edit selected hosts', 'settings', () => editPower(ctx, [...reader.states.values()], false));
     const preset = action(ctx, 'Prepare continuous operation settings', 'check', () => editPower(ctx, [...reader.states.values()], true));
-    edit.append(document.createTextNode(` · ${ctx.t('Target hosts')}: ${hostCount(ctx, hosts.length)}`));
-    preset.append(document.createTextNode(` · ${ctx.t('Target hosts')}: ${hostCount(ctx, hosts.length)}`));
     edit.disabled = true;
     preset.disabled = true;
     const buttons = node('div', '', 'hm-actions');

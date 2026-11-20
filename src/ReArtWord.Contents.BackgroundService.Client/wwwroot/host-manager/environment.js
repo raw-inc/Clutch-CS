@@ -1,4 +1,4 @@
-import { node, select, input, field, heading, action, badge, table, empty, segmented, hostCount } from './dom.js';
+import { node, select, input, field, heading, action, badge, table, empty, segmented, hostCount, recordCount } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 import { environmentForm } from './environment-form.js';
 import { environmentBulk } from './environment-bulk.js';
@@ -114,7 +114,7 @@ export function environmentView(root, ctx, actionArea)
             rows.add([name, value, actions]);
         }
         const summary = node('div', '', 'hm-toolbar');
-        summary.append(badge(`${variables.length} ${ctx.t('variables')}`), node('span', `${host.target.hostId} · ${ctx.t(scope)}`, 'hm-muted'));
+        summary.append(badge(recordCount(ctx, 'count.variables', variables.length)), node('span', `${host.target.hostId} · ${ctx.t(scope)}`, 'hm-muted'));
         listing.append(summary, rows.root);
     }
 

@@ -125,6 +125,14 @@ export function hostCount(ctx, count)
     return count + ' ' + ctx.t(count === 1 ? 'hostCountOne' : 'hostCountUnit');
 }
 
+/** 一覧の見出しに対象名と表示件数を示します。
+ * @returns 言語に合わせた件数表記です。
+ */
+export function recordCount(ctx, key, count)
+{
+    return ctx.t(key).replace('{0}', String(count));
+}
+
 /** 折り畳み可能な詳細表示を構成します。
  * @returns 呼出し元が使用する値です。
  */

@@ -1,4 +1,4 @@
-import { node, empty } from './dom.js';
+import { node, empty, icon } from './dom.js';
 
 // Each read owns its generation. A late response never replaces a newer scope or a disposed view.
 /** 照会の世代と取消しを管理する読取り処理を構成します。
@@ -80,7 +80,7 @@ export function readStatus(root, ctx, states, retry)
     {
         const error = node('div', '', 'hm-read-error');
         error.setAttribute('role', 'alert');
-        error.append(node('strong', state.host.target.hostId), node('span', ctx.t(state.error)));
+        error.append(icon('warning'), node('strong', state.host.target.hostId), node('span', ctx.t(state.error)));
         if (retry)
         {
             error.append(ctx.button('Refresh settings', retry));

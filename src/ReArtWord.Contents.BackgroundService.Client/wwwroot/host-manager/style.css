@@ -873,9 +873,9 @@
     color: var(--ink);
     background: var(--paper);
     border-radius: var(--radius-panel);
-    box-shadow: none;
+    box-shadow: 0 8px 24px #0002;
     overflow: hidden;
-    border: 1px solid var(--control);
+    border: 1px solid var(--line);
 }
 
 .hm-dialog[open] {
@@ -884,7 +884,7 @@
 }
 
 .hm-dialog::backdrop {
-    background: rgb(0 0 0 / 68%);
+    background: var(--backdrop);
 }
 
 .hm-dialog-title {
@@ -1726,10 +1726,13 @@
     background: var(--danger-soft);
 }
 
-.hm-read-error[role="alert"]::before {
-    content: "⚠";
-    font-size: 16px;
-    font-weight: 800;
+.hm-read-error[role="alert"] > .ui-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.hm-read-error[role="alert"] > span {
+    word-break: auto-phrase;
 }
 
 .hm-section .hm-table-wrap {
@@ -1860,7 +1863,7 @@
 }
 
 .hm-dialog-body .hm-field {
-    gap: 6px;
+    gap: 5px;
     margin: 0;
 }
 
@@ -2016,6 +2019,10 @@
 
 .hm-view-actions > button {
     align-self: end;
+}
+
+.hm-selection-bar .hm-actions > button {
+    min-height: 40px;
 }
 
 .hm-profile-scope {
@@ -2208,14 +2215,19 @@
     justify-self: start;
 }
 
-.hm-workspace .hm-host:has(input:focus-visible):not(:has(input:checked)) {
+:root .hm-workspace label.hm-host:has(input:focus-visible):not(:has(input:checked)) {
     background-color: var(--panel);
     box-shadow: inset 0 -2px var(--accent);
 }
 
+:root .hm-workspace label.hm-host:has(input:checked) {
+    background-color: var(--accent-soft);
+    border-color: var(--accent);
+}
+
 .hm-dialog-body > .hm-field + .hm-field,
 .hm-dialog-body > .hm-grid + .hm-field {
-    margin-block-start: 14px;
+    margin-block-start: 24px;
 }
 
 .hm-dialog-body .hm-grid > :is(.hm-field, label) > :is(input, select) {
@@ -2227,15 +2239,31 @@
         grid-template-columns: minmax(0, 1fr);
     }
 
+    .hm-view .hm-table-wrap:not(.hm-facts):has(> .record-table) {
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+    }
+
     .hm-view .hm-table-wrap:not(.hm-facts) .record-table tbody {
         display: grid;
         gap: 10px;
+        padding: 0;
     }
 
     .hm-view .hm-table-wrap:not(.hm-facts) .record-table tbody > tr {
-        border: 1px solid var(--control);
-        background: var(--panel);
+        margin: 0;
+        border: 1px solid var(--line);
+        background: var(--nested);
         border-radius: var(--radius-control);
+    }
+
+    .hm-schedule-bulk > button:last-child {
+        margin-inline-start: 0;
+    }
+
+    .hm-view .hm-table-wrap .record-table:not(.hm-facts table) td[data-field] {
+        align-items: start;
     }
 
     .hm-facts .record-table {
@@ -2265,6 +2293,8 @@
 .hm-firewall-form .hm-profile-scope .hm-toolbar {
     align-items: center;
     padding-block: 0;
+    gap: 4px 10px;
+    margin-block: 0;
 }
 
 .hm-firewall-form .hm-field > :is(input, select) {
@@ -2288,4 +2318,48 @@
     .hm-schedule-row > .hm-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
     }
+}
+
+.hm-firewall-form > .hm-section > h3 {
+    font: 700 16px/1.5 var(--font-title);
+    letter-spacing: normal;
+}
+
+.hm-firewall-form .hm-check:has(input:disabled) {
+    color: var(--disabled-ink);
+}
+
+.hm-schedule-row {
+    border: 1px solid var(--line);
+    padding: 12px;
+}
+
+.hm-schedule-row .hm-field > :is(select, input) {
+    min-block-size: 40px;
+}
+
+.hm-view .hm-muted.hm-inline-hint {
+    margin-block: 0 12px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.hm-view .hm-toolbar input.hm-search:disabled {
+    color: var(--disabled-ink);
+}
+
+.hm-list-skeleton {
+    display: grid;
+    gap: 8px;
+    margin-block: 12px;
+}
+
+.hm-list-skeleton .skeleton-line {
+    min-height: 24px;
+    margin: 0;
+}
+
+.hm-selection-bar details .record-table,
+.hm-view-actions .record-table {
+    font-size: 13px;
 }

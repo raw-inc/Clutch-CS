@@ -1,4 +1,4 @@
-import { node, field, input, select, table, details, heading, action, badge, empty, hostCount } from './dom.js';
+import { node, field, input, select, table, details, heading, action, badge, empty, hostCount, recordCount } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 import { firewallForm } from './firewall-form.js';
 import { firewallBulkView } from './firewall-bulk.js';
@@ -139,7 +139,7 @@ export function firewallView(root, ctx, actionArea)
         const start = page?.offset ?? 0;
         const end = start + data.rules.length;
         const position = start || data.nextOffset != null ? ` · ${start + 1}–${end}` : '';
-        range.textContent = `${ctx.t('Rules')} · ${data.rules.length} ${ctx.t('ruleCountUnit')}${position}`;
+        range.textContent = recordCount(ctx, 'count.rules', data.rules.length) + position;
     }
 
     /** 指定位置にある一覧のページを取得します。
