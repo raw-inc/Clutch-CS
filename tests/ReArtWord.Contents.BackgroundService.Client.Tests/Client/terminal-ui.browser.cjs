@@ -124,11 +124,19 @@ window.inputs=[];window.WebSocket=class{
         assert.ok(bounds.hintEnd <= bounds.controlsTop, JSON.stringify(bounds));
         await page.setViewportSize({ width: 1280, height: 800 });
     });
-    await t.test('広い画面では起動操作と端末操作を同じ高さに置く', async() =>
+    await t.test('広い画面では起動操作と端末操作を同じ高さに置く', { skip: 'シェルの見出しを起動欄の上に置くため、欄の上端を揃える旧レイアウトの検証を終了します。' }, async() =>
     {
         const toolbar = page.locator('.terminal-toolbar');
         const [session, controls] = await toolbar.locator(':scope > div').evaluateAll(elements => elements.map(element => element.getBoundingClientRect().top));
         assert.ok(Math.abs(session - controls) <= 1);
+    });
+    await t.test('広い画面ではユーザー実行とコピーの縦中心を揃える', async() =>
+    {
+        const start = await button('ユーザー実行').boundingBox();
+        const copy = await button('コピー').boundingBox();
+        assert.ok(start && copy);
+        assert.ok(start.x + start.width <= copy.x);
+        assert.ok(Math.abs(start.y + start.height / 2 - (copy.y + copy.height / 2)) <= 1);
     });
     await button('ユーザー実行').click();
     await page.waitForFunction(() => (0) < (window.inputs.length));
@@ -169,7 +177,7 @@ window.inputs=[];window.WebSocket=class{
         await page.setViewportSize({ width: 1280, height: 800 });
     }
 
-    await t.test('共有セッションの操作は接続状態の下で横一列に並ぶ', async() =>
+    await t.test('共有セッションの操作は接続状態の下で横一列に並ぶ', { skip: '接続中のセッションから引き継ぎを外し、状態と終了操作を並べる仕様へ変更しました。' }, async() =>
     {
         await checkSessionActionsAsync([1280, 768, 390, 320]);
     });
@@ -238,7 +246,7 @@ window.inputs=[];window.WebSocket=class{
             await page.screenshot({ path: process.env.CONTENTS_TEST_TERMINAL_SCREENSHOT });
         }
     });
-    await t.test('英語表示でも引き継ぎと終了のラベルが一行に収まる', async() =>
+    await t.test('英語表示でも引き継ぎと終了のラベルが一行に収まる', { skip: '接続後も引き継ぎを表示していた旧仕様の検証を終了します。' }, async() =>
     {
         await page.goto(base + '/terminal?language=en');
         await page.waitForFunction(() => window.mounted);
@@ -246,5 +254,77 @@ window.inputs=[];window.WebSocket=class{
         await button('Take over').click();
         await checkSessionActionsAsync([950, 651]);
     });
+
+    /** 共有セッションの状態に応じて操作を表示し、横幅に合わせて並べることを確認します。
+     * @returns 各画面幅での確認が済むと完了するPromiseです。
+     */
+    async function checkVisibleSessionActionsAsync(widths, connected, actions)
+    {
+        const row = page.locator(connected ? '.terminal-session[aria-current="true"]' : '.terminal-session:not([aria-current])');
+        const sources = page.locator('.terminal-sources');
+        for (const width of widths)
+        {
+            await page.setViewportSize({ width, height: 800 });
+            await page.evaluate(() => new Promise(resolve =>
+            {
+                requestAnimationFrame(() => resolve());
+            }));
+            if (width <= 650 && await sources.getAttribute('open') === null)
+            {
+                await sources.locator(':scope > summary').click();
+            }
+            await row.waitFor();
+            assert.equal(await row.getByRole('button').count(), actions.length);
+            for (const name of actions)
+            {
+                assert.ok(await row.getByRole('button', { name, exact: true }).isVisible(), name);
+            }
+            const layout = await row.evaluate(element =>
+            {
+                const [name, left, right] = element.children;
+                const bounds = element.getBoundingClientRect(), style = getComputedStyle(element);
+                const leftBounds = left.getBoundingClientRect(), rightBounds = right.getBoundingClientRect();
+                const available = element.clientWidth - parseFloat(style.paddingInlineStart) - parseFloat(style.paddingInlineEnd);
+                const canShareRow = leftBounds.width + parseFloat(style.columnGap) + rightBounds.width <= available;
+                const layoutMatchesWidth = canShareRow
+                    ? leftBounds.right < rightBounds.left && Math.abs(leftBounds.top + leftBounds.height / 2 - (rightBounds.top + rightBounds.height / 2)) <= 1
+                    : Math.abs(leftBounds.left - rightBounds.left) <= 1 && leftBounds.bottom < rightBounds.top;
+                const titles = [left, right].map(control =>
+                {
+                    const label = control.querySelector('.control-label') ?? control;
+                    const range = document.createRange();
+                    range.selectNodeContents(label);
+                    return range.getClientRects().length === 1 && control.scrollWidth <= control.clientWidth;
+                });
+                return {
+                    inside: bounds.left <= Math.min(leftBounds.left, rightBounds.left) && Math.max(leftBounds.right, rightBounds.right) <= bounds.right,
+                    afterName: name.getBoundingClientRect().bottom < Math.min(leftBounds.top, rightBounds.top),
+                    layoutMatchesWidth,
+                    titles,
+                };
+            });
+            assert.deepEqual(layout, { inside: true, afterName: true, layoutMatchesWidth: true, titles: [true, true] }, width + 'px');
+        }
+    }
+
+    for (const { language, claim, terminate, status, widths } of [
+        { language: 'ja', claim: '接続を引き継ぐ', terminate: 'セッションを終了', status: '接続中', widths: [1280, 768, 390, 320] },
+        { language: 'en', claim: 'Take over', terminate: 'End session', status: 'Connected', widths: [1280, 950, 651, 390, 320] },
+    ])
+    {
+        await t.test('共有セッションの状態と画面幅に合わせて操作を表示する ' + language, async() =>
+        {
+            await page.setViewportSize({ width: 1280, height: 800 });
+            await page.goto(base + '/terminal?language=' + language);
+            await page.waitForFunction(() => window.mounted);
+            await button('host / peer').click();
+            await checkVisibleSessionActionsAsync(widths, false, [claim, terminate]);
+            await page.setViewportSize({ width: 1280, height: 800 });
+            await button(claim).click();
+            const current = page.locator('.terminal-session[aria-current="true"]');
+            await current.getByText(status, { exact: true }).waitFor();
+            await checkVisibleSessionActionsAsync(widths, true, [terminate]);
+        });
+    }
     assert.deepEqual(errors, []);
 });
