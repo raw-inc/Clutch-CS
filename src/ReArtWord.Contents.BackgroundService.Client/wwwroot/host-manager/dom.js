@@ -184,7 +184,7 @@ export function action(ctx, label, glyph, run, primary = false)
     {
         button.classList.add('danger');
     }
-    setControlLabel(button, glyph);
+    setControlLabel(button, icon(glyph));
     return button;
 }
 

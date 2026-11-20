@@ -41,6 +41,23 @@ for (const engine of [chromium, firefox])
         assert.equal((await first.boundingBox()).height, 50);
     });
 
+    test(engine.name() + ': 片側に警告が出ても同じ行のカードの本文開始位置を揃える', async context =>
+    {
+        const page = await browser.newPage({ viewport: { width: 600, height: 500 } });
+        context.after(() => page.close());
+        await page.setContent('<style>.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px}header{line-height:20px}article>div{height:80px}</style><clutch-card-rows><div class="grid"><article><header data-card-header>Host A</header><div></div></article><article><header data-card-header>Host B<br>High CPU usage</header><div></div></article></div></clutch-card-rows>');
+        await page.addStyleTag({ path: fileURLToPath(new URL('styles/controls.css', root)) });
+        await page.addScriptTag({ path: fileURLToPath(new URL('card-rows.js', root)) });
+
+        const headers = page.locator('[data-card-header]'), content = page.locator('article > div');
+        await page.waitForFunction(() => document.querySelector('[data-card-header]').offsetHeight === 40);
+        const positions = await content.evaluateAll(elements => elements.map(el => el.getBoundingClientRect().top));
+        assert.equal(positions[0], positions[1]);
+        await page.setViewportSize({ width: 390, height: 500 });
+        await page.waitForFunction(() => document.querySelector('[data-card-header]').offsetHeight === 20);
+        assert.equal((await headers.last().boundingBox()).height, 40);
+    });
+
     test(engine.name() + ': 入れ子の内容は伸ばさず、説明の長さと高さの比に応じて上端を揃える', async context =>
     {
         const page = await browser.newPage();

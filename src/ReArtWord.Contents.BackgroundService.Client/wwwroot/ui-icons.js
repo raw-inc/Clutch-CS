@@ -20,5 +20,5 @@ export function setControlLabel(control, icon, text = control.textContent)
     const label = document.createElement('span');
     label.className = 'control-label';
     label.textContent = text;
-    control.replaceChildren(uiIcon(icon), label);
+    control.replaceChildren(icon, label);
 }

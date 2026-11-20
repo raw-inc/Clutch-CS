@@ -46,7 +46,7 @@ export async function filesView(root, ctx)
         clusterOptions();
         await selectHostsAsync();
     });
-    setControlLabel(reload, 'refresh');
+    setControlLabel(reload, ctx.icon('refresh'));
 
     /** 到達可能なクラスタを選択肢へ反映します。 */
     function clusterOptions()
@@ -168,11 +168,11 @@ export async function filesView(root, ctx)
         });
         copy.className = 'primary';
         const drives = ctx.button(ctx.t('Drives', 'ドライブ'), () => openAsync(null));
-        setControlLabel(drives, 'drive');
+        setControlLabel(drives, ctx.icon('drive'));
         const up = ctx.button(ctx.t('Up', '上へ'), () => openAsync(state.parent));
-        setControlLabel(up, 'up');
+        setControlLabel(up, ctx.icon('up'));
         const refresh = ctx.button(ctx.t('Refresh', '更新'), () => openAsync(state.directory));
-        setControlLabel(refresh, 'refresh');
+        setControlLabel(refresh, ctx.icon('refresh'));
         toolbar.append(drives, up, refresh);
         footer.append(count);
         section.append(label, location, toolbar, tree, footer);

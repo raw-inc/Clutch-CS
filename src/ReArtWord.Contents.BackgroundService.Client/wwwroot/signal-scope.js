@@ -68,7 +68,7 @@ export async function signalScopeViewAsync(container, ctx)
     });
     const latest = ctx.button(ctx.t('Follow latest', '最新に追従'), () => table.latest(!table.following));
     const reload = ctx.button(ctx.t('Refresh hosts', 'ホスト一覧を更新'), () => sources.loadAsync());
-    setControlLabel(reload, 'refresh');
+    setControlLabel(reload, ctx.icon('refresh'));
     display.setAttribute('aria-label', ctx.t('Endpoint display', '送受信先の表示'));
     display.append(new Option(ctx.t('IP:Port', 'IPアドレス:ポート番号'), 'ip'), new Option(ctx.t('Host:Port', 'ホスト名:ポート番号'), 'host'));
     start.className = 'primary';
@@ -90,7 +90,7 @@ export async function signalScopeViewAsync(container, ctx)
     const sample = document.createElement('p');
     sample.className = 'scope-filter-example';
     sample.textContent = ctx.t('Example: OSC AND "/stage"', '入力例：OSC AND "/stage"');
-    setControlLabel(clear, 'trash');
+    setControlLabel(clear, ctx.icon('trash'));
     clear.disabled = true;
     const packetListHeading = document.createElement('div'), packetListTitle = document.createElement('h2'), scrollHint = document.createElement('span');
     packetListHeading.className = 'scope-packet-heading';

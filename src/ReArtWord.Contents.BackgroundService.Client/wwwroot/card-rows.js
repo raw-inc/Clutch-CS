@@ -86,10 +86,11 @@ class CardRows extends HTMLElement
             }
             const top = box.top;
             const row = rows.get(top) ?? [];
+            const header = card.querySelector(':scope > [data-card-header]');
             const inset = card.querySelector(':scope > [data-card-inset]');
             const caption = inset && card.querySelector('[data-card-caption]');
             const lines = caption ? caption.getBoundingClientRect().height / parseFloat(getComputedStyle(caption).lineHeight) : Infinity;
-            row.push({ card, height: box.height, inset, detail: inset?.getBoundingClientRect(), lines });
+            row.push({ card, height: box.height, header, headerHeight: header?.getBoundingClientRect().height ?? 0, inset, detail: inset?.getBoundingClientRect(), lines });
             rows.set(top, row);
         }
         for (const row of rows.values())
@@ -107,6 +108,9 @@ function alignRow(row, balanceShortCards)
     const stretch = 1 < row.length && Math.max(...heights) < 2 * Math.min(...heights);
     const shortest = Math.min(...heights);
     const shorterHeight = balanceShortCards && !stretch ? Math.max(...heights.filter(height => height < 2 * shortest)) : 0;
+
+    // 一部のカードに警告が出ても、同じ行のグラフを同じ高さから比較できるようにする。
+    const headerHeight = stretch ? Math.max(...row.map(item => item.headerHeight)) : 0;
     const details = row.map(item => item.detail).filter(box => box?.height);
     const sizes = details.map(box => box.height);
     const alignInsets = 1 < row.length && details.length === row.length
@@ -115,6 +119,7 @@ function alignRow(row, balanceShortCards)
     for (const item of row)
     {
         item.card.toggleAttribute('data-stretch', stretch);
+        item.header?.style.setProperty('--card-header-height', headerHeight + 'px');
         if (balanceShortCards)
         {
             item.card.style.setProperty('--comparable-card-height', (item.height <= shorterHeight ? shorterHeight : 0) + 'px');

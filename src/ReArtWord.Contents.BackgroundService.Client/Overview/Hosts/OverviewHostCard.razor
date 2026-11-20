@@ -8,7 +8,7 @@
     var aboveThreshold = stale ? 0 : DashboardMetrics.AboveThreshold(sample);
 }
                 <article class="health-card host-card @(Detailed ? "detailed" : "summary") @(stale ? "stale" : "")">
-                    <header>
+                    <header data-card-header>
                         <div class="host-name">
                             <span class="host-icon"><UiIcon Name="monitor" /></span>
                             <div class="host-heading">

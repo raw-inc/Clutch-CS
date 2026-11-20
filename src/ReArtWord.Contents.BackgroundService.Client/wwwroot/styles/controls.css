@@ -398,6 +398,10 @@ clutch-card-rows:not([data-measuring]) > :first-child > [data-stretch] {
     align-self: stretch;
 }
 
+clutch-card-rows:not([data-measuring]) > :first-child > * > [data-card-header] {
+    min-block-size: var(--card-header-height, 0);
+}
+
 clutch-card-rows:not([data-measuring]) > :first-child > * > [data-card-inset] {
     margin-block-start: calc(var(--card-inset-margin, 0px) + var(--card-inset-offset, 0px));
 }

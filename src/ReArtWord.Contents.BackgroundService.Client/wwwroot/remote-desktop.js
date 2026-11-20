@@ -137,7 +137,7 @@ export async function desktopView(root, ctx)
         }
         else
         {
-            setControlLabel(button, icon, caption);
+            setControlLabel(button, ctx.icon(icon), caption);
         }
         button.title = label;
         button.setAttribute('aria-label', label);
@@ -2292,7 +2292,7 @@ export async function desktopView(root, ctx)
     action(follow, ctx.t('Follow pointer', 'マウス追従'), 'follow-pointer');
     follow.setAttribute('aria-pressed', 'true');
     start.className = 'primary desktop-connect';
-    setControlLabel(start, 'play');
+    setControlLabel(start, ctx.icon('play'));
     action(stop, ctx.t('Disconnect', '接続解除'), 'close', ctx.t('Disconnect', '接続解除'));
     action(reload, ctx.t('Refresh hosts', 'ホスト一覧を更新'), 'refresh', ctx.t('Refresh hosts', 'ホスト一覧を更新'));
     reload.className += ' desktop-reload';

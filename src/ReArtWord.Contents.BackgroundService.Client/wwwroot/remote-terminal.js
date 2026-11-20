@@ -205,7 +205,7 @@ export async function terminalView(root, ctx)
                     await list();
                 });
                 terminate.className = 'danger';
-                setControlLabel(terminate, 'stop');
+                setControlLabel(terminate, ctx.icon('stop'));
                 claim.disabled = terminate.disabled = item.failed;
                 row.append(claim, terminate);
                 sessions.append(row);
@@ -432,7 +432,7 @@ export async function terminalView(root, ctx)
                     renderSessions();
                 });
                 button.dataset.peer = peerKey(target);
-                setControlLabel(button, 'monitor');
+                setControlLabel(button, ctx.icon('monitor'));
                 branch.append(button);
             }
             peersTree.append(branch);
@@ -686,7 +686,7 @@ export async function terminalView(root, ctx)
         fit: () => layout.update() });
     for (const [button, icon] of [[user, 'play'], [admin, 'settings'], [copy, 'copy'], [paste, 'clipboard'], [leave, 'close']])
     {
-        setControlLabel(button, icon);
+        setControlLabel(button, ctx.icon(icon));
     }
     const refreshSessions = ctx.button(ctx.t('Refresh sessions', 'セッション更新'), list);
     const tokenPolicy = experimental ? ctx.button('', async() =>
@@ -723,7 +723,7 @@ export async function terminalView(root, ctx)
         const unavailable = !peer || shellLoading || !shells.length || !peers.some(item => samePeer(item, peer));
         user.disabled = unavailable || capabilities?.userAvailable !== true;
         admin.disabled = unavailable || capabilities?.administratorAvailable !== true;
-        setControlLabel(admin, 'shield', capabilities?.administratorUsesSystem ? ctx.t('SYSTEM session', 'SYSTEM 実行') : ctx.t('Administrator', '管理者実行'));
+        setControlLabel(admin, ctx.icon('shield'), capabilities?.administratorUsesSystem ? ctx.t('SYSTEM session', 'SYSTEM 実行') : ctx.t('Administrator', '管理者実行'));
         user.title = capabilities?.userAvailable ? '' : ctx.t('No non-elevated user token is available.', '通常ユーザーのトークンを取得できません。');
         admin.title = capabilities?.administratorUsesSystem ? ctx.t('No user is logged on. Start as SYSTEM.', '未ログオンのためSYSTEMとして起動します。') :
             capabilities?.administratorAvailable ? ctx.t('Start as this user with administrator privileges', 'ユーザー本人の管理者権限で起動') :
@@ -778,8 +778,8 @@ export async function terminalView(root, ctx)
     peerTitle.textContent = ctx.t('Clusters & peers', 'クラスタ・ピア');
     sessionTitle.textContent = ctx.t('Shared sessions', '共有セッション');
     const refreshPeers = ctx.button(ctx.t('Refresh peers', 'ピア更新'), list);
-    setControlLabel(refreshPeers, 'refresh');
-    setControlLabel(refreshSessions, 'refresh');
+    setControlLabel(refreshPeers, ctx.icon('refresh'));
+    setControlLabel(refreshSessions, ctx.icon('refresh'));
     peerHeading.append(peerTitle, refreshPeers);
     sessionHeading.append(sessionTitle, refreshSessions);
     peersTree.append(peerHeading);

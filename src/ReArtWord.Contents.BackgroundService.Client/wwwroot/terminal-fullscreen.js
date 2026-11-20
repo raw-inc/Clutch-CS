@@ -68,7 +68,7 @@ export function createTerminalFullscreen(root, screen, ctx, options)
     for (const [button, icon] of [[full, 'fullscreen'], [content, 'video-fullscreen']])
     {
         button.className = 'terminal-action';
-        setControlLabel(button, icon);
+        setControlLabel(button, ctx.icon(icon));
     }
     full.className += ' terminal-fullscreen';
 

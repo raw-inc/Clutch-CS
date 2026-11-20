@@ -185,7 +185,7 @@ export async function mount(element, labels)
             button.type = 'button';
             if (className.split(' ').includes('danger'))
             {
-                setControlLabel(button, 'trash');
+                setControlLabel(button, icon('trash'));
             }
             button.onclick = () =>
             {
