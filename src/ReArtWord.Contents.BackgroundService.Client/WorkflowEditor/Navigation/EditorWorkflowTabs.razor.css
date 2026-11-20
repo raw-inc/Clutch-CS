@@ -161,3 +161,28 @@
     border-radius: 0;
     margin-top: 4px;
 }
+
+.editor-workflow-strip {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    flex: none;
+    background: var(--paper);
+}
+
+.editor-workflow-strip > nav {
+    flex: 1;
+    min-width: 0;
+}
+
+.other-drafts {
+    display: none;
+}
+
+@media (max-width: 750px) {
+    .other-drafts {
+        display: inline-flex;
+        margin-inline: 6px;
+        white-space: nowrap;
+    }
+}

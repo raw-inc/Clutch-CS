@@ -86,6 +86,14 @@ public sealed partial class EditorNavigator
         get; set;
     }
 
+    /// <summary>キャンバスの手前に並べる共同編集者の表示です。</summary>
+    [Parameter]
+    public RenderFragment? Participants
+    {
+        get;
+        set;
+    }
+
     /// <summary>マップ表示の有無に追従し、その下へ重ねる操作結果です。</summary>
     [Parameter]
     public RenderFragment? Notifications

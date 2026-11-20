@@ -171,7 +171,7 @@
   "An integer is required.": "整数が必要です。",
   "The input type does not match.": "入力の型が一致しません。",
   "Settings must be an object.": "設定にはJSONオブジェクトが必要です。",
-  "Saved, active and recoverable versions": "このワークフローの保存・現在有効・復旧状態",
+  "Saved, active and recoverable versions": "保存と復旧の状態",
   "Check status": "状態を確認",
   "Saved, active and recoverable versions could not be confirmed.": "現在の保存・有効・復旧状態を確認できません。",
   "Status has not been confirmed.": "状態未確認です。",
@@ -233,7 +233,8 @@
   "Finish layout editing": "運転表示に戻る",
   "Name, ID or type": "名前・ID・種類で検索",
   "Run {0}": "{0}を実行",
-  "Confirm automatic inputs": "自動入力を有効にしますか？",
+  "Confirm automatic inputs": "このワークフローの自動入力を有効にしますか？設定は保存して反映した後に適用されます。",
+  "Some nodes overlap.": "ノードが重なっています。",
   "Force saving can overwrite another saved revision.": "ほかの利用者が保存した変更を上書きする場合があります。",
   "{0} items": "{0} 件",
   "Show more": "さらに表示",
@@ -255,5 +256,6 @@
   "Separate overlapping nodes. Use Undo to restore the previous layout.": "重なったノードを移動します。「元に戻す」で以前の配置に戻せます。",
   "Some nodes overlap. Space nodes to make the controls reachable.": "ノードが重なっています。「間隔を整える」で隠れたノードを表示できます。",
   "Layout edits remain in the draft until saved.": "保存していない配置の変更は草稿に残ります。",
-  "Automatic execution": "自動実行"
+  "Automatic execution": "自動実行",
+  "{0} other unsaved workflows": "ほかに未保存 {0} 件"
 }

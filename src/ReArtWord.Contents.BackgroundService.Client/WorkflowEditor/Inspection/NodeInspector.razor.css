@@ -9,7 +9,8 @@
 }
 
 .node-summary .kind-caption {
-    margin-left: auto;
+    margin-inline-start: auto;
+    font-size: 13px;
 }
 
 .inspector-section {
@@ -20,9 +21,7 @@
 
 .inspector-section > summary {
     color: var(--muted);
-    padding: 9px 0;
     font-size: 13px;
-    padding-inline-end: 28px;
 }
 
 .inspector-section[open] > summary {
@@ -53,4 +52,8 @@
     font-size: 11px;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+}
+
+.node-identifier {
+    font-size: 13px;
 }

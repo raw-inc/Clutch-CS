@@ -1,6 +1,12 @@
 .workflow-button {
-    display: flex;
+    display: grid;
+    align-items: center;
     min-width: 0;
+}
+
+.workflow-button:has(.node-button-reason) {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 10px;
 }
 
 .workflow-button > button {

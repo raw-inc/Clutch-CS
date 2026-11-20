@@ -54,14 +54,30 @@ public sealed partial class WorkflowEditorPage
         }
     }
 
-    /// <summary>自動入力を有効にする前に、編集者に対象を確認します。</summary>
-    /// <returns>確認後の下書きへの反映です。</returns>
-    private async Task ChangeAutomaticInputsAsync(bool enabled, CancellationToken cancellationToken = default)
+    private bool nodesOverlap;
+    private int? automaticInputGeneration;
+
+    /// <summary>自動入力の有効化は、対象の草稿を固定して確認します。</summary>
+    private void SetAutomaticInputs(bool enabled)
     {
-        bool confirmed = !enabled || await Script.InvokeAsync<bool>("confirm", cancellationToken, Ui["Confirm automatic inputs"]).ConfigureAwait(true);
-        if (confirmed)
+        if (enabled)
         {
-            Model.Change(document => document with { Enabled = enabled });
+            automaticInputGeneration = Model.Generation;
+        }
+        else
+        {
+            Model.Change(document => document with { Enabled = false });
+        }
+    }
+
+    /// <summary>確認中に草稿や編集権限が変わった場合は、別の対象へ適用しません。</summary>
+    private void ConfirmAutomaticInputs()
+    {
+        int? expected = automaticInputGeneration;
+        automaticInputGeneration = null;
+        if (expected == Model.Generation && !busy && !Model.Locks.Whole(Model.Draft.Document.Id))
+        {
+            Model.Change(document => document with { Enabled = true });
         }
     }
 

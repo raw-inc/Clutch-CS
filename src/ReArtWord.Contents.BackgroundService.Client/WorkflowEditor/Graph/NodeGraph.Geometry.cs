@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Workflow;
@@ -8,6 +9,27 @@ namespace ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Graph;
 /// <summary>図のカード・ポート・接続線に使用する表示座標を計算します。</summary>
 public sealed partial class NodeGraph
 {
+    /// <summary>図の表示に基づき、カードの重なりを親画面へ通知します。</summary>
+    [Parameter]
+    public EventCallback<bool> OverlapChanged
+    {
+        get;
+        set;
+    }
+
+    private bool overlap, notifiedOverlap;
+
+    /// <summary>重なりが変わったときだけ、キャンバス外の操作欄を更新します。</summary>
+    /// <returns>親画面の表示更新です。</returns>
+    private async Task NotifyOverlapAsync(CancellationToken cancellationToken = default)
+    {
+        if (!disposed && !cancellationToken.IsCancellationRequested && notifiedOverlap != overlap)
+        {
+            notifiedOverlap = overlap;
+            await OverlapChanged.InvokeAsync(overlap).ConfigureAwait(true);
+        }
+    }
+
     /// <summary>追加するノードと横幅が重なるカードの下に、操作できる余白を確保します。</summary>
     /// <returns>キャンバス内の配置位置です。</returns>
     internal NodePosition PlaceBelowNodes(NodeDefinition added, NodePosition preferred)
@@ -74,13 +96,15 @@ public sealed partial class NodeGraph
     private static bool HasOverlap(IReadOnlyDictionary<string, (NodePosition Position, NodeSize Size)> bounds)
     {
         (NodePosition Position, NodeSize Size)[] ordered = bounds.Values.OrderBy(item => item.Position.Y).ToArray();
+        double borderTolerance = 2;
         for (int i = 0; i < ordered.Length; i++)
         {
             var (position, size) = ordered[i];
-            for (int j = i + 1; j < ordered.Length && ordered[j].Position.Y < position.Y + size.Height; j++)
+            for (int j = i + 1; j < ordered.Length && ordered[j].Position.Y < position.Y + size.Height - borderTolerance; j++)
             {
                 var (other, otherSize) = ordered[j];
-                if (other.X < position.X + size.Width && position.X < other.X + otherSize.Width)
+                double overlapWidth = Math.Min(position.X + size.Width, other.X + otherSize.Width) - Math.Max(position.X, other.X);
+                if (borderTolerance < overlapWidth)
                 {
                     return true;
                 }

@@ -162,12 +162,6 @@ export function attachEditorNavigation(viewport, root, receiver)
         {
             return;
         }
-        const box = viewport.getBoundingClientRect();
-        root.style.right = `${Math.max(8, document.documentElement.clientWidth - box.left - viewport.clientLeft - viewport.clientWidth + 8)}px`;
-        const peers = viewport.querySelector('.canvas-editors');
-        const belowPeers = peers?.childElementCount ? peers.getBoundingClientRect().bottom : box.top;
-        root.style.top = `${Math.max(box.top, belowPeers) + 8}px`;
-        root.style.maxWidth = `${Math.max(0, box.width - 16)}px`;
         root.setAttribute('data-navigation-ready', '');
         if (!visible && !matches.size)
         {
@@ -293,8 +287,8 @@ export function attachEditorNavigation(viewport, root, receiver)
                 if (card)
                 {
                     const bounds = card.getBoundingClientRect(), work = viewport.getBoundingClientRect();
-                    viewport.scrollLeft += bounds.left - work.left - 10;
-                    viewport.scrollTop += bounds.top - work.top - 10;
+                    viewport.scrollLeft += bounds.left - work.left - 16;
+                    viewport.scrollTop += bounds.top - work.top - 16;
                 }
                 else
                 {

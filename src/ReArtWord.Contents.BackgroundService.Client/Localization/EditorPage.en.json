@@ -200,5 +200,6 @@
   "Workflow deleted. Saved deletion details and the snapshot ID are available in operation history.": "Workflow deleted. Saved deletion details and the snapshot ID are available in operation history.",
   "Workflow.DeleteUnavailable": "Workflow.DeleteUnavailable",
   "Workflow.DeleteUnconfirmed": "Workflow.DeleteUnconfirmed",
-  "Workflow.DeletedOrMissing": "Workflow.DeletedOrMissing"
+  "Workflow.DeletedOrMissing": "Workflow.DeletedOrMissing",
+  "Confirm automatic inputs": "Enable automatic inputs for this workflow? Save and apply the workflow to activate the change."
 }

@@ -1,5 +1,6 @@
 @using ReArtWord.Contents.BackgroundService.Client.Components
 @using ReArtWord.Contents.BackgroundService.Contracts.Workflow
+<div class="editor-workflow-strip">
 <nav @ref="tabStrip" class="editor-workflow-tabs" aria-label="@Ui["Workflows in the selected cluster"]">
     @foreach(var item in tabs)
     {
@@ -9,6 +10,9 @@
     }
     <div class="tabs-actions"><EditorCreateMenu Experimental="Experimental" Busy="Busy" New="New" NewDashboard="NewDashboard" />@if(HasMore){<button class="quiet" disabled="@Busy" @onclick="Next">@Ui["Next page"]</button>}</div>
 </nav>
+@{var otherDrafts = tabs.Count(item => item.Dirty && item.Id != SelectedId);}
+@if(otherDrafts > 0){<span class="badge warn other-drafts" role="status">@Ui.Format("{0} other unsaved workflows", otherDrafts)</span>}
+</div>
 @if(preferenceProblem is not null){<p class="notice" role="status">@Ui[preferenceProblem]</p>}
 @if(menuId is not null)
 {

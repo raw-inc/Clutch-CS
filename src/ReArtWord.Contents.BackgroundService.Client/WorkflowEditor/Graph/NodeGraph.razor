@@ -116,10 +116,7 @@
         </g>
     }
 </svg>
-@if(HasOverlap(bounds))
-{
-    <span id="node-overlap-notice" class="visually-hidden node-overlap-notice">@Ui["Some nodes overlap. Space nodes to make the controls reachable."]</span>
-}
+@{ overlap = HasOverlap(bounds); }
 
 @if(output is {} pendingOutput){<div class="graph-connection-pending" role="status">@pendingOutput.Node.@PortName(pendingOutput.Node,pendingOutput.Port,true) → <button @onclick="CancelConnection">@Ui["Cancel"]</button><span class="small">Esc</span></div>}
 @if(Model.SelectedWire is int selected && 0<=selected && selected<Model.Draft.Document.Wires.Count)
