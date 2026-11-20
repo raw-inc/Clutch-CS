@@ -270,7 +270,7 @@
   "Clear temporary tracing and request cluster stop": "一時追跡を解除してクラスタ停止を要求",
   "Trace scope and fixed targets": "追跡範囲と固定対象の詳細",
   "Clear tracing and request cluster stop": "一時追跡解除とクラスタ停止要求",
-  "Request stop for the displayed peer instances. Acceptance does not confirm every process has exited.": "下のピアに CoreService の停止を要求します。停止までに時間がかかる場合があります。",
+  "Request stop for the displayed peer instances. Acceptance does not confirm every process has exited.": "下のピアに CoreService の停止を要求します。受付後は、各ピアで停止を確認してください。",
   "Instances fixed at the start": "開始時に固定する実体",
   "Request stop for {0} peers": "{0} ピアに停止を要求",
   "The connected peer state was retrieved.": "接続先の状態を取得しました。",
