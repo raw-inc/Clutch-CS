@@ -65,7 +65,7 @@ window.inputs=[];window.WebSocket=class{
  send(text){const value=JSON.parse(text);if(value.type!=='input')return;inputs.push(value.request);this.session.sequence=value.request.sequence+1;setTimeout(()=>{this.receive({type:'ack',session:this.session});if(!this.output){this.output=true;const text='Clutch-CS Terminal test peer\r\nPS > ';this.receive({type:'output',output:{session:this.session,offset:0,nextOffset:text.length,data:btoa(text)}});}},0);}
  close(){this.readyState=3;}
 };
-</script><script type="module">import{mount,unmount}from'/remote-tools.js';window.unmount=()=>unmount(document.querySelector('#app'));await mount(document.querySelector('#app'),'terminal','ja');window.mounted=true;</script>`);
+</script><script type="module">import{mount,unmount}from'/remote-tools.js';window.unmount=()=>unmount(document.querySelector('#app'));await mount(document.querySelector('#app'),'terminal',new URL(location.href).searchParams.get('language')||'ja');window.mounted=true;</script>`);
             return;
         }
         const file = resolve(root, '.' + url.pathname);
@@ -133,6 +133,47 @@ window.inputs=[];window.WebSocket=class{
     await button('ユーザー実行').click();
     await page.waitForFunction(() => (0) < (window.inputs.length));
 
+    /** 接続中のカードで状態表示と二つの操作の位置、各ラベルの収まりを確認します。
+     * @returns 各画面幅での確認が済むと完了するPromiseです。
+     */
+    async function checkSessionActionsAsync(widths)
+    {
+        const current = page.locator('.terminal-session[aria-current="true"]');
+        const sources = page.locator('.terminal-sources');
+        for (const width of widths)
+        {
+            await page.setViewportSize({ width, height: 800 });
+            if (width <= 650 && await sources.getAttribute('open') === null)
+            {
+                await sources.locator(':scope > summary').click();
+            }
+            await current.waitFor();
+            const aligned = await current.evaluate(element =>
+            {
+                const row = element.getBoundingClientRect();
+                const state = element.querySelector('.badge').getBoundingClientRect();
+                const buttons = [...element.querySelectorAll('button')];
+                const [left, right] = buttons.map(control => control.getBoundingClientRect());
+                const labelsFit = buttons.every(control =>
+                {
+                    const label = control.querySelector('.control-label') ?? control;
+                    const line = document.createRange();
+                    line.selectNodeContents(label);
+                    return line.getClientRects().length === 1 && control.scrollWidth <= control.clientWidth;
+                });
+                return left.top === right.top && left.height === right.height && state.bottom < left.top
+                    && row.left <= left.left && left.right < right.left && right.right <= row.right && labelsFit;
+            });
+            assert.equal(aligned, true, width + 'px');
+        }
+        await page.setViewportSize({ width: 1280, height: 800 });
+    }
+
+    await t.test('共有セッションの操作は接続状態の下で横一列に並ぶ', async() =>
+    {
+        await checkSessionActionsAsync([1280, 768, 390, 320]);
+    });
+
     /** 試験用の端末寸法を返します。
      * @returns 呼出し元が使用する値です。
      */
@@ -196,6 +237,14 @@ window.inputs=[];window.WebSocket=class{
             await page.waitForFunction(() => (0) < (window.inputs.length));
             await page.screenshot({ path: process.env.CONTENTS_TEST_TERMINAL_SCREENSHOT });
         }
+    });
+    await t.test('英語表示でも引き継ぎと終了のラベルが一行に収まる', async() =>
+    {
+        await page.goto(base + '/terminal?language=en');
+        await page.waitForFunction(() => window.mounted);
+        await button('host / peer').click();
+        await button('Take over').click();
+        await checkSessionActionsAsync([950, 651]);
     });
     assert.deepEqual(errors, []);
 });

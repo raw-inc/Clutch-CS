@@ -190,8 +190,9 @@ export async function terminalView(root, ctx)
                     indicator.textContent = ctx.t('Current session', '接続中のセッション');
                     row.append(indicator);
                 }
-                const claim = ctx.button(ctx.t('Take over', '接続を引き継ぐ'), () => connectAsync(value, false, selected));
-                const terminate = ctx.button(ctx.t('Terminate', 'セッションを終了'), async () =>
+                const claim = ctx.button(ctx.t('Take over', '引き継ぐ'), () => connectAsync(value, false, selected));
+                claim.setAttribute('aria-label', ctx.t('Take over', '接続を引き継ぐ'));
+                const terminate = ctx.button(ctx.t('Terminate', '終了'), async () =>
                 {
                     if (!window.confirm(ctx.t('Terminate this session?', 'このセッションを終了しますか？') + '\n' + value.sessionId))
                     {
@@ -205,6 +206,7 @@ export async function terminalView(root, ctx)
                     await list();
                 });
                 terminate.className = 'danger';
+                terminate.setAttribute('aria-label', ctx.t('Terminate', 'セッションを終了'));
                 setControlLabel(terminate, ctx.icon('stop'));
                 claim.disabled = terminate.disabled = item.failed;
                 row.append(claim, terminate);

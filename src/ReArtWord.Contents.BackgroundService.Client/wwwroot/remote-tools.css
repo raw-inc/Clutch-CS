@@ -258,29 +258,48 @@
 }
 
 .terminal-session {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--line);
+    padding: 8px;
+    border-inline-start: 2px solid transparent;
+    border-block-end: 1px solid var(--line);
+    border-radius: var(--radius-inset);
 }
 
 .terminal-session.selected {
-    border-left: 2px solid var(--accent);
-    padding-left: 10px;
+    border-inline-start-color: var(--accent);
     background: var(--accent-soft);
 }
 
-.terminal-session span {
-    width: 100%;
+.terminal-session > span {
+    grid-column: 1 / -1;
     overflow-wrap: anywhere;
     font-size: 11px;
 }
 
-.terminal-session button,
+.terminal-session > .badge {
+    justify-self: start;
+}
+
+.terminal-session > button,
 .remote-sidebar .toolbar button {
     font-size: 11px;
     padding: 4px 7px;
+}
+
+.terminal-session > button {
+    min-width: 0;
+    min-height: 34px;
+    gap: 4px;
+    padding-inline: 4px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.terminal-session > button > .ui-icon {
+    width: 14px;
+    height: 14px;
 }
 
 .terminal-panel {
@@ -1053,8 +1072,7 @@
     opacity: 1;
 }
 
-.terminal-session .danger {
-    margin-inline-start: 10px;
+.terminal-session > .danger {
     color: var(--danger);
 }
 
@@ -1203,10 +1221,6 @@
         height: auto;
         max-height: 40dvh;
     }
-}
-
-.terminal-sidebar .terminal-session button {
-    margin-inline-start: 0;
 }
 
 .files-tool .tool-toolbar {
@@ -1377,10 +1391,6 @@
     min-height: 36px;
 }
 
-.terminal-session.selected .badge {
-    width: fit-content;
-}
-
 .terminal-session-actions .terminal-shell-field {
     flex: 0 1 auto;
     white-space: nowrap;
@@ -1393,15 +1403,6 @@
     color: var(--muted);
     font-size: 13px;
     overflow-wrap: anywhere;
-}
-
-.terminal-sidebar .terminal-session > button {
-    min-height: 34px;
-    margin: 0;
-}
-
-.terminal-sidebar .terminal-session > .danger {
-    margin-inline-start: auto;
 }
 
 .terminal-panel > .terminal-state {
