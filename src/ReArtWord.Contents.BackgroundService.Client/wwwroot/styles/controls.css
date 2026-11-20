@@ -495,7 +495,7 @@ input[type="file"]::file-selector-button {
     padding: 5px 10px;
     border: 1px solid var(--control);
     border-radius: var(--radius-control);
-    background: var(--panel);
+    background: var(--button-face);
     color: var(--ink);
     font: inherit;
 }
@@ -534,7 +534,7 @@ input[type="file"]::file-selector-button {
     padding-inline: 12px;
     border: 1px solid var(--control);
     border-radius: var(--radius-control);
-    background: var(--panel);
+    background: var(--button-face);
 }
 
 .file-picker-control > span + span {
@@ -551,8 +551,21 @@ input[type="file"]::file-selector-button {
     cursor: pointer;
 }
 
+input[type="file"]:enabled::file-selector-button:hover,
+.file-picker-control:has(input:enabled):hover > span:first-child {
+    background: var(--button-hover);
+}
+
+input[type="file"]:disabled::file-selector-button,
+.file-picker-control:has(input:disabled) > span:first-child {
+    border-color: var(--disabled-line);
+    background: var(--disabled-face);
+    color: var(--disabled-ink);
+}
+
 .file-picker-control:focus-within > span:first-child {
     border-color: var(--accent);
+    background: var(--focus-face);
     box-shadow: inset 0 -2px var(--accent);
 }
 

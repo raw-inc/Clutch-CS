@@ -112,6 +112,11 @@
     margin: 0;
 }
 
+.desktop-workspace :where(.desktop-targets, .desktop-quick-controls, .desktop-toolbar) .desktop-action:where(:enabled) {
+    background: var(--button-face);
+    color: var(--ink);
+}
+
 .desktop-workspace .ui-icon {
     width: 17px;
     height: 17px;
@@ -125,6 +130,10 @@
 .desktop-action:hover {
     background: var(--raised);
     color: var(--ink);
+}
+
+.desktop-workspace :where(.desktop-targets, .desktop-quick-controls, .desktop-toolbar) .desktop-action:where(:enabled:hover) {
+    background: var(--button-hover);
 }
 
 .desktop-menu[open] > summary,

@@ -133,17 +133,6 @@
     gap: 6px;
 }
 
-.terminal-toolbar button:not(.primary) {
-    background: transparent;
-    border-color: transparent;
-    color: var(--muted);
-}
-
-.terminal-toolbar button:hover:not(:disabled) {
-    background: var(--raised);
-    color: var(--ink);
-}
-
 .terminal-toolbar .terminal-fullscreen {
     margin-left: auto;
 }
@@ -156,10 +145,6 @@
     height: 32px;
     min-width: 32px;
     padding: 6px;
-    border: 1px solid transparent;
-    border-radius: var(--radius-control);
-    background: transparent;
-    color: var(--muted);
     font-size: 0;
     gap: 0;
 }
@@ -167,11 +152,6 @@
 .terminal-workspace .terminal-action .ui-icon {
     width: 17px;
     height: 17px;
-}
-
-.terminal-workspace .terminal-action:hover {
-    background: var(--raised);
-    color: var(--ink);
 }
 
 .terminal-workspace .terminal-action[aria-pressed="true"] {
@@ -501,19 +481,7 @@
 .file-navigation button {
     font-size: 12px;
     padding: 6px 9px 4px;
-    background: transparent;
-    border-color: transparent;
-    color: var(--muted);
     min-height: 36px;
-}
-
-.file-navigation button:hover {
-    background: var(--raised);
-    color: var(--ink);
-}
-
-.file-navigation button.danger {
-    color: var(--danger);
 }
 
 .file-action-dialog {
@@ -1209,11 +1177,6 @@
     }
 }
 
-.terminal-toolbar button:not(:disabled),
-.terminal-workspace button.terminal-action:not(:disabled) {
-    border: 1px solid var(--control);
-}
-
 @media (max-width: 680px) {
     .terminal-panel .terminal-screen {
         min-height: 14rem;
@@ -1286,10 +1249,6 @@
     overflow-wrap: anywhere;
     color: var(--muted);
     font-size: 13px;
-}
-
-.file-pane .file-navigation button:not(:disabled) {
-    border-color: var(--control);
 }
 
 .license-cards > section > a .ui-icon {

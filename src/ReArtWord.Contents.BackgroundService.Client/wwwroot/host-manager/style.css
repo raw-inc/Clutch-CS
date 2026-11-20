@@ -136,7 +136,6 @@
 }
 
 .hm-selection-tools button {
-    background: transparent;
     padding: 3px 4px 1px;
     color: var(--muted);
     border: 1px solid var(--control);

@@ -86,3 +86,60 @@ test('ホスト設定の編集可能な欄はフォーカス前でも隣接す�
         assert.ok(ratios.every(ratio => 3 <= ratio), JSON.stringify(ratios));
     }
 });
+
+test('通常の操作ボタンは面と見分けられ、操作中と無効状態も区別できる', async context =>
+{
+    const page = await browser.newPage();
+    context.after(() => page.close());
+    await page.setContent(`
+        <section class="card">
+            <button>操作</button>
+            <button class="primary">保存</button>
+            <button class="quiet">閉じる</button>
+            <button class="danger">削除</button>
+            <button disabled>準備中</button>
+            <button aria-disabled="true">電源操作</button>
+            <div class="terminal-workspace"><div class="terminal-toolbar"><button class="terminal-action">コピー</button></div></div>
+            <div class="file-pane"><div class="file-navigation"><button>ドライブ</button></div></div>
+            <span class="file-picker-control"><span>ファイルを選ぶ</span><input type="file" aria-label="ファイル"></span>
+            <div class="desktop-workspace"><div class="desktop-quick-controls"><button class="desktop-action quiet" aria-label="全画面"></button></div></div>
+        </section>
+    `);
+    await page.addStyleTag({ content: styles.css });
+    const action = page.getByRole('button', { name: '操作', exact: true });
+
+    /** 現在の状態で描画される色を読み取る。
+     * @returns ブラウザーが適用した背景色。
+     */
+    const background = element => element.evaluate(e => getComputedStyle(e).backgroundColor);
+
+    for (const colorScheme of ['light', 'dark'])
+    {
+        await page.emulateMedia({ colorScheme });
+        await action.blur();
+        await page.mouse.move(0, 0);
+        const face = await background(action);
+        assert.notEqual(face, await background(page.locator('.card')));
+        assert.notEqual(face, await background(page.getByRole('button', { name: '保存' })));
+        assert.notEqual(face, await background(page.getByRole('button', { name: '閉じる' })));
+        assert.notEqual(face, await background(page.getByRole('button', { name: '削除' })));
+        const disabled = await background(page.getByRole('button', { name: '準備中' }));
+        assert.notEqual(face, disabled);
+        assert.equal(disabled, await background(page.getByRole('button', { name: '電源操作' })));
+        const toolFaces = await page.locator('.terminal-action, .file-navigation button, .file-picker-control > span, .desktop-action').evaluateAll(elements =>
+            elements.map(e => getComputedStyle(e).backgroundColor));
+        assert.ok(toolFaces.every(color => color === face), JSON.stringify(toolFaces));
+
+        await action.hover();
+        const hovered = await background(action);
+        assert.notEqual(face, hovered);
+        await page.mouse.down();
+        assert.notEqual(hovered, await background(action));
+        await page.mouse.up();
+        await page.mouse.move(0, 0);
+        await page.keyboard.press('Tab');
+        await action.focus();
+        assert.ok(await action.evaluate(e => e.matches(':focus-visible') && getComputedStyle(e).boxShadow.includes('inset')));
+        assert.notEqual(face, await background(action));
+    }
+});

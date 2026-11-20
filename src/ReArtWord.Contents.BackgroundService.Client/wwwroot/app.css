@@ -45,7 +45,7 @@ button {
     gap: 8px;
     border: 1px solid var(--control);
     border-radius: var(--radius-control);
-    background: transparent;
+    background: var(--button-face);
     padding: 9px 14px 7px;
     font-size: 13px;
     font-weight: 600;
@@ -54,16 +54,17 @@ button {
     white-space: nowrap;
 }
 
-button:hover:where(:enabled) {
-    background: var(--raised);
+button:hover:where(:enabled:not([aria-disabled="true"])) {
+    background: var(--button-hover);
     border-color: var(--control);
 }
 
-button:enabled:active {
+button:enabled:active:where(:not([aria-disabled="true"])) {
     background: var(--accent-soft);
 }
 
 button:disabled,
+button[aria-disabled="true"],
 button.primary:disabled {
     cursor: not-allowed;
     color: var(--disabled-ink);
@@ -84,6 +85,7 @@ button.primary:enabled:hover {
 
 button.danger {
     border-color: var(--danger);
+    background: transparent;
     color: var(--danger);
 }
 
