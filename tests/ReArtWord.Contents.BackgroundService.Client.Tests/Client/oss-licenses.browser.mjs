@@ -92,7 +92,12 @@ for (const language of ['ja', 'en'])
         await bundled.click();
         const packageHeading = editor.getByRole('heading', { name: /^@codemirror\/commands /u });
         await packageHeading.waitFor({ state: 'visible' });
-        await editor.getByRole('button', { name: language === 'ja' ? '本文を閉じる' : 'Close notice' }).click();
+        const close = editor.getByRole('button', { name: language === 'ja' ? '本文を閉じる' : 'Close notice' });
+        assert.ok(await close.isHidden());
+        await packageHeading.scrollIntoViewIfNeeded();
+        await close.waitFor();
+        assert.equal(await close.locator('..').locator('strong').innerText(), '@codemirror/autocomplete');
+        await close.click();
         assert.equal(await bundled.getAttribute('aria-expanded'), 'false');
         assert.equal(await bundled.evaluate(button => button === document.activeElement), true);
         assert.ok(await packageHeading.isHidden());

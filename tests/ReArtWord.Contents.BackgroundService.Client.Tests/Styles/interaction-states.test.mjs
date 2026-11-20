@@ -276,6 +276,41 @@ test('横スクロールの端と一覧の行ボタンを通常操作と区別�
     await page.locator('clutch-scroll-area[data-scroll-before]:not([data-scroll-after])').waitFor();
 });
 
+test('両方向に送れる一覧は固定見出しの下に上下・左右の続きがあることを示す', async context =>
+{
+    const page = await browser.newPage();
+    context.after(() => page.close());
+    await page.setContent(`
+        <clutch-scroll-area data-scroll-axis="both" style="width: 180px; height: 120px">
+            <div><table style="width: 400px">
+                <thead style="position: sticky; top: 0"><tr><th>項目</th></tr></thead>
+                <tbody><tr><td style="height: 280px">データ</td></tr></tbody>
+            </table></div>
+            <span class="scroll-inline-edge scroll-inline-before"></span>
+            <span class="scroll-inline-edge scroll-inline-after"></span>
+        </clutch-scroll-area>
+    `);
+    await page.addStyleTag({ content: styles.css });
+    const script = new URL('../../../src/ReArtWord.Contents.BackgroundService.Client/wwwroot/scroll-area.js', import.meta.url);
+    await page.addScriptTag({ content: await readFile(script, 'utf8') });
+    const area = page.locator('clutch-scroll-area');
+    await area.locator('.scroll-inline-after').waitFor();
+    const port = area.locator(':scope > div');
+    await port.evaluate(e => e.scrollTo(e.scrollWidth / 4, e.scrollHeight / 4));
+    await area.locator('.scroll-inline-before').waitFor();
+    const edges = await area.evaluate(e =>
+    {
+        const header = e.querySelector('thead').getBoundingClientRect();
+        const hint = e.querySelector('.scroll-inline-before').getBoundingClientRect();
+        return { top: getComputedStyle(e, '::before').top, headerHeight: header.height, headerBottom: header.bottom, hintTop: hint.top };
+    });
+    assert.equal(parseFloat(edges.top), Math.round(edges.headerHeight));
+    assert.ok(edges.headerBottom <= edges.hintTop);
+    await port.evaluate(e => e.scrollTo(e.scrollWidth, e.scrollHeight));
+    await area.locator('.scroll-inline-after').waitFor({ state: 'hidden' });
+    await page.locator('clutch-scroll-area[data-scroll-before]:not([data-scroll-after])').waitFor();
+});
+
 test('Terminal の補助キーを上下二段に保ち、狭い幅ではキー列だけを送れる', async context =>
 {
     const page = await browser.newPage({ viewport: { width: 320, height: 720 } });
