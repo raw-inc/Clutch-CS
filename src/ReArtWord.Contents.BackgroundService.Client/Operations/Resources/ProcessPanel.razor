@@ -85,9 +85,13 @@
         }
         @if(result is not null){<JsonDetails Value="result" Title='@Ui["Actual operation result"]' />}
     }
+    @if(selected is { } displayed)
+    {
+        <div class="destructive-action"><button class="danger" disabled="@(busy||refreshing||target is null)" @onclick="()=>ConfirmRemoval(displayed)"><UiIcon Name="trash" />@Ui["Remove registration"]</button></div>
+    }
     </ChildContent>
     <Actions>
-        @if(selected is { } displayed){<button disabled="@busy" @onclick="()=>Edit(displayed)">@Ui["Edit registration"]</button><button class="quiet danger" disabled="@(busy||refreshing||target is null)" @onclick="()=>ConfirmRemoval(displayed)">@Ui["Remove registration"]</button>}
+        @if(selected is { } displayed){<button disabled="@busy" @onclick="()=>Edit(displayed)">@Ui["Edit registration"]</button>}
     </Actions>
 </Modal>
 <Modal Open="@(removing is not null)" Title='@Ui["Remove registration"]' Close="CloseRemoval">

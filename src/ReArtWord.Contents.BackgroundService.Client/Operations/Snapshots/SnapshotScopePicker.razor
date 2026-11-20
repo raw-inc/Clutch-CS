@@ -1,7 +1,7 @@
 @using ReArtWord.Contents.BackgroundService.Client.Components
 @using ReArtWord.Contents.BackgroundService.Contracts.Configuration
 @using ReArtWord.Contents.BackgroundService.Contracts.Workflow
-<details>
+<details class="secondary-details">
     <summary>@Ui["Select configuration scope by node, subgraph, host or host group"]</summary>
     <button @onclick="LoadAsync">@Ui["Retrieve effective candidates"]</button>
     <p class="notice">@(message?.Invoke())</p>

@@ -603,5 +603,6 @@
   "Look up an operation": "操作IDで照会",
   "Restore normal tracing": "通常の記録に戻す",
   "Start temporary tracing": "一時的な追跡を開始",
-  "Pause or resume new inputs for a node or safety group.": "ノードや安全グループを選び、新規入力の受付を一時停止または再開できます。"
+  "Pause or resume new inputs for a node or safety group.": "ノードや安全グループを選び、新規入力の受付を一時停止または再開できます。",
+  "Select a local release manifest and specify where the ClientHost can read the package files.": "手元のリリースマニフェストを選び、ClientHost が配布ファイルを読み込める場所を指定します。"
 }

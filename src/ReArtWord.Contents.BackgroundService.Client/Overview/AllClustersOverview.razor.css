@@ -223,12 +223,6 @@ footer {
     gap: 10px;
 }
 
-.panel-content > .empty {
-    color: var(--ink);
-    font-size: 14px;
-    text-align: start;
-}
-
 .panel-content > footer {
     color: var(--muted);
     font-size: 13px;
@@ -237,4 +231,19 @@ footer {
 .panel-links a .ui-icon {
     width: 16px;
     height: 16px;
+}
+
+.panel-heading :is(.window-chip, .panel-links > span) {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.panel-content > .empty {
+    color: var(--ink);
+    font-size: 14px;
+    margin-inline: 0;
+    padding-inline: 0;
+    min-height: 44px;
+    justify-content: start;
+    text-align: start;
 }

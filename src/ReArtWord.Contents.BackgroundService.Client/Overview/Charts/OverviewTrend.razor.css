@@ -103,7 +103,8 @@ figcaption {
 }
 
 .historical .trend-line {
-    stroke: var(--muted);
+    stroke: color-mix(in srgb, var(--muted) 72%, var(--nested));
+    stroke-dasharray: 4 3;
 }
 
 .historical .trend-highlight {

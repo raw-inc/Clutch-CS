@@ -2,7 +2,7 @@
 <section class="section script-packages">
     <div class="section-heading">
         <h2>@Ui["Script packages"]</h2>
-        <button disabled="@loading" @onclick="()=>RefreshAsync(UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh package information"]</button>
+        <button class="quiet" disabled="@loading" @onclick="()=>RefreshAsync(UiCancellation)"><UiIcon Name="refresh" />@Ui["Refresh package information"]</button>
     </div>
     <p class="footer-note">@Ui.Format("Package destination: {0} / {1}", cluster, peer)</p>
     <p class="small muted">@Ui["Packages are installed on this peer. Analyze and save a script to adopt the current package configuration. Existing saved scripts keep their previous configuration."]</p>
@@ -40,6 +40,7 @@
             </aside>
         }
         <div class="package-pane">
+        <h3>@Ui["Packages"]</h3>
         <ScriptPackageBrowser @key="kind" Kind="kind" Busy="Busy" Installed="@(Current(kind)?.Requested??[])" Install="package=>ChangeAsync(kind,package,false,UiCancellation)" />
         <details class="secondary-details"><summary>@Ui["Enter an exact package and version"]</summary>
             <div class="package-form">

@@ -199,7 +199,7 @@
     }
 }
 
-@media (pointer: coarse) {
+@media (pointer: coarse), (max-width: 600px) {
     .statusbar-left > a,
     .statusbar-left ::deep :is(.statusbar-action, .transfer-toggle, a.pwa-state) {
         display: inline-flex;
@@ -327,25 +327,36 @@
     }
 
     .connection ::deep .connection-button {
-        width: 44px;
-        max-width: none;
+        max-width: min(38vw, 10rem);
         min-height: 44px;
-        position: relative;
-        padding: 0;
-        border-color: transparent;
+        padding: 4px 7px;
+        gap: 4px;
     }
 
-    .connection ::deep .connection-name,
-    .connection ::deep .connection-chevron {
-        display: none;
+    .connection ::deep .connection-name {
+        display: block;
+        font-size: 11px;
+        line-height: 1.15;
     }
 
-    .connection ::deep .connection-symbol {
+    .connection ::deep .connection-name small {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 10px;
+    }
+
+    .connection ::deep :is(.connection-chevron, .connection-symbol) {
         display: inline-flex;
+        flex: none;
+    }
+
+    .connection ::deep .connection-symbol .ui-icon {
+        width: 12px;
+        height: 12px;
     }
 
     .connection ::deep .connection-dot {
-        position: absolute;
-        inset: 5px 5px auto auto;
+        display: none;
     }
 }

@@ -8,10 +8,10 @@
         <div><h2>@Ui["Shared state conflicts"]</h2>
             @if(!loaded || conflicts.Count>0){<p class="small muted">@Ui["Compare the saved values and choose the revision to keep."]</p>}</div>
     </header>
-    @if(!loaded){<p><span class="badge">@Ui["Not checked"]</span></p>}
+    @if(!loaded){<p class="lookup-status"><span class="badge pending">@Ui["Not checked"]</span></p>}
     @if(loaded)
     {
-        <p role="status"><span class="badge @(conflicts.Count>0?"warn":"good")">@(conflicts.Count == 0 ? Ui["No conflicts"] : Ui.Format("Unresolved: {0}", conflicts.Count))</span> <small class="muted">@Ui.Format("Checked at {0}", FormatTime(checkedAt,"HH:mm"))</small></p>
+        <p role="status" class="lookup-status"><span class="badge @(conflicts.Count>0?"warn":"good")">@(conflicts.Count == 0 ? Ui["No conflicts"] : Ui.Format("Unresolved: {0}", conflicts.Count))</span> <small class="muted">@Ui.Format("Checked at {0}", FormatTime(checkedAt,"HH:mm"))</small></p>
         @if(conflicts.Count>0)
         {
         <div class="table-wrap"><table class="record-table"><thead><tr><th>@Ui["Storage purpose / target"]</th><th>@Ui["Affected scope"]</th><th class="numeric">@Ui["Candidates"]</th><th>@Ui["Actions"]</th></tr></thead><tbody>
@@ -23,7 +23,7 @@
         }
         @if(cursor is not null){<button disabled="@(busy||!SameConnection)" @onclick="()=>LoadPageAsync(true)">@Ui["Show more candidates"]</button>}
     }
-    <button disabled="@busy" @onclick="LoadAsync"><UiIcon Name="search" />@Ui[loaded?"Check again":"Show candidates"]</button>
+    <button disabled="@busy" @onclick="LoadAsync"><UiIcon Name="@(loaded?"refresh":"search")" />@Ui[loaded?"Check again":"Show candidates"]</button>
     @if(message is not null){<p class="notice">@(message?.Invoke())</p>}
     @if(lastId is Guid id)
     {

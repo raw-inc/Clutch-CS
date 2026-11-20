@@ -73,3 +73,16 @@ clutch-status-labels {
 .health-indicator.offline {
     color: var(--danger);
 }
+
+.history-progress-ring {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    fill: none;
+    stroke-width: 3px;
+    stroke: var(--accent);
+}
+
+.history-progress-ring .history-progress-track {
+    stroke: var(--line);
+}

@@ -76,6 +76,7 @@
     .peer-connections td[data-label]::before {
         content: attr(data-label);
         color: var(--muted);
+        font-weight: 600;
     }
 
     .peer-connections td:last-child {
@@ -97,4 +98,8 @@
     .peer-connections td:last-child button {
         min-height: 44px;
     }
+}
+
+.connection-button:has(.connection-dot.online) .connection-symbol {
+    color: var(--green);
 }

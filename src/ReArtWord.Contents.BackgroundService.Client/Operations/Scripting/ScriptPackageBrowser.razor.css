@@ -98,3 +98,9 @@
 .package-search {
     align-items: end;
 }
+
+@media (max-width: 680px) {
+    .package-search :is(input, button) {
+        min-height: 44px;
+    }
+}

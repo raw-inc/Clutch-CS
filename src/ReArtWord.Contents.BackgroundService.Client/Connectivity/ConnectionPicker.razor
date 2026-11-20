@@ -3,9 +3,9 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Management
 @using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor
 
-<button class="connection-button" @onclick="OpenAsync" title="@(ClusterId is null ? Ui["Select network, cluster and peer"] : ClusterId + " / " + PeerId)" aria-label="@Ui["Select network, cluster and peer"]">
+<button class="connection-button" @onclick="OpenAsync" title="@(ClusterId is null ? Ui["Select network, cluster and peer"] : ClusterId + " / " + PeerId + " · " + Ui[Connected?"Connected":"Disconnected"])" aria-label="@Ui["Select network, cluster and peer"]">
     <span class="connection-dot @(Connected?"online":string.Empty)" aria-hidden="true"></span>
-    <span class="connection-symbol" aria-hidden="true"><UiIcon Name="network" /></span>
+    <span class="connection-symbol" aria-hidden="true"><UiIcon Name="@(Connected?"check":"plug")" /></span>
     @if(ClusterId is not null){<span class="connection-name">@ClusterId <small>/ @PeerId</small></span>}
     else{<span class="connection-name">@Ui["Select connection"]</span>}
     <span class="connection-chevron" aria-hidden="true"><UiIcon Name="chevron" /></span>
@@ -31,7 +31,7 @@
             @foreach(var peer in cluster.Peers)
             {
                 var selected = Connected && cluster.ClusterId == ClusterId && peer.PeerId == PeerId && peer.InstanceId == Connection.Current?.InstanceId;
-                <tr @key="peer.InstanceId"><td data-label="@Ui["Peer / Host"]">@peer.PeerId / @peer.HostId</td><td data-label="@Ui["Observed state"]">@Ui[peer.Status.ToString()]</td><td class="small mono" data-label="@Ui["Instance ID"]">@peer.InstanceId</td><td>@if(selected){<span class="tag">@Ui["Connected"]</span>}else{<button @onclick="()=>SelectAsync(cluster.ClusterId,peer.PeerId,peer.InstanceId)" disabled="@busy">@Ui["Connect"]</button>}</td></tr>
+                <tr @key="peer.InstanceId"><td data-label="@Ui["Peer / Host"]">@peer.PeerId / @peer.HostId</td><td data-label="@Ui["Observed state"]">@Ui[peer.Status.ToString()]</td><td data-label="@Ui["Instance ID"]"><code class="small mono">@peer.InstanceId</code></td><td>@if(selected){<span class="tag">@Ui["Connected"]</span>}else{<button @onclick="()=>SelectAsync(cluster.ClusterId,peer.PeerId,peer.InstanceId)" disabled="@busy">@Ui["Connect"]</button>}</td></tr>
             }
             </tbody></table>
         </section>
@@ -43,7 +43,7 @@
         {
             <div class="discovery-binding"><p class="small muted">@(network.Interfaces.FirstOrDefault(item=>item.InterfaceId==status.Binding.InterfaceId)?.Name??status.Binding.InterfaceId) / @status.Binding.BindAddress → @status.Binding.BroadcastAddress : @status.Binding.Port · @Ui[status.Listening?"Listening":"Not listening"] @status.Problem
                 </p><div class="toolbar"><button @onclick="()=>EditBinding(status.Binding)" disabled="@busy">@Ui["Edit"]</button>
-                <button class="danger" @onclick="()=>removingBinding=status.Binding" disabled="@busy"><UiIcon Name="stop" />@Ui["Stop discovery"]</button>
+                <button class="danger" @onclick="()=>removingBinding=status.Binding" disabled="@busy"><UiIcon Name="offline" />@Ui["Stop discovery"]</button>
             </div></div>
         }
         <label>NIC<select value="@interfaceId" @onchange="InterfaceChanged">
@@ -82,8 +82,8 @@
         {
             var name = network?.Interfaces.FirstOrDefault(item=>item.InterfaceId==binding.InterfaceId)?.Name ?? binding.InterfaceId;
             <p>@name<br /><code>@binding.BindAddress → @binding.BroadcastAddress : @binding.Port</code></p>
-            <p class="notice warning"><UiIcon Name="info" />@Ui.Format("Stopping observation for {0} can remove clusters only visible through it.", name)</p>
+            <p class="notice warning"><UiIcon Name="warning" />@Ui.Format("Stopping observation for {0} can remove clusters only visible through it.", name)</p>
         }
     </ChildContent>
-    <Actions><button class="danger" disabled="@busy" @onclick="()=>ConfirmRemovalAsync(UiCancellation)"><UiIcon Name="stop" />@Ui["Stop discovery"]</button></Actions>
+    <Actions><button class="danger" disabled="@busy" @onclick="()=>ConfirmRemovalAsync(UiCancellation)"><UiIcon Name="offline" />@Ui["Stop discovery"]</button></Actions>
 </Modal>

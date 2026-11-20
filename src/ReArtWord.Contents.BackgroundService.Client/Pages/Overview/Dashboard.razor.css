@@ -208,8 +208,9 @@
     margin-block-start: 10px;
 }
 
-.internal-data-card > summary {
-    min-height: 44px;
+.dashboard-operations > .internal-data-card > summary {
+    min-height: 52px;
+    font-size: 18px;
 }
 
 .dashboard-operations ::deep .field-actions > label select {
@@ -232,6 +233,9 @@
 
 .settings-topic-compact {
     display: none;
+    padding: 8px 12px;
+    border-inline-start: 2px solid var(--accent);
+    background: var(--card);
 }
 
 @media (max-width: 600px) {
@@ -242,5 +246,55 @@
     .settings-topic-compact {
         display: grid;
         margin: 0;
+    }
+}
+
+@media (max-width: 680px) {
+    .dashboard-operations ::deep .field-actions :is(input, select, button) {
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 680px) {
+    .dashboard-operations ::deep .field-actions input {
+        min-height: 44px;
+    }
+}
+
+.workflow-name p:empty {
+    display: none;
+}
+
+@media (max-width: 680px) {
+    .workflow-records {
+        border: 0;
+        background: transparent;
+    }
+
+    .workflow-records .record-table tr {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: start;
+        border: 1px solid var(--line);
+    }
+
+    .workflow-records .record-table td[data-field] {
+        display: block;
+    }
+
+    .workflow-records td[data-field]::before {
+        content: none;
+    }
+
+    .workflow-name {
+        font-weight: 600;
+    }
+
+    .workflow-records .record-table .mono,
+    .workflow-row-actions {
+        grid-column: 1 / -1;
+    }
+
+    .workflow-row-actions > button {
+        margin: 3px 6px 0 0;
     }
 }

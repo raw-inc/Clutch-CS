@@ -1,22 +1,41 @@
 .runtime-picker {
     display: grid;
-    gap: 0.4rem;
+    gap: 8px;
     min-width: 0;
 }
 
-.runtime-choice {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    min-width: 0;
-}
-
-.runtime-choice select,
+.runtime-current select,
 .runtime-choice input {
-    flex: 1;
+    width: 100%;
     min-width: 0;
 }
 
-.runtime-picker small {
+.runtime-choice,
+.runtime-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.runtime-choice input {
+    flex: 1 1 12rem;
+}
+
+.runtime-picker small,
+.runtime-current-path {
     overflow-wrap: anywhere;
+}
+
+.runtime-current-path {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.runtime-picker > .secondary-details {
+    margin-block-start: 4px;
+}
+
+.runtime-picker .runtime-actions > button {
+    min-height: 40px;
 }

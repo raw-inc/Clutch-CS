@@ -8,7 +8,7 @@
   "Statically inferred types take precedence. Select every unresolved argument and result, then analyze again.": "静的に確認できた型を優先します。未確定の引数・返却型を選択して、再解析してください。",
   "JavaScript: export function run(...) or export async function run(...). Import npm packages as ES Modules. Select unresolved JSON types below.": "JavaScriptの入口はexport function run(...)またはexport async function run(...)です。npmパッケージはES Modulesのimportで読み込めます。未確定のJSON型は下で選択してください。",
   "Node.js executable on this peer": "Node.jsの実行ファイル",
-  "npm-cli.js path (optional)": "npm-cli.jsのパス（標準配置以外の場合に指定）",
+  "npm-cli.js path (optional)": "npm-cli.js のパス（任意）",
   "npm uses registry.npmjs.org and requires Node.js 24 or later with npm. Scoped packages are supported. Leave the script Node.js path blank to use the managed environment.": "npmはregistry.npmjs.orgから取得します。npmを備えたNode.js 24以降が必要です。@scope/name形式にも対応します。スクリプト側のNode.jsパスが空欄の場合は管理中の環境を使います。",
   "script.javascriptEntryRequired": "export function run(...)またはexport async function run(...)を一つ定義してください。ジェネレーターは使用できません。",
   "script.javascriptNamedArgumentsRequired": "runの引数は名前付きの識別子、または末尾の...argsで指定してください。分割代入は使用できません。",

@@ -67,7 +67,7 @@ button:disabled,
 button.primary:disabled {
     cursor: not-allowed;
     color: var(--disabled-ink);
-    background: var(--disabled-face);
+    background-color: var(--disabled-face);
     border-color: var(--disabled-line);
 }
 
@@ -644,7 +644,10 @@ td details {
     border-radius: var(--radius-control);
     margin-top: 16px;
     background: var(--panel);
-    padding: 0 12px;
+}
+
+.secondary-details > :not(summary) {
+    margin-inline: 12px;
 }
 
 .secondary-details > .section,
@@ -1071,7 +1074,8 @@ button.danger:disabled {
 }
 
 .dialog.dialog-compact {
-    width: min(100% - 24px, 32rem);
+    width: min(calc(100% - 24px), 32rem);
+    max-width: 32rem;
 }
 
 .dialog :where(p, small) {
@@ -1103,10 +1107,16 @@ button.danger:disabled {
     font-size: 13px;
 }
 
-.included-target {
-    padding-inline: 0;
-    background: none;
-    box-shadow: -3px 0 var(--accent);
+.snapshot-target {
+    display: grid;
+    min-width: 0;
+    padding: 8px 12px;
+    border-radius: var(--radius-control);
+}
+
+.snapshot-target.included-target {
+    background: var(--accent-soft);
+    box-shadow: inset 3px 0 var(--accent);
 }
 
 .fleet-update .file-picker-control,
@@ -1198,4 +1208,37 @@ button.danger:disabled {
 
 .group-settings-fields > label + label {
     margin-block-start: 14px;
+}
+
+.lookup-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.badge.pending {
+    border: 1px solid var(--control);
+    color: var(--muted);
+    background: var(--nested);
+}
+
+.section-heading > .section-refresh,
+.section-heading .toolbar > .section-refresh {
+    padding-inline-start: 0;
+}
+
+.dialog-content > .notice.warning {
+    width: 100%;
+}
+
+@media (max-width: 760px) {
+    .dashboard-operations .record-table td[data-field] {
+        align-items: center;
+    }
+}
+
+.dialog-content:has(.snapshot-target) {
+    scrollbar-color: var(--control) var(--raised);
 }

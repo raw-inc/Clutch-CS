@@ -52,4 +52,9 @@
   <symbol id="brand" viewBox="0 0 24 24"><path d="M3 3h6v6H3z M15 15h6v6h-6z M15 3h6v6h-6z M9 6h6 M6 9v9h9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
   <symbol id="menu" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z" /></symbol>
   <symbol id="external-link" viewBox="0 0 24 24"><path d="M14 3h7v7h-2V6.4l-9.3 9.3-1.4-1.4L17.6 5H14zM5 5h6v2H5v12h12v-6h2v8H3V5z"/></symbol>
-<symbol id="offline" viewBox="0 0 24 24"><path d="M2.7 3.8 4.1 2.4l17.5 17.5-1.4 1.4-3.2-3.2H6a5 5 0 0 1-.8-9.9L2.7 3.8ZM7 10.1l-.2.1H6a3 3 0 0 0 0 6h9.1l-8.1-6.1ZM13 5a6 6 0 0 1 5.9 4.9A4 4 0 0 1 21 17l-1.5-1.5a2 2 0 0 0-1.4-3.5H17v-1a4 4 0 0 0-5.9-3.5l-1.4-1.4A6 6 0 0 1 13 5Z"/></symbol></svg>
+  <symbol id="offline" viewBox="0 0 24 24"><path d="M2.7 3.8 4.1 2.4l17.5 17.5-1.4 1.4-3.2-3.2H6a5 5 0 0 1-.8-9.9L2.7 3.8ZM7 10.1l-.2.1H6a3 3 0 0 0 0 6h9.1l-8.1-6.1ZM13 5a6 6 0 0 1 5.9 4.9A4 4 0 0 1 21 17l-1.5-1.5a2 2 0 0 0-1.4-3.5H17v-1a4 4 0 0 0-5.9-3.5l-1.4-1.4A6 6 0 0 1 13 5Z"/></symbol>
+  <symbol id="warning" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 2.5 23 21H1L12 2.5Zm0 4-7.5 12.5h15L12 6.5ZM11 10h2v5h-2v-5Zm0 6.5h2v2h-2v-2Z"/></symbol>
+  <symbol id="leave" viewBox="0 0 24 24"><path d="M3 3h11v2H5v14h9v2H3V3Zm14 4 5 5-5 5-1.4-1.4 2.6-2.6H9v-2h9.2l-2.6-2.6L17 7Z"/></symbol>
+  <symbol id="plug" viewBox="0 0 24 24"><path d="M8 3h2v5h4V3h2v5h3v2h-2v1a5 5 0 0 1-4 4.9V21h-2v-5.1A5 5 0 0 1 7 11v-1H5V8h3V3Zm1 7v1a3 3 0 0 0 6 0v-1H9Z"/></symbol>
+  <symbol id="arrow-right" viewBox="0 0 24 24"><path d="M4 11h12.6l-4.3-4.3 1.4-1.4L20.4 12l-6.7 6.7-1.4-1.4 4.3-4.3H4v-2Z"/></symbol>
+</svg>

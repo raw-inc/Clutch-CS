@@ -545,10 +545,24 @@ input[type="file"]::file-selector-button {
     width: 10ch;
 }
 
-/* Native selection keeps its affordance and keyboard behavior in each browser. */
-select:not([multiple], [size]) {
-    appearance: auto;
+@media (forced-colors: none) {
+    select:not([multiple], [size]) {
+        appearance: none;
+        background-image: var(--select-arrow);
+        background-position: right 10px center;
+        background-repeat: no-repeat;
+        background-size: 12px 8px;
+        padding-inline-end: 32px;
+    }
+}
+
+select:not([multiple], [size]):enabled {
     cursor: pointer;
+}
+
+::placeholder {
+    color: var(--muted);
+    opacity: 1;
 }
 
 .pc-display-toggle button[aria-pressed] {
@@ -567,8 +581,10 @@ summary {
 
 :where(details:not(.route-menu, .desktop-menu)) > summary {
     position: relative;
-    display: block;
-    padding: 10px 32px 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 32px 8px 12px;
     min-height: 40px;
     font-size: 13px;
     line-height: 1.5;
@@ -583,7 +599,9 @@ summary {
 :where(details:not(.route-menu, .desktop-menu)) > summary::after {
     content: "";
     position: absolute;
-    inset: calc(50% - 4px) 10px auto auto;
+    inset-block-start: 50%;
+    inset-inline-end: 12px;
+    translate: 0 -50%;
     width: 8px;
     height: 8px;
     border: solid currentcolor;

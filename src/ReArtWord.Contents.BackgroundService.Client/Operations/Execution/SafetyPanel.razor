@@ -4,10 +4,10 @@
 <section class="card">
 <h2>@Ui["Safety"]</h2>
 <p class="small muted">@Ui["Pause or resume new inputs for a node or safety group."]</p>
-<div class="toolbar inline-status">
-<span class="badge @(Current is { Stopped: true } or { Continued: true } ? "warn" : targets.Count > 0 && status?.Loaded == true ? "good" : null)">@Ui[OverrideState]</span>
-<button @onclick="OpenAsync"><UiIcon Name="search" />@Ui["Review effective state and targets"]</button>
+<div class="lookup-status">
+<span class="badge @(Current is { Stopped: true } or { Continued: true } ? "warn" : targets.Count > 0 && status?.Loaded == true ? "good" : "pending")">@Ui[OverrideState]</span>
 </div>
+<button @onclick="OpenAsync"><UiIcon Name="search" />@Ui["Review effective state and targets"]</button>
 <p class="notice">@(message?.Invoke())</p>
 @if(lastOperation is Guid operation){<p>@Ui["Current operation"] @operation <button @onclick="ReadOperationAsync" disabled="@busy">@Ui["Query acceptance again"]</button></p>}
 </section>

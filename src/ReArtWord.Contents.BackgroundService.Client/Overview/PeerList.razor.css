@@ -72,3 +72,11 @@ th {
         column-gap: 8px;
     }
 }
+
+@media (max-width: 760px) {
+    .peer-list .record-table tbody tr {
+        border: 1px solid var(--control);
+        border-radius: var(--radius-control);
+        background: var(--panel);
+    }
+}

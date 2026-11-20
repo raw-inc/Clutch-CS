@@ -36,7 +36,7 @@
   "Not selected": "未選択",
   "Unconfirmed": "未確認",
   "Updating measurements": "実測を更新中",
-  "Refresh every 3 seconds": "3秒ごとに取得",
+  "Refresh every 3 seconds": "3 秒ごとに取得",
   "Waiting for PC measurements": "PC の観測値を待っています",
   "Select a connection to view available measurements.": "接続先を選ぶと、取得できた実測値を表示します。",
   "Current measurements unconfirmed": "現在の計測値は未確認です",
@@ -56,7 +56,7 @@
   "Completions · deduplicated by execution ID": "完了回数 · 実行 ID の重複を除外",
   "No completions in the retrieved range.": "取得範囲に完了記録はありません。",
   "Recent logs": "直近のログ",
-  "Newest first · last 15 minutes · up to 8 entries": "直近15分の新しい順・最大8件",
+  "Newest first · last 15 minutes · up to 8 entries": "直近15分の新しい順・最大 8 件",
   "No logs in the retrieved range.": "取得範囲にログはありません。",
   "Some results are omitted or unavailable. Open Log Viewer for details.": "一部に省略・取得できなかった範囲があります。詳細はログ画面で確認できます。",
   "This search range was retrieved.": "この検索範囲の取得完了",
@@ -165,7 +165,7 @@
   "{0} clusters · {1} observed peers": "{0} クラスタ · 検出した {1} ピア",
   "Coordinator disagreement": "担当の不一致",
   "Choose this PC’s network to discover reachable clusters. No cluster selection is required.": "このPCのネットワークを選ぶと、到達できるクラスタを表示します。クラスタの選択は不要です。",
-  "Up to 8 log entries per polled cluster; showing the latest 8 observed entries.": "取得対象の各クラスタから最大8件を読み、取得できた最新8件を表示しています。",
+  "Up to 8 log entries per polled cluster; showing the latest 8 observed entries.": "取得対象の各クラスタから最大 8 件を読み、取得できた最新 8 件を表示しています。",
   "{0} cores / {1} threads": "{0} コア / {1} スレッド",
   "Dedicated GPU memory": "専用GPUメモリ",
   "Shared system memory": "共有システムメモリ",
@@ -232,5 +232,8 @@
   "Do not process new work until rejoined: {0}": "{0} はクラスタから離脱します。再参加するまで、このピアにはクラスタの処理が割り当てられません。",
   "Instance ID": "実体ID",
   "Stopping observation for {0} can remove clusters only visible through it.": "{0} の監視を停止します。この設定でしか観測できないクラスタは一覧から外れます。",
-  "Select a local release manifest to choose the files for this update.": "手元のマニフェストを指定して、配布するファイルを選びます。"
+  "Select a local release manifest to choose the files for this update.": "手元のマニフェストを指定して、配布するファイルを選びます。",
+  "Settings category": "設定カテゴリ",
+  "{0} measurements over 80%": "{0} 項目が 80 % 超",
+  "Showing up to 8 recent log entries.": "直近のログを最大 8 件表示します。"
 }

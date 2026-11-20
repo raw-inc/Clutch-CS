@@ -13,6 +13,10 @@
                                     <h3>@item.Peer.HostId</h3>
                                     <PeerStateLabel State="@HealthState" Identity="@item.Peer.HostId" History="item.HistorySynchronization" />
                                 </div>
+                                @if(!stale && DashboardMetrics.AboveThreshold(sample) is var above && above != 0)
+                                {
+                                    <small class="metric-alert">@Ui.Format("{0} measurements over 80%", above)</small>
+                                }
                                 @if(stale && sample is not null)
                                 {
                                     <small class="observation-status" title="@FormatTime(sample.ObservedAt)">@Ui.Format("Previous measurement at {0}", FormatTime(sample.ObservedAt,"HH:mm:ss"))</small>

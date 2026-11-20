@@ -8,9 +8,9 @@
     display: flex;
     justify-content: space-between;
     gap: 10px;
-    align-items: start;
+    align-items: center;
     flex-wrap: wrap;
-    column-gap: 16px;
+    column-gap: 10px;
 }
 
 .host-name {
@@ -358,6 +358,7 @@ h3 {
 }
 
 .host-name small.metric-alert {
+    display: block;
     color: var(--warn);
     font-size: 13px;
 }
@@ -398,10 +399,4 @@ h3 {
     font-size: 15px;
     margin-block: 8px 0;
     color: var(--muted);
-}
-
-@media (max-width: 500px) {
-    .host-card header .host-name {
-        flex-basis: 100%;
-    }
 }

@@ -68,7 +68,7 @@ public sealed partial class Dashboard : IAsyncDisposable
         ("All clusters", "dashboard"), ("Peer list", "monitor"), ("Selected cluster", "network"),
         ("Execution & processes", "play"), ("Applications", "windows"), ("Script packages", "code"),
         ("Snapshots", "save"), ("Resolve conflicts", "copy"), ("Safety", "shield"),
-        ("Settings & maintenance", "values"), ("Operations", "history")
+        ("Settings & maintenance", "settings"), ("Operations", "history")
     ];
 
     /// <summary>接続先が未選択でもクラスタの探索とブラウザー設定は利用できます。</summary>
