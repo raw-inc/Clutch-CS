@@ -556,11 +556,6 @@ input[type="file"]::file-selector-button {
     box-shadow: inset 0 -2px var(--accent);
 }
 
-.included-target {
-    background: var(--accent-soft);
-    padding: 8px;
-}
-
 .count-entry {
     width: 10ch;
 }
