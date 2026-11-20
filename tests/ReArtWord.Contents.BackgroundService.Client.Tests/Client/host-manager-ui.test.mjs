@@ -320,13 +320,22 @@ test('NetworkIF stages both families on multiple hosts and sends one operation p
     assert.equal(changes[0].request.action, 'networkProtocols');
     assert.deepEqual(changes[1].request.change, { ipv6Enabled: false });
 });
-test('NetworkIF restores staged toggles, retains them across tabs, and discards explicitly on host changes', async t =>
+test('NetworkIF restores staged toggles, retains them across tabs, and discards explicitly on host changes',
+    { skip: 'The apply bar is now hidden when there are no pending changes.' }, t => verifyNetworkDraftAsync(t, f => assert.equal(f.button('Apply').disabled, true)));
+
+test('NetworkIF keeps staged changes across tabs and hides Apply when they are cleared', t =>
+    verifyNetworkDraftAsync(t, f => assert.equal(f.find('button', 'Apply'), undefined)));
+
+/** 変更予定を保持する条件と、変更がなくなったときの表示を確認します。
+ * @returns 表示と変更予定の確認です。
+ */
+async function verifyNetworkDraftAsync(t, verifyEmpty)
 {
     const f = await fixtureAsync(t);
     await f.pick('host-a');
     await f.click('IPv4 · Ethernet 0 · host-a');
     await f.click('IPv4 · Ethernet 0 · host-a');
-    assert.equal(f.button('Apply').disabled, true);
+    verifyEmpty(f);
     await f.click('IPv4 · Ethernet 0 · host-a');
     await f.click('Hosts');
     await f.click('NetworkIF');
@@ -335,10 +344,11 @@ test('NetworkIF restores staged toggles, retains them across tabs, and discards 
     assert.equal(f.dialogs().length, 1);
     await f.click('Keep editing');
     await f.click('Clear all pending changes');
-    assert.equal(f.button('Apply').disabled, true);
+    verifyEmpty(f);
     assert.equal(f.button('IPv4 · Ethernet 0 · host-a').dataset.pending, 'false');
     assert.equal(f.button('IPv4 · Ethernet 0 · host-a').getAttribute('aria-checked'), 'true');
-});
+}
+
 test('NetworkIF rejects stale staged settings before dispatch', async t =>
 {
     const f = await fixtureAsync(t);

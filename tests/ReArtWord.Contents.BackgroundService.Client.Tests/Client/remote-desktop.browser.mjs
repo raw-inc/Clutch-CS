@@ -254,7 +254,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         await page.waitForFunction(() => document.fullscreenElement === null);
         await page.getByRole('button', { name: 'Connect', exact: true }).click();
         await page.waitForFunction(() => document.querySelector('button[aria-label="Show software keyboard"]')?.disabled === false);
-        for (const [width, height] of [[1280, 720], [844, 390], [390, 844]])
+        for (const [width, height] of [[1280, 720], [844, 390], [667, 375], [390, 844]])
         {
             await page.setViewportSize({ width, height });
             await page.waitForFunction(() =>
@@ -270,6 +270,17 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
                 return (0) < (image.width) && (0) < (image.height) &&
                     Boolean(document.elementFromPoint(image.left + image.width / 2, image.top + image.height / 2)?.closest('.desktop-monitor'));
             });
+
+            if (width === 667)
+            {
+                const workspace = page.locator('.desktop-workspace');
+                const bounds = await workspace.evaluate(element =>
+                {
+                    const stage = element.querySelector('.desktop-viewport');
+                    return { video: stage.clientHeight, workspace: element.clientHeight };
+                });
+                assert.ok(bounds.workspace - bounds.video <= 42, JSON.stringify(bounds));
+            }
 
             if (width <= 844)
             {

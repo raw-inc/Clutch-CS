@@ -142,18 +142,28 @@ async function mountAsync(page, annotations)
     await page.getByRole('button', { name: 'Connect', exact: true }).click();
     await page.waitForFunction(() => document.querySelector('.desktop-connection')?.textContent === 'Connected');
     await (await desktopControlAsync(page, 'Dot by dot (1:1)')).click();
-    const grouped = await page.getByRole('group', { name: 'Displays', exact: true }).evaluate(displays => ({
-        separator: displays.nextElementSibling?.className,
-        next: displays.nextElementSibling?.nextElementSibling?.getAttribute('aria-label'),
-        enabled: displays.nextElementSibling?.nextElementSibling?.getAttribute('aria-pressed'),
-        gap: parseFloat(getComputedStyle(displays.parentElement).columnGap) + parseFloat(getComputedStyle(displays.nextElementSibling).marginRight),
-        spacing: displays.nextElementSibling?.nextElementSibling?.getBoundingClientRect().left - displays.nextElementSibling?.getBoundingClientRect().right
-    }));
-    assert.equal(grouped.separator, 'desktop-key-separator');
+    await verifyDisplayGroupAsync(page);
+    return sent;
+}
+
+/** 表示先と再接続の操作が同じグループ内に並ぶことを確認します。
+ * @returns 表示と操作状態の検証です。
+ */
+async function verifyDisplayGroupAsync(page)
+{
+    const grouped = await page.getByRole('group', { name: 'Displays', exact: true }).evaluate(displays =>
+    {
+        const next = displays.nextElementSibling;
+        const from = displays.getBoundingClientRect(), to = next.getBoundingClientRect();
+        return { next: next.getAttribute('aria-label'), enabled: next.getAttribute('aria-pressed'),
+            sameLine: Math.abs(to.top + to.height / 2 - from.top - from.height / 2) <= 1,
+            gap: parseFloat(getComputedStyle(displays.parentElement).columnGap),
+            spacing: to.left - from.right };
+    });
     assert.equal(grouped.next, 'Automatic reconnect');
     assert.equal(grouped.enabled, 'true');
+    assert.ok(grouped.sameLine);
     assert.ok(Math.abs(grouped.spacing - grouped.gap) <= 1);
-    return sent;
 }
 
 /** スクロール後の映像と番号表示の位置を実レイアウトから取得します。

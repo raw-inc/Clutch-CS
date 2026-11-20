@@ -79,8 +79,18 @@ class Element
     }
 
     /** 属性の値を試験用DOMへ記録します。 */
-    setAttribute()
-    {}
+    setAttribute(name, value)
+    {
+        (this.attributes ??= {})[name] = value;
+    }
+
+    /** 保持した操作名や状態を試験用DOMから読み取ります。
+     * @returns 登録した属性値です。
+     */
+    getAttribute(name)
+    {
+        return this.attributes?.[name];
+    }
 
     /** 試験で呼び出せるイベントハンドラーを登録します。 */
     addEventListener()
@@ -370,7 +380,7 @@ async function fixtureAsync(t, custom, experimental = false, alwaysExperimental 
     /** 操作の実行と処理中表示を持つボタンを構成します。
      * @returns 呼出し元が使用する値です。
      */
-    const button = text => all(root).find(item => item.tag === 'button' && item.textContent === text);
+    const button = text => all(root).find(item => item.tag === 'button' && (item.textContent === text || item.getAttribute('aria-label') === text));
 
     /** 表示の検証に使用する一覧行を作成します。
      * @returns 呼出し元が使用する値です。
@@ -705,7 +715,7 @@ test('mobile modifier toggles and direct keys reach the connected stream in orde
     assert.equal(f.button('Ctrl').disabled, false);
     f.button('Ctrl').onclick();
     f.terms[0].data('c');
-    f.button('←').onclick();
+    f.button('Left').onclick();
     const pending = [...f.timers].find(([,value]) => value.delay === 8);
     pending[1].callback();
     assert.equal(atob(socket.sent.at(-1).request.data), '\x03\x1b[1;5D');

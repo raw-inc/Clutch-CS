@@ -74,12 +74,20 @@ test('toggles persist independently, buttons share modifiers, and disconnection 
 
         t: en => en,
 
+        icon: name => ({ name }),
+
         /** 操作の実行と処理中表示を持つボタンを構成します。
          * @returns 呼出し元が使用する値です。
          */
         button(label, action)
         {
-            const button = { label, onclick: action, attributes: {},
+            const button = { label, onclick: action, attributes: {}, dataset: {},
+
+                /** キーのラベルをアイコンへ置き換えます。 */
+                replaceChildren(...items)
+                {
+                    this.children = items;
+                },
 
                 /** 属性の値を試験用DOMへ記録します。 */
                 setAttribute(key, value)

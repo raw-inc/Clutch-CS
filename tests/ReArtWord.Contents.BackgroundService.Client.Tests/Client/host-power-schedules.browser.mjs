@@ -132,7 +132,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         await page.screenshot({ path: fileURLToPath(new URL('bulk-' + name.toLowerCase() + '.png', evidence)), fullPage: true });
         await page.keyboard.press('Escape');
         await page.getByRole('button', { name: labels['powerSchedule.bulkDisable'], exact: true }).click();
-        await dialog.getByRole('button', { name: labels['powerSchedule.bulkApply'], exact: true }).click();
+        await dialog.getByRole('button', { name: labels['powerSchedule.confirmDisable'], exact: true }).click();
         await page.waitForFunction(label => [...document.querySelectorAll('dialog td [role="status"]')].filter(item => item.textContent === label).length === 2, labels['powerSchedule.succeeded']);
         assert.equal(requests.length, 4);
         assert.deepEqual(requests[2].schedules, requests[0].schedules.map(item => ({ ...item, enabled: false })));
@@ -141,10 +141,10 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         await page.keyboard.press('Escape');
         failSecond = true;
         await page.getByRole('button', { name: labels['powerSchedule.bulkEnable'], exact: true }).click();
-        await dialog.getByRole('button', { name: labels['powerSchedule.bulkApply'], exact: true }).click();
+        await dialog.getByRole('button', { name: labels['powerSchedule.confirmEnable'], exact: true }).click();
         await dialog.locator('td [role="status"]').nth(1).filter({ hasText: labels['powerSchedule.saveUnconfirmed'] }).waitFor();
         assert.equal(requests.length, 6);
-        assert.equal(await dialog.getByRole('button', { name: labels['powerSchedule.bulkApply'], exact: true }).isDisabled(), true);
+        assert.equal(await dialog.getByRole('button', { name: labels['powerSchedule.confirmEnable'], exact: true }).isDisabled(), true);
         assert.equal(requests.some(item => item.hostId === 'host-unselected'), false);
         await page.setViewportSize({ width: 390, height: 844 });
         const bounds = await dialog.boundingBox();

@@ -316,7 +316,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         await page.waitForFunction(() => !document.querySelector('.signal-scope').classList.contains('capturing'));
         assert.equal(commands.filter(item => item.type === 'stop').length, 2);
         assert((await page.locator('.scope-details pre').first().innerText()).includes('OSC packet 42'));
-        await page.getByRole('button', { name: 'Clear', exact: true }).click();
+        await page.locator('.scope-packet-heading').getByRole('button', { name: 'Clear captured packets', exact: true }).click();
         await page.waitForFunction(() => document.querySelectorAll('[data-packet]').length === 0);
         assert.deepEqual(await page.evaluate(() => window.scopeErrors.filter(Boolean)), []);
         assert.equal(commands.filter(item => item.type === 'search').length, 0);

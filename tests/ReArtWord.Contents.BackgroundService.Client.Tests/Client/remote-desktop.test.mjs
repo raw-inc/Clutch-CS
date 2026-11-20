@@ -1188,14 +1188,32 @@ test('malformed cursor states close the session and release held keys', async t 
     assert.equal(ctrl.getAttribute('aria-pressed'), 'false');
 });
 
-test('all eight toolbar keys independently hold and release before the refresh separator', async t =>
+test('all eight toolbar keys independently hold and release before the refresh separator',
+    { skip: 'Host discovery now refreshes in the connection targets.' }, t => verifyToolbarKeysAsync(t, true));
+
+test('all eight toolbar keys hold and release independently of host discovery', t => verifyToolbarKeysAsync(t, false));
+
+/** 特殊キーの送信と、キーボードから独立した再取得の配置を確認します。
+ * @returns キーの送信と切断時に解放した結果の確認です。
+ */
+async function verifyToolbarKeysAsync(t, legacyPlacement)
 {
     const f = await fixtureAsync(t), toolbar = descendants(f.root).find(item => item.className === 'desktop-toolbar');
     const bar = descendants(f.root).find(item => item.className === 'desktop-keybar');
     assert.equal(bar.parentElement, toolbar);
-    assert.equal(toolbar.children.at(-3), bar);
-    assert.equal(toolbar.children.at(-2).className, 'desktop-key-separator');
-    assert.equal(toolbar.children.at(-1).getAttribute('aria-label'), 'Refresh hosts');
+    if (legacyPlacement)
+    {
+        assert.equal(toolbar.children.at(-3), bar);
+        assert.equal(toolbar.children.at(-2).className, 'desktop-key-separator');
+        assert.equal(toolbar.children.at(-1).getAttribute('aria-label'), 'Refresh hosts');
+    }
+    else
+    {
+        const targets = descendants(f.root).find(item => item.className === 'desktop-targets');
+        const reload = targets.children.find(item => item.getAttribute('aria-label') === 'Refresh hosts');
+        assert.ok(reload.disabled);
+        assert.equal(toolbar.children.at(-1), bar);
+    }
     for (const [name, key] of [['Win', 0x5b], ['Ctrl', 0xa2], ['Alt', 0xa4], ['Del', 46], ['Esc', 27], ['PrSc', 44], ['Shift', 0xa0], ['Tab', 9]])
     {
         const button = bar.children.find(item => item.textContent === name);
@@ -1217,7 +1235,7 @@ test('all eight toolbar keys independently hold and release before the refresh s
     assert.ok(bar.children.every(b => b.getAttribute('aria-pressed') === 'false'));
     await f.click('Disconnect');
     assert.ok(bar.children.every(b => b.disabled));
-});
+}
 
 test('physical and virtual key holds do not release each other and focus stays within keyboard controls', async t =>
 {
@@ -1851,7 +1869,15 @@ test.skip('toolbar labels disconnect and audio state while keeping both fullscre
     assert.equal(f.socket.readyState, 1);
 });
 
-test('connection actions stay with the host while display controls reflect the current audio state', async t =>
+test('connection actions stay with the host while display controls reflect the current audio state',
+    { skip: 'Mute and fullscreen now appear in the connected command bar.' }, t => verifyAudioActionsAsync(t, true));
+
+test('connected quick controls reflect mute state and keep the host action separate', t => verifyAudioActionsAsync(t, false));
+
+/** ミュート操作が表示と音声出力に反映されることを確認します。
+ * @returns ミュート切替と接続状態の検証です。
+ */
+async function verifyAudioActionsAsync(t, legacyPlacement)
 {
     const f = await fixtureAsync(t), toolbar = descendants(f.root).find(item => item.className === 'desktop-toolbar');
 
@@ -1861,10 +1887,16 @@ test('connection actions stay with the host while display controls reflect the c
     const button = name => descendants(f.root).find(item => item.tag === 'button' && item.getAttribute('aria-label') === name);
 
     assert.equal(button('Disconnect').parentElement.className, 'desktop-targets');
-    for (const name of [ 'Mute audio', 'Fullscreen', 'Video fullscreen'])
+    const container = legacyPlacement ? toolbar : descendants(f.root).find(item => item.className === 'desktop-quick-controls');
+    if (!legacyPlacement)
     {
-        assert.equal(button(name).parentElement, toolbar);
+        assert.equal(container.parentElement.className, 'desktop-rail');
     }
+    for (const name of ['Mute audio', 'Fullscreen'])
+    {
+        assert.equal(button(name).parentElement, container);
+    }
+    assert.equal(button('Video fullscreen').parentElement, toolbar);
     assert.equal(button('Disconnect').textContent, 'Disconnect');
     assert.match(button('Disconnect').className, /desktop-labeled/);
     const sound = button('Mute audio');
@@ -1881,7 +1913,7 @@ test('connection actions stay with the host while display controls reflect the c
     assert.equal(sound.dataset.muted, 'false');
     assert.equal(f.contexts[0].gains.at(-1), 1);
     assert.equal(f.socket.readyState, 1);
-});
+}
 
 test('remote viewers preserve every held-key repeat and are not automatically muted', async t =>
 {
@@ -3265,13 +3297,21 @@ test('icon controls and display tabs replace the old sidebar screen menu', { ski
     await verifyScreenTabsAsync(f, tabs);
 });
 
-test('display tabs stay with the connection modes and switch screens', async t =>
+test('display tabs stay with the connection modes and switch screens',
+    { skip: 'Audio moved to the connected command bar.' }, t => verifyDisplayToolsAsync(t, true));
+
+test('display tools and display tabs stay with connection modes while audio stays available', t => verifyDisplayToolsAsync(t, false));
+
+/** 表示方法・ミュートの配置とディスプレイ切替を確認します。
+ * @returns 操作の配置とディスプレイ切替の検証です。
+ */
+async function verifyDisplayToolsAsync(t, legacyPlacement)
 {
     const f = await fixtureAsync(t), all = descendants(f.root);
     const toolbar = all.find(e => e.className === 'desktop-toolbar'), rail = all.find(e => e.className === 'desktop-rail');
-    for (const name of ['Cursor synchronization', 'Dot by dot (1:1)', 'Follow pointer', 'Mute audio'])
+    for (const [name, parent] of [['Cursor synchronization', toolbar], ['Dot by dot (1:1)', toolbar], ['Follow pointer', toolbar], ['Mute audio', legacyPlacement ? toolbar : rail]])
     {
-        const button = toolbar.children.find(e => e.getAttribute('aria-label') === name);
+        const button = descendants(parent).find(e => e.getAttribute('aria-label') === name);
         assert.equal(button.tag, 'button');
         assert.equal(button.textContent, '');
         assert.ok(button.title);
@@ -3281,7 +3321,7 @@ test('display tabs stay with the connection modes and switch screens', async t =
     assert.equal(tabs.parentElement.className, 'desktop-display-controls');
     assert.equal(tabs.parentElement.parentElement, toolbar);
     await verifyScreenTabsAsync(f, tabs);
-});
+}
 
 /** 表示先の切替と切断後の項目消去を確認します。
  * @returns 一連の操作と表示の検証です。
