@@ -1872,12 +1872,15 @@ test.skip('toolbar labels disconnect and audio state while keeping both fullscre
 test('connection actions stay with the host while display controls reflect the current audio state',
     { skip: 'Mute and fullscreen now appear in the connected command bar.' }, t => verifyAudioActionsAsync(t, true));
 
-test('connected quick controls reflect mute state and keep the host action separate', t => verifyAudioActionsAsync(t, false));
+test('connected quick controls reflect mute state and keep the host action separate',
+    { skip: 'The wide toolbar now shows labels next to the audio icon.' }, t => verifyAudioActionsAsync(t, false, false));
+
+test('the audio button changes its wide-toolbar label with mute state', t => verifyAudioActionsAsync(t, false, true));
 
 /** ミュート操作が表示と音声出力に反映されることを確認します。
  * @returns ミュート切替と接続状態の検証です。
  */
-async function verifyAudioActionsAsync(t, legacyPlacement)
+async function verifyAudioActionsAsync(t, legacyPlacement, showCaption = false)
 {
     const f = await fixtureAsync(t), toolbar = descendants(f.root).find(item => item.className === 'desktop-toolbar');
 
@@ -1900,15 +1903,15 @@ async function verifyAudioActionsAsync(t, legacyPlacement)
     assert.equal(button('Disconnect').textContent, 'Disconnect');
     assert.match(button('Disconnect').className, /desktop-labeled/);
     const sound = button('Mute audio');
-    assert.equal(sound.textContent, '');
+    assert.equal(sound.textContent, showCaption ? 'Mute' : '');
     assert.equal(sound.getAttribute('aria-pressed'), 'false');
     await f.click('Mute audio');
-    assert.equal(sound.textContent, '');
+    assert.equal(sound.textContent, showCaption ? 'Unmute' : '');
     assert.equal(sound.getAttribute('aria-pressed'), 'true');
     assert.equal(sound.dataset.muted, 'true');
     assert.equal(f.contexts[0].gains.at(-1), 0);
     await f.click('Unmute audio');
-    assert.equal(sound.textContent, '');
+    assert.equal(sound.textContent, showCaption ? 'Mute' : '');
     assert.equal(sound.getAttribute('aria-pressed'), 'false');
     assert.equal(sound.dataset.muted, 'false');
     assert.equal(f.contexts[0].gains.at(-1), 1);
@@ -1942,14 +1945,22 @@ test('remote viewers preserve every held-key repeat and are not automatically mu
     assert.equal(f.socket.sent.at(-1)[0], 5);
 });
 
-test('local connections mute playback before PCM can feed back into loopback capture', async t =>
+test('local connections mute playback before PCM can feed back into loopback capture',
+    { skip: 'The wide toolbar now labels the action for a muted connection.' }, t => verifyLocalAudioMuteAsync(t, ''));
+
+test('local connections mute loopback playback and show the action to unmute', t => verifyLocalAudioMuteAsync(t, 'Unmute'));
+
+/** 同一PCへの接続で音声を消し、再生を再開できることを確認します。
+ * @returns ミュート状態と入力の検証です。
+ */
+async function verifyLocalAudioMuteAsync(t, caption)
 {
     const f = await fixtureAsync(t);
     f.socket.onmessage(frame(7, 0, { clusterId: 'cluster', hostId: 'host', localAudioMuted: true }));
     f.socket.onmessage(frame(4, 0, { sampleRate: 48000, channels: 2, format: 'f32le' }));
     assert.equal(f.contexts[0].gains.at(-1), 0);
     const sound = descendants(f.root).find(item => item.tag === 'button' && item.getAttribute('aria-label') === 'Unmute audio');
-    assert.equal(sound.textContent, '');
+    assert.equal(sound.textContent, caption);
     assert.equal(sound.dataset.muted, 'true');
     assert.match(sound.title, /feedback/);
     const viewport = descendants(f.root).find(item => item.className === 'desktop-viewport');
@@ -1978,10 +1989,10 @@ test('local connections mute playback before PCM can feed back into loopback cap
     assert.ok(descendants(f.root).some(item => item.textContent?.includes('initially muted to prevent feedback')));
     await f.click('Unmute audio');
     assert.equal(f.contexts[0].gains.at(-1), 1);
-    assert.equal(sound.textContent, '');
+    assert.equal(sound.textContent, caption ? 'Mute' : '');
     assert.equal(sound.dataset.muted, 'false');
     assert.equal(descendants(f.root).some(item => item.textContent?.includes('initially muted to prevent feedback')), false);
-});
+}
 
 test('a Core fault reports its stage and releases the media resources', async t =>
 {
@@ -3300,12 +3311,15 @@ test('icon controls and display tabs replace the old sidebar screen menu', { ski
 test('display tabs stay with the connection modes and switch screens',
     { skip: 'Audio moved to the connected command bar.' }, t => verifyDisplayToolsAsync(t, true));
 
-test('display tools and display tabs stay with connection modes while audio stays available', t => verifyDisplayToolsAsync(t, false));
+test('display tools and display tabs stay with connection modes while audio stays available',
+    { skip: 'The wide toolbar now labels the audio action.' }, t => verifyDisplayToolsAsync(t, false));
+
+test('display tabs stay in display controls and mute stays in the labelled connection toolbar', t => verifyDisplayToolsAsync(t, false, 'Mute'));
 
 /** 表示方法・ミュートの配置とディスプレイ切替を確認します。
  * @returns 操作の配置とディスプレイ切替の検証です。
  */
-async function verifyDisplayToolsAsync(t, legacyPlacement)
+async function verifyDisplayToolsAsync(t, legacyPlacement, muteCaption = '')
 {
     const f = await fixtureAsync(t), all = descendants(f.root);
     const toolbar = all.find(e => e.className === 'desktop-toolbar'), rail = all.find(e => e.className === 'desktop-rail');
@@ -3313,7 +3327,8 @@ async function verifyDisplayToolsAsync(t, legacyPlacement)
     {
         const button = descendants(parent).find(e => e.getAttribute('aria-label') === name);
         assert.equal(button.tag, 'button');
-        assert.equal(button.textContent, '');
+        const mute = 'Mute audio';
+        assert.equal(button.textContent, name === mute ? muteCaption : '');
         assert.ok(button.title);
     }
     assert.equal(descendants(rail).some(e => e.getAttribute('aria-label') === 'Displays & scale'), false);
