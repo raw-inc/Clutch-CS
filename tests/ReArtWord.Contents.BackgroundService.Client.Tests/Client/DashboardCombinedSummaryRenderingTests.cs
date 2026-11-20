@@ -104,6 +104,9 @@ public sealed class DashboardCombinedSummaryRenderingTests
             Assert.Contains(cpuLabel, html, StringComparison.Ordinal);
             Assert.Contains("8.00 GiB", html, StringComparison.Ordinal);
             Assert.Contains("/ 16.00 GiB · 50.0 %", html, StringComparison.Ordinal);
+            Assert.Contains("/ 8.00 GiB", html, StringComparison.Ordinal);
+            Assert.Contains("· 12.5 %", html, StringComparison.Ordinal);
+            Assert.DoesNotContain("@if", html, StringComparison.Ordinal);
             Assert.Contains("Measured GPU usage", html, StringComparison.Ordinal);
             Assert.Contains("Measured dedicated GPU memory usage", html, StringComparison.Ordinal);
             Assert.DoesNotContain("Small GPU", html, StringComparison.Ordinal);
