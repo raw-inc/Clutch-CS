@@ -270,7 +270,7 @@ async function fixtureAsync(t, inventory = null, browse = true)
             await timers.shift()();
         },
 
-        names: () => descendants(pane).filter(e => e.className.split(' ').includes('file-name')).map(e => e.textContent)
+        names: () => descendants(pane).filter(e => e.className?.split(' ').includes('file-name')).map(e => e.textContent)
     };
 }
 
@@ -412,7 +412,7 @@ test('Enter opens a focused directory while keyboard button activation selects a
     const f = await fixtureAsync(t, null, false);
     await f.select(2, 'host');
     await f.clickIn(1, 'Drive', true);
-    const folder = descendants(f.pane).find(e => e.className.split(' ').includes('file-name'));
+    const folder = descendants(f.pane).find(e => e.className?.split(' ').includes('file-name'));
     let prevented = false;
     folder.onkeydown({ key: 'Enter',
 
@@ -425,7 +425,7 @@ test('Enter opens a focused directory while keyboard button activation selects a
     assert.equal(prevented, true);
     assert.equal(f.calls.at(-1), '/drive/dest');
     const before = f.calls.length;
-    const file = descendants(f.pane).find(e => e.className.split(' ').includes('file-name'));
+    const file = descendants(f.pane).find(e => e.className?.split(' ').includes('file-name'));
     file.onclick({ detail: 0 });
     assert.equal(descendants(f.pane).find(e => e.type === 'checkbox').checked, true);
     assert.equal(f.calls.length, before);
