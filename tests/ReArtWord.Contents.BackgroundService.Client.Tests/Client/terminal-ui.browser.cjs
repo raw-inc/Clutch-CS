@@ -28,6 +28,8 @@ test('terminal native fullscreen modes, controls, resize and Core policy', { tim
             let value;
             switch (url.pathname)
             {
+                case '/client/clusters':value = [{ clusterId: peer.clusterId, peers: [peer] }];
+                    break;
                 case '/client/terminal/sessions':value = [{ clusterId: peer.clusterId, peer, sessions, confirmed: true }];
                     break;
                 case '/api/terminal/shells':value = [{ name: 'pwsh', path: 'C:/pwsh.exe' }];
@@ -52,7 +54,7 @@ test('terminal native fullscreen modes, controls, resize and Core policy', { tim
         if (url.pathname === '/terminal')
         {
             res.setHeader('Content-Type', 'text/html');
-            res.end(String.raw`<link rel="stylesheet" href="/styles/fonts.css"><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-tools.css"><link rel="stylesheet" href="/vendor/xterm/xterm.css">
+            res.end(String.raw`<link rel="stylesheet" href="/styles/fonts.css"><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/styles/controls.css"><link rel="stylesheet" href="/remote-tools.css"><link rel="stylesheet" href="/vendor/xterm/xterm.css">
 <div style="height:90px"></div><main id="app" class="remote-tools" style="padding:12px"></main><footer class="app-statusbar" style="height:26px"></footer>
 <script src="/vendor/xterm/xterm.js"></script><script src="/vendor/xterm/addon-fit.js"></script>
 <script>
@@ -105,8 +107,24 @@ window.inputs=[];window.WebSocket=class{
     const button = name => page.getByRole('button', { name, exact: true });
 
     await button('host / peer').click();
-    assert(await button('＋ 管理者実行').isDisabled());
-    await button('＋ ユーザー実行').click();
+    assert(await button('管理者実行').isDisabled());
+    await t.test('管理者実行の注意は狭い画面でも起動操作の幅で表示する', async() =>
+    {
+        await page.setViewportSize({ width: 390, height: 844 });
+        const hint = page.locator('.terminal-launch-hint');
+        await hint.waitFor();
+        const bounds = await hint.evaluate(element =>
+        {
+            const hintRect = element.getBoundingClientRect();
+            const session = document.querySelector('.terminal-session-actions').getBoundingClientRect();
+            const controls = document.querySelector('.terminal-screen-actions').getBoundingClientRect();
+            return { hint: hintRect.width, available: session.width, hintEnd: hintRect.bottom, controlsTop: controls.top };
+        });
+        assert.ok((bounds.available - 1) <= bounds.hint, JSON.stringify(bounds));
+        assert.ok(bounds.hintEnd <= bounds.controlsTop, JSON.stringify(bounds));
+        await page.setViewportSize({ width: 1280, height: 800 });
+    });
+    await button('ユーザー実行').click();
     await page.waitForFunction(() => (0) < (window.inputs.length));
 
     /** 試験用の端末寸法を返します。
@@ -117,8 +135,8 @@ window.inputs=[];window.WebSocket=class{
     const initial = await dimensions();
     await t.test('disconnect is beside creation; policy saves without disconnecting the current shell', async() =>
     {
-        const order = await page.locator('.terminal-toolbar').evaluate(el => [...el.children].map(c => c.textContent));
-        assert(order.indexOf('接続解除') === order.indexOf('＋ 管理者実行') + 1);
+        const order = await page.locator('.terminal-session-actions').evaluate(el => [...el.querySelectorAll('button')].map(c => c.textContent));
+        assert(order.indexOf('接続解除') === order.indexOf('管理者実行') + 1);
         await button('厳密な非昇格: OFF').click();
         await button('厳密な非昇格: ON').waitFor();
         assert.equal(sessions.length, 1);
