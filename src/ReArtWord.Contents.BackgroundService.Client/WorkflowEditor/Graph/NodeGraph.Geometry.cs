@@ -49,7 +49,32 @@ public sealed partial class NodeGraph
         return preferred with { Y = y };
     }
 
-    /// <summary>重なるカードだけを下へ移し、1回の操作で元に戻せる配置へまとめます。</summary>
+    /// <summary>キャンバスの倍率に影響されないコード編集欄を開きます。</summary>
+    [Parameter]
+    public EventCallback<string> EditCode
+    {
+        get; set;
+    }
+
+    private readonly Dictionary<string, NodePosition> displayPositions = new(StringComparer.Ordinal);
+    private (WorkflowDefinition? Document, GraphTypeInference? Inference, bool Details, bool PortTypes) displayLayout;
+
+    /// <summary>重なるカードを表示上だけ離し、保存済みの座標は編集操作まで保持します。</summary>
+    private void RefreshDisplayPositions()
+    {
+        (WorkflowDefinition Document, GraphTypeInference Inference, bool Details, bool PortTypes) input = (Model.Draft.Document, inference, ShowDetails, View.ShowPortTypes);
+        if (displayLayout != input && dragging is null)
+        {
+            displayPositions.Clear();
+            foreach ((string id, NodePosition position) in SeparatedPositions(false))
+            {
+                displayPositions.Add(id, position);
+            }
+            displayLayout = input;
+        }
+    }
+
+    /// <summary>表示上の重なりを解消する配置を、1回の編集として草稿へ反映します。</summary>
     internal void SeparateCards()
     {
         WorkflowDefinition document = Model.Draft.Document;
@@ -57,31 +82,8 @@ public sealed partial class NodeGraph
         {
             return;
         }
-        List<(double Left, double Right, double Top, double Bottom)> occupied = [];
-        Dictionary<string, NodePosition> moved = new(StringComparer.Ordinal);
-        foreach (NodeDefinition node in document.Nodes.OrderByDescending(item => Model.Locks.Node(document.Id, item.Id)).ThenBy(item => Position(item).Y))
-        {
-            NodePosition at = Position(node);
-            NodeDescriptor? descriptor = inference.EditorDescriptor(node.Id);
-            double width = CardWidth(node);
-            double height = NodeHeight(node, descriptor, Ports(descriptor, false, node.Id).Count, Ports(descriptor, true).Count);
-            double top = at.Y;
-            if (!Model.Locks.Node(document.Id, node.Id))
-            {
-                foreach ((double Left, double Right, double Top, double Bottom) box in occupied.OrderBy(item => item.Bottom))
-                {
-                    if (at.X < box.Right + 24 && box.Left < at.X + width + 24 && top < box.Bottom + 24 && box.Top < top + height + 24)
-                    {
-                        top = box.Bottom + 24;
-                    }
-                }
-            }
-            occupied.Add((at.X, at.X + width, top, top + height));
-            if (at.Y < top)
-            {
-                moved[node.Id] = at with { Y = top };
-            }
-        }
+
+        Dictionary<string, NodePosition> moved = SeparatedPositions(true);
         if (moved.Count != 0)
         {
             Model.Change(current => current with { Nodes = [.. current.Nodes.Select(Placed)] });
@@ -91,27 +93,46 @@ public sealed partial class NodeGraph
                                                                                                        : node;
     }
 
-    /// <summary>前面のノードが別のノードの操作を隠す配置を検出します。</summary>
-    /// <returns>現在の表示でカードが交差するかです。</returns>
-    private static bool HasOverlap(IReadOnlyDictionary<string, (NodePosition Position, NodeSize Size)> bounds)
+    /// <summary>カードが交差するときだけ、同じ列の次の空きへ移します。</summary>
+    /// <returns>表示時、または草稿へ反映する際に移動する座標です。</returns>
+    private Dictionary<string, NodePosition> SeparatedPositions(bool preserveLocks)
     {
-        (NodePosition Position, NodeSize Size)[] ordered = bounds.Values.OrderBy(item => item.Position.Y).ToArray();
-        double borderTolerance = 2;
-        for (int i = 0; i < ordered.Length; i++)
+        WorkflowDefinition document = Model.Draft.Document;
+        List<(double Left, double Right, double Top, double Bottom)> occupied = [];
+        Dictionary<string, NodePosition> moved = new(StringComparer.Ordinal);
+        foreach (NodeDefinition node in document.Nodes.OrderByDescending(item => Locked(item)).ThenBy(item => StoredPosition(item).Y))
         {
-            var (position, size) = ordered[i];
-            for (int j = i + 1; j < ordered.Length && ordered[j].Position.Y < position.Y + size.Height - borderTolerance; j++)
+            NodePosition at = StoredPosition(node);
+            NodeDescriptor? descriptor = inference.EditorDescriptor(node.Id);
+            double width = CardWidth(node);
+            double height = NodeHeight(node, descriptor, Ports(descriptor, false, node.Id).Count, Ports(descriptor, true, node.Id).Count);
+            double top = at.Y;
+            if (!Locked(node) && occupied.Any(Intersects))
             {
-                var (other, otherSize) = ordered[j];
-                double overlapWidth = Math.Min(position.X + size.Width, other.X + otherSize.Width) - Math.Max(position.X, other.X);
-                if (borderTolerance < overlapWidth)
+                foreach ((double Left, double Right, double Top, double Bottom) box in occupied.OrderBy(item => item.Bottom))
                 {
-                    return true;
+                    if (Intersects(box))
+                    {
+                        top = box.Bottom + 24;
+                    }
                 }
+                moved[node.Id] = at with { Y = top };
             }
+
+            occupied.Add((at.X, at.X + width, top, top + height));
+
+            bool Intersects((double Left, double Right, double Top, double Bottom) box) =>
+                at.X < box.Right - 2 && box.Left < at.X + width - 2 && top < box.Bottom - 2 && box.Top < top + height - 2;
         }
-        return false;
+
+        return moved;
+
+        bool Locked(NodeDefinition node) => preserveLocks && Model.Locks.Node(document.Id, node.Id);
     }
+
+    /// <summary>配置が保存されていないノードには、読み込み時の既定座標を使います。</summary>
+    /// <returns>表示用の補正を適用する前の位置です。</returns>
+    private static NodePosition StoredPosition(NodeDefinition node) => node.Position ?? new(60, 80);
 
     private double CanvasWidth => Math.Max(1600, Model.Draft.Document.Nodes.Select(node => Position(node).X + CardWidth(node) + 64).DefaultIfEmpty().Max());
     private double CanvasHeight => Math.Max(1200, Model.Draft.Document.Nodes.Select(node =>
@@ -193,15 +214,15 @@ public sealed partial class NodeGraph
                         : string.Equals(wire.ToNode, node, StringComparison.Ordinal) && string.Equals(wire.ToPort, port, StringComparison.Ordinal);
     }
 
-    /// <summary>ノードの保存位置または既定位置を取得します。</summary>
-    /// <returns>ドラッグ中の仮位置、保存済み位置、または既定配置の座標です。</returns>
+    /// <summary>ノードがキャンバスに描画される位置を取得します。</summary>
+    /// <returns>ドラッグ中の仮位置、または重なりを補正した表示位置です。</returns>
     private NodePosition Position(NodeDefinition node)
     {
         if (!resizing && preview is not null && original is not null && dragOrigins.TryGetValue(node.Id, out NodePosition? origin))
         {
             return new(origin.X + preview.X - original.X, origin.Y + preview.Y - original.Y);
         }
-        return node.Position ?? new(60, 80);
+        return displayPositions.GetValueOrDefault(node.Id) ?? StoredPosition(node);
     }
 
     /// <summary>ノード定義と接続状態に対応するポート一覧を返します。</summary>

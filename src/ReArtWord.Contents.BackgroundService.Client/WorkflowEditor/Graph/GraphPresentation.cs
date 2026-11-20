@@ -146,7 +146,7 @@ internal static class GraphPresentation
         string buttonType = "control.button", toggleType = "control.toggleButton";
         if (string.Equals(descriptor?.Type, buttonType, StringComparison.Ordinal) || string.Equals(descriptor?.Type, toggleType, StringComparison.Ordinal))
         {
-            height += 56;
+            height += 78;
         }
         int settings = SettingsCount(descriptor);
         int constants = descriptor?.Inputs.Count ?? 0;

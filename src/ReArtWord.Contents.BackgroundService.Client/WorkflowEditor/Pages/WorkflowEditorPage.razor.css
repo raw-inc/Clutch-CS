@@ -590,7 +590,7 @@
 .studio .inspector {
     padding: 0 15px 18px;
     background: var(--card);
-    border-inline-start: 1px solid var(--control);
+    border-inline-start: 1px solid var(--line);
 }
 
 .studio .inspector-heading {
@@ -881,7 +881,7 @@
 
 .studio .library,
 .studio .inspector {
-    border-inline: 1px solid var(--control);
+    border-inline: 1px solid var(--line);
 }
 
 .inspector ::deep details {
@@ -1097,4 +1097,16 @@
 .editor-view-options .live-policy input:disabled {
     border-color: var(--disabled-line);
     box-shadow: none;
+}
+
+.code-edit-sheet {
+    height: min(58dvh, 32rem);
+}
+
+.code-edit-sheet ::deep .code-input-inline {
+    height: min(56dvh, 32rem);
+}
+
+.code-edit-sheet ::deep .cm-content {
+    font-size: 16px;
 }

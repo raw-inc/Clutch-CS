@@ -6,7 +6,7 @@
 @inject EditorPresentationCache Presentation
 @inject SettingChoiceProvider Choices
 @inject EditorConcurrencyQueues ConcurrencyQueues
-@{regions.Update(Model.Draft.Document);var nodeIssues=Diagnostics.Issues(Model.ClusterId,Model.Draft.Document.Id).ToLookup(issue=>issue.NodeId,StringComparer.Ordinal);var running=Diagnostics.Values.RunningNodes(Model.ClusterId,Model.Draft);var width=CanvasWidth;var height=CanvasHeight;var bounds=new Dictionary<string,(NodePosition Position,NodeSize Size)>();}
+@{regions.Update(Model.Draft.Document);var nodeIssues=Diagnostics.Issues(Model.ClusterId,Model.Draft.Document.Id).ToLookup(issue=>issue.NodeId,StringComparer.Ordinal);var running=Diagnostics.Values.RunningNodes(Model.ClusterId,Model.Draft);RefreshDisplayPositions();var width=CanvasWidth;var height=CanvasHeight;var bounds=new Dictionary<string,(NodePosition Position,NodeSize Size)>();}
 <svg @ref="canvas" class="graph" data-can-copy="@(Model.Selection.Nodes.Count>0?"true":"false")" data-realtime-pointer="@(View.RealtimePointer?"true":"false")" data-connection-version="@connectionVersion" data-node-dragging="@(dragging is not null ? "true" : "false")" width="@(width*Zoom)" height="@(height*Zoom)" viewBox="@FormattableString.Invariant($"0 0 {width} {height}")" @onpointerup="EndAsync" @onpointercancel="CancelDragAsync" @onkeydown="CanvasKeyAsync">
     @foreach(var wire in Model.Draft.Document.Wires.Select((value,index)=>(value,index)))
     {
@@ -69,7 +69,7 @@
             }
             @if(node.Type is "control.button" or "control.toggleButton")
             {
-                <foreignObject x="12" y="@(90+Math.Max(inputs.Count,outputs.Count)*GraphPresentation.PortSpacing(View))" width="266" height="44">
+                <foreignObject x="12" y="@(90+Math.Max(inputs.Count,outputs.Count)*GraphPresentation.PortSpacing(View))" width="266" height="72">
                     <div xmlns="http://www.w3.org/1999/xhtml" @onpointerdown:stopPropagation="true" @onpointerup:stopPropagation="true" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
                         <ButtonNodeControl Node="node" Pressed="ButtonPressed" ToggleState="@ToggleStates.GetValueOrDefault(node.Id)" />
                     </div>
@@ -80,7 +80,12 @@
                 var top=90+Math.Max(inputs.Count,outputs.Count)*GraphPresentation.PortSpacing(View);
                 <foreignObject x="12" y="@top" width="@(CardWidth(node)-24)" height="@(NodeHeight(node,descriptor,inputs.Count,outputs.Count)-top-20)">
                     <div xmlns="http://www.w3.org/1999/xhtml" class="code-block-container" @onpointerdown:stopPropagation="true" @onpointerup:stopPropagation="true" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true" @onfocusin="()=>SelectNodeAsync(node.Id)">
-                        @if(node.Type is "control.preview" or "control.progress"){@if(SubworkflowInterface.IsSubworkflow(Model.Draft.Document)){<small>@Ui["Open a placed recipe to see live previews."]</small>}else{<NodePreviewPanel @key="node.Id" Node="node" />}}else{<fieldset disabled="@Model.Locks.Node(Model.Draft.Document.Id,node.Id)"><CodeBlockFields NodeId="@node.Id" /></fieldset>}
+                        @if(node.Type is "control.preview" or "control.progress"){@if(SubworkflowInterface.IsSubworkflow(Model.Draft.Document)){<small>@Ui["Open a placed recipe to see live previews."]</small>}else{<NodePreviewPanel @key="node.Id" Node="node" />}}else{
+                            <fieldset class="graph-code-field" disabled="@Model.Locks.Node(Model.Draft.Document.Id,node.Id)">
+                                <button type="button" class="graph-code-open" @onclick="()=>EditCode.InvokeAsync(node.Id)"><UiIcon Name="code" /><span class="control-label">@Ui["Open code editor"]</span></button>
+                                <CodeBlockFields NodeId="@node.Id" />
+                            </fieldset>
+                        }
                     </div>
                 </foreignObject>
                 <rect class="node-resize-handle" role="button" tabindex="0" aria-label="@Ui[node.Type is "control.preview" or "control.progress"?"Resize preview":"Resize code block"]" x="@(CardWidth(node)-18)" y="@(NodeHeight(node,descriptor,inputs.Count,outputs.Count)-18)" width="16" height="16" rx="3" @onpointerdown="e=>BeginResizeAsync(node,e)" @onpointerdown:stopPropagation="true" @onkeydown="e=>ResizeKey(node,e)" @onkeydown:stopPropagation="true" />
@@ -116,7 +121,7 @@
         </g>
     }
 </svg>
-@{ overlap = HasOverlap(bounds); }
+@{ overlap = displayPositions.Count != 0; }
 
 @if(output is {} pendingOutput){<div class="graph-connection-pending" role="status">@pendingOutput.Node.@PortName(pendingOutput.Node,pendingOutput.Port,true) → <button @onclick="CancelConnection">@Ui["Cancel"]</button><span class="small">Esc</span></div>}
 @if(Model.SelectedWire is int selected && 0<=selected && selected<Model.Draft.Document.Wires.Count)

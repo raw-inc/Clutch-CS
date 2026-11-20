@@ -132,7 +132,7 @@
 
 .graph-node .node-box {
     fill: var(--panel);
-    stroke: var(--line);
+    stroke: color-mix(in srgb, var(--control) 42%, var(--line));
     rx: var(--radius-panel);
     stroke-width: 1px;
     vector-effect: non-scaling-stroke;
@@ -211,8 +211,8 @@
 
 .graph-node:focus .node-box,
 .graph-node.selected .node-box {
-    stroke: var(--category-color);
-    stroke-width: 1.8;
+    stroke: var(--accent);
+    stroke-width: 2;
 }
 
 .graph-node .node-card-fields ::deep .node-inline-group {
@@ -384,4 +384,20 @@
 
 .graph-node .port-caption {
     font-size: 13px;
+}
+
+.graph-code-open {
+    display: none;
+}
+
+@media (max-width: 760px) {
+    .graph-code-field > ::deep .code-block-fields {
+        display: none;
+    }
+
+    .graph-code-open {
+        display: inline-flex;
+        min-height: 50px;
+        font-size: 16px;
+    }
 }

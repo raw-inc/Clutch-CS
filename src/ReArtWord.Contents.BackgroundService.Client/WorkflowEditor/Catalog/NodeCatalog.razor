@@ -15,7 +15,7 @@
     @foreach(var option in new[]{ECatalogLayout.Category,ECatalogLayout.Kind,ECatalogLayout.Name}){<button class="quiet" aria-pressed="@(layout==option?"true":"false")" @onclick="()=>layout=option">@Ui[LayoutLabel(option)]</button>}
 </div>
 <div class="catalog-list">
-    @foreach(var group in CatalogPresentation.Groups(filtered,layout,Ui.NodeName,Ui.Language,includeEmpty:!searching&&category.Length==0,ranked:searching))
+    @foreach(var group in CatalogPresentation.Groups(filtered,layout,Ui.NodeName,Ui.Language,ranked:searching))
     {
         var expanded=searching || layout==ECatalogLayout.Name || CatalogPresentation.IsExpanded(group.Key,search,collapsed);
         @if(!searching&&layout!=ECatalogLayout.Name){<button class="catalog-category catalog-fold" data-category="@GraphPresentation.CategoryKey(group.Category)" aria-expanded="@(expanded?"true":"false")" @onclick="()=>Toggle(group.Key)"><span class="fold-chevron" aria-hidden="true">@(expanded?"▾":"▸")</span>@if(group.Label=="Values & types"){<UiIcon Name="values" />}else{<span class="category-dot"></span>}@Ui[group.Label] <span class="category-count">@group.Items.Count</span></button>}

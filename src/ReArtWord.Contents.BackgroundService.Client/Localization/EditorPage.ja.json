@@ -1,4 +1,5 @@
 {
+  "{0} is editing": "{0} が編集中",
   "Revision": "リビジョン",
   "Order": "実行順",
   "Binary": "バイナリ",
@@ -248,6 +249,12 @@
   "Currently open": "編集中",
   "Read the rest of the comment": "コメントの続きを読む",
   "Space nodes": "間隔を整える",
+  "Open code editor": "コードを編集",
+  "Code editor · {0}": "コード編集 · {0}",
+  "Overlapping nodes spaced in this view": "表示上の間隔を調整中",
+  "Enable automatic workflow execution": "ワークフローの自動実行を有効にする",
+  "Enable automatic execution": "自動実行を有効にする",
+  "After you save and apply {0}, it can run automatically when its input conditions are met.": "「{0}」を保存して反映すると、開始条件を満たしたときに自動で実行されます。",
   "Exit layout editing to operate the board.": "配置の編集を終えると操作できます。",
   "No action recorded on this page.": "この画面での操作記録はありません。",
   "Collaborator": "共同編集者",

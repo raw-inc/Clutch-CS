@@ -21,7 +21,7 @@ public sealed partial class EditorWorkflowTabs
     } = null!;
 
     private ElementReference tabStrip;
-    private bool revealSelected;
+    private bool revealSelected, lastDirty;
 
     [Inject]
     private BrowserStorage Storage
@@ -239,6 +239,8 @@ public sealed partial class EditorWorkflowTabs
     /// <summary>保存済み候補と草稿を現在の表示順・非表示設定へ反映します。</summary>
     private void RebuildTabs()
     {
+        revealSelected |= Dirty != lastDirty;
+        lastDirty = Dirty;
         if (!string.Equals(lastSelection, SelectedId, StringComparison.Ordinal))
         {
             revealSelected = true;

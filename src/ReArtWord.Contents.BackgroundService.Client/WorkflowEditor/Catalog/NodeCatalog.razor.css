@@ -24,10 +24,10 @@
 .catalog-filters select {
     width: 100%;
     font-size: 11px;
-    background: var(--paper);
+    background-color: var(--paper);
     border-color: var(--control);
     margin-top: 8px;
-    padding: 6px 8px;
+    padding-block: 6px;
 }
 
 .catalog-list {

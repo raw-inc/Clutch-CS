@@ -5,6 +5,7 @@
 @using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Documents
 @using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Dashboards
 @using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Graph
+@using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Fields
 @using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Inspection
 @using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Navigation
 @using ReArtWord.Contents.BackgroundService.Client.Operations.Configuration
@@ -84,7 +85,7 @@ else
                     @if(collaborators.Length>0)
                     {
                         <details class="editor-participants">
-                            <summary>@Ui.Format("{0} editors", collaborators.Length)</summary>
+                            <summary>@(collaborators.Length==1?Ui.Format("{0} is editing",collaborators[0].Presence.DisplayName):Ui.Format("{0} editors",collaborators.Length))</summary>
                             <ul>
                             @foreach(var peer in collaborators)
                             {
@@ -97,7 +98,7 @@ else
                 <Notifications><EditorNotifications /></Notifications>
             </EditorNavigator>
             <section @ref="canvasContainer" class="canvas-container" tabindex="0" @ondragover:preventDefault="true" @ondrop="DropNodeAsync">
-            <NodeGraph ToggleStates="@ToggleStates.Find(Model.ClusterId,Model.Draft.Document.Id)" ButtonPressed="RunCoreAsync" PreviewRequested="PreviewRecipe" ExtractRequested="ExtractSubworkflowAsync" @ref="graph" Catalog="catalog" SelectionChanged="StateHasChanged" OverlapChanged="value=>nodesOverlap=value" DragChanged="value=>dragging=value" ShowDetails="showDetails" Zoom="zoom" ZoomChanged="value=>zoom=value" View="EffectiveView" />
+            <NodeGraph ToggleStates="@ToggleStates.Find(Model.ClusterId,Model.Draft.Document.Id)" ButtonPressed="RunCoreAsync" PreviewRequested="PreviewRecipe" ExtractRequested="ExtractSubworkflowAsync" @ref="graph" Catalog="catalog" SelectionChanged="StateHasChanged" OverlapChanged="value=>nodesOverlap=value" EditCode="OpenCodeEditor" DragChanged="value=>dragging=value" ShowDetails="showDetails" Zoom="zoom" ZoomChanged="value=>zoom=value" View="EffectiveView" />
             @if(Model.Draft.Document.Nodes.Count==0){<div class="canvas-empty"><button @onclick="()=>catalogOpen=true"><UiIcon Name="add" /><span class="control-label">@Ui["Add node"]</span></button></div>}
             </section>
         </div>
@@ -106,12 +107,20 @@ else
             @if(Model.SelectedNode is not null){<NodeInspector ToggleState="@ToggleStates.Find(Model.ClusterId,Model.Draft.Document.Id).GetValueOrDefault(Model.SelectedNode)" ButtonPressed="RunCoreAsync" @key="Model.SelectedNode" Visible="inspectorOpen" Catalog="catalog" InvalidChanged="value=>invalid=value" />}else{<WorkflowInspector Visible="inspectorOpen" Routes="@(inspectorOpen?AllRoutes:[])" Catalog="catalog" />}
         </aside>
     </div>
-    <div class="editor-statusbar"><button class="arrange-nodes @(nodesOverlap?"warn":null)" title="@Ui["Separate overlapping nodes. Use Undo to restore the previous layout."]" aria-describedby="@(nodesOverlap?"node-overlap-notice":null)" disabled="@(busy||Model.Locks.Whole(Model.Draft.Document.Id))" @onclick="()=>graph?.SeparateCards()">@Ui["Space nodes"]</button>@if(nodesOverlap){<span id="node-overlap-notice" class="node-overlap-notice" role="status"><UiIcon Name="warning" />@Ui["Some nodes overlap."]</span>}<span>@Ui.Format("{0} nodes",Model.Draft.Document.Nodes.Count)<span class="status-separator">/</span>@Ui.Format("{0} connections",Model.Draft.Document.Wires.Count)</span><span class="statusbar-spacer"></span><div class="zoom-tools"><button class="quiet" aria-label="@Ui["Zoom out"]" @onclick="()=>zoom=Math.Max(.05,Math.Round(zoom-.05,2))">−</button><span>@((int)Math.Round(zoom*100))&nbsp;%</span><button class="quiet" aria-label="@Ui["Zoom in"]" @onclick="()=>zoom=Math.Min(1.5,Math.Round(zoom+.05,2))">＋</button></div><span class="toolbar-divider"></span><button class="quiet" title="@(LocalContext?Ui["Local editing · not shared"]:Ui[Collaboration.Status])" @onclick="()=>collaborationOpen=true"><span class="dot"></span><span id="collaboration-status" class="collaboration-status">@(LocalContext?Ui["Local editing"]:Collaboration.Active?Ui["Checking draft"]:Collaboration.Pending?Ui["Draft synchronization pending"]:Ui["Collaboration"])</span>@if(Model.Draft.Conflicts.Count!=0){<span class="badge warn">@Ui.Format("{0} conflicts",Model.Draft.Conflicts.Count)</span>}</button></div>
+    <div class="editor-statusbar"><button class="arrange-nodes @(nodesOverlap?"warn":null)" title="@Ui["Separate overlapping nodes. Use Undo to restore the previous layout."]" disabled="@(busy||!nodesOverlap||Model.Locks.Whole(Model.Draft.Document.Id))" @onclick="()=>graph?.SeparateCards()"><UiIcon Name="arrange" /><span class="control-label">@Ui["Space nodes"]</span></button>@if(nodesOverlap){<span class="node-overlap-notice" role="status">@Ui["Overlapping nodes spaced in this view"]</span>}<span>@Ui.Format("{0} nodes",Model.Draft.Document.Nodes.Count)<span class="status-separator">/</span>@Ui.Format("{0} connections",Model.Draft.Document.Wires.Count)</span><span class="statusbar-spacer"></span><div class="zoom-tools"><button class="quiet" aria-label="@Ui["Zoom out"]" @onclick="()=>zoom=Math.Max(.05,Math.Round(zoom-.05,2))">−</button><span>@((int)Math.Round(zoom*100))&nbsp;%</span><button class="quiet" aria-label="@Ui["Zoom in"]" @onclick="()=>zoom=Math.Min(1.5,Math.Round(zoom+.05,2))">＋</button></div><span class="toolbar-divider"></span><button class="quiet" title="@(LocalContext?Ui["Local editing · not shared"]:Ui[Collaboration.Status])" @onclick="()=>collaborationOpen=true"><span class="dot"></span><span id="collaboration-status" class="collaboration-status">@(LocalContext?Ui["Local editing"]:Collaboration.Active?Ui["Checking draft"]:Collaboration.Pending?Ui["Draft synchronization pending"]:Ui["Collaboration"])</span>@if(Model.Draft.Conflicts.Count!=0){<span class="badge warn">@Ui.Format("{0} conflicts",Model.Draft.Conflicts.Count)</span>}</button></div>
     }
 </main>
-<Modal Open="@(automaticInputGeneration is not null)" Title="@Ui["Enable automatic inputs"]" Close="()=>automaticInputGeneration=null" Compact="true">
-    <ChildContent><p>@Ui["Confirm automatic inputs"]</p></ChildContent>
-    <Actions><button class="primary" @onclick="ConfirmAutomaticInputs">@Ui["Enable"]</button></Actions>
+@if(CodeEditorNode is {} editorNode)
+{
+    <Modal @key="editorNode.Id" Open="true" Title="@Ui.Format("Code editor · {0}", Ui.NodeName(editorNode, catalog.FirstOrDefault(item=>item.Type==editorNode.Type)))" Close="()=>codeEditor=null" ShowCloseAction="true">
+        <fieldset class="code-edit-sheet" disabled="@Model.Locks.Node(Model.Draft.Document.Id,editorNode.Id)">
+            <CodeBlockFields NodeId="@editorNode.Id" />
+        </fieldset>
+    </Modal>
+}
+<Modal Open="@(automaticInputGeneration is not null)" Title="@Ui["Enable automatic workflow execution"]" Close="()=>automaticInputGeneration=null" Compact="true">
+    <ChildContent><p>@Ui.Format("After you save and apply {0}, it can run automatically when its input conditions are met.", Model.Draft.Document.Name)</p></ChildContent>
+    <Actions><button class="primary" @onclick="ConfirmAutomaticInputs">@Ui["Enable automatic execution"]</button></Actions>
 </Modal>
 <Modal Open="viewOptionsOpen" Title="@Ui["Editor view"]" Close="()=>viewOptionsOpen=false">
 

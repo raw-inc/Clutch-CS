@@ -54,6 +54,14 @@ public sealed partial class WorkflowEditorPage
         }
     }
 
+    private (string Workflow, string Node)? codeEditor;
+
+    private NodeDefinition? CodeEditorNode => codeEditor is { } target && string.Equals(target.Workflow, Model.Draft.Document.Id, StringComparison.Ordinal) ? Model.Draft.Document.Nodes.FirstOrDefault(node => string.Equals(node.Id, target.Node, StringComparison.Ordinal) && string.Equals(node.Type, "value.code", StringComparison.Ordinal))
+                                                                                                                                                            : null;
+
+    /// <summary>編集中の草稿とノードを指定してコード編集欄を開きます。</summary>
+    private void OpenCodeEditor(string node) => codeEditor = (Model.Draft.Document.Id, node);
+
     private bool nodesOverlap;
     private int? automaticInputGeneration;
 

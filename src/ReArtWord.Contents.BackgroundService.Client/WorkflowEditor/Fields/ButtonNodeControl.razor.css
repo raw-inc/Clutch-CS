@@ -5,8 +5,12 @@
 }
 
 .workflow-button:has(.node-button-reason) {
-    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-    gap: 10px;
+    gap: 4px;
+}
+
+.workflow-button .node-button-reason {
+    font-size: 12px;
+    line-height: 1.35;
 }
 
 .workflow-button > button {
