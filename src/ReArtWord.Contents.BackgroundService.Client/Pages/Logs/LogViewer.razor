@@ -77,19 +77,21 @@
             var location = LogLocation(selected);
             <aside class="log-detail" aria-labelledby="log-detail-title">
                 <div class="section-heading"><h2 id="log-detail-title">@Ui["Selected log"]</h2><button class="quiet icon-button" aria-label="@Ui["Close log details"]" @onclick="()=>selected=null"><UiIcon Name="close" /></button></div>
-                <div class="log-detail-body" tabindex="0">
+                <div class="log-detail-body record-detail-scroll" tabindex="0">
                 <p class="log-detail-message">@selected.Entry.Message</p>
                 <dl class="log-facts">
                     <dt>@Ui.Format("display.timezone.time",DisplayTimeZone.Id)</dt><dd>@FormatTime(selected.Entry.Time)</dd>
                     <dt>@Ui["Severity"]</dt><dd>@selected.Entry.Level</dd>
-                    <dt>@Ui["Cluster"]</dt><dd>@selected.Source.ClusterId</dd>
+                    </dl>
+                <details class="secondary-details log-technical" @key="selected.Entry.Id"><summary>@Ui["Identifiers and original record"]</summary>
+                <dl class="log-facts"><dt>@Ui["Cluster"]</dt><dd>@selected.Source.ClusterId</dd>
                     <dt>@Ui["PC / Peer"]</dt><dd>@selected.Entry.PeerId</dd>
                     <dt>@Ui["Workflow"]</dt><dd>@(selected.Entry.WorkflowId ?? Ui["Not recorded"])</dd>
                     <dt>@Ui["Node"]</dt><dd>@(selected.Entry.NodeId ?? Ui["Not recorded"])</dd>
                 </dl>
                 @if (selected.Entry.Data is not null){<JsonDetails Value="selected.Entry.Data" Title="@Ui["Recorded data"]" />}
                 @if (selected.Entry.Raw is not null){<JsonDetails Value="selected.Entry.Raw" Title="@Ui["Communication capture"]" />}
-                <details class="log-technical"><summary>@Ui["Identifiers and original record"]</summary><dl class="log-facts"><dt>@Ui["Log ID"]</dt><dd>@selected.Entry.Id</dd><dt>@Ui["Related log ID"]<br />(Causation ID)</dt><dd>@(selected.Entry.CausationId?.ToString() ?? Ui["Not recorded"])</dd></dl><JsonDetails Value="selected.Entry" Title="@Ui["Full record (JSON)"]" /></details>
+                <dl class="log-facts"><dt>@Ui["Log ID"]</dt><dd>@selected.Entry.Id</dd><dt>@Ui["Related log ID"]<br />(Causation ID)</dt><dd>@(selected.Entry.CausationId?.ToString() ?? Ui["Not recorded"])</dd></dl><JsonDetails Value="selected.Entry" Title="@Ui["Full record (JSON)"]" /></details>
                 </div>
                 @if (location is not null || selected.Entry.CausationId is not null)
                 {

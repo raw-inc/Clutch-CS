@@ -618,7 +618,7 @@ test('takeover and termination route to the row owner even when another peer is 
     assert.equal(f.calls.find(call => call.path.endsWith('/claim')).target.peerId, 'peer-a');
     assert.equal(f.terms.length, 1);
     assert.equal(f.terms[0].disposed, false);
-    await f.row(b).children.find(item => item.textContent === 'Terminate').onclick();
+    await f.row(b).children.find(item => item.textContent === 'End session').onclick();
     assert.equal(f.calls.find(call => call.path.endsWith('/close')).target.peerId, 'peer-b');
     assert.equal(f.terms[0].disposed, false, 'a duplicate session ID on another peer must not disconnect this terminal');
     await f.tick();
@@ -699,7 +699,7 @@ test('explicit termination closes the local stream before the server can report 
     const f = await fixtureAsync(t);
     await f.mounting;
     await f.row(a).children.find(item => item.textContent === 'Take over').onclick();
-    await f.row(a).children.find(item => item.textContent === 'Terminate').onclick();
+    await f.row(a).children.find(item => item.textContent === 'End session').onclick();
     assert.equal(f.calls.find(item => item.path.endsWith('/close')).terminalDisposed, true);
     assert.equal(f.terms[0].disposed, true);
 });
@@ -737,7 +737,7 @@ test('declining session termination keeps the stream and sends no close request'
     const row = f.row(a);
     await row.children.find(item => item.textContent === 'Take over').onclick();
     window.confirm = () => false;
-    await row.children.find(item => item.textContent === 'Terminate').onclick();
+    await row.children.find(item => item.textContent === 'End session').onclick();
     assert.equal(f.calls.some(item => item.path.endsWith('/close')), false);
     assert.equal(f.terms[0].disposed, false);
 });

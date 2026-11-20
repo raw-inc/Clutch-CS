@@ -168,7 +168,7 @@ export function fileActionControls(root, ctx, actions)
                 event.preventDefault();
                 if (creating && !validFolderName(name.value))
                 {
-                    name.setCustomValidity(ctx.t('Enter one folder name without path separators or reserved characters.', 'スラッシュやコロンなどの記号と予約名は使えません。末尾に空白やピリオドを付けることもできません。'));
+                    name.setCustomValidity(ctx.t('Enter one folder name without path separators or reserved characters.', '記号や予約名は使えません。名前の末尾に空白やピリオドは使えません。'));
                     name.checkValidity();
                     name.focus();
                     return;

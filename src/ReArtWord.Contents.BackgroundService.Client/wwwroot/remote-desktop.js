@@ -74,10 +74,9 @@ export async function desktopView(root, ctx)
         const element = document.createElement('details');
         element.className = 'desktop-menu';
         const trigger = document.createElement('summary');
-        trigger.textContent = label;
         trigger.title = label;
         trigger.setAttribute('aria-label', label);
-        trigger.append(ctx.icon(icon));
+        setControlLabel(trigger, ctx.icon(icon), label);
         const body = document.createElement('div');
         body.className = 'desktop-popover';
         const content = document.createElement('div');
@@ -1391,7 +1390,7 @@ export async function desktopView(root, ctx)
             updateDeliveryDisplay(now);
             videoStatus.textContent = ctx.t('Receive-to-display: ', '受信から表示: ') + Math.round(delay) + ' ms\n' +
                 ctx.t('Decoder preference: ', 'デコーダー指定: ') + acceleration.options[acceleration.selectedIndex]?.textContent +
-                '\n' + views.filter(Boolean).map(view => `${view.video.renderer}\nDecode ${Math.round(view.video.decodeDelay)} ms · Draw ${view.video.drawCost.toFixed(1)} ms\nFlush ${view.video.flushes} · Replay ${view.video.replays}`).join('\n');
+                '\n' + views.filter(Boolean).map(view => `${ctx.t('Render surface', '描画方式')}: ${view.video.renderer}\n${ctx.t('Decode', 'デコード')}: ${Math.round(view.video.decodeDelay)} ms · ${ctx.t('Draw', '描画')}: ${view.video.drawCost.toFixed(1)} ms\n${ctx.t('Decoder flushes', 'デコーダー再初期化')}: ${view.video.flushes} · ${ctx.t('Replays', '再描画')}: ${view.video.replays}`).join('\n');
 
             // Recovery means images are displayed again; network/audio latency
             // is not evidence that the decoder still failed.
@@ -2247,7 +2246,7 @@ export async function desktopView(root, ctx)
     /** ミュートと音声の選択状態を反映します。 */
     function updateSound()
     {
-        action(sound, muted ? ctx.t('Unmute audio', 'ミュートを解除') : ctx.t('Mute audio', '音声をミュート'), muted ? 'volume-off' : 'volume');
+        action(sound, muted ? ctx.t('Unmute audio', 'ミュートを解除') : ctx.t('Mute audio', '音声をミュート'), muted ? 'volume-off' : 'volume', muted ? ctx.t('Unmute', 'ミュート解除') : ctx.t('Mute', 'ミュート'));
         sound.setAttribute('aria-pressed', String(muted));
         sound.dataset.muted = String(muted);
         if (autoMuted)
@@ -2297,11 +2296,11 @@ export async function desktopView(root, ctx)
     action(reload, ctx.t('Refresh hosts', 'ホスト一覧を更新'), 'refresh', ctx.t('Refresh hosts', 'ホスト一覧を更新'));
     reload.className += ' desktop-reload';
     updateSound();
-    action(fullscreen, ctx.t('Fullscreen', '全画面表示'), 'fullscreen');
+    action(fullscreen, ctx.t('Fullscreen', '全画面表示'), 'fullscreen', ctx.t('Fullscreen', '全画面'));
     action(videoFullscreen, ctx.t('Video fullscreen', '映像のみ全画面'), 'video-fullscreen');
     fullscreen.setAttribute('aria-pressed', 'false');
     videoFullscreen.setAttribute('aria-pressed', 'false');
-    action(statistics, ctx.t('Statistics overlay', '統計オーバーレイ'), 'statistics');
+    action(statistics, ctx.t('Statistics overlay', '統計オーバーレイ'), 'statistics', ctx.t('Statistics', '統計'));
     statistics.setAttribute('aria-pressed', String(!overlay.hidden));
     if (experimental)
     {

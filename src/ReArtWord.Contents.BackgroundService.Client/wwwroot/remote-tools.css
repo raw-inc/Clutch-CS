@@ -51,7 +51,7 @@
     min-width: 130px;
     max-width: 260px;
     height: 30px;
-    padding: 4px 8px;
+    padding-block: 4px;
     font-size: 11px;
 }
 
@@ -909,7 +909,6 @@
 .terminal-session-actions .terminal-shell {
     max-width: min(65vw, 18rem);
     min-width: min(12rem, 58vw);
-    padding-inline-end: 8px;
 }
 
 .license-filter {
@@ -943,11 +942,13 @@
 .license-filter label :is(input, select) {
     width: 100%;
     min-width: 0;
+    min-height: 40px;
     font-size: 14px;
 }
 
 .license-filter .search-field {
-    margin-block-start: 4px;
+    margin: 0;
+    min-height: 42px;
 }
 
 .file-action-dialog form > :not(header, .toolbar) {
@@ -1257,7 +1258,28 @@
 }
 
 .file-root-note {
+    display: flex;
+    align-items: start;
+    gap: 6px;
     margin: 0;
+    padding-inline: 12px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.file-root-note[hidden] {
+    display: none;
+}
+
+.file-root-note .ui-icon {
+    margin-block-start: 3px;
+    width: 14px;
+    height: 14px;
+}
+
+.file-picker-result {
+    flex-basis: 100%;
+    overflow-wrap: anywhere;
     color: var(--muted);
     font-size: 13px;
 }
@@ -1314,13 +1336,36 @@
 }
 
 .license-notices {
-    display: grid;
-    gap: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
     grid-column: 1 / -1;
+    min-width: 0;
+}
+
+.license-notices > details:not([open]) {
+    width: fit-content;
+    max-width: 100%;
+}
+
+.license-notices > details[open] {
+    width: 100%;
 }
 
 .license-notices summary {
-    width: min(100%, 20rem);
+    width: fit-content;
+    min-height: 32px;
+    max-width: 100%;
+    padding-block: 4px;
+}
+
+.license-notices .license-text {
+    margin-block: 6px;
+}
+
+.license-notices .license-text > pre {
+    max-height: min(52dvh, 28rem);
+    overflow: auto;
 }
 
 @media (max-width: 760px) {
@@ -1558,5 +1603,21 @@
 @media (max-width: 680px) {
     .license-filter {
         grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.terminal-session[aria-current="true"] > .danger {
+    grid-column: 1 / -1;
+    justify-self: start;
+}
+
+@media (min-width: 651px) {
+    .terminal-sidebar-heading > h2 {
+        flex: 1;
+        white-space: normal;
+    }
+
+    .terminal-sidebar-heading > button {
+        margin-inline-start: auto;
     }
 }

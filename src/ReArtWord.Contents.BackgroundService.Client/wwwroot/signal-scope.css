@@ -186,11 +186,11 @@
 }
 
 .scope-list {
-    height: clamp(220px, 40vh, 600px);
+    height: clamp(220px, 32vh, 460px);
     overflow: auto;
     overflow-anchor: none;
     scrollbar-color: var(--control) var(--raised);
-    background: var(--panel);
+    background-color: var(--panel);
     border: 1px solid var(--line);
     border-radius: var(--radius-control);
 }
@@ -428,6 +428,12 @@
         display: block;
     }
 
+    .signal-scope:not(.all-columns) .scope-packets thead {
+        position: sticky;
+        inset-block-start: 0;
+        z-index: 2;
+    }
+
     .signal-scope:not(.all-columns) .scope-packets tr {
         display: grid;
         grid-template-columns: 6rem 3.25rem minmax(0, 1fr);
@@ -599,7 +605,7 @@
     align-items: center;
     gap: 6px 12px;
     justify-content: space-between;
-    margin-block-start: 16px;
+    margin-block-start: 8px;
 }
 
 .scope-packet-heading h2 {
@@ -622,11 +628,11 @@
     flex-basis: 100%;
 }
 
-.scope-results:has(.scope-list[data-scrollable="true"]) .scope-scroll-hint {
-    display: block;
-}
-
 @media (max-width: 680px) {
+    .scope-results:has(.scope-list[data-scrollable="true"]) .scope-scroll-hint {
+        display: block;
+    }
+
     .scope-packet-heading button {
         min-height: 44px;
     }

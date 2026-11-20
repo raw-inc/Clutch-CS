@@ -152,7 +152,9 @@ export async function browserFilesView(root, ctx)
         refresh.prepend(ctx.icon('refresh'));
         const atRoot = document.createElement('p');
         atRoot.className = 'file-root-note';
-        atRoot.textContent = ctx.t('Top of the permitted transfer folders.', 'このフォルダーが転送範囲の最上位です。');
+        const rootText = document.createElement('span');
+        rootText.textContent = ctx.t('Top of the permitted transfer folders.', 'このフォルダーが転送範囲の最上位です。');
+        atRoot.append(ctx.icon('info'), rootText);
         atRoot.hidden = true;
         navigation.append(home, up, refresh);
         footer.append(count);
@@ -266,8 +268,9 @@ export async function browserFilesView(root, ctx)
             filesLabel.className = 'file-picker-control';
             filesCaption.textContent = chooseFilesLabel;
             fileNames.textContent = ctx.t('No file selected', 'ファイル未選択');
-            filesLabel.append(filesCaption, fileNames, chooser);
-            access.append(picker, filesLabel, permission);
+            filesLabel.append(filesCaption, chooser);
+            fileNames.className = 'file-picker-result';
+            access.append(picker, filesLabel, fileNames, permission);
             section.insertBefore(access, location);
         }
 
@@ -501,21 +504,17 @@ export async function browserFilesView(root, ctx)
     {
         queue.replaceChildren();
         const heading = document.createElement('h2');
-        heading.textContent = ctx.t('Browser transfers', '端末との転送');
+        heading.textContent = ctx.t('Transfer queue', '転送キュー');
         const hint = document.createElement('p');
         hint.className = 'small muted';
         hint.textContent = ctx.t('Keep this page open during transfers.', '転送が終わるまで、この画面を開いたままにしてください。');
-        queue.append(heading);
+        queue.append(heading, hint);
         if (!jobs.length)
         {
             const empty = document.createElement('p');
             empty.className = 'remote-empty';
             empty.textContent = ctx.t('No transfers.', '転送はありません。');
             queue.append(empty);
-        }
-        else
-        {
-            queue.append(hint);
         }
         for (const job of jobs)
         {

@@ -190,9 +190,9 @@ export async function terminalView(root, ctx)
                     indicator.textContent = ctx.t('Current session', '接続中のセッション');
                     row.append(indicator);
                 }
-                const claim = ctx.button(ctx.t('Take over', '引き継ぐ'), () => connectAsync(value, false, selected));
-                claim.setAttribute('aria-label', ctx.t('Take over', '接続を引き継ぐ'));
-                const terminate = ctx.button(ctx.t('Terminate', '終了'), async () =>
+                const claim = current ? null : ctx.button(ctx.t('Take over', '引き継ぐ'), () => connectAsync(value, false, selected));
+                claim?.setAttribute('aria-label', ctx.t('Take over', '接続を引き継ぐ'));
+                const terminate = ctx.button(ctx.t('End session', 'セッションを終了'), async () =>
                 {
                     if (!window.confirm(ctx.t('Terminate this session?', 'このセッションを終了しますか？') + '\n' + value.sessionId))
                     {
@@ -206,10 +206,14 @@ export async function terminalView(root, ctx)
                     await list();
                 });
                 terminate.className = 'danger';
-                terminate.setAttribute('aria-label', ctx.t('Terminate', 'セッションを終了'));
                 setControlLabel(terminate, ctx.icon('stop'));
-                claim.disabled = terminate.disabled = item.failed;
-                row.append(claim, terminate);
+                terminate.disabled = item.failed;
+                if (claim)
+                {
+                    claim.disabled = item.failed;
+                    row.append(claim);
+                }
+                row.append(terminate);
                 sessions.append(row);
             }
         }
@@ -217,7 +221,7 @@ export async function terminalView(root, ctx)
         {
             const empty = document.createElement('p');
             empty.className = 'remote-empty';
-            empty.textContent = ctx.t('No sessions confirmed. Select a peer to start a shell.', '確認できたセッションはありません。ピアを選択してシェルを開始できます。');
+            empty.textContent = ctx.t('No sessions confirmed. Select a peer to start a shell.', 'ピアを選ぶとシェルを開始できます。');
             sessions.append(empty);
         }
         if (failed)

@@ -28,12 +28,12 @@
             </tbody>
         </table></div>
         <label>@Ui["Target workflow"]<select @bind="workflow">@foreach(var item in state.States){<option value="@item.WorkflowId">@item.WorkflowId</option>}</select></label>
-        <div class="toolbar">
+        <div class="trace-content-options">
             <label><input type="checkbox" @bind="inputs" />@Ui["Record inputs"]</label>
             <label><input type="checkbox" @bind="outputs" />@Ui["Record outputs"]</label>
             <label><input type="checkbox" @bind="raw" />@Ui["Record communication bodies and frames"]</label>
-            <label>@Ui["Leading bytes (empty means full content)"]<input type="text" inputmode="numeric" @bind="rawLimit" @bind:event="oninput" /></label>
         </div>
+        <label>@Ui["Leading bytes (empty means full content)"]<input type="text" inputmode="numeric" @bind="rawLimit" @bind:event="oninput" /></label>
         <p class="small muted">@Ui["With no content options selected, only metadata is recorded. Secrets remain redacted even in detailed tracing."]</p>
         @if(state.Closing.OperationId is Guid closing)
         {
@@ -43,7 +43,10 @@
         }
         else
         {
-            <button class="danger" @onclick="()=>stopOpen=true" disabled="@(!state.Loaded)">@Ui["Clear temporary tracing and request cluster stop"]</button>
+            <div class="destructive-action">
+                <p class="small muted">@Ui["Use this action to stop CoreService on the selected peers. Use Restore normal tracing to keep CoreService running."]</p>
+                <button class="danger" @onclick="()=>stopOpen=true" disabled="@(!state.Loaded)"><UiIcon Name="stop" /><span class="control-label">@Ui["End temporary tracing and request CoreService stop"]</span></button>
+            </div>
         }
         <JsonDetails Value="state" Title="@Ui["Trace scope and fixed targets"]" />
     }

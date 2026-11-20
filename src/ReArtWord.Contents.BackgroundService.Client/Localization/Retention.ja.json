@@ -1,7 +1,10 @@
 {
+  "Storage used": "保存容量",
+  "Set a separate period for {0}": "{0}の保持期間を個別に指定",
+  "Retention by category": "種類別の保持期間",
   "Rolling time (HH:mm)": "日付切替時刻（HH:mm）",
   "Rolling time zone": "日付切替のタイムゾーン",
-  "Inspect retention on peer": "保持方針の反映を確認するPeer",
+  "Inspect retention on peer": "保持方針の反映を確認するピア",
   "Applied retention hash": "反映済み保持方針の識別子",
   "Maintenance held": "圧縮・削除の保留",
   "Peer retention state": "ピアの保持方針の状態",

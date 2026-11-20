@@ -5,7 +5,7 @@ export function scopeTable(container, ctx, send, report)
 {
     const height = 26, viewport = document.createElement('div'), table = document.createElement('table');
     const header = document.createElement('thead'), labels = document.createElement('tr'), body = document.createElement('tbody');
-    viewport.className = 'scope-list';
+    viewport.className = 'scope-list record-detail-scroll';
     viewport.tabIndex = 0;
     viewport.setAttribute('aria-label', ctx.t('Captured packets', '取得したパケット'));
     table.className = 'scope-packets';
@@ -119,8 +119,10 @@ export function scopeTable(container, ctx, send, report)
     {
         if (viewport.scrollTop === programmedScroll)
         {
+            programmedScroll = -1;
             return;
         }
+        programmedScroll = -1;
         anchor = null;
         follow = viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop < height;
         refresh();

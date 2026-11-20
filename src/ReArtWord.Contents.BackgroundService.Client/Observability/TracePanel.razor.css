@@ -34,3 +34,13 @@
         padding: 2px 0;
     }
 }
+
+.trace-content-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 16px;
+}
+
+.trace-content-options > label {
+    margin-block: 0;
+}

@@ -1,0 +1,19 @@
+.retention-by-category {
+    display: grid;
+    gap: 0;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+}
+
+.retention-category + .retention-category {
+    border-block-start: 1px solid var(--line);
+}
+
+.retention-category > label:first-child {
+    margin: 0;
+}
+
+.zone-entry {
+    width: min(100%, 21rem);
+}

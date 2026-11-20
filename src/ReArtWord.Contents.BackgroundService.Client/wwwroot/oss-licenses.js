@@ -139,11 +139,15 @@ export async function licensesView(root, ctx)
             const caption = noticeCaption(notice.label, ctx);
             summary.textContent = caption;
             summary.setAttribute('aria-label', entry.name + ' · ' + caption);
-            details.append(summary, text);
-            if (!section.querySelector('details'))
+            const content = document.createElement('div');
+            content.className = 'license-text';
+            const close = ctx.button(ctx.t('Close notice', '本文を閉じる'), () =>
             {
-                details.setAttribute('data-card-inset', '');
-            }
+                details.open = false;
+                summary.focus();
+            }, 'quiet');
+            content.append(text, close);
+            details.append(summary, content);
             notices.append(details);
             let loaded = false;
 
@@ -165,6 +169,14 @@ export async function licensesView(root, ctx)
                         throw new Error('License could not be loaded.');
                     }
                     text.textContent = await response.text();
+                    const bundledEditor = '@codemirror/autocomplete';
+                    if (entry.name === bundledEditor && text.textContent.includes('@codemirror/commands'))
+                    {
+                        const note = document.createElement('p');
+                        note.className = 'small muted';
+                        note.textContent = ctx.t('This file contains notices for the bundled editor packages.', 'この本文には、同梱しているエディター関連パッケージのライセンスをまとめて掲載しています。');
+                        content.prepend(note);
+                    }
                 }
                 catch(error)
                 {

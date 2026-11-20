@@ -35,7 +35,7 @@
 
 .desktop-targets select {
     height: 30px;
-    padding: 4px 8px;
+    padding-block: 4px;
     font-size: 11px;
     flex: 0 1 180px;
     width: 180px;
@@ -375,7 +375,7 @@
     .desktop-targets select {
         min-width: 100px;
         height: 26px;
-        padding: 3px 7px;
+        padding-block: 3px;
     }
 
     .desktop-targets .desktop-connect {
@@ -388,10 +388,6 @@
         width: 26px;
         min-width: 26px;
         padding: 4px;
-    }
-
-    .desktop-connection {
-        display: none;
     }
 
     .desktop-stats {
@@ -917,7 +913,10 @@
 }
 
 .desktop-workspace:not([data-state="connected"]) .desktop-targets .desktop-connection {
-    align-self: center;
+    align-self: end;
+    margin-block-end: 6px;
+    border: 1px solid var(--line);
+    background: var(--nested);
 }
 
 .desktop-popover > footer:not(:empty) {
@@ -943,6 +942,8 @@
 .desktop-popover-content .desktop-settings-notice {
     background: var(--accent-soft);
     color: var(--accent);
+    padding-inline: 6px;
+    word-break: auto-phrase;
 }
 
 .desktop-popover-content :is(.desktop-settings-notice, .desktop-permission) .ui-icon {
@@ -978,6 +979,7 @@
 
     .desktop-workspace[data-state="connected"] .desktop-rail {
         grid-row: 2;
+        padding-inline-start: 8px;
     }
 
     .desktop-workspace[data-state="connected"] .desktop-deck > details {
@@ -994,6 +996,7 @@
         grid-row: 2;
         grid-column: 2;
         justify-self: end;
+        border-block: 0;
     }
 
     .desktop-workspace[data-state="connected"] :is(.desktop-viewport, .desktop-popover, details[open] .desktop-toolbar) {
@@ -1065,5 +1068,42 @@
         width: 28px;
         height: 32px;
         padding-inline: 3px;
+    }
+}
+
+.desktop-popover-content .codec-field-note {
+    font-size: 13px;
+}
+
+.desktop-rail summary > .control-label {
+    display: none;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-rail button.desktop-labeled {
+    min-width: 32px;
+    width: auto;
+    padding-inline: 6px;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-rail button.desktop-labeled > .control-label {
+    display: none;
+}
+
+@media (min-width: 1280px) and (min-height: 620px) {
+    .desktop-workspace[data-state="connected"] .desktop-rail :is(summary, button.desktop-labeled) {
+        gap: 5px;
+        width: auto;
+        padding-inline: 7px;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-rail :is(summary, button.desktop-labeled) > .control-label {
+        display: inline;
+    }
+}
+
+@media (max-width: 480px) and (orientation: portrait) {
+    .desktop-workspace[data-state="connected"] .desktop-rail :is(summary, button),
+    .desktop-workspace[data-state="connected"] .desktop-targets .desktop-labeled {
+        min-height: 44px;
     }
 }
