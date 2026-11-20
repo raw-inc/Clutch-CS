@@ -2178,6 +2178,7 @@
 
 .hm-schedule-settings {
     display: grid;
+    margin-block-end: 14px;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 12px;
     align-items: start;
@@ -2269,4 +2270,23 @@
 
 .hm-firewall-form .hm-field > :is(input, select) {
     height: 40px;
+}
+
+.hm-schedule-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 12px;
+    margin-block-end: 10px;
+}
+
+.hm-schedule-row-actions .hm-check {
+    margin: 0;
+}
+
+@media (min-width: 1150px) {
+    .hm-schedule-row > .hm-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
 }

@@ -258,9 +258,11 @@ export function powerSchedulesView(root, ctx, actionArea = root)
         return noSelection(root, ctx);
     }
     const abort = new AbortController(), signal = AbortSignal.any([ctx.signal, abort.signal]), toolbar = node('div', '', 'hm-toolbar');
-    root.append(heading(ctx.t('powerSchedule.title')), toolbar,
-        details(ctx.t('powerSchedule.helpTitle'), node('p', ctx.t('powerSchedule.help'), 'hm-muted')));
+    const title = heading(ctx.t('powerSchedule.title'));
+    title.append(toolbar);
+    root.append(title);
     const panels = hosts.map(host => hostPanel(root, ctx, host, signal, actionArea));
+    root.append(details(ctx.t('powerSchedule.helpTitle'), node('p', ctx.t('powerSchedule.help'), 'hm-muted')));
     powerScheduleBulk(toolbar, ctx, panels, signal);
     ctx.guard(async () =>
     {

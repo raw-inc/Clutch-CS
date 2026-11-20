@@ -5,7 +5,7 @@ import { node, input, select, checkbox, field, action } from './dom.js';
  */
 function scheduleRow(ctx, definition, changed, remove)
 {
-    const root = node('section', '', 'hm-section'), grid = node('div', '', 'hm-grid');
+    const root = node('section', '', 'hm-section hm-schedule-row'), grid = node('div', '', 'hm-grid');
     const kind = select([['wake', ctx.t('powerSchedule.wake')], ['shutdown', ctx.t('powerSchedule.shutdown')]], definition.action);
     const time = input(definition.time, 'time'), zone = input(definition.timeZoneId);
     time.step = '1';
@@ -31,7 +31,9 @@ function scheduleRow(ctx, definition, changed, remove)
     root.addEventListener('change', changed);
     mode.onchange = renderDays;
     grid.append(field(ctx.t('Action'), kind), field(ctx.t('powerSchedule.time'), time), field(ctx.t('powerSchedule.zone'), zone), field(ctx.t('Repeat'), mode));
-    root.append(enabled.root, grid, days, action(ctx, 'powerSchedule.remove', 'trash', remove));
+    const rowActions = node('div', '', 'hm-schedule-row-actions');
+    rowActions.append(enabled.root, action(ctx, 'powerSchedule.remove', 'trash', remove));
+    root.append(rowActions, grid, days);
     renderDays();
     return { root,
 
@@ -59,7 +61,9 @@ export function powerScheduleForm(ctx, definitions, changed)
     const root = node('div'), rowsRoot = node('div');
     let rows = [];
 
-    /** 一行を追加し、削除も未保存の変更として扱います。 */
+    /** 一行を追加し、削除も未保存の変更として扱います。
+     * @returns 追加した入力行です。
+     */
     function append(definition)
     {
         const row = scheduleRow(ctx, definition, changed, () =>
@@ -70,6 +74,7 @@ export function powerScheduleForm(ctx, definitions, changed)
         });
         rows.push(row);
         rowsRoot.append(row.root);
+        return row.root;
     }
 
     /** 読取り済みの値で入力欄を置き換えます。 */
@@ -90,10 +95,11 @@ export function powerScheduleForm(ctx, definitions, changed)
         {
             throw new Error('powerSchedule.invalid');
         }
-        append({ id: crypto.randomUUID(), action: 'wake', time: '08:00', timeZoneId: 'UTC', weekdays: [], enabled: true });
+        const row = append({ id: crypto.randomUUID(), action: 'wake', time: '08:00', timeZoneId: 'UTC', weekdays: [], enabled: true });
         changed();
+        row.scrollIntoView?.({ block: 'nearest' });
     });
-    root.append(rowsRoot, add);
+    root.append(add, rowsRoot);
     reset(definitions);
     return { root, reset,
 
