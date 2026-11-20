@@ -102,7 +102,10 @@ test('通常の操作ボタンは面と見分けられ、操作中と無効状�
             <div class="terminal-workspace"><div class="terminal-toolbar"><button class="terminal-action">コピー</button></div></div>
             <div class="file-pane"><div class="file-navigation"><button>ドライブ</button></div></div>
             <span class="file-picker-control"><span>ファイルを選ぶ</span><input type="file" aria-label="ファイル"></span>
-            <div class="desktop-workspace"><div class="desktop-quick-controls"><button class="desktop-action quiet" aria-label="全画面"></button></div></div>
+            <div class="desktop-workspace">
+                <div class="desktop-targets"><button class="desktop-action desktop-labeled quiet">接続を解除</button></div>
+                <div class="desktop-quick-controls"><button class="desktop-action quiet" aria-label="全画面"></button></div>
+            </div>
         </section>
     `);
     await page.addStyleTag({ content: styles.css });
