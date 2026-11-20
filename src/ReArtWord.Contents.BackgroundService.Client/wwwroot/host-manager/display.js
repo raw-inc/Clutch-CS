@@ -43,7 +43,9 @@ export function displayView(root, ctx)
         const dialog = ctx.dialog('Change display mode');
         const current = display.modes.findIndex(mode => JSON.stringify(mode) === JSON.stringify(display.current));
         const modes = select(display.modes.map((mode, index) => [String(index), displayModeLabel(mode, ctx.t)]), String(current));
-        dialog.root.append(node('p', `${ctx.t('Target hosts')}: ${host.target.hostId} · ${display.name}`), node('p', `${ctx.t('Current mode')}: ${displayModeLabel(display.current, ctx.t)}`), field(ctx.t('Resolution and refresh rate'), modes), node('p', ctx.t('Choose a different mode to preview the change.'), 'hm-muted'));
+        const currentMode = node('dl', '', 'hm-display-current-mode');
+        currentMode.append(node('dt', ctx.t('Current mode')), node('dd', displayModeLabel(display.current, ctx.t)));
+        dialog.root.append(node('p', `${ctx.t('Target hosts')}: ${host.target.hostId} · ${display.name}`), currentMode, field(ctx.t('Resolution and refresh rate'), modes), node('p', ctx.t('Choose a different mode to preview the change.'), 'hm-muted'));
         const preview = action(ctx, 'Preview changes', 'check', () => ctx.preview([
             { host, query: { area: 'display', resourceId: display.id }, action: 'display', baseRevision: display.revision,
                 change: displayChange(display, modes.value.length ? Number(modes.value) : Number.NaN), label: display.name }

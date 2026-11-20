@@ -22,6 +22,9 @@ export function networkView(root, ctx, actions)
     let family = 4, mode = 'interfaces', records = [], selected = new Set(), switchView = null;
     const pending = new Map();
     const staged = node('div', '', 'hm-protocol-drafts');
+    const reviewBody = node('div', '', 'hm-protocol-review-body');
+    const review = details(ctx.t('Review pending changes'), reviewBody);
+    review.classList.add('hm-protocol-review');
 
     /** 元の値から変更された項目があるか判定します。
      * @returns 呼出し元が使用する判定結果です。
@@ -71,7 +74,7 @@ export function networkView(root, ctx, actions)
         visibleRecords().filter(record => configuration(record)).forEach(record => selected.add(record.key));
         renderList();
     }), count);
-    root.append(title, views, status, filters, listing, virtual, switches);
+    root.append(title, views, status, review, filters, listing, virtual, switches);
     actions.append(staged);
 
     /** 保存前の変更予定を確認欄へ表示します。 */
@@ -81,28 +84,37 @@ export function networkView(root, ctx, actions)
         const entries = [...pending.values()], changes = entries.reduce((sum, item) => sum + Object.keys(item.change).length, 0);
         staged.append(bulk);
         staged.hidden = !changes && bulk.hidden;
+        review.hidden = !changes;
         if (!changes)
         {
+            review.open = false;
+            reviewBody.replaceChildren();
             return;
         }
-        const tools = node('div', '', 'hm-selection-bar');
+        const tools = node('div', '', 'hm-selection-bar hm-protocol-summary');
         tools.append(node('strong', recordCount(ctx, 'count.protocolChanges', changes) + ' · ' + recordCount(ctx, 'count.changedInterfaces', entries.length)));
         const actions = node('div', '', 'hm-actions'), clear = ctx.button('Clear all pending changes', resetPending), apply = action(ctx, 'Apply', 'check', async () =>
         {
             const planned = entries.map(({ record, change, revision }) => ({ host: record.host, query: { area: 'network', resourceId: record.nic.id }, action: 'networkProtocols', change: { ...change }, baseRevision: revision, label: record.nic.name }));
-            listing.inert = filters.inert = views.inert = staged.inert = true;
+            listing.inert = filters.inert = views.inert = staged.inert = review.inert = true;
             try
             {
                 return await ctx.preview(planned, resetPending);
             }
             finally
             {
-                listing.inert = filters.inert = views.inert = staged.inert = false;
+                listing.inert = filters.inert = views.inert = staged.inert = review.inert = false;
             }
         }, true);
         actions.append(clear, apply);
         tools.append(actions);
         staged.append(tools);
+        renderPendingRows(entries);
+    }
+
+    /** 上書き前の値と適用予定の値を同じ行で確認できるようにします。 */
+    function renderPendingRows(entries)
+    {
         const rows = table(['Host', 'Network interface', 'Before', 'After'].map(ctx.t));
         for (const { record, change } of entries)
         {
@@ -116,7 +128,7 @@ export function networkView(root, ctx, actions)
                 rows.add([record.host.target.hostId, `${record.nic.name} · IPv${version}`, ctx.t(record.nic[`ipv${version}`].enabled ? 'Enabled' : 'Disabled'), ctx.t(value ? 'Enabled' : 'Disabled')]);
             }
         }
-        staged.append(details(ctx.t('Review pending changes'), rows.root));
+        reviewBody.replaceChildren(rows.root);
     }
 
     /** 現在の値から適用する設定を組み立てます。
