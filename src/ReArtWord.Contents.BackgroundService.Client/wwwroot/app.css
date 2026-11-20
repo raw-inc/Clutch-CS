@@ -1107,7 +1107,7 @@ button.danger:disabled {
     font-size: 13px;
 }
 
-.snapshot-target {
+.dialog-content .snapshot-target {
     display: grid;
     min-width: 0;
     padding: 8px 12px;
