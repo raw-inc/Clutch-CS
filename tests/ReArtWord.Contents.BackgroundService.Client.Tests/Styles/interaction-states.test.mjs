@@ -311,6 +311,45 @@ test('両方向に送れる一覧は固定見出しの下に上下・左右の�
     await page.locator('clutch-scroll-area[data-scroll-before]:not([data-scroll-after])').waitFor();
 });
 
+test('ワークフローのタブ列が狭くなっても選択中のタブを表示する', async context =>
+{
+    const page = await browser.newPage();
+    context.after(() => page.close());
+    await page.setContent(`
+        <div id="strip-host" style="width: 440px">
+            <nav class="editor-workflow-tabs" style="display: flex; overflow: auto">
+                <button style="flex: 0 0 140px">音響</button>
+                <button style="flex: 0 0 140px">映像</button>
+                <button aria-pressed="true" style="flex: 0 0 140px">ステージキュー</button>
+            </nav>
+        </div>
+    `);
+    const script = new URL('../../../src/ReArtWord.Contents.BackgroundService.Client/wwwroot/browser.js', import.meta.url);
+    await page.addScriptTag({ content: await readFile(script, 'utf8') });
+    await page.evaluate(() => window.contentsBrowser.revealTab(document.querySelector('nav')));
+    await page.locator('#strip-host').evaluate(host =>
+    {
+        host.style.width = '260px';
+    });
+    await page.waitForFunction(() =>
+    {
+        const strip = document.querySelector('nav'), selected = strip.querySelector('[aria-pressed="true"]');
+        const limits = strip.getBoundingClientRect(), box = selected.getBoundingClientRect();
+        return limits.left <= box.left && box.right <= limits.right;
+    });
+    const strip = page.locator('nav');
+    assert.ok(0 < await strip.evaluate(element => element.scrollLeft));
+    await strip.evaluate(element =>
+    {
+        element.scrollLeft = 0;
+    });
+    await page.evaluate(() => new Promise(resolve =>
+    {
+        requestAnimationFrame(() => requestAnimationFrame(resolve));
+    }));
+    assert.equal(await strip.evaluate(element => element.scrollLeft), 0);
+});
+
 test('Terminal の補助キーを上下二段に保ち、狭い幅ではキー列だけを送れる', async context =>
 {
     const page = await browser.newPage({ viewport: { width: 320, height: 720 } });
