@@ -515,3 +515,71 @@ test('複数の変更対象がある確認画面では、本文が長くても�
     });
     assert.ok(bounds.scrollable && bounds.labelBottom <= bounds.targetBottom, JSON.stringify(bounds));
 });
+
+test('ツールごとの見出しと共通ダイアログの見出しをそれぞれの大きさで表示する', async context =>
+{
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    context.after(() => page.close());
+    await page.setContent(`
+        <main class="remote-tools">
+            <section class="transfer-jobs"><h2>転送キュー</h2><p>転送はありません</p></section>
+            <div class="terminal-sidebar-heading"><h2>共有セッション</h2></div>
+            <div class="scope-packet-heading"><h2>取得したパケット</h2></div>
+            <div class="scope-details"><h2>パケット詳細</h2></div>
+            <div class="desktop-popover"><header><h2>接続の詳細</h2></header></div>
+            <div class="license-list"><h2>ライブラリー名</h2></div>
+            <dialog class="dialog dialog-compact" open><header class="dialog-heading"><h2>終了するセッション</h2></header></dialog>
+        </main>`);
+    await page.addStyleTag({ content: styles.css });
+    const sizes = await page.locator('h2').evaluateAll(headings => headings.map(heading => getComputedStyle(heading).fontSize));
+    assert.deepEqual(sizes, ['18px', '13px', '16px', '12px', '12px', '18px', '19px']);
+});
+
+test('ページの見出し帯やHostManagerの中でも確認ダイアログの操作サイズを揃える', async context =>
+{
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    context.after(() => page.close());
+    await page.setContent(`
+        <main class="page-title">
+            <button>設定を開く</button>
+            <dialog class="dialog dialog-compact" open>
+                <header class="dialog-heading"><h2>保持期間の確認</h2><button class="quiet icon-button" aria-label="閉じる">×</button></header>
+                <clutch-scroll-area><div class="dialog-content"><p>既存の記録にも適用します。</p></div></clutch-scroll-area>
+                <footer class="toolbar"><button>確定</button></footer>
+            </dialog>
+        </main>
+        <div class="host-manager">
+            <dialog class="dialog hm-dialog" open>
+                <header class="dialog-heading"><h2>変更内容の確認</h2><button class="quiet icon-button" aria-label="閉じる">×</button></header>
+                <clutch-scroll-area><div class="dialog-content hm-dialog-body"><p class="hm-muted">選択したホストに適用します。</p></div></clutch-scroll-area>
+                <footer class="toolbar hm-confirm-footer"><div class="hm-actions"><button>適用</button></div></footer>
+            </dialog>
+        </div>`);
+    await page.addStyleTag({ content: styles.css });
+
+    /** テーマや配置に関係なく、見出し・本文・確定操作の寸法を取得します。
+     * @returns 開いているダイアログごとの寸法です。
+     */
+    const measure = () => page.locator('.dialog').evaluateAll(dialogs => dialogs.map(dialog =>
+    {
+        const heading = dialog.querySelector('header');
+        const copy = dialog.querySelector('.dialog-content > p');
+        const action = dialog.querySelector('footer button');
+        return { heading: heading.getBoundingClientRect().height, size: getComputedStyle(copy).fontSize,
+            action: action.getBoundingClientRect().height,
+            bottom: dialog.querySelector('footer').getBoundingClientRect().top - copy.getBoundingClientRect().bottom };
+    }));
+
+    const [retention, host] = await measure();
+    assert.ok(Math.abs(retention.heading - host.heading) <= 2);
+    assert.equal(retention.size, '13px');
+    assert.equal(host.size, retention.size);
+    assert.equal(retention.action, host.action);
+    assert.equal(retention.action, 37);
+    assert.ok(Math.abs(retention.bottom - host.bottom) <= 1);
+    await page.setViewportSize({ width: 390, height: 844 });
+    for (const metrics of await measure())
+    {
+        assert.equal(metrics.action, 44);
+    }
+});
