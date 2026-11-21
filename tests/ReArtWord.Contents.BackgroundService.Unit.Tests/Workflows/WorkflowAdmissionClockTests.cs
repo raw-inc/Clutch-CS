@@ -76,7 +76,7 @@ public sealed class WorkflowAdmissionClockTests
 
     /// <summary>時計を戻した後の新規ノードは受け付け、古い要求を同じIDで復活させません。</summary>
     /// <returns>実WFの要求生成から、通信時計とUUIDの受付境界までの確認です。</returns>
-    [Fact]
+    [Fact(Skip = "永続実行IDを通信受付にも使っていた旧仕様の試験です。IDを分けた後の受付と再送は新しいケースで検証します。")]
     public async Task NewWorkflowAfterRollbackKeepsItsOwnAdmissionBudgetAsync()
     {
         AdmissionTestClock source = new(), target = new();
@@ -118,6 +118,72 @@ public sealed class WorkflowAdmissionClockTests
         target.Advance(TimeSpan.FromMinutes(5));
         ClockedClusterRequest retry = (await client.PrepareAsync(generated, ProbeAsync).ConfigureAwait(true))!;
         Assert.Equal(sent.StartByTicks, retry.StartByTicks);
+        Assert.True(server.Accept(retry).Admission!.IsExpired);
+    }
+
+    /// <summary>時計補正後も、新規実行の永続IDと通信受付IDを分け、同じ受付の期限を再送で延長しません。</summary>
+    /// <returns>新しい受付の成功と、再送した二つの受付の失効を確認します。</returns>
+    [Fact]
+    public async Task NewWorkflowAfterRollbackUsesSeparateDeliveryIdentityAsync()
+    {
+        AdmissionTestClock source = new(), target = new();
+        target.Adjust(TimeSpan.FromHours(2));
+        WorkflowFixture fixture = new(new WorkflowFixture.ActionNode((_, _) => ValueTask.FromResult(NodeResult.Success())));
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = fixture.ConfigureAwait(true);
+        RequestClockClient client = new(source);
+        RequestAdmissionClock server = new(fixture.Peers.LocalInstanceId, target);
+        Task<ClusterResponse> ProbeAsync(ClusterRequest _, CancellationToken token)
+            => Task.FromResult(new ClusterResponse(EOutcome.Succeeded, NodeValue.FromObject(server.Capture())));
+
+        ClusterRequest previous = ClusterRequest.Start("node.execute", fixture.Peers.LocalPeerId,
+            fixture.Peers.LocalInstanceId, TimeSpan.FromSeconds(5), NodeValue.Null, source);
+        ClockedClusterRequest? previousDelivery = await client.PrepareAsync(previous, ProbeAsync).ConfigureAwait(true);
+        Assert.NotNull(previousDelivery);
+        source.Advance(TimeSpan.FromSeconds(6));
+        target.Advance(TimeSpan.FromSeconds(6));
+        source.Adjust(TimeSpan.FromHours(-1));
+
+        ClockedClusterRequest? delivery = null;
+        ClusterRequest? command = null;
+        fixture.Dispatcher.Handler = async (request, token) =>
+        {
+            Assert.Equal(8, request.Id.Version);
+            Assert.Equal(7, request.DeliveryId.Version);
+            Assert.Equal(request.ReceiptId, request.DeliveryId);
+            command = new(request.DeliveryId, "node.execute", request.TargetPeerId, request.TargetInstanceId,
+                request.ExpiresAt, NodeValue.FromObject(request)) { Admission = request.Admission };
+            delivery = await client.PrepareAsync(command, ProbeAsync, token).ConfigureAwait(false);
+            Assert.NotNull(delivery);
+            ClusterRequest received = server.Accept(delivery);
+            Assert.Equal(request.DeliveryId, received.Id);
+            Assert.Equal(command.Payload, received.Payload);
+            Assert.NotNull(received.Admission);
+            Assert.False(received.Admission.IsExpired);
+            Assert.Equal(TimeSpan.FromMinutes(5), received.Admission.Remaining);
+            DateTimeOffset now = target.GetUtcNow();
+            Assert.True(RuntimeRequestIdentity.TryDeadline(received, now, out DateTimeOffset retainedUntil));
+            Assert.Equal(now.AddMinutes(6), retainedUntil);
+            return NodeResult.Success();
+        };
+
+        WorkflowEngine engine = new(fixture.Registry, fixture.Peers, fixture.Dispatcher, source);
+        CompiledWorkflow workflow = ValueMergeFixture.Compile(fixture, new("clock", "Clock", [WorkflowFixture.Definition("node")], []));
+        Assert.Equal(EOutcome.Succeeded, (await engine.ExecuteAsync(workflow, "node").ConfigureAwait(true)).Outcome);
+        Assert.NotNull(command);
+        Assert.NotNull(delivery);
+
+        ClockedClusterRequest? previousRetry = await client.PrepareAsync(previous, ProbeAsync).ConfigureAwait(true);
+        Assert.NotNull(previousRetry);
+        Assert.Equal(previousDelivery.StartByTicks, previousRetry.StartByTicks);
+        Assert.True(server.Accept(previousRetry).Admission!.IsExpired);
+
+        source.Adjust(TimeSpan.FromHours(3));
+        source.Advance(TimeSpan.FromMinutes(5));
+        target.Advance(TimeSpan.FromMinutes(5));
+        ClockedClusterRequest? retry = await client.PrepareAsync(command, ProbeAsync).ConfigureAwait(true);
+        Assert.NotNull(retry);
+        Assert.Equal(delivery.StartByTicks, retry.StartByTicks);
+        Assert.Equal(command.Id, retry.Request.Id);
         Assert.True(server.Accept(retry).Admission!.IsExpired);
     }
 
