@@ -209,6 +209,6 @@ first, second
         {
             return default;
         }
-        return JsonSerializer.Deserialize<T>(content, ContractJson.Options);
+        return JsonSerializer.Deserialize<T>(content, ClientObservationJson.Options);
     }
 }
