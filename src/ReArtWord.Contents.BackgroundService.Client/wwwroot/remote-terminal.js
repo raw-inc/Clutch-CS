@@ -115,7 +115,7 @@ export async function terminalView(root, ctx)
             connected.className = 'badge good';
             connected.textContent = ctx.t('Connected', '接続中');
             sessionName.append(connected);
-            description.textContent += ' ' + ctx.t('This screen will also disconnect.', 'この画面の接続も切断されます。');
+            description.textContent = ctx.t('This closes the shared session and interrupts commands still running in it. This screen will also disconnect.', '共有セッションを終了すると、実行中のコマンドが中断され、この画面の接続も切断されます。');
         }
         const details = document.createElement('details'), titleId = document.createElement('summary'), identifier = document.createElement('code');
         details.className = 'secondary-details';

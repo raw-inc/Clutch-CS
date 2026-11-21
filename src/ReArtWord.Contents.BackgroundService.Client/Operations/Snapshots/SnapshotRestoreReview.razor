@@ -47,39 +47,54 @@
         {
             <p class="small muted">@Ui["Operation"] @preparation.OperationId</p>
             <JsonDetails Value="preparation.Targets" Title="@Ui["Fixed restore scope"]" />
-            @foreach(var editor in preparation.Editors)
+            @foreach(var editor in preparation.Editors.Where(HasUnsavedChanges))
             {
-                <section class="card section">
-                    <p>@editor.PeerId / @editor.WorkflowId · @(editor.NodeIds is null?Ui["Whole scope"]:string.Join(", ",editor.NodeIds))</p>
-                    <p>@Ui["Draft revision"] @editor.SessionVersion</p>
-                    <p>@Ui[editor.Dirty || editor.Presence.Any(item=>item.Presence.Dirty)?"Unsaved changes block restore":"No unsaved changes"]</p>
-                    @if(editor.Dirty || editor.Presence.Any(item=>item.Presence.Dirty))
+                <section class="card section restore-draft">
+                    <h3>@editor.PeerId / @editor.WorkflowId</h3>
+                    <p class="small muted">@(editor.NodeIds is null?Ui["Whole scope"]:string.Join(", ",editor.NodeIds))</p>
+                    <p class="restore-draft-warning"><UiIcon Name="warning" /><span>@Ui["Unsaved changes block restore"]</span></p>
+                    @if(editor.Presence.Any(item=>item.Presence.Dirty))
                     {
-                        @if(editor.Presence.Any(item=>item.Presence.Dirty))
-                        {
-                            <p class="small muted">@Ui.Format("Editors with unsaved changes: {0}",DirtyEditorLabels(editor))</p>
-                        }
-                        else
-                        {
-                            <p class="small muted">@Ui["The shared draft has unsaved changes. The editor that made them is unconfirmed."]</p>
-                        }
-                        @if(CanResolve(editor))
-                        {
-                            <div class="toolbar">
-                                @if(Model.Draft.Document.Id==editor.WorkflowId&&Api.SelectedPeerId==editor.PeerId)
-                                {
-                                    <button @onclick="()=>SaveAsync(editor)" disabled="@busy">@Ui["Save and confirm this workflow draft"]</button>
-                                }
-                                <button @onclick="()=>ResolveAsync(editor,ESnapshotDraftAction.ConfirmSaved)" disabled="@busy">@Ui["Confirm scope already saved by another operation"]</button>
-                                <button class="danger" @onclick="()=>discarding=editor" disabled="@busy"><UiIcon Name="trash" /><span class="control-label">@Ui["Discard unsaved changes in this selected scope"]</span></button>
-                            </div>
-                        }
-                        else
-                        {
-                            <p>@Ui["The original page with unsaved input must confirm saving or discarding it."]</p>
-                        }
+                        <p>@Ui.Format("Editors with unsaved changes: {0}",DirtyEditorLabels(editor))</p>
+                    }
+                    else
+                    {
+                        <p class="small muted">@Ui["The shared draft has unsaved changes. The editor that made them is unconfirmed."]</p>
+                    }
+                    @if(CanResolve(editor))
+                    {
+                        <div class="toolbar">
+                            @if(Model.Draft.Document.Id==editor.WorkflowId&&Api.SelectedPeerId==editor.PeerId)
+                            {
+                                <button @onclick="()=>SaveAsync(editor)" disabled="@busy">@Ui["Save and confirm this workflow draft"]</button>
+                            }
+                            <button @onclick="()=>ResolveAsync(editor,ESnapshotDraftAction.ConfirmSaved)" disabled="@busy">@Ui["Confirm scope already saved by another operation"]</button>
+                            <button class="danger" @onclick="()=>discarding=editor" disabled="@busy"><UiIcon Name="trash" /><span class="control-label">@Ui["Discard unsaved changes in this selected scope"]</span></button>
+                        </div>
+                    }
+                    else
+                    {
+                        <p>@Ui["The original page with unsaved input must confirm saving or discarding it."]</p>
+                    }
+                    @if(editor.SessionVersion is {} revision)
+                    {
+                        <details class="secondary-details"><summary>@Ui["Draft revision"] <code>@AbbreviatedRevision(revision)</code></summary><code>@revision</code></details>
                     }
                 </section>
+            }
+            var unchanged = preparation.Editors.Where(editor=>!HasUnsavedChanges(editor)).ToArray();
+            @if(unchanged.Length!=0)
+            {
+                <details class="secondary-details clean-restore-drafts">
+                    <summary>@Ui.Format("Drafts with no unsaved changes ({0})",unchanged.Length)</summary>
+                    <ul>
+                        @foreach(var editor in unchanged)
+                        {
+                            <li>@editor.PeerId / @editor.WorkflowId · @(editor.NodeIds is null?Ui["Whole scope"]:string.Join(", ",editor.NodeIds))
+                            @if(editor.SessionVersion is {} revision){<code>@revision</code>}</li>
+                        }
+                    </ul>
+                </details>
             }
             @if(preparation.Locks.Count!=0)
             {

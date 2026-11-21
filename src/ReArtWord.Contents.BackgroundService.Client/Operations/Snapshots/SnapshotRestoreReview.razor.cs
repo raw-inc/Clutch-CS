@@ -96,6 +96,10 @@ public sealed partial class SnapshotRestoreReview
         }
     }
 
+    /// <summary>共有下書きと各編集画面から、復元前に保存または破棄が必要かを判定します。</summary>
+    /// <returns>未保存の変更がある場合はtrueです。</returns>
+    private static bool HasUnsavedChanges(SnapshotEditorState editor) => editor.Dirty || editor.Presence.Any(item => item.Presence.Dirty);
+
     /// <summary>共同編集画面と同じ表記で、未保存の変更を報告した編集画面を示します。</summary>
     /// <returns>対象の編集画面名です。</returns>
     private static string DirtyEditorLabels(SnapshotEditorState editor) => string.Join(", ", editor.Presence.Where(item => item.Presence.Dirty)
