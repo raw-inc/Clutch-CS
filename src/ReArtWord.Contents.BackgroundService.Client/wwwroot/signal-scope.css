@@ -236,7 +236,7 @@
 
 .scope-packets th:nth-child(4),
 .scope-packets th:nth-child(5) {
-    width: 20%;
+    width: max(8.5rem, 20%);
 }
 
 .scope-packets th:nth-child(7) {

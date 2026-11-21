@@ -452,6 +452,18 @@ export async function desktopView(root, ctx)
     }, { signal: ctx.signal });
     controlScroll.append(toolbar);
     controls.append(controlsLabel, controlScroll);
+    controls.addEventListener('toggle', () =>
+    {
+        if (controls.open && compactControls && root.dataset.state !== connectedState)
+        {
+            const firstControl = toolbar.firstElementChild;
+            const hiddenHeight = firstControl?.getBoundingClientRect().bottom - deckScroll.getBoundingClientRect().bottom;
+            if (0 < hiddenHeight)
+            {
+                deck.scrollTop += Math.ceil(hiddenHeight) + 8;
+            }
+        }
+    }, { signal: ctx.signal });
     deck.append(targets, controls);
     deckScroll.append(deck);
     root.append(deckScroll, rail, viewport);
@@ -2328,9 +2340,13 @@ export async function desktopView(root, ctx)
     statistics.setAttribute('aria-pressed', String(!overlay.hidden));
     if (experimental)
     {
-        targets.append(labeled(ctx.t('Cluster', 'クラスタ'), cluster));
+        const clusterField = labeled(ctx.t('Cluster', 'クラスタ'), cluster);
+        clusterField.classList.add('desktop-cluster-field');
+        targets.append(clusterField);
     }
-    targets.append(connectedTarget, labeled(ctx.t('Transmission preset', '伝送プリセット'), transmissionPreset), labeled(ctx.t('Host', '接続先'), host), start, stop, connection);
+    const hostField = labeled(ctx.t('Host', '接続先'), host);
+    hostField.classList.add('desktop-host-field');
+    targets.append(connectedTarget, hostField, labeled(ctx.t('Transmission preset', '伝送プリセット'), transmissionPreset), start, stop, connection);
     targets.append(reload);
     quickControls.append(sound, fullscreen);
     toolbar.append(videoFullscreen, cursorSync, clipboardSync, sizing, follow);

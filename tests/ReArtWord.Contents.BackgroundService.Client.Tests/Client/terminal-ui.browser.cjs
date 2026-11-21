@@ -44,6 +44,9 @@ test('terminal native fullscreen modes, controls, resize and Core policy', { tim
                     break;
                 case '/api/v2/terminal/claim':value = { ...sessions.find(s => s.sessionId === body.sessionId), owner: body.owner };
                     break;
+                case '/api/v2/terminal/close':sessions.splice(sessions.findIndex(s => s.sessionId === body.sessionId), 1);
+                    value = { outcome: 'succeeded' };
+                    break;
                 default:res.statusCode = 404;
                     value = { error: 'unexpected' };
             }
@@ -122,6 +125,8 @@ window.inputs=[];window.WebSocket=class{
         });
         assert.ok((bounds.available - 1) <= bounds.hint, JSON.stringify(bounds));
         assert.ok(bounds.hintEnd <= bounds.controlsTop, JSON.stringify(bounds));
+        const [shell, path, start] = await Promise.all([page.locator('.terminal-shell').boundingBox(), page.locator('.terminal-shell-path').boundingBox(), button('ユーザー実行').boundingBox()]);
+        assert.ok(shell && path && start && shell.y + shell.height <= path.y && path.y + path.height <= start.y);
         await page.setViewportSize({ width: 1280, height: 800 });
     });
     await t.test('広い画面では起動操作と端末操作を同じ高さに置く', { skip: 'シェルの見出しを起動欄の上に置くため、欄の上端を揃える旧レイアウトの検証を終了します。' }, async() =>
@@ -300,16 +305,21 @@ window.inputs=[];window.WebSocket=class{
                     inside: bounds.left <= Math.min(leftBounds.left, rightBounds.left) && Math.max(leftBounds.right, rightBounds.right) <= bounds.right,
                     afterName: name.getBoundingClientRect().bottom < Math.min(leftBounds.top, rightBounds.top),
                     layoutMatchesWidth,
+                    singleRow: canShareRow,
                     titles,
                 };
             });
-            assert.deepEqual(layout, { inside: true, afterName: true, layoutMatchesWidth: true, titles: [true, true] }, width + 'px');
+            assert.ok(layout.inside && layout.afterName && layout.layoutMatchesWidth && layout.titles.every(Boolean), width + 'px ' + JSON.stringify(layout));
+            if (width === 1440)
+            {
+                assert.ok(layout.singleRow, 'The desktop session actions must fit side by side');
+            }
         }
     }
 
     for (const { language, claim, terminate, status, widths } of [
-        { language: 'ja', claim: '接続を引き継ぐ', terminate: 'セッションを終了', status: '接続中', widths: [1280, 768, 390, 320] },
-        { language: 'en', claim: 'Take over', terminate: 'End session', status: 'Connected', widths: [1280, 950, 651, 390, 320] },
+        { language: 'ja', claim: '接続を引き継ぐ', terminate: 'セッションを終了', status: '接続中', widths: [1440, 1280, 768, 390, 320] },
+        { language: 'en', claim: 'Take over', terminate: 'End session', status: 'Connected', widths: [1440, 1280, 950, 651, 390, 320] },
     ])
     {
         await t.test('共有セッションの状態と画面幅に合わせて操作を表示する ' + language, async() =>
@@ -326,5 +336,24 @@ window.inputs=[];window.WebSocket=class{
             await checkVisibleSessionActionsAsync(widths, true, [terminate]);
         });
     }
+    await t.test('終了する共有セッションは確認後にだけ一度終了する', async() =>
+    {
+        await page.setViewportSize({ width: 1440, height: 900 });
+        const entry = page.locator('.terminal-session[aria-current="true"]');
+        await entry.getByRole('button', { name: 'End session', exact: true }).click();
+        const dialog = page.getByRole('dialog', { name: 'End session' });
+        await dialog.waitFor();
+        assert.ok((await dialog.innerText()).includes(sessions[0].sessionId));
+        await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+        await dialog.waitFor({ state: 'hidden' });
+        assert.equal(operations.filter(o => o.path.endsWith('/close')).length, 0);
+        await entry.waitFor();
+
+        await entry.getByRole('button', { name: 'End session', exact: true }).click();
+        await dialog.getByRole('button', { name: 'End session', exact: true }).click();
+        await page.waitForFunction(() => !document.querySelector('.terminal-session'));
+        assert.equal(operations.filter(o => o.path.endsWith('/close')).length, 1);
+        assert.equal(sessions.length, 0);
+    });
     assert.deepEqual(errors, []);
 });

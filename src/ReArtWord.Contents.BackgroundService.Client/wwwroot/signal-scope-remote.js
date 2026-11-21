@@ -135,7 +135,8 @@ export function scopeRemote(history, connections, tell, send, changed)
             return;
         }
         tell('detail', { id: selected.id, details: value.details, rawLength: value.raw.length, originalLength: value.originalLength,
-            time: value.time, observers: selected.observers, observationCount: selected.observationCount, hex: hex(value.raw) });
+            time: value.time, observers: selected.observers, observationCount: selected.observationCount, hex: hex(value.raw),
+            source: selected.source, sourcePort: selected.sourcePort, destination: selected.destination, destinationPort: selected.destinationPort });
         cancelSelection();
     }
 
@@ -208,7 +209,8 @@ export function scopeRemote(history, connections, tell, send, changed)
                 tell('detail', { id, removed: true });
                 return;
             }
-            selected = { id, references: [...row.references], deadline: performance.now() + 10000, observers: row.observers, observationCount: row.observationCount };
+            selected = { id, references: [...row.references], deadline: performance.now() + 10000, observers: row.observers, observationCount: row.observationCount,
+                source: row.source, sourcePort: row.sourcePort, destination: row.destination, destinationPort: row.destinationPort };
             tell('detail', { id, pending: true });
             requestDetail();
         },

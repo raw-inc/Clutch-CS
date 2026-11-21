@@ -305,6 +305,9 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         assert((await page.locator('[data-packet]').innerText()).includes('host-b:9000'));
         await page.locator('[data-packet]').click();
         await page.waitForFunction(() => document.querySelector('.scope-details pre')?.textContent.includes('OSC packet 42'));
+        const details = await page.locator('.scope-details pre').first().innerText();
+        assert.match(details, /Source: 192\.168\.10\.10:9001/);
+        assert.match(details, /Destination: 192\.168\.20\.10:9000/);
         assert((await page.locator('.scope-details pre').nth(1).innerText()).includes('74 65 73 74'));
         assert.equal(commands.filter(item => item.type === 'detail').length, 1);
         await page.getByRole('searchbox', { name: 'Search captured packets' }).fill('host-a AND "and" AND "or"');

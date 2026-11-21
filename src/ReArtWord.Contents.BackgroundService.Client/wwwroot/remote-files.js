@@ -162,6 +162,7 @@ export async function filesView(root, ctx)
         count.setAttribute('role', 'status');
         const copyHint = document.createElement('p');
         copyHint.className = 'file-copy-hint';
+        copyHint.id = 'file-copy-hint-' + index;
         copyHint.textContent = ctx.t('Open a folder on the destination host to copy here.', 'コピー先のホストでフォルダーを開いてください。');
         copyHint.hidden = true;
         const copy = ctx.button(ctx.t('Copy selected files', '選択したファイルをコピー'), async () =>
@@ -184,7 +185,7 @@ export async function filesView(root, ctx)
         hintText.textContent = ctx.t('Open a drive to create folders.', 'ドライブを開くとフォルダーを作成できます。');
         driveHint.append(ctx.icon('info'), hintText);
         driveHint.hidden = true;
-        section.append(label, location, toolbar, driveHint, tree, footer);
+        section.append(label, location, toolbar, driveHint, tree, copyHint, footer);
         split.append(section);
         state.actions = fileActionControls(section, ctx, {
             read: () => ({ generation: state.generation, directory: state.directory, peer: state.peer, label: state.peer?.hostId ?? '',
@@ -200,7 +201,7 @@ export async function filesView(root, ctx)
             refresh: snapshot => Promise.all(panes.filter(item => samePeer(item.peer, snapshot.peer) && item.directory === snapshot.directory).map(item => item.refresh()))
         });
         toolbar.append(state.actions.create);
-        footer.append(state.actions.remove, copy, copyHint);
+        footer.append(state.actions.remove, copy);
 
         /** 転送先が決まっていないとき、フォルダーを開く場所を示します。 */
         function updateCopyAction(locked)
@@ -209,6 +210,14 @@ export async function filesView(root, ctx)
             copy.textContent = destination ? ctx.t('Copy to ' + destination, destination + ' にコピー') : ctx.t('Copy selected files', '選択したファイルをコピー');
             copy.disabled = locked || !state.peer || !state.selected.size || !other?.directory || other.busy || state.peer.clusterId !== other.peer?.clusterId;
             copyHint.hidden = locked || !state.selected.size || !other?.peer || other.busy || other.directory !== null;
+            if (copyHint.hidden)
+            {
+                copy.removeAttribute('aria-describedby');
+            }
+            else
+            {
+                copy.setAttribute('aria-describedby', copyHint.id);
+            }
         }
 
         /** 現在の設定と状態から表示を更新します。 */

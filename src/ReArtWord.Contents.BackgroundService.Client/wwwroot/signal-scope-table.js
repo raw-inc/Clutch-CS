@@ -35,13 +35,6 @@ export function scopeTable(container, ctx, send, report)
     const scrollArea = document.createElement('clutch-scroll-area');
     scrollArea.dataset.scrollAxis = 'both';
     scrollArea.append(viewport);
-    for (const edge of ['before', 'after'])
-    {
-        const indicator = document.createElement('span');
-        indicator.className = 'scroll-inline-edge scroll-inline-' + edge;
-        indicator.setAttribute('aria-hidden', 'true');
-        scrollArea.append(indicator);
-    }
     container.append(scrollArea, panels);
     let follow = true, hostNames = false, selected = null, request = 0, programmedScroll = -1, anchor = null;
     let firstRendered = 0, requestedOffset = 0, requestedAnchor = null;
@@ -177,7 +170,9 @@ export function scopeTable(container, ctx, send, report)
             }
             description.textContent = value.pending ? ctx.t('Loading packet details…', 'パケットの詳細を取得しています…')
                 : value.removed ? ctx.t('Packet details have expired or the source is disconnected.', '詳細の保持期限が切れたか、取得側との接続が終了しています。')
-                    : value.time + '\n' + value.observers.join('\n') + '\n' + value.rawLength + ' / ' + value.originalLength + ' bytes\n\n' + (value.details ?? '');
+                    : value.time + '\n' + value.observers.join('\n') + '\n' +
+                        ctx.t('Source', '送信元') + ': ' + endpoint(value.source, null, value.sourcePort) + '\n' +
+                        ctx.t('Destination', '宛先') + ': ' + endpoint(value.destination, null, value.destinationPort) + '\n' + value.rawLength + ' / ' + value.originalLength + ' bytes\n\n' + (value.details ?? '');
             hex.textContent = value.hex ?? '';
         },
 

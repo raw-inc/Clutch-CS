@@ -48,7 +48,7 @@ export async function terminalView(root, ctx)
     panel.append(connectionState, note, host);
     root.append(toolbar, sources, panel);
     let peer, session, term, fit, stream, generation = 0, owner;
-    let disposed = false;
+    let disposed = false, terminationDialog;
     let peers = [], listTimer, listing, sessionSignature = '', peerSignature = '';
     const shellSelect = document.createElement('select');
     shellSelect.className = 'terminal-shell';
@@ -81,6 +81,60 @@ export async function terminalView(root, ctx)
     keyScroll.append(keys.element);
     panel.append(keyScroll);
     host.addEventListener('paste', () => keys.reset(), { capture: true, signal: ctx.signal });
+
+    /** 終了するセッションを確定し、取消時には接続を維持します。
+     * @returns 利用者が対象セッションの終了を確定した場合はtrueです。
+     */
+    function confirmTermination(target, value, endLabel)
+    {
+        const dialog = document.createElement('dialog'), heading = document.createElement('div'), title = document.createElement('h2');
+        const scroll = document.createElement('clutch-scroll-area'), body = document.createElement('div'), footer = document.createElement('form');
+        dialog.className = 'dialog dialog-compact terminal-termination';
+        title.textContent = endLabel;
+        dialog.setAttribute('aria-label', endLabel);
+        heading.className = 'dialog-heading';
+        const close = ctx.button(ctx.t('Close dialog', '閉じる'), () => dialog.close());
+        close.className = 'quiet icon-button';
+        close.setAttribute('aria-label', close.textContent);
+        close.replaceChildren(ctx.icon('close'));
+        heading.append(title, close);
+        body.className = 'dialog-content';
+        const impact = document.createElement('p'), description = document.createElement('span');
+        impact.className = 'notice warning';
+        description.textContent = ctx.t('This closes the shared session and interrupts commands still running in it.', '共有セッションを終了します。実行中のコマンドも中断されます。');
+        impact.append(ctx.icon('warning'), description);
+        const details = document.createElement('p'), identifier = document.createElement('code');
+        details.textContent = target.hostId + ' / ' + target.peerId;
+        identifier.textContent = value.sessionId;
+        details.append(document.createElement('br'), identifier);
+        body.append(details, impact);
+        scroll.append(body);
+        footer.className = 'toolbar';
+        footer.method = 'dialog';
+        const cancel = document.createElement('button'), confirm = document.createElement('button');
+        cancel.textContent = ctx.t('Cancel', 'キャンセル');
+        cancel.value = 'cancel';
+        cancel.autofocus = true;
+        confirm.textContent = endLabel;
+        const terminate = 'terminate';
+        confirm.value = terminate;
+        confirm.className = 'danger confirm-action';
+        setControlLabel(confirm, ctx.icon('stop'));
+        footer.append(cancel, confirm);
+        dialog.append(heading, scroll, footer);
+        root.append(dialog);
+        terminationDialog = dialog;
+        return new Promise(resolve =>
+        {
+            dialog.addEventListener('close', () =>
+            {
+                terminationDialog = null;
+                dialog.remove();
+                resolve(dialog.returnValue === terminate);
+            }, { once: true });
+            dialog.showModal();
+        });
+    }
 
     /** xtermはCanvasに描画するため、端末面に適用された配色を渡します。
      * @returns 文字・背景・カーソルの表示色です。
@@ -205,9 +259,10 @@ export async function terminalView(root, ctx)
                 }
                 const claim = current ? null : ctx.button(ctx.t('Take over', '引き継ぐ'), () => connectAsync(value, false, selected));
                 claim?.setAttribute('aria-label', ctx.t('Take over', '接続を引き継ぐ'));
-                const terminate = ctx.button(ctx.t('End session', 'セッションを終了'), async () =>
+                const endLabel = ctx.t('End session', 'セッションを終了');
+                const terminate = ctx.button(ctx.t('End', '終了'), async () =>
                 {
-                    if (!window.confirm(ctx.t('Terminate this session?', 'このセッションを終了しますか？') + '\n' + value.sessionId))
+                    if (!await confirmTermination(selected, value, endLabel) || disposed || ctx.signal.aborted)
                     {
                         return;
                     }
@@ -218,7 +273,9 @@ export async function terminalView(root, ctx)
                     await ctx.api('/api/v2/terminal/close', selected, { sessionId: value.sessionId });
                     await list();
                 });
-                terminate.className = 'danger';
+                terminate.className = 'danger terminal-end-session';
+                terminate.setAttribute('aria-label', endLabel);
+                terminate.title = endLabel;
                 setControlLabel(terminate, ctx.icon('stop'));
                 terminate.disabled = item.failed;
                 if (claim)
@@ -800,14 +857,14 @@ export async function terminalView(root, ctx)
     const sessionActions = document.createElement('div'), screenActions = document.createElement('div');
     sessionActions.className = 'terminal-session-actions';
     screenActions.className = 'terminal-screen-actions';
-    sessionActions.append(shellLabel, user, admin, leave);
+    sessionActions.append(shellLabel, shellPath, user, admin, leave);
     screenActions.append(copy, paste, ...fullscreen.buttons);
     toolbar.append(sessionActions, screenActions);
     if (tokenPolicy)
     {
         sessionActions.append(tokenPolicy);
     }
-    sessionActions.append(shellPath, adminHint);
+    sessionActions.append(adminHint);
     const peerTitle = document.createElement('h2'), sessionTitle = document.createElement('h2');
     peerTitle.textContent = ctx.t('Clusters & peers', 'クラスタ・ピア');
     sessionTitle.textContent = ctx.t('Shared sessions', '共有セッション');
@@ -915,6 +972,7 @@ export async function terminalView(root, ctx)
         dispose()
         {
             disposed = true;
+            terminationDialog?.close();
             clearTimeout(listTimer);
             shellCatalogs.clear();
             fullscreen.dispose();

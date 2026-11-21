@@ -536,7 +536,7 @@
     min-width: 0;
     height: 30px;
     padding: 5px 8px;
-    font: 11px Consolas, monospace;
+    font: 14px var(--font-mono);
     background: var(--paper);
 }
 
@@ -999,19 +999,6 @@
     background: transparent;
 }
 
-.terminal-keys button:disabled,
-.terminal-toolbar button:disabled,
-.file-pane .danger:disabled {
-    color: var(--disabled-ink);
-    background: var(--disabled-face);
-    border-color: var(--line);
-    opacity: 1;
-}
-
-.terminal-session > .danger {
-    color: var(--danger);
-}
-
 .file-pane-title,
 .transfer-jobs h2 {
     font-size: 18px;
@@ -1461,8 +1448,13 @@
 }
 
 .terminal-shell-path {
+    order: 1;
     font-family: var(--font-mono);
     font-size: 12px;
+}
+
+.terminal-launch-hint {
+    order: 2;
 }
 
 .terminal-panel > .terminal-state {
@@ -1572,6 +1564,10 @@
 
     .terminal-session-actions .terminal-shell-field {
         flex-basis: 100%;
+    }
+
+    .terminal-shell-path {
+        order: 0;
     }
 
     .terminal-session-actions .terminal-shell {
@@ -1687,13 +1683,18 @@
 }
 
 .terminal-sidebar .terminal-session > :is(.terminal-claim, .terminal-connected) {
-    inline-size: 5.75rem;
+    inline-size: 5.25rem;
     flex: none;
 }
 
+.terminal-sidebar .terminal-session > .terminal-end-session {
+    padding-inline: 8px;
+}
+
 .file-copy-hint {
-    flex-basis: 100%;
     margin: 0;
+    padding: 6px 12px;
+    color: var(--muted);
     font-size: 12px;
 }
 
