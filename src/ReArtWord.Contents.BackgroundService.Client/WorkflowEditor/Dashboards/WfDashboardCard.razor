@@ -22,7 +22,7 @@
         else
         {
             <button type="button" class="primary dashboard-control dashboard-push" aria-label="@label" disabled="@(!CanPress)" @onclick="Pressed" title="@Ui[State?.Active==true?"Press button":"Save and activate the source workflow before using this control."]">
-                <span class="dashboard-push-icon" aria-hidden="true"><UiIcon Name="play" /></span><span class="dashboard-control-label">@label</span>
+                <UiIcon Name="play" /><span class="control-label dashboard-control-label">@label</span>
                 <span class="dashboard-action-feedback" aria-hidden="true"></span>
             </button>
         }

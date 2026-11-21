@@ -3,7 +3,7 @@
 <Modal Open="Open" Title="@Ui["Delete workflow"]" Close="()=>CloseAsync(UiCancellation)">
     <ChildContent>
     <p><strong>@name</strong> · <code>@id</code></p>
-    <p>@Ui[revision is null ? "Delete this unsaved draft from this browser?" : "Delete the saved workflow from this cluster? A snapshot is required before deletion. New inputs will stop as each peer applies the deletion; already running executions are not cancelled."]</p>
+    <p class="notice warning"><UiIcon Name="warning" /><span>@Ui[revision is null ? "Delete this unsaved draft from this browser?" : "Delete the saved workflow from this cluster? A snapshot is required before deletion. New inputs will stop as each peer applies the deletion; already running executions are not cancelled."]</span></p>
     @if(dirty){<p class="notice">@Ui["Unsaved changes in this draft will also be discarded."]</p>}
     @if(localOnly){<p class="notice">@Ui["Rejoin the cluster and resolve local changes before deleting this saved workflow."]</p>}
     @if(result is not null){<p role="status">@Ui.Format("Snapshot: {0} / Deleted: {1} / Local deactivation: {2}",Ui[result.Snapshot.Outcome.ToString()],Ui[result.Deleted.Outcome.ToString()],Ui[result.Deactivation.Outcome.ToString()])<br />@result.Deleted.Reason @result.Deactivation.Reason<br />@Ui["Snapshot"]: @result.SnapshotId</p>}

@@ -3,7 +3,6 @@
     <div class="section-heading"><h2>@Ui["Add reference"]</h2><button class="quiet icon-button" type="button" aria-label="@Ui["Close"]" @onclick="Close"><UiIcon Name="close" /></button></div>
     <label class="field-label">@Ui["Search nodes"]<input type="search" aria-label="@Ui["Search nodes by logical name or physical name"]" placeholder="@Ui["Name, ID or type"]" value="@search" @oninput="SearchAsync" maxlength="256" /></label>
     <clutch-scroll-area class="dashboard-catalog-scroll"><div class="dashboard-catalog-content">
-    @ChildContent
     @if(problem is not null){<p class="notice warn">@Ui[problem]</p>}
     @if(busy){<p class="muted" role="status">@Ui["Loading…"]</p>}
     <div class="dashboard-catalog-items" aria-busy="@busy.ToString().ToLowerInvariant()">
@@ -18,5 +17,6 @@
     </div>
     @if(!busy&&problem is null&&items.Count==0){<p class="muted">@Ui["No matching nodes"]</p>}
     @if(next is not null){<button type="button" disabled="@busy" @onclick="()=>ReadAsync(true,UiCancellation)">@Ui["Next page"]</button>}
+    @ChildContent
     </div></clutch-scroll-area>
 </div>

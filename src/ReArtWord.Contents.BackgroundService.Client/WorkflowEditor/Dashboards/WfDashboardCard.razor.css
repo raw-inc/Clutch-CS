@@ -30,7 +30,7 @@
     overflow-wrap: anywhere;
 }
 
-.dashboard-push {
+.dashboard-push:enabled {
     background: var(--accent);
     color: var(--on-accent);
     border: 1px solid transparent;
@@ -46,18 +46,16 @@
     }
 }
 
-.dashboard-push-icon {
-    display: inline-flex;
-    flex: none;
-}
-
 .dashboard-switch {
     justify-content: space-between;
     gap: 14px;
     padding: 8px;
+    text-align: left;
+}
+
+.dashboard-switch:enabled {
     border-color: transparent;
     background: transparent;
-    text-align: left;
 }
 
 .dashboard-switch:hover:not(:disabled) {
