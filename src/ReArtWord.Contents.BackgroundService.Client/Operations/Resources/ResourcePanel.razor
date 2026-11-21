@@ -1,5 +1,6 @@
 @using ReArtWord.Contents.BackgroundService.Client.Components
 @using ReArtWord.Contents.BackgroundService.Contracts.Resources
+@using ReArtWord.Contents.BackgroundService.Client.Overview.Telemetry
 <section class="card">
 <div class="section-heading"><h2>@Ui["Resources"]</h2><div class="toolbar"><button class="quiet section-refresh" @onclick="RefreshAsync"><UiIcon Name="refresh" /><span class="control-label">@Ui["Refresh resource measurements"]</span></button><button @onclick="HistoryAsync"><UiIcon Name="logs" /><span class="control-label">@Ui["Sample history"]</span></button></div></div>
 @if(sample is not null){<p class="small muted">@sample.PeerId · <time title="@FormatTime(sample.ObservedAt)">@FormatTime(sample.ObservedAt,"HH:mm:ss")</time></p>
@@ -11,7 +12,7 @@
         <div><dt>@label</dt><dd>@Value(metric)</dd>
             @if (metric is { Unit: "percent", Value: double percent })
             {
-                <meter aria-label="@label" min="0" max="100" value="@percent.ToString(CultureInfo.InvariantCulture)"></meter>
+                <meter aria-label="@label" min="0" max="100" high="@DashboardMetrics.UsageWarningThreshold" optimum="0" class="@(percent > DashboardMetrics.UsageWarningThreshold ? "over-threshold" : null)" value="@percent.ToString(CultureInfo.InvariantCulture)"></meter>
             }
         </div>
     }

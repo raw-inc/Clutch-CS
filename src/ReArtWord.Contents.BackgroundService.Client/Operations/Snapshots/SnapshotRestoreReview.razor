@@ -28,7 +28,7 @@
         }
         @if(preparation.Locks.Count!=0){<JsonDetails Value="preparation.Locks" Title="@Ui["Active restore protection"]" />}
         <button @onclick="RefreshAsync" disabled="@busy">@Ui["Check again"]</button>
-        <button class="restore-action confirm" @onclick="StartAsync" disabled="@(busy||!preparation.Ready)"><UiIcon Name="warning" /><span class="control-label">@Ui["Start restoring this fixed scope"]</span></button>
+        <button class="restore-action confirm-action" @onclick="StartAsync" disabled="@(busy||!preparation.Ready)"><UiIcon Name="warning" /><span class="control-label">@Ui["Start restoring this fixed scope"]</span></button>
     }
     <button @onclick="CancelAsync" disabled="@busy">@Ui["Cancel without starting restore"]</button>
 </Modal>

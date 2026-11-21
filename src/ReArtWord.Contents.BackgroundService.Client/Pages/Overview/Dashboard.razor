@@ -151,7 +151,7 @@
     </ChildContent>
     <Actions>
         @if(MembershipStatus==EPeerStatus.Detached){<button class="primary" @onclick="RejoinAsync">@Ui["Rejoin"]</button>}
-        else{<button class="danger" data-confirm-entry="@(!confirmDetach ? "" : null)" disabled="@(MembershipStatus is null)" @onclick="()=>{if(confirmDetach){confirmDetach=false;return DetachAsync();}confirmDetach=true;return Task.CompletedTask;}"><UiIcon Name="leave" /><span class="control-label">@Ui[confirmDetach?"Confirm detachment":"Detach this peer"]</span></button>}
+        else{<button class="@(confirmDetach ? "danger confirm-action" : "danger")" disabled="@(MembershipStatus is null)" @onclick="()=>{if(confirmDetach){confirmDetach=false;return DetachAsync();}confirmDetach=true;return Task.CompletedTask;}"><UiIcon Name="leave" /><span class="control-label">@Ui[confirmDetach?"Confirm detachment":"Detach this peer"]</span></button>}
     </Actions>
 </Modal>
 <Modal Open="(activation is not null)" Title='@Ui["Apply saved revision to future inputs"]' Close="()=>activation=null">

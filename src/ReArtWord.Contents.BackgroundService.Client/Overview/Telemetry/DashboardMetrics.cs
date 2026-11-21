@@ -100,13 +100,16 @@ internal static class DashboardMetrics
     internal static string Trend(IReadOnlyList<ResourceSample> samples, string metric, string target, double maximum = 100)
         => TrendPaths(samples, metric, target, maximum).Series;
 
+    /// <summary>CPU、メモリー、GPUの使用率を強調するしきい値です。</summary>
+    internal static int UsageWarningThreshold => 80;
+
     /// <summary>カードで表示するCPU・メモリーと代表GPU・VRAMの最新の使用率を数えます。</summary>
     /// <returns>80%を超えている指標の件数です。</returns>
     internal static int AboveThreshold(ResourceSample? sample)
     {
         string gpu = LargestDedicatedGpu(sample)?.Target ?? string.Empty;
-        return Convert.ToInt32(80 < Value(sample, "cpu.usage")) + Convert.ToInt32(80 < Value(sample, "memory.usage"))
-               + Convert.ToInt32(80 < Value(sample, "gpu.usage", gpu)) + Convert.ToInt32(80 < Value(sample, "gpu.memory.usage", gpu));
+        return Convert.ToInt32(UsageWarningThreshold < Value(sample, "cpu.usage")) + Convert.ToInt32(UsageWarningThreshold < Value(sample, "memory.usage"))
+               + Convert.ToInt32(UsageWarningThreshold < Value(sample, "gpu.usage", gpu)) + Convert.ToInt32(UsageWarningThreshold < Value(sample, "gpu.memory.usage", gpu));
     }
 
     /// <summary>固定の百分率で表示する指標かを判定します。</summary>
@@ -144,7 +147,7 @@ internal static class DashboardMetrics
             double x = (sample.ObservedAt.ToUnixTimeMilliseconds() - startMilliseconds) / 1000d;
             double y = 100 - value.Value / maximum * 100;
             result.Append(CultureInfo.InvariantCulture, $"{command}{x:F3},{y:F2} ");
-            double threshold = 80;
+            double threshold = UsageWarningThreshold;
             if (usage && connected && threshold < Math.Max(lastValue, value.Value))
             {
                 double startX = lastX, endX = x, startValue = lastValue, endValue = value.Value;

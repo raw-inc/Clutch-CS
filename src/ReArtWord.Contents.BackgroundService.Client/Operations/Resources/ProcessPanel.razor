@@ -17,6 +17,10 @@
     }
     else
     {
+        @if(RemovalUnavailable is {} unavailable)
+        {
+            <p id="application-removal-status" class="small muted" role="status">@Ui[unavailable]</p>
+        }
         <clutch-status-labels><clutch-card-rows><ul class="application-list">
             @foreach (var item in processes)
             {
@@ -43,7 +47,7 @@
                     <div class="toolbar application-actions">
                         <button disabled="@(busy||target is null)" @onclick="()=>selected=item">@Ui["Details and actions"]</button>
                         <button disabled="@(busy||target is null)" @onclick="()=>Edit(item)">@Ui["Edit"]</button>
-                        <button class="danger registration-remove" disabled="@(busy||refreshing||target is null)" @onclick="()=>ConfirmRemoval(item)"><UiIcon Name="trash" /><span class="control-label">@Ui["Remove registration"]</span></button>
+                        <button class="danger registration-remove" disabled="@(RemovalUnavailable is not null)" aria-describedby="@(RemovalUnavailable is null ? null : "application-removal-status")" @onclick="()=>ConfirmRemoval(item)"><UiIcon Name="trash" /><span class="control-label">@Ui["Remove registration"]</span></button>
                     </div>
                 </li>
             }
@@ -75,7 +79,7 @@
         {
             <fieldset disabled="@(busy||target is null)"><legend>@Ui["Process controls"]</legend><div class="toolbar">
                 <button class="primary" disabled="@(item.Observed.Status?.Running is true)" @onclick='()=>CommandAsync("process.start",new{processId=item.Definition.Id},UiCancellation)'><UiIcon Name="play" /><span class="control-label">@Ui["Start"]</span></button>
-                <button class="danger" disabled="@(item.Observed.Status?.Running is false)" @onclick="()=>{restarting=false;stopOpen=true;}">@Ui["Stop"]</button>
+                <button class="danger" disabled="@(item.Observed.Status?.Running is false)" @onclick="()=>{restarting=false;stopOpen=true;}"><UiIcon Name="stop" /><span class="control-label">@Ui["Stop"]</span></button>
                 <button disabled="@(item.Observed.Status?.Running is false)" @onclick="()=>{restarting=true;stopOpen=true;}">@Ui["Restart"]</button>
             </div>@if(item.Observed.Status?.Running is false){<p class="small muted">@Ui["The application is stopped. Use Start to run it."]</p>}<details class="secondary-details recovery-controls"><summary>@Ui["Recovery controls"]</summary><div class="action-list">
                 <button class="quiet" @onclick='()=>CommandAsync("process.recoverySuppression",new{processId=item.Definition.Id,suppressed=!(item.Observed.Status?.RecoverySuppressed??false)},UiCancellation)'>@Ui[item.Observed.Status?.RecoverySuppressed is true?"Resume automatic recovery":"Suppress automatic recovery"]</button>
@@ -87,7 +91,13 @@
     }
     @if(selected is { } displayed)
     {
-        <div class="destructive-action"><button class="danger" disabled="@(busy||refreshing||target is null)" @onclick="()=>ConfirmRemoval(displayed)"><UiIcon Name="trash" /><span class="control-label">@Ui["Remove registration"]</span></button></div>
+        <div class="destructive-action">
+            <button class="danger" disabled="@(RemovalUnavailable is not null)" aria-describedby="@(RemovalUnavailable is null ? null : "application-detail-removal-status")" @onclick="()=>ConfirmRemoval(displayed)"><UiIcon Name="trash" /><span class="control-label">@Ui["Remove registration"]</span></button>
+            @if(RemovalUnavailable is {} unavailable)
+            {
+                <p id="application-detail-removal-status" class="small muted" role="status">@Ui[unavailable]</p>
+            }
+        </div>
     }
     </ChildContent>
     <Actions>
@@ -99,7 +109,7 @@
     <p>@Ui["Removing this registration disables automatic monitoring, recovery and scheduled starts. A running application will not be stopped."]</p>
     <p>@Ui["Workflows that use this registration will no longer be able to operate it."]</p>
     @if(message is not null){<p class="notice" role="status">@message()</p>}
-    <div class="toolbar"><button class="danger" disabled="@(busy||refreshing||target is null)" @onclick="()=>RemoveAsync(UiCancellation)">@Ui["Remove registration"]</button><button class="quiet" disabled="@busy" @onclick="CloseRemoval">@Ui["Cancel"]</button></div>
+    <div class="toolbar"><button class="danger confirm-action" disabled="@(RemovalUnavailable is not null)" @onclick="()=>RemoveAsync(UiCancellation)"><UiIcon Name="trash" /><span class="control-label">@Ui["Remove registration"]</span></button><button class="quiet" disabled="@busy" @onclick="CloseRemoval">@Ui["Cancel"]</button></div>
 </Modal>
 <Modal Open="stopOpen" Title='@Ui[restarting?"Restart application":"Stop application"]' Close="()=>stopOpen=false">
     <p>@Owner · <strong>@selected?.Definition.DisplayName</strong></p>

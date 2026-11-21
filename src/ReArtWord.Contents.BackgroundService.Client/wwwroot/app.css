@@ -90,16 +90,40 @@ button.primary:enabled:hover {
 }
 
 button.danger {
-    border-color: var(--danger);
-    background: transparent;
-    color: var(--danger);
+    --action-ink: var(--danger);
+    --action-hover: var(--danger-soft);
+    --action-fill: var(--danger-fill);
+    --action-fill-hover: var(--danger-fill-hover);
 }
 
-button.danger:enabled:hover,
-:is(.dialog > footer, .hm-dialog-actions, .file-action-dialog .toolbar) button.danger:enabled:where(:not([data-confirm-entry])) {
-    border-color: var(--danger);
-    background: var(--danger-soft);
-    color: var(--danger);
+button.restore-action {
+    --action-ink: var(--warn);
+    --action-hover: var(--warn-soft);
+    --action-fill: var(--warn-fill);
+    --action-fill-hover: var(--warn-fill-hover);
+}
+
+button:is(.danger, .restore-action):enabled {
+    color: var(--action-ink);
+    border-color: var(--button-line);
+    border-bottom-color: var(--button-line-bottom);
+    background: var(--button-face);
+    box-shadow: var(--button-shadow);
+}
+
+button:is(.danger, .restore-action):enabled:hover {
+    background: var(--action-hover);
+}
+
+button:is(.danger, .restore-action).confirm-action:enabled {
+    border-color: transparent;
+    background: var(--action-fill);
+    color: var(--on-accent);
+    box-shadow: none;
+}
+
+button:is(.danger, .restore-action).confirm-action:enabled:hover {
+    background: var(--action-fill-hover);
 }
 
 button.quiet {
@@ -1070,12 +1094,6 @@ input[type="checkbox"] {
     }
 }
 
-button.danger:disabled {
-    border-color: var(--disabled-line);
-    color: var(--disabled-ink);
-    background: var(--disabled-face);
-}
-
 .lookup-status .badge.pending {
     border-color: var(--line);
     background: var(--nested);
@@ -1291,27 +1309,11 @@ button.danger:disabled {
     white-space: normal;
 }
 
-.restore-action:enabled {
-    color: var(--warn);
-    border-color: var(--warn);
-    background: transparent;
-    box-shadow: none;
-}
-
-.restore-action.confirm:enabled {
-    background: var(--warn-soft);
-    font-weight: 600;
-}
-
-.restore-action:enabled:hover {
-    background: var(--warn-soft);
-}
-
 .json-details {
     min-inline-size: 0;
 }
 
-.json-details > .detail {
+.json-details > clutch-scroll-area > .detail {
     overflow-x: auto;
     white-space: pre;
     scrollbar-color: var(--control) var(--paper);

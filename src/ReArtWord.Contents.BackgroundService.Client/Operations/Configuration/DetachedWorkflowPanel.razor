@@ -63,5 +63,5 @@
 </Modal>
 <Modal Open="discardOpen" Title="@Ui["Discard local changes without sharing"]" Close="()=>discardOpen=false">
     <p>@Ui.Format("Discard only the reviewed local revision of {0}. This does not undo file changes, process actions or external outputs that already occurred.", state?.WorkflowId)</p>
-    <button class="danger" disabled="@busy" @onclick="()=>ResolveAsync(true)">@Ui["Confirm discard of the local revision"]</button>
+    <button class="danger confirm-action" disabled="@busy" @onclick="()=>ResolveAsync(true)">@Ui["Confirm discard of the local revision"]</button>
 </Modal>

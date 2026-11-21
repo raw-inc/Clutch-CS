@@ -15,6 +15,18 @@
         background-color: var(--accent-hover);
     }
 
+    :root button:is(.danger, .restore-action):enabled:focus-visible {
+        --focus-mark: var(--action-ink);
+
+        background-color: var(--action-hover);
+    }
+
+    :root button:is(.danger, .restore-action).confirm-action:enabled:focus-visible {
+        --focus-mark: var(--on-accent);
+
+        background-color: var(--action-fill-hover);
+    }
+
     :root :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"]), select, textarea):focus,
     .search-field:focus-within,
     .code-input:focus-within,

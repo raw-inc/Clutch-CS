@@ -7,5 +7,5 @@
         <p>@Ui["Completed effects cannot be undone."]</p>
         <p class="small muted">@Ui["Operation ID"] · <code>@RunId</code></p>
     </ChildContent>
-    <Actions><button class="danger" disabled="@(busy||submitted)" @onclick="()=>{confirming=false;return CancelAsync(UiCancellation);}"><UiIcon Name="stop" /><span class="control-label">@Ui["Cancel this execution"]</span></button></Actions>
+    <Actions><button class="danger confirm-action" disabled="@(busy||submitted)" @onclick="()=>{confirming=false;return CancelAsync(UiCancellation);}"><UiIcon Name="stop" /><span class="control-label">@Ui["Cancel this execution"]</span></button></Actions>
 </Modal>

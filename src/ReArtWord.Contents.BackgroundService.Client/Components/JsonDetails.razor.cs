@@ -31,7 +31,7 @@ public sealed partial class JsonDetails
     {
         get;
         set;
-    } = "Exact JSON";
+    } = "View JSON";
 
     private static readonly JsonSerializerOptions options = new(ContractJson.Options)
     {

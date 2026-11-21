@@ -1,0 +1,12 @@
+.safety-panel .lookup-status {
+    margin-block-end: 20px;
+}
+
+.safety-target {
+    overflow-wrap: anywhere;
+}
+
+.safety-target-help {
+    flex-basis: 100%;
+    margin: 0;
+}

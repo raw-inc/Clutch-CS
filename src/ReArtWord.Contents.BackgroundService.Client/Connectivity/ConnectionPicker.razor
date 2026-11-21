@@ -84,5 +84,5 @@
             <p class="notice warning"><UiIcon Name="warning" />@Ui.Format("Stopping observation for {0} can remove clusters only visible through it.", name)</p>
         }
     </ChildContent>
-    <Actions><button class="danger" disabled="@busy" @onclick="()=>ConfirmRemovalAsync(UiCancellation)"><UiIcon Name="offline" /><span class="control-label">@Ui["Stop discovery"]</span></button></Actions>
+    <Actions><button class="danger confirm-action" disabled="@busy" @onclick="()=>ConfirmRemovalAsync(UiCancellation)"><UiIcon Name="offline" /><span class="control-label">@Ui["Stop discovery"]</span></button></Actions>
 </Modal>

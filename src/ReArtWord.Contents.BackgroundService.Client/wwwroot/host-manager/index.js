@@ -283,7 +283,7 @@ export async function mount(element, labels)
             {
                 dialog.close();
                 await run();
-            }, 'danger'));
+            }, 'danger confirm-action'));
         },
 
         /** 適用前の変更内容を確認表示へ渡します。

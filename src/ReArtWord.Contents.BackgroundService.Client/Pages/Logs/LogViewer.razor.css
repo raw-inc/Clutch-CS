@@ -304,6 +304,10 @@
     margin-top: 12px;
 }
 
+.log-technical > .log-facts {
+    margin-inline: 12px;
+}
+
 .log-missing {
     overflow-wrap: anywhere;
 }

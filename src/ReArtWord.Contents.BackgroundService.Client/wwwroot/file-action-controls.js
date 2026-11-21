@@ -161,7 +161,7 @@ export function fileActionControls(root, ctx, actions)
             cancel.textContent = ctx.t('Cancel', 'キャンセル');
             cancel.onclick = () => dialog.close();
             submit.type = 'submit';
-            submit.className = creating ? 'primary' : 'danger';
+            submit.className = creating ? 'primary' : 'danger confirm-action';
             submit.textContent = creating ? ctx.t('Create folder', '作成') : ctx.t('Delete permanently', '完全に削除');
             form.onsubmit = event =>
             {

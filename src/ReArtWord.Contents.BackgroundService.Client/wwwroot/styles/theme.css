@@ -25,6 +25,10 @@
     --green-soft: light-dark(#d9eee3, #19392f);
     --danger: light-dark(#b02232, #ff9da8);
     --danger-soft: light-dark(#f7dfe1, #40252d);
+    --danger-fill: light-dark(#b02232, #e7909c);
+    --danger-fill-hover: light-dark(#99212f, #ff9da8);
+    --warn-fill: light-dark(#963607, #de977e);
+    --warn-fill-hover: light-dark(#83320a, #ffac8a);
     --violet: light-dark(#70468e, #d3acf1);
     --disabled-ink: light-dark(#535b68, #9097a4);
     --disabled-face: light-dark(#d1d6de, #25272d);

@@ -43,6 +43,14 @@
     background: var(--accent);
 }
 
+.resource-metrics meter::-webkit-meter-suboptimum-value {
+    background: var(--warn);
+}
+
 .resource-metrics meter::-moz-meter-bar {
     background: var(--accent);
+}
+
+.resource-metrics meter.over-threshold::-moz-meter-bar {
+    background: var(--warn);
 }

@@ -7,9 +7,7 @@
 }
 
 .operation-lookup + .section {
-    border-block-start: 1px solid var(--line);
     margin-block-start: 20px;
-    padding-block-start: 20px;
 }
 
 .operation-lookup + .section > h3 {

@@ -46,6 +46,14 @@ public sealed partial class ProcessPanel
     private bool busy, refreshing, stopOpen, resolveOpen, registrationOpen, restarting;
     private string gracefulSeconds = "30", pid = string.Empty, startedAt = string.Empty, resolveMode = string.Empty;
 
+    private string? RemovalUnavailable => (refreshing, busy, target) switch
+    {
+        (true, _, _) => "Wait for the application list to finish refreshing.",
+        (_, true, _) => "Wait for the current application operation to finish.",
+        (_, _, null) => "Confirm the application host before removing a registration.",
+        _ => null
+    };
+
     private string Owner => (Connection.Current?.Peers.FirstOrDefault(item => string.Equals(item.PeerId, peer, StringComparison.Ordinal))?.HostId ?? peer)
         + " / " + cluster + " / " + peer;
 

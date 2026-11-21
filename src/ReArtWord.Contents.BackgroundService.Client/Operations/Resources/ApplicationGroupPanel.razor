@@ -64,5 +64,5 @@
     <p>@Owner · <strong>@removing?.Definition.Name</strong></p>
     <p>@Ui["Remove the group only. Applications keep running and return to their individual monitoring settings."]</p>
     @if(message is not null){<p class="notice" role="status">@message()</p>}
-    <button class="danger" disabled="@(busy||!Available)" @onclick="()=>RemoveAsync(UiCancellation)">@Ui["Remove group"]</button>
+    <button class="danger confirm-action" disabled="@(busy||!Available)" @onclick="()=>RemoveAsync(UiCancellation)">@Ui["Remove group"]</button>
 </Modal>

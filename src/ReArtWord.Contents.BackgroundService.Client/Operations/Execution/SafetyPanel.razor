@@ -1,13 +1,21 @@
 @using ReArtWord.Contents.BackgroundService.Client.Components
 @using ReArtWord.Contents.BackgroundService.Contracts.Workflow
 @using ReArtWord.Contents.BackgroundService.Contracts.Execution
-<section class="card">
+<section class="card safety-panel">
 <h2>@Ui["Safety"]</h2>
 <p class="small muted">@Ui["Pause or resume new inputs for a node or safety group."]</p>
 <div class="lookup-status">
-<span class="badge @(Current is { Stopped: true } or { Continued: true } ? "warn" : targets.Count > 0 && status?.Loaded == true ? "good" : "pending")">@Ui[OverrideState]</span>
+<span class="badge @(Current is { Stopped: true } or { Continued: true } ? "warn" : targets.Count > 0 && status?.Loaded == true ? "good" : targetsLoaded ? "muted" : "pending")">@Ui[OverrideState]</span>
+@if(targetsLoaded && targetWorkflow is not null)
+{
+    <span class="small safety-target">@targetWorkflow @(targets.Count > 0 ? " / " + targets[selected].Scope : null)</span>
+}
+@if(targetsLoaded && targets.Count == 0)
+{
+    <p class="small muted safety-target-help">@Ui["Check the effective revision in WorkflowEditor before choosing a safety target."]</p>
+}
 </div>
-<button class="lookup-action" @onclick="OpenAsync"><UiIcon Name="search" /><span class="control-label">@Ui["Review effective state and targets"]</span></button>
+<button class="lookup-action" @onclick="OpenAsync"><UiIcon Name="search" /><span class="control-label">@Ui["Choose targets to pause or resume"]</span></button>
 <p class="notice">@(message?.Invoke())</p>
 @if(lastOperation is Guid operation){<p>@Ui["Current operation"] @operation <button @onclick="ReadOperationAsync" disabled="@busy">@Ui["Query acceptance again"]</button></p>}
 </section>

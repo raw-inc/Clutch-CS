@@ -33,6 +33,7 @@ public sealed partial class SafetyPanel
     private Guid? lastOperation;
     private readonly List<(string Workflow, string Scope)> targets = [];
     private int selected;
+    private string? targetWorkflow;
     private bool targetsLoaded;
     private ManualSafetyStatus? Current => targets.Count == 0 ? null
                                                               : status?.States.FirstOrDefault(item => string.Equals(item.WorkflowId, targets[selected].Workflow, StringComparison.Ordinal) && string.Equals(item.Scope, targets[selected].Scope, StringComparison.Ordinal));
@@ -63,6 +64,7 @@ public sealed partial class SafetyPanel
 
             targets.Clear();
             targetsLoaded = false;
+            targetWorkflow = null;
             selected = 0;
             preview = null;
             open = true;
@@ -70,6 +72,9 @@ public sealed partial class SafetyPanel
         catch (Exception exception) when (exception is HttpRequestException or InvalidOperationException or JsonException or OperationCanceledException)
         {
             status = null;
+            targets.Clear();
+            targetsLoaded = false;
+            targetWorkflow = null;
             message = Ui.Deferred("Safety state and effective targets could not be confirmed.");
         }
     }
@@ -100,12 +105,14 @@ public sealed partial class SafetyPanel
 
             selected = 0;
             targetsLoaded = true;
+            targetWorkflow = summary.Name;
             preview = null;
         }
         catch (Exception exception) when (exception is HttpRequestException or JsonException or InvalidOperationException)
         {
             targets.Clear();
             targetsLoaded = false;
+            targetWorkflow = null;
             message = Ui.Deferred("The complete target node list could not be retrieved.{0}", exception.Message);
         }
     }
