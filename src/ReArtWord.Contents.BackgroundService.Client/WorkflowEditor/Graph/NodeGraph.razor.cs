@@ -29,7 +29,6 @@ public sealed partial class NodeGraph : IAsyncDisposable
     } = System.Collections.Immutable.ImmutableDictionary<string, bool?>.Empty;
 
     private static string EscapeKey => "Escape";
-    private static string MatchProperties => "properties";
     private static string EnterKey => "Enter";
 
     [Inject]

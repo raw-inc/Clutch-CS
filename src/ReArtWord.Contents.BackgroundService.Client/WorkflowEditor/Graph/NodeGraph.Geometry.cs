@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Fields;
@@ -58,7 +57,6 @@ public sealed partial class NodeGraph
     }
 
     private static double CardGap => 24;
-    private static int ButtonHeightWithReason => 88;
     private readonly Dictionary<string, NodePosition> displayPositions = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> buttonHeights = new(StringComparer.Ordinal);
     private (WorkflowDefinition? Document, GraphTypeInference? Inference, bool Details, bool PortTypes) displayLayout;
@@ -82,8 +80,7 @@ public sealed partial class NodeGraph
             if (string.Equals(node.Type, button, StringComparison.Ordinal) || string.Equals(node.Type, toggle, StringComparison.Ordinal))
             {
                 string? reason = ButtonNodeControl.UnavailableReason(Model, node, ButtonPressed.HasDelegate, ToggleStates.GetValueOrDefault(node.Id));
-                int height = reason is null ? 52
-                                            : ButtonHeightWithReason;
+                int height = GraphPresentation.ButtonHeight(reason is not null);
                 geometryChanged |= buttonHeights.GetValueOrDefault(node.Id) != height;
                 buttonHeights[node.Id] = height;
             }
@@ -169,15 +166,7 @@ public sealed partial class NodeGraph
     /// <summary>ノードの表示設定とポート数からカードの高さを求めます。</summary>
     /// <returns>キャンバス座標におけるカードの高さです。</returns>
     private double CardHeight(NodeDefinition node, NodeDescriptor? descriptor, int inputs, int outputs, bool applyingPlacement = false)
-    {
-        int buttonHeight = buttonHeights.GetValueOrDefault(node.Id);
-        // 配置を草稿に反映すると未保存になり、実行できない理由がボタンの下に表示される。
-        if (applyingPlacement && buttonHeight > 0)
-        {
-            buttonHeight = ButtonHeightWithReason;
-        }
-        return GraphPresentation.CardHeight(descriptor, inputs, outputs, ShowDetails, View, buttonHeight);
-    }
+        => GraphPresentation.CardHeight(descriptor, inputs, outputs, ShowDetails, View, buttonHeights.GetValueOrDefault(node.Id), applyingPlacement);
 
     /// <summary>コードブロックだけ利用者指定のサイズを持ち、壊れた保存値は既定へ戻します。</summary>
     /// <returns>描画に使用できる有限の寸法です。</returns>
@@ -185,10 +174,7 @@ public sealed partial class NodeGraph
     {
         NodeSize? size = resizing && string.Equals(dragging, node.Id, StringComparison.Ordinal) ? sizePreview
                                                                                                 : node.Size;
-        return new(size is not null && double.IsFinite(size.Width) ? Math.Clamp(size.Width, 360, 1600)
-                                                                   : 560,
-            size is not null && double.IsFinite(size.Height) ? Math.Clamp(size.Height, 400, 2000)
-                                                             : 520);
+        return GraphPresentation.ResizableNodeSize(size);
     }
 
     private static string CodeBlockType => "value.code";
@@ -305,11 +291,6 @@ public sealed partial class NodeGraph
         return name;
     }
 
-    /// <summary>設定Schemaに含まれるプロパティを列挙します。</summary>
-    /// <returns>設定プロパティの列挙子、未定義なら空の列挙子です。</returns>
-    private static JsonElement.ObjectEnumerator SettingProperties(NodeDescriptor descriptor) => descriptor.SettingsSchema.ValueKind == System.Text.Json.JsonValueKind.Object && descriptor.SettingsSchema.TryGetProperty(MatchProperties, out JsonElement properties) && properties.ValueKind == System.Text.Json.JsonValueKind.Object ? properties.EnumerateObject()
-                                                                                                                                                                                                                                                                                                                                       : [];
-
     /// <summary>設定入力ポートの縦位置を求めます。</summary>
     /// <returns>カード内の設定ポートのY座標です。</returns>
     private double SettingY(int inputs, int outputs, int index, NodeDefinition node) => GraphSettingPorts.Y(inputs, outputs, index, buttonHeights.GetValueOrDefault(node.Id), View);
@@ -332,7 +313,7 @@ public sealed partial class NodeGraph
         NodeDescriptor? descriptor = inference.EditorDescriptor(id);
         if (!outbound && ShowDetails && descriptor is not null && SettingPorts.Property(port) is { } property)
         {
-            int settingIndex = SettingProperties(descriptor).Select(item => item.Name).ToList().IndexOf(property);
+            int settingIndex = GraphPresentation.SettingProperties(descriptor).Select(item => item.Name).ToList().IndexOf(property);
             if (0 <= settingIndex)
             {
                 return new(position.X, position.Y + SettingY(Ports(descriptor, false, id).Count, Ports(descriptor, true, id).Count, settingIndex, node));

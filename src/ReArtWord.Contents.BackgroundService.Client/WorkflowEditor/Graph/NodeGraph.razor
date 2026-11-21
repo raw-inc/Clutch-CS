@@ -94,7 +94,7 @@
             else if(ShowDetails && descriptor is not null && (GraphPresentation.SettingsCount(descriptor)>0 || descriptor.Inputs.Count>0))
             {
                 var top=90+Math.Max(inputs.Count,outputs.Count)*GraphPresentation.PortSpacing(View)+buttonHeight;
-                @foreach(var setting in SettingProperties(descriptor).Select((property,index)=>(property,index)))
+                @foreach(var setting in GraphPresentation.SettingProperties(descriptor).Select((property,index)=>(property,index)))
                 {
                     var settingPort=SettingPorts.Name(setting.property.Name);var settingInfo=inference.Port(node.Id,settingPort,false);var settingY=SettingY(inputs.Count,outputs.Count,setting.index,node);
                     @if(GraphSettingPorts.Visible(Model.Draft.Document,node.Id,descriptor,settingPort))
