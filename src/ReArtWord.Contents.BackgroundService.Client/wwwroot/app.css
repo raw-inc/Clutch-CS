@@ -1239,6 +1239,14 @@ input[type="checkbox"] {
     .dialog > .toolbar button {
         min-height: 44px;
     }
+
+    .dialog.dialog-compact > .toolbar {
+        padding-inline: 12px;
+    }
+
+    .dialog-compact > .toolbar button {
+        padding-inline: 12px;
+    }
 }
 
 :lang(ja) .dialog :where(p, small, .notice > span) {

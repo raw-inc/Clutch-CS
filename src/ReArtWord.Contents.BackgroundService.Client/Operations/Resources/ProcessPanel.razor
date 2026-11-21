@@ -106,7 +106,7 @@
 </Modal>
 <Modal Open="@(removing is not null)" Compact="true" Title='@Ui["Remove registration"]' Close="CloseRemoval">
     <ChildContent>
-        <p>@Owner · <strong>@removing?.Definition.DisplayName</strong></p>
+        <p><strong>@removing?.Definition.DisplayName</strong><br /><span class="muted">@Owner</span></p>
         <p class="notice warning"><UiIcon Name="warning" /><span>@Ui["Removing this registration disables automatic monitoring, recovery and scheduled starts. A running application will not be stopped."]</span></p>
         <p>@Ui["Workflows that use this registration will no longer be able to operate it."]</p>
         @if(message is not null){<p class="notice" role="status">@message()</p>}
@@ -117,7 +117,7 @@
 </Modal>
 <Modal Open="stopOpen" Compact="true" Title='@Ui[restarting?"Restart application":"Stop application"]' Close="()=>stopOpen=false">
     <ChildContent>
-        <p>@Owner · <strong>@selected?.Definition.DisplayName</strong></p>
+        <p><strong>@selected?.Definition.DisplayName</strong><br /><span class="muted">@Owner</span></p>
         <p class="notice warning"><UiIcon Name="warning" /><span>@StopImpact</span></p>
         @if(restarting){<p>@Ui["A restart only starts a new process after the old process has been confirmed stopped."]</p>}
         @if(message is not null){<p class="notice" role="status">@message()</p>}

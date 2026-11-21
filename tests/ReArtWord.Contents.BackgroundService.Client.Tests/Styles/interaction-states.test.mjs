@@ -518,7 +518,7 @@ test('複数の変更対象がある確認画面では、本文が長くても�
 
 test('ツールごとの見出しと共通ダイアログの見出しをそれぞれの大きさで表示する', async context =>
 {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
     context.after(() => page.close());
     await page.setContent(`
         <main class="remote-tools">
@@ -537,7 +537,7 @@ test('ツールごとの見出しと共通ダイアログの見出しをそれ�
 
 test('ページの見出し帯やHostManagerの中でも確認ダイアログの操作サイズを揃える', async context =>
 {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
     context.after(() => page.close());
     await page.setContent(`
         <main class="page-title">
@@ -582,4 +582,23 @@ test('ページの見出し帯やHostManagerの中でも確認ダイアログの
     {
         assert.equal(metrics.action, 44);
     }
+});
+
+test('390px幅でもアプリの再起動確認はキャンセルと確定を同じ行に表示する', async context =>
+{
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 }, locale: 'ja-JP', reducedMotion: 'reduce' });
+    context.after(() => page.close());
+    await page.setContent(`
+        <dialog class="dialog dialog-compact dialog-stacked" open>
+            <header class="dialog-heading"><h2>アプリケーションを再起動</h2></header>
+            <div class="dialog-content"><p>映像プレイヤー</p></div>
+            <footer class="toolbar">
+                <button style="min-inline-size:91px">キャンセル</button>
+                <button class="restore-action confirm-action" style="min-inline-size:208px"><svg class="ui-icon" aria-hidden="true"></svg><span class="control-label">アプリケーションを再起動</span></button>
+            </footer>
+        </dialog>`);
+    await page.addStyleTag({ content: styles.css });
+    const buttons = await page.locator('footer button').evaluateAll(actions => actions.map(button => button.getBoundingClientRect().toJSON()));
+    assert.equal(buttons[0].top, buttons[1].top);
+    assert.ok(buttons.every(button => 44 <= button.height));
 });
