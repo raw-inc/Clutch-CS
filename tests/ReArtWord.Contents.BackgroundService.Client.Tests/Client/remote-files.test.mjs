@@ -59,8 +59,19 @@ class Element
     }
 
     /** 属性の値を試験用DOMへ記録します。 */
-    setAttribute()
-    {}
+    setAttribute(name, value)
+    {
+        (this.attributes ??= {})[name] = value;
+    }
+
+    /** 閲覧先が選ばれたときに案内の関連付けを解除します。 */
+    removeAttribute(name)
+    {
+        if (this.attributes)
+        {
+            delete this.attributes[name];
+        }
+    }
 
     /** 親との関係を解除して試験用DOMから取り除きます。 */
     remove()
@@ -270,7 +281,7 @@ async function fixtureAsync(t, inventory = null, browse = true)
             await timers.shift()();
         },
 
-        names: () => descendants(pane).filter(e => e.className === 'file-name').map(e => e.textContent)
+        names: () => descendants(pane).filter(e => e.className?.split(' ').includes('file-name')).map(e => e.textContent)
     };
 }
 
@@ -340,7 +351,7 @@ test('a restarted endpoint cannot enqueue from paths browsed on its old instance
     check.checked = true;
     check.onchange();
     f.setPeers([{ ...left, instanceId: 'restarted' }, right]);
-    await f.clickIn(0, 'Copy selected →');
+    await f.clickIn(0, 'Copy to right');
     assert.equal(f.transfers.length, 0);
     assert.ok(f.messages.at(-1).includes('Refresh hosts'));
 });
@@ -361,7 +372,7 @@ test('copy enqueue keeps browsed peers even when a higher priority peer appears'
     check.checked = true;
     check.onchange();
     f.setPeers([left, right, { ...left, peerId: 'new-peer', instanceId: 'new-instance', priority: 100 }]);
-    await f.clickIn(0, 'Copy selected →');
+    await f.clickIn(0, 'Copy to right');
     assert.equal(f.transfers.length, 1);
     assert.equal(f.transfers[0].source.peerId, left.peerId);
     assert.equal(f.transfers[0].destination.peerId, right.peerId);
@@ -412,7 +423,7 @@ test('Enter opens a focused directory while keyboard button activation selects a
     const f = await fixtureAsync(t, null, false);
     await f.select(2, 'host');
     await f.clickIn(1, 'Drive', true);
-    const folder = descendants(f.pane).find(e => e.className === 'file-name');
+    const folder = descendants(f.pane).find(e => e.className?.split(' ').includes('file-name'));
     let prevented = false;
     folder.onkeydown({ key: 'Enter',
 
@@ -425,7 +436,7 @@ test('Enter opens a focused directory while keyboard button activation selects a
     assert.equal(prevented, true);
     assert.equal(f.calls.at(-1), '/drive/dest');
     const before = f.calls.length;
-    const file = descendants(f.pane).find(e => e.className === 'file-name');
+    const file = descendants(f.pane).find(e => e.className?.split(' ').includes('file-name'));
     file.onclick({ detail: 0 });
     assert.equal(descendants(f.pane).find(e => e.type === 'checkbox').checked, true);
     assert.equal(f.calls.length, before);

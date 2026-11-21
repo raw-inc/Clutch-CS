@@ -1,17 +1,17 @@
-import { node, select, field, heading, action, badge } from './dom.js';
+import { node, select, field, heading, action, badge, details, hostCount, targetHosts } from './dom.js';
 import { noSelection } from './loader.js';
 import { powerScheduleForm } from './power-schedule-form.js';
 import { powerScheduleBulk } from './power-schedules-bulk.js';
 
-export const powerScheduleKeys = ['powerSchedule.title', 'powerSchedule.help', 'powerSchedule.cluster', 'powerSchedule.add', 'powerSchedule.save',
+export const powerScheduleKeys = ['powerSchedule.title', 'powerSchedule.help', 'powerSchedule.helpTitle', 'powerSchedule.more', 'powerSchedule.cluster', 'powerSchedule.add', 'powerSchedule.save',
     'powerSchedule.wake', 'powerSchedule.shutdown', 'powerSchedule.time', 'powerSchedule.zone', 'powerSchedule.daily', 'powerSchedule.weekdays',
     'powerSchedule.enabled', 'powerSchedule.remove', 'powerSchedule.next', 'powerSchedule.last', 'powerSchedule.active', 'powerSchedule.inactive',
     'powerSchedule.wakeAvailable', 'powerSchedule.wakeMissing', 'powerSchedule.saved', 'powerSchedule.invalid', 'powerSchedule.readUnavailable',
     'powerSchedule.clusterUnavailable', 'powerSchedule.hostUnknown', 'powerSchedule.saveUnconfirmed', 'powerSchedule.activationUnconfirmed',
     'powerSchedule.unconfirmed', 'powerSchedule.resultUnconfirmed', 'powerSchedule.noTarget', 'powerSchedule.missed',
-    'powerSchedule.bulk', 'powerSchedule.bulkHelp', 'powerSchedule.bulkEnable', 'powerSchedule.bulkDisable', 'powerSchedule.bulkToggleHelp',
+    'powerSchedule.bulk', 'powerSchedule.bulkHelp', 'powerSchedule.bulkEnable', 'powerSchedule.bulkDisable', 'powerSchedule.bulkEnableHelp', 'powerSchedule.bulkDisableHelp',
     'powerSchedule.bulkSource', 'powerSchedule.bulkCopy', 'powerSchedule.bulkApply', 'powerSchedule.bulkUnavailable', 'powerSchedule.bulkDrafts',
-    'powerSchedule.bulkChanged', 'powerSchedule.bulkComplete', 'powerSchedule.pending', 'powerSchedule.saving', 'powerSchedule.succeeded',
+    'powerSchedule.confirmEnable', 'powerSchedule.confirmDisable', 'powerSchedule.changing', 'powerSchedule.bulkChanged', 'powerSchedule.bulkComplete', 'powerSchedule.pending', 'powerSchedule.saving', 'powerSchedule.succeeded',
     'powerSchedule.notExecuted', 'powerSchedule.failed', 'powerSchedule.unchanged', 'powerSchedule.enabledCount', 'powerSchedule.targets',
     'powerSchedule.day0', 'powerSchedule.day1', 'powerSchedule.day2', 'powerSchedule.day3', 'powerSchedule.day4', 'powerSchedule.day5', 'powerSchedule.day6',
     'host.power.scheduleExpired', 'host.power.scheduleAlreadyAccepted', 'host.power.scheduleClaimUnconfirmed', 'Offline', 'Action', 'Repeat'];
@@ -27,10 +27,10 @@ function instant(value)
 /** 一Hostの予定と、共有するクラスタを明示した編集パネルを構成します。
  * @returns 個別編集と一括保存で共有する状態です。
  */
-function hostPanel(root, ctx, host, signal)
+function hostPanel(root, ctx, host, signal, actionArea)
 {
     const section = node('section', '', 'hm-section'), title = heading(host.target.hostId), status = node('div', '', 'hm-muted');
-    const cluster = select([]), controls = node('div', '', 'hm-actions'), resultStatus = node('p', '', 'hm-message');
+    const cluster = select([]), controls = node('div', '', 'hm-selection-bar'), resultStatus = node('p', '', 'hm-message');
     resultStatus.setAttribute('role', 'status');
     let view = null, dirty = false, generation = 0, uncertain = false, selectedCluster = '', loading = false, busy = false, held = false;
     const form = powerScheduleForm(ctx, [], () =>
@@ -51,15 +51,17 @@ function hostPanel(root, ctx, host, signal)
     function render()
     {
         form.reset(view.schedules);
-        status.replaceChildren(badge(ctx.t(view.active ? 'powerSchedule.active' : 'powerSchedule.inactive')),
-            node('p', `${ctx.t('powerSchedule.enabledCount')}: ${view.schedules.filter(item => item.enabled).length} / ${view.schedules.length}`),
-            node('p', ctx.t(view.wakeProfileAvailable ? 'powerSchedule.wakeAvailable' : 'powerSchedule.wakeMissing')));
+        const facts = node('div', '', 'hm-schedule-summary'), extra = node('div');
+        facts.append(badge(ctx.t(view.active ? 'powerSchedule.active' : 'powerSchedule.inactive')),
+            node('span', `${ctx.t('powerSchedule.enabledCount')}: ${view.schedules.filter(item => item.enabled).length} / ${view.schedules.length}`));
+        status.replaceChildren(facts, details(ctx.t('powerSchedule.more'), extra));
+        extra.append(node('p', ctx.t(view.wakeProfileAvailable ? 'powerSchedule.wakeAvailable' : 'powerSchedule.wakeMissing')));
         for (const item of view.status)
         {
             const wake = 'wake';
             const definition = view.schedules.find(row => row.id === item.id);
             const label = ctx.t(definition?.action === wake ? 'powerSchedule.wake' : 'powerSchedule.shutdown');
-            status.append(node('p', `${label} · ${ctx.t('powerSchedule.next')}: ${instant(item.nextAt)} · ${ctx.t('powerSchedule.last')}: ${instant(item.lastAt)} · ${ctx.t(item.reason ?? item.outcome ?? '')}`));
+            extra.append(node('p', `${label} · ${ctx.t('powerSchedule.next')}: ${instant(item.nextAt)} · ${ctx.t('powerSchedule.last')}: ${instant(item.lastAt)} · ${ctx.t(item.reason ?? item.outcome ?? '')}`));
         }
     }
 
@@ -167,8 +169,12 @@ function hostPanel(root, ctx, host, signal)
         ctx.say(ctx.t(result.outcome === succeeded && result.view ? 'powerSchedule.saved' : result.reason ?? 'powerSchedule.saveUnconfirmed'));
     }, true);
     const refresh = action(ctx, 'Refresh settings', 'refresh', () => ctx.discard(loadAsync));
-    controls.append(save, refresh);
-    section.append(title, field(ctx.t('powerSchedule.cluster'), cluster), status, form.root, controls, resultStatus);
+    controls.append(node('strong', targetHosts(ctx, [host])), save);
+    actionArea.append(controls);
+    title.append(refresh);
+    const settings = node('div', '', 'hm-schedule-settings');
+    settings.append(field(ctx.t('powerSchedule.cluster'), cluster), status);
+    section.append(title, settings, form.root, resultStatus);
     root.append(section);
     updateControls();
     cluster.onchange = () =>
@@ -244,7 +250,7 @@ function hostPanel(root, ctx, host, signal)
 /** 選択Hostの予定をクラスタ別に管理し、ブラウザーは予定の実行主体にしません。
  * @returns この画面が所有する通信と未保存編集の寿命です。
  */
-export function powerSchedulesView(root, ctx)
+export function powerSchedulesView(root, ctx, actionArea = root)
 {
     const hosts = structuredClone(ctx.hosts());
     if (!hosts.length)
@@ -252,8 +258,11 @@ export function powerSchedulesView(root, ctx)
         return noSelection(root, ctx);
     }
     const abort = new AbortController(), signal = AbortSignal.any([ctx.signal, abort.signal]), toolbar = node('div', '', 'hm-toolbar');
-    root.append(heading(ctx.t('powerSchedule.title'), ctx.t('powerSchedule.help')), toolbar);
-    const panels = hosts.map(host => hostPanel(root, ctx, host, signal));
+    const title = heading(ctx.t('powerSchedule.title'), `${ctx.t('Selected hosts')}: ${hostCount(ctx, hosts.length)}`);
+    title.append(toolbar);
+    root.append(title);
+    const panels = hosts.map(host => hostPanel(root, ctx, host, signal, actionArea));
+    root.append(details(ctx.t('powerSchedule.helpTitle'), node('p', ctx.t('powerSchedule.help'), 'hm-muted')));
     powerScheduleBulk(toolbar, ctx, panels, signal);
     ctx.guard(async () =>
     {

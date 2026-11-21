@@ -24,7 +24,7 @@ public static long Run(long left, long right) => left + right;
 
 個別入力の `left` へ2、`right` へ3を渡すと、`value` は5です。一括入力では `arguments` へ `{"left":2,"right":3}` を渡します。`System`、`System.Collections.Generic`、`System.Linq`、`System.Threading.Tasks` はあらかじめ参照されます。コード先頭の `using`、別名、`using static` に対応します。
 
-NuGetパッケージはDashboardの「スクリプトパッケージの管理」から導入します。`#r` による個別DLL参照は扱いません。
+NuGetパッケージはDashboardの「スクリプトパッケージ」から導入します。`#r` による個別DLL参照は扱いません。
 
 専用Roslyn アナライザーは引数・返却型を検査し、WorkflowEditorの既存型に対応付けます。基本スカラー、nullable、一次元配列、List、string-key Dictionary、公開get/setプロパティと生成可能な既定コンストラクターを持つPOCOに対応します。ポート直下の`byte[]`はバイナリ、日時とGUIDはJSON文字列です。JSONオブジェクトや配列の内部にある`byte[]`はBase64文字列のまま扱います。
 
@@ -100,12 +100,12 @@ Pythonの場合は `pythonPath` と、必要なときだけ `manualContract` も
 
 ## スクリプトパッケージの管理
 
-1. Dashboardで導入先のクラスター・ピアを選び、「スクリプトパッケージの管理」を開いてください。
+1. Dashboardで導入先のクラスター・ピアを選び、「スクリプトパッケージの管理」を開き、C#、Python、Node.jsから使う環境を選んでください。
 2. NuGet・pip・npmを選び、パッケージ名やキーワードで検索します。検索結果から候補を選ぶと、説明、導入済みの版、公開バージョンを確認できます。PyPIはパッケージ名の完全一致・前方一致・部分一致で検索します。
 3. インストールするバージョンを選び、「インストール・更新」を押してください。操作一覧が「完了」になるまで確認してください。NuGetはnuget.org、pipはPyPI、npmはregistry.npmjs.orgから推移依存も含めて導入します。検索・候補選択だけでは導入しません。「導入中」は受付状態であり、成功を示しません。
 4. 実行先ピアを指定したC#／Python／JavaScriptノードで「コードと型を解析」を押して保存します。コードブロックからコードを渡す場合も、接続先のスクリプトノードの解析を更新します。
 
-pipにはPython 3.10以降と `venv`・`ensurepip`、npmにはNode.js 24以降が必要です。検出・登録済みの環境、ピアの既定、または新しい実行環境のインストールを選べます。npmが標準配置にない場合は `npm-cli.js` の絶対パスも指定します。「パッケージ名と固定バージョンを直接指定」から、検索せずに既知の版を導入する方法も使用できます。
+pipにはPython 3.10以降と `venv`・`ensurepip`、npmにはNode.js 24以降が必要です。検出・登録済みの環境、ピアの既定、または新しい実行環境のインストールを選べます。npmが標準配置にない場合は `npm-cli.js` の絶対パスも指定します。「名前とバージョンを指定して追加」から、検索せずに既知の版を導入する方法も使用できます。
 
 ### Python／Node.jsの選択と導入
 

@@ -61,10 +61,23 @@ public sealed class ScriptPackagePanelTests
 
     /// <summary>接続先が途中で変更されても、表示元と操作履歴の識別子を維持します。</summary>
     /// <returns>画面描画、受付、履歴、取得先固定の確認です。</returns>
-    [Theory]
+    [Theory(Skip = "旧画面はすべての言語のパッケージを同時に表示していました。")]
     [InlineData(EScriptPackageKind.Nuget)]
     [InlineData(EScriptPackageKind.Npm)]
     public async Task InstallUsesDisplayedPeerAndRecordsOriginalRequestAsync(EScriptPackageKind kind)
+        => await VerifyPackageRequestAsync(kind, true).ConfigureAwait(true);
+
+    /// <summary>言語を切り替えても、要求と履歴には元の接続先を使います。</summary>
+    /// <returns>選択言語のパッケージを確認し、要求の記録を照合するまでの処理です。</returns>
+    [Theory]
+    [InlineData(EScriptPackageKind.Nuget)]
+    [InlineData(EScriptPackageKind.Npm)]
+    public async Task SelectedLanguageKeepsOriginalPeerAsync(EScriptPackageKind kind)
+        => await VerifyPackageRequestAsync(kind, false).ConfigureAwait(true);
+
+    /// <summary>操作する言語の構成版と、送信先のピアを照合します。</summary>
+    /// <returns>パッケージ要求と履歴の確認結果です。</returns>
+    private static async Task VerifyPackageRequestAsync(EScriptPackageKind kind, bool legacyLayout)
     {
         BrowserTestRuntime browser = new();
         string revision = new('a', 64);
@@ -107,11 +120,17 @@ public sealed class ScriptPackagePanelTests
         await renderer.Dispatcher.InvokeAsync(async () =>
         {
             Microsoft.AspNetCore.Components.Web.HtmlRendering.HtmlRootComponent rendered = await renderer.RenderComponentAsync<ScriptPackagePanel>().ConfigureAwait(true);
+            if (!legacyLayout)
+            {
+                typeof(ScriptPackagePanel).GetMethod("ChooseSource", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(activator.Panel, [kind]);
+                typeof(ComponentBase).GetMethod("StateHasChanged", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(activator.Panel, null);
+            }
             string html = WebUtility.HtmlDecode(rendered.ToHtmlString());
             Assert.Contains("Script packages", html, StringComparison.Ordinal);
             Assert.Contains("peer-a", html, StringComparison.Ordinal);
             Assert.Contains("Remove from new analysis", html, StringComparison.Ordinal);
-            Assert.Contains("npm · JavaScript", html, StringComparison.Ordinal);
+            Assert.Contains(legacyLayout ? "npm · JavaScript"
+                                         : "Node.js", html, StringComparison.Ordinal);
             api.SelectedPeerId = "peer-b";
             api.SelectedClusterId = "cluster-b";
             MethodInfo change = typeof(ScriptPackagePanel).GetMethod("ChangeAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;

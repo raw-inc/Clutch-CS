@@ -1,29 +1,33 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Observability
 @using ReArtWord.Contents.BackgroundService.Contracts.Management
-<button @onclick="OpenAsync" disabled="@Disabled">@Ui["Retention settings"]</button>
+@using ReArtWord.Contents.BackgroundService.Contracts.Retention
+<button @onclick="OpenAsync" disabled="@Disabled"><UiIcon Name="drive" /><span class="control-label">@Ui["Retention settings"]</span></button>
 <span>@(message?.Invoke())</span>
 <Modal Open="open" Title="@Ui["Log and history retention"]" Close="()=>open=false">
+    <ChildContent>
 <p>@Ui["Logs and completed history are compressed after the raw period and deleted after the total period. Current state, unresolved operations and explicitly permanent snapshots are protected."]</p>
-<label>@Ui["Common raw retention days"]<input type="text" inputmode="numeric" @bind="defaultRaw" @bind:event="oninput" /></label>
-<label>@Ui["Common total retention days"]<input type="text" inputmode="numeric" @bind="defaultTotal" @bind:event="oninput" disabled="@defaultUnlimited" /></label>
+<label>@Ui["Common raw retention days"]<span class="unit-entry"><input type="number" min="0" step="1" class="count-entry" @bind="defaultRaw" @bind:event="oninput" /> @Ui["days"]</span></label>
+<label>@Ui["Common total retention days"]<span class="unit-entry"><input type="number" min="0" step="1" class="count-entry" @bind="defaultTotal" @bind:event="oninput" disabled="@defaultUnlimited" /> @Ui["days"]</span></label>
 <label><input type="checkbox" @bind="defaultUnlimited" />@Ui["Keep compressed history indefinitely"]</label>
-<label>@Ui["Rolling time (HH:mm)"]<input @bind="rollingTime" /></label>
-<label>@Ui["Rolling time zone"]<input @bind="timeZone" /></label>
-<label>@Ui["Checkpoint after committed changes"]<input type="text" inputmode="numeric" @bind="checkpointEvents" @bind:event="oninput" /></label>
-<label>@Ui["Checkpoint after days with changes"]<input type="text" inputmode="numeric" @bind="checkpointDays" @bind:event="oninput" /></label>
+<label>@Ui["Rolling time (HH:mm)"]<input type="time" class="retention-time" value="@rollingTime" @oninput="e=>rollingTime=e.Value?.ToString()??string.Empty" /></label>
+<label>@Ui["Rolling time zone"]<input class="zone-entry" list="retention-zones" aria-describedby="retention-zone-help" @bind="timeZone" /><datalist id="retention-zones"><option value="UTC" /><option value="Asia/Tokyo" /><option value="Europe/London" /><option value="America/New_York" /></datalist><small id="retention-zone-help" class="retention-zone-help">@Ui["Choose a suggestion or enter a time zone ID."]</small></label>
+<label>@Ui["Checkpoint after committed changes"]<span class="unit-entry"><input type="number" min="0" step="1" class="count-entry" @bind="checkpointEvents" @bind:event="oninput" /> @Ui["events"]</span></label>
+<label>@Ui["Checkpoint after days with changes"]<span class="unit-entry"><input type="number" min="0" step="1" class="count-entry" @bind="checkpointDays" @bind:event="oninput" /> @Ui["days"]</span></label>
 <p>@Ui["A checkpoint is captured when either threshold is reached. No extra checkpoint is created without changes."]</p>
-@foreach(var row in rows){<section class="card section">
-<h3>@Ui[row.Level]</h3>
-<label><input type="checkbox" @bind="row.Override" />@Ui["Use a separate period for this category"]</label>
+<fieldset class="retention-by-category">
+<legend>@Ui["Retention by category"]</legend>
+@foreach(var row in rows){<div class="retention-category" @key="row.Level">
+<label><input type="checkbox" @bind="row.Override" />@Ui.Format("Set a separate period for {0}",Ui[row.Level])</label>
 @if(row.Override){
-<label>@Ui["Raw retention days"]<input type="text" inputmode="numeric" @bind="row.RawDays" @bind:event="oninput" />
+<label>@Ui["Raw retention days"]<span class="unit-entry"><input type="number" min="0" step="1" class="count-entry" @bind="row.RawDays" @bind:event="oninput" /> @Ui["days"]</span>
 </label>
-<label>@Ui["Total retention days"]<input type="text" inputmode="numeric" @bind="row.TotalDays" @bind:event="oninput" disabled="@row.Unlimited" />
+<label>@Ui["Total retention days"]<span class="unit-entry"><input type="number" min="0" step="1" class="count-entry" @bind="row.TotalDays" @bind:event="oninput" disabled="@row.Unlimited" /> @Ui["days"]</span>
 </label>
 <label>
 <input type="checkbox" @bind="row.Unlimited" />@Ui["Keep compressed history indefinitely"]</label>
 }
-</section>}
+</div>}
+</fieldset>
 <label>
 <input type="checkbox" @bind="applyExisting" />@Ui["Apply shorter deletion periods to existing logs and history (otherwise new records only)"]</label>
 <label>
@@ -32,13 +36,66 @@
 <p>@Ui["Saved revision"]: @shared?.Configuration.Saved?.Revision</p>
 <p>@Ui["Effective revision"]: @shared?.Configuration.Effective?.Revision</p>
 <label>@Ui["Inspect retention on peer"]<select value="@statusPeer" @onchange="args=>InspectPeerAsync(args,UiCancellation)">@foreach(var peer in Connection.Current?.Peers??[]){<option value="@peer.PeerId">@peer.PeerId</option>}</select></label>
-@if(observed?.Local is { } local){<p>@Ui["Applied retention hash"]: @local.AppliedHash</p><p>@Ui["Maintenance held"]: @local.MaintenanceHeld · @local.Problem</p><JsonDetails Value="observed" Title="@Ui["Peer retention state"]" />}else{<p class="notice">@Ui["The peer retention state could not be confirmed."]</p>}
-<button @onclick="SaveAsync">@Ui["Update retention settings"]</button>
+@if(observed?.Local is { } local)
+{
+    <p>@Ui["Applied retention hash"]: @local.AppliedHash</p>
+    <p>@Ui["Maintenance held"]: @Ui[local.MaintenanceHeld ? "Yes" : "No"]</p>
+    @if(!string.IsNullOrWhiteSpace(local.Problem)){<p class="notice">@local.Problem</p>}
+    <JsonDetails Value="observed" Title="@Ui["Peer retention state"]" />
+}
+else
+{
+    <p class="notice">@Ui["The peer retention state could not be confirmed."]</p>
+}
+
 @if(historyStatus is not null){<JsonDetails Value="historyStatus" Title="@Ui["History storage state"]" />}
 @if(checkpoints.Count!=0){
 <h3>@Ui["Automatic checkpoints"]</h3>
-<table><thead><tr><th>@Ui["Captured at"]</th><th>@Ui["Committed event position"]</th><th>@Ui["Stored bytes"]</th><th>@Ui["Compressed"]</th></tr></thead>
-<tbody>@foreach(var point in checkpoints){<tr><td>@FormatTime(point.CreatedAt)</td><td>@point.Sequence</td><td>@point.StoredBytes</td><td>@point.Compressed</td></tr>}</tbody></table>
+<div class="table-wrap">
+    <table class="record-table" aria-label="@Ui["Automatic checkpoints"]">
+        <thead><tr><th>@Ui["Captured at"]</th><th class="numeric">@Ui["Committed event position"]</th><th class="numeric">@Ui["Storage used"]</th><th>@Ui["Compressed"]</th></tr></thead>
+        <tbody>
+        @foreach(var point in checkpoints)
+        {
+            <tr>
+                <td data-field="@Ui["Captured at"]">@FormatTime(point.CreatedAt)</td>
+                <td data-field="@Ui["Committed event position"]" class="numeric">@point.Sequence.ToString("N0",CultureInfo.CurrentCulture)</td>
+                <td data-field="@Ui["Storage used"]" class="numeric">@point.StoredBytes.ToString("N0",CultureInfo.CurrentCulture)&nbsp;@Ui["bytes"]</td>
+                <td data-field="@Ui["Compressed"]">@Ui[point.Compressed ? "Yes" : "No"]</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
 }
 <p class="notice">@(message?.Invoke())</p>
+    </ChildContent>
+    <Actions>
+        <button class="primary" @onclick="SaveAsync" disabled="@busy">@Ui["Update retention settings"]</button>
+    </Actions>
+</Modal>
+
+<Modal Open="@(pending is not null)" Compact="true" Title="@Ui["Apply retention to existing logs and history"]" Close="()=>pending=null">
+    <ChildContent>
+        @if(pending?.DataRetention is {} policy)
+        {
+            <p>@Ui["Total retention periods for existing records"]</p>
+            <ul class="retention-deadlines">
+                @foreach(var row in rows)
+                {
+                    @if(policy.Window(row.Category).TotalDays is int days)
+                    {
+                        <li><span>@Ui[row.Level]</span><strong>@Ui.Format("{0} days",days)</strong></li>
+                    }
+                }
+            </ul>
+            <p class="notice warning"><UiIcon Name="warning" /><span>@Ui["Existing records beyond these periods are eligible for deletion during retention cleanup. Deleted records cannot be recovered."]</span></p>
+        }
+    </ChildContent>
+    <Actions>
+        @if(pending is {} request)
+        {
+            <button class="danger confirm-action" @onclick="()=>SaveRequestAsync(request,UiCancellation)"><UiIcon Name="warning" /><span class="control-label">@Ui["Update and apply to existing records"]</span></button>
+        }
+    </Actions>
 </Modal>

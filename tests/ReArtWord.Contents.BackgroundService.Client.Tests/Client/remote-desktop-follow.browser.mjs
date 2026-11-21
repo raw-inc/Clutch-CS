@@ -20,12 +20,12 @@ before(async () =>
             if (pathname === '/')
             {
                 response.setHeader('Content-Type', 'text/html; charset=utf-8');
-                response.end('<!doctype html><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-desktop.css"><main id="desktop"></main>');
+                response.end('<!doctype html><link rel="stylesheet" href="/styles/fonts.css"><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-desktop.css"><main id="desktop"></main>');
                 return;
             }
             const file = path.resolve(root, '.' + decodeURIComponent(pathname));
             assert.ok(file.startsWith(root + path.sep));
-            response.setHeader('Content-Type', file.endsWith('.css') ? 'text/css' : 'text/javascript');
+            response.setHeader('Content-Type', file.endsWith('.css') ? 'text/css' : file.endsWith('.svg') ? 'image/svg+xml' : file.endsWith('.woff2') ? 'font/woff2' : 'text/javascript');
             response.end(await readFile(file));
         }
         catch
@@ -138,22 +138,32 @@ async function mountAsync(page, annotations)
     });
     await page.getByLabel('Host', { exact: true }).selectOption('remote');
     await page.getByLabel('Transmission preset', { exact: true }).selectOption('lan');
-    await page.getByRole('button', { name: 'View-only mode', exact: true }).click();
+    await (await desktopControlAsync(page, 'View-only mode')).click();
     await page.getByRole('button', { name: 'Connect', exact: true }).click();
     await page.waitForFunction(() => document.querySelector('.desktop-connection')?.textContent === 'Connected');
-    await page.getByRole('button', { name: 'Dot by dot (1:1)', exact: true }).click();
-    const grouped = await page.getByRole('group', { name: 'Displays', exact: true }).evaluate(displays => ({
-        separator: displays.nextElementSibling?.className,
-        next: displays.nextElementSibling?.nextElementSibling?.getAttribute('aria-label'),
-        enabled: displays.nextElementSibling?.nextElementSibling?.getAttribute('aria-pressed'),
-        gap: parseFloat(getComputedStyle(displays.parentElement).columnGap) + parseFloat(getComputedStyle(displays.nextElementSibling).marginRight),
-        spacing: displays.nextElementSibling?.nextElementSibling?.getBoundingClientRect().left - displays.nextElementSibling?.getBoundingClientRect().right
-    }));
-    assert.equal(grouped.separator, 'desktop-key-separator');
+    await (await desktopControlAsync(page, 'Dot by dot (1:1)')).click();
+    await verifyDisplayGroupAsync(page);
+    return sent;
+}
+
+/** 表示先と再接続の操作が同じグループ内に並ぶことを確認します。
+ * @returns 表示と操作状態の検証です。
+ */
+async function verifyDisplayGroupAsync(page)
+{
+    const grouped = await page.getByRole('group', { name: 'Displays', exact: true }).evaluate(displays =>
+    {
+        const next = displays.nextElementSibling;
+        const from = displays.getBoundingClientRect(), to = next.getBoundingClientRect();
+        return { next: next.getAttribute('aria-label'), enabled: next.getAttribute('aria-pressed'),
+            sameLine: Math.abs(to.top + to.height / 2 - from.top - from.height / 2) <= 1,
+            gap: parseFloat(getComputedStyle(displays.parentElement).columnGap),
+            spacing: to.left - from.right };
+    });
     assert.equal(grouped.next, 'Automatic reconnect');
     assert.equal(grouped.enabled, 'true');
+    assert.ok(grouped.sameLine);
     assert.ok(Math.abs(grouped.spacing - grouped.gap) <= 1);
-    return sent;
 }
 
 /** スクロール後の映像と番号表示の位置を実レイアウトから取得します。
@@ -196,7 +206,25 @@ async function followedAsync(page, x)
     }, x);
 }
 
-for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' }], ['Firefox', firefox, {}]])
+// Firefoxの全画面切替中はブラウザーがツールバーへの入力を受け取るため、試験では通知と画面切替の演出を無効にします。
+/** 展開した表示・入力欄から、現在の操作を選びます。
+ * @returns 押下する操作です。
+ */
+async function desktopControlAsync(page, name)
+{
+    const controls = page.locator('.desktop-deck > details');
+    if (!await controls.evaluate(element => element.open))
+    {
+        await controls.locator('summary').click();
+    }
+    return page.getByRole('button', { name, exact: true });
+}
+
+for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' }], ['Firefox', firefox, { firefoxUserPrefs: {
+    'full-screen-api.warning.timeout': 0,
+    'full-screen-api.transition-duration.enter': '0 0',
+    'full-screen-api.transition-duration.leave': '0 0'
+} }]])
 {
     for (const [density, annotations] of [[1, true], [2, false]])
     {
@@ -214,7 +242,8 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
             assert.ok(Math.abs(original.headerTop - original.top) <= 1, 'no gap above the display header');
             for (const fraction of [0.25, 0.75])
             {
-                const x = original.left + original.width * fraction, y = original.top + original.height * 0.7;
+                // ブラウザー間で端数の丸め方が異なるため、実際に送る座標と期待値を同じ整数ピクセルに揃える。
+                const x = Math.round(original.left + original.width * fraction), y = Math.round(original.top + original.height * 0.7);
                 await page.mouse.move(x, y);
                 const wanted = original.horizontal * (x - original.left) / (original.width - 1);
                 await page.waitForFunction(wanted => Math.abs(document.querySelector('.desktop-viewport').scrollLeft - wanted) <= 2, wanted);
@@ -232,13 +261,13 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
                     assert.deepEqual(sent.findLast(packet => packet[0] === 13).slice(0, 4), expected);
                 }
             }
-            await page.getByRole('button', { name: 'Follow pointer', exact: true }).click();
+            await (await desktopControlAsync(page, 'Follow pointer')).click();
             const stopped = await geometryAsync(page);
             await page.mouse.move(original.left + 30, original.top + 80);
             await renderedAsync(page);
             assert.equal((await geometryAsync(page)).scrollLeft, stopped.scrollLeft);
-            await page.getByRole('button', { name: 'Follow pointer', exact: true }).click();
-            await page.getByRole('button', { name: 'Fullscreen', exact: true }).click();
+            await (await desktopControlAsync(page, 'Follow pointer')).click();
+            await (await desktopControlAsync(page, 'Fullscreen')).click();
             await page.waitForFunction(() => document.fullscreenElement?.id === 'desktop');
             const fullscreen = await geometryAsync(page);
             await page.mouse.move(fullscreen.left + fullscreen.width * 0.5, fullscreen.top + fullscreen.height * 0.5);
@@ -246,7 +275,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
             const pinned = await geometryAsync(page);
             assert.ok(Math.abs(pinned.headerTop - pinned.top) <= 1);
             assert.ok(Math.abs(pinned.labelLeft - pinned.left - 8) <= 1);
-            await page.getByRole('button', { name: 'All screens side by side', exact: true }).press('Enter');
+            await (await desktopControlAsync(page, 'All screens side by side')).press('Enter');
             try
             {
                 await page.waitForFunction(() => document.querySelectorAll('.desktop-monitor').length === 2);
@@ -265,7 +294,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
             assert.ok(0 < followed.scrollLeft);
             assert.ok(Math.abs(followed.headerTop - followed.top) <= 1);
             assert.ok(Math.abs(followed.labelLeft - followed.left - 8) <= 1);
-            await page.getByRole('button', { name: 'Dot by dot (1:1)', exact: true }).click();
+            await (await desktopControlAsync(page, 'Dot by dot (1:1)')).click();
             await page.waitForFunction(() =>
             {
                 const viewport = document.querySelector('.desktop-viewport');

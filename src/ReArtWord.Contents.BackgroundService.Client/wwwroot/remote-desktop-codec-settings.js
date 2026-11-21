@@ -2,7 +2,7 @@
 /** 映像コーデックの詳細設定と入力検証を構成します。
  * @returns プリセット適用・草稿照合・読取り・表示更新の操作です。
  */
-export function createDesktopCodecSettings(body, ctx, numberSetting, apply, modeChanged)
+export function createDesktopCodecSettings(body, ctx, numberSetting, apply, modeChanged, actions = body)
 {
     let enabled = false, qualityMode = false, automaticP = true, bEnabled = false, codec = 'h264', connected = false, supported = false, busy = false;
     const custom = ctx.button(ctx.t('Custom codec settings', 'コーデック詳細設定を使用'), () =>
@@ -37,11 +37,20 @@ export function createDesktopCodecSettings(body, ctx, numberSetting, apply, mode
     });
     mode.setAttribute('aria-label', ctx.t('Quality target mode', '品質指定モード'));
     const quality = numberSetting(ctx.t('Quality value (lower is better)', '品質値（小さいほど高画質）'), 23, 1, 51);
-    const explanation = document.createElement('p');
+    const pHelp = document.createElement('p'), bHelp = document.createElement('p'), qualityHelp = document.createElement('p');
+    pHelp.textContent = ctx.t('A P-frame limit also limits the keyframe interval to P + 1.', 'キーフレーム間隔の上限は、Pフレーム数に1を加えた値です。');
+    qualityHelp.textContent = ctx.t('CRF/CQ tracks quality. Traffic varies without a bitrate target or cap, and replay uses at most 16 frames. Quality values differ by encoder.',
+        'CRF／CQ は画質を指定します。通信量は映像に応じて変わり、ビットレートの上限はありません。再復号は最大 16 フレームです。値と画質の関係はエンコーダーによって異なります。');
     const capability = document.createElement('p');
+    for (const paragraph of [pHelp, bHelp, qualityHelp, capability])
+    {
+        paragraph.className = 'codec-field-note';
+    }
     capability.setAttribute('role', 'status');
     const commit = ctx.button(ctx.t('Apply codec settings', 'コーデック設定を反映'), apply);
-    body.append(custom, interval.wrapper, pMode, p.wrapper, bMode, b.wrapper, mode, quality.wrapper, explanation, capability, commit);
+    commit.className = 'primary codec-apply';
+    body.append(custom, interval.wrapper, pMode, p.wrapper, pHelp, bMode, b.wrapper, bHelp, mode, quality.wrapper, qualityHelp, capability);
+    actions.append(commit);
     for (const field of [interval.field, p.field, b.field, quality.field])
     {
         field.oninput = field.onchange = modeChanged;
@@ -54,29 +63,26 @@ export function createDesktopCodecSettings(body, ctx, numberSetting, apply, mode
 
         const unavailable = busy || connected && !supported;
         custom.disabled = unavailable;
-        custom.setAttribute('aria-pressed', String(enabled));
+        showSwitch(custom, ctx.t('Custom settings', 'コーデック詳細設定'), enabled);
         for (const field of [interval.field, p.field, b.field, quality.field])
         {
             field.disabled = unavailable || !enabled;
         }
         p.field.disabled ||= automaticP;
         pMode.disabled = unavailable || !enabled;
-        pMode.setAttribute('aria-pressed', String(automaticP));
+        showSwitch(pMode, ctx.t('Automatic P frames', 'Pフレームの自動設定'), automaticP);
         bMode.disabled = unavailable || !enabled || codec === 'vp9';
-        bMode.setAttribute('aria-pressed', String(bEnabled && codec !== 'vp9'));
+        showSwitch(bMode, ctx.t('B frames', 'Bフレーム'), bEnabled && codec !== 'vp9');
         b.field.disabled ||= codec === 'vp9' || !bEnabled;
         quality.field.disabled ||= !qualityMode;
         quality.field.max = codec === expectedVp9 ? '63' : '51';
         mode.disabled = unavailable || !enabled;
-        mode.textContent = qualityMode ? ctx.t('Use bitrate target', 'ビットレート指定に変更') : ctx.t('Use quality target', '品質指定に変更');
-        mode.setAttribute('aria-pressed', String(qualityMode));
+        showSwitch(mode, ctx.t('Quality target', '品質指定'), qualityMode);
         commit.disabled = unavailable;
-        explanation.textContent = (codec === expectedVp9 ? ctx.t('VP9: B-frame control is unavailable; P is the inter-frame limit. ', 'VP9ではBフレーム指定は使用しません。Pは非キーフレーム数の上限です。') :
-            ctx.t('B frames add delay and keep capturing even when the desktop is static. ', 'Bフレームは遅延を増やし、静止中も映像取得を続けるため負荷・通信量が増えます。')) +
-            ctx.t('P is automatic unless an explicit limit is selected. An explicit P limit also bounds the keyframe interval by P + 1. Quality mode uses CRF/CQ without a bitrate target or cap; bandwidth varies with the image. Replay is limited to 16 frames in quality mode. Values are not equivalent across encoders.',
-                'Pは自動が既定です。P上限を指定した場合はキーフレーム間隔をP上限＋1でも制限します。品質指定はCRF/CQで、ビットレートの目標・上限を使用せず、映像に応じて通信量が変わります。品質指定では再復号を最大16フレームに制限します。同じ数値でもエンコーダー間で画質は一致しません。');
+        bHelp.textContent = codec === expectedVp9 ? ctx.t('VP9 has no B-frame setting.', 'VP9ではBフレームを指定できません。') :
+            ctx.t('B frames add delay and keep capturing while the desktop is static.', 'Bフレームを使うと遅延が増え、画面が静止している間も映像を取得します。');
         capability.textContent = connected && !supported ? ctx.t('Update the Core and ClientHost to use codec details.', 'コーデック詳細設定を使用するにはCoreとClientHostを更新してください。') :
-            ctx.t('Apply restarts video capture only. Disable custom settings and apply to use the short-keyframe-interval mode.', '反映すると映像取得を切り替えます。詳細設定をOFFにして反映すると、短いキーフレーム間隔の設定へ戻ります。');
+            ctx.t('Apply restarts video capture only. Disable custom settings and apply to use the short-keyframe-interval mode.', '設定を反映すると映像の取得を再開します。詳細設定を無効にすると、短いキーフレーム間隔の設定に戻ります。');
     }
 
     /** 入力中の数値を読み、確定時だけ整数と範囲を検証します。
@@ -167,4 +173,12 @@ export function sameDesktopCodecSettings(expected, actual)
     }
     return actual != null && expected.maximumKeyFrameInterval === actual.maximumKeyFrameInterval && expected.maximumPFrames === (actual.maximumPFrames ?? null) &&
         expected.maximumBFrames === actual.maximumBFrames && expected.quality === (actual.quality ?? null);
+}
+
+/** ボタンに現在の設定値を表示し、読み上げにも同じ状態を伝えます。 */
+function showSwitch(button, label, enabled)
+{
+    button.setAttribute('role', 'switch');
+    button.setAttribute('aria-checked', String(enabled));
+    button.textContent = label;
 }

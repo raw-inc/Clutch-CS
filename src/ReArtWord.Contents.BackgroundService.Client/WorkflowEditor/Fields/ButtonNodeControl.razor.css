@@ -1,6 +1,16 @@
 .workflow-button {
-    display: flex;
+    display: grid;
+    align-items: center;
     min-width: 0;
+}
+
+.workflow-button:has(.node-button-reason) {
+    gap: 4px;
+}
+
+.workflow-button .node-button-reason {
+    font-size: 12px;
+    line-height: 1.35;
 }
 
 .workflow-button > button {

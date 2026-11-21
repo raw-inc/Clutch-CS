@@ -40,6 +40,15 @@ public sealed partial class ConflictPanel
     private string? version, cluster, peer;
     private Func<string>? message;
     private string edited = string.Empty;
+
+    /// <summary>この接続で確認できた候補の件数をナビゲーションへ伝えます。</summary>
+    [Parameter]
+    public EventCallback<int> CountChanged
+    {
+        get; set;
+    }
+
+    private DateTimeOffset? checkedAt;
     private bool loaded, busy, reviewed, edit;
     private Guid? lastId;
     private ConflictResolveResult? result;
@@ -73,7 +82,9 @@ public sealed partial class ConflictPanel
             conflicts = page?.Entries ?? throw UiError.InvalidOperation("The candidate list is unconfirmed.");
             cursor = page.Cursor;
             (cluster, peer) = source;
+            checkedAt = Api.UtcNow;
             loaded = true;
+            await CountChanged.InvokeAsync(conflicts.Count).ConfigureAwait(true);
         }
         catch (Exception error) when (error is HttpRequestException or JsonException or InvalidOperationException or OperationCanceledException)
         {

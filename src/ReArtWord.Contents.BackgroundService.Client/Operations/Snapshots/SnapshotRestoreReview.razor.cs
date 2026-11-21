@@ -66,10 +66,19 @@ public sealed partial class SnapshotRestoreReview
         set;
     }
 
+    /// <summary>対象選択で表示したスナップショットの取得日時を確認画面に引き継ぎます。</summary>
+    [Parameter]
+    public IReadOnlyList<SnapshotListSummary> KnownSnapshots
+    {
+        get;
+        init;
+    } = [];
+
     private Guid? initialized;
     private SnapshotRestorePreparation? preparation;
-    private bool busy;
-    private Func<string>? message = () => string.Empty;
+    private SnapshotEditorState? discarding;
+    private bool busy, readyMessage;
+    private Func<string>? message;
 
     /// <summary>親から渡された対象に合わせて関連する状態を再確認します。</summary>
     /// <returns>要求処理と現時点の画面反映の完了です。</returns>
@@ -81,12 +90,23 @@ public sealed partial class SnapshotRestoreReview
         {
             initialized = Request.OperationId;
             preparation = null;
+            discarding = null;
+            message = null;
             await RefreshAsync().ConfigureAwait(true);
         }
     }
 
-    /// <summary>保留した草稿を現在の状態で解消できるか判定します。</summary>
-    /// <returns>指定した条件を満たすかどうかです。</returns>
+    /// <summary>共有下書きと各編集画面から、復元前に保存または破棄が必要かを判定します。</summary>
+    /// <returns>未保存の変更がある場合はtrueです。</returns>
+    private static bool HasUnsavedChanges(SnapshotEditorState editor) => editor.Dirty || editor.Presence.Any(item => item.Presence.Dirty);
+
+    /// <summary>共同編集画面と同じ表記で、未保存の変更を報告した編集画面を示します。</summary>
+    /// <returns>対象の編集画面名です。</returns>
+    private static string DirtyEditorLabels(SnapshotEditorState editor) => string.Join(", ", editor.Presence.Where(item => item.Presence.Dirty)
+        .Select(item => ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Collaboration.CollaborationOverlay.Label(item.Presence)));
+
+    /// <summary>当事者の編集画面から、または編集画面に未保存の変更がない状態で解消できるか判定します。</summary>
+    /// <returns>この画面で草稿の状態を確認できる場合はtrueです。</returns>
     private bool CanResolve(SnapshotEditorState editor) => editor.Presence.Any(item => item.Presence.UiInstanceId == Collaboration.UiInstanceId) || editor.Presence.All(item => !item.Presence.Dirty);
 
     /// <summary>表示対象の最新状態を取得して画面へ反映します。</summary>
@@ -100,6 +120,7 @@ public sealed partial class SnapshotRestoreReview
             return;
         }
 
+        readyMessage = false;
         try
         {
             await Model.InitializeAsync(cancellationToken: UiCancellation).ConfigureAwait(true);
@@ -114,9 +135,20 @@ public sealed partial class SnapshotRestoreReview
                 throw UiError.InvalidOperation("This result does not belong to the original restore request.");
             }
 
-            message = preparation.Ready ? Ui.Deferred("No unsaved edits block this restore. This is checked again immediately before starting.")
-                                        : (preparation.Reason) is null ? Ui.Deferred("Check unsaved edits or the restore already in progress.")
-                                                                       : Ui.Deferred("{0}", preparation.Reason);
+            string unsavedEdits = "Snapshot.UnsavedEdits";
+            readyMessage = preparation.Ready;
+            if (readyMessage)
+            {
+                message = Ui.Deferred("Restore is ready. The state is checked again immediately before restoring.");
+            }
+            else if (string.Equals(preparation.Reason, unsavedEdits, StringComparison.Ordinal))
+            {
+                message = Ui.Deferred("Save or discard the unsaved changes before restoring.");
+            }
+            else
+            {
+                message = Ui.Deferred("Check the target and any restore in progress, then check again.");
+            }
         }
         catch (Exception exception) when (exception is HttpRequestException or JsonException or InvalidOperationException or JSException or OperationCanceledException)
         {
@@ -132,6 +164,7 @@ public sealed partial class SnapshotRestoreReview
     private async Task SaveAsync(SnapshotEditorState editor)
     {
         busy = true;
+        readyMessage = false;
         try
         {
             if (Model.HasInvalidInputs || Model.Draft.Conflicts.Count != 0)
@@ -184,6 +217,7 @@ public sealed partial class SnapshotRestoreReview
         }
 
         busy = true;
+        readyMessage = false;
         try
         {
             SnapshotDraftResolution? resolution = new SnapshotDraftResolution(Request, editor.PeerId, editor.WorkflowId, Collaboration.UiInstanceId, editor.SessionVersion, action);
@@ -232,6 +266,7 @@ public sealed partial class SnapshotRestoreReview
         }
 
         busy = true;
+        readyMessage = false;
         try
         {
             await Journal.StartAsync(Request.OperationId, "Restore snapshot", "/api/v2/snapshots/restore", "/api/snapshots/restores/" + Request.OperationId, Request, "/api/v2/snapshots/recover", cancellationToken: UiCancellation).ConfigureAwait(true);

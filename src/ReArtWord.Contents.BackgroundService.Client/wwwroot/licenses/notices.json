@@ -368,6 +368,32 @@
     ]
   },
   {
+    "name": "M PLUS 2",
+    "version": "1.100",
+    "license": "OFL-1.1",
+    "authors": "The M+ FONTS Project Authors",
+    "project": "https://github.com/coz-m/MPLUS_FONTS",
+    "notices": [
+      {
+        "label": "License",
+        "href": "/licenses/m-plus-2-license.txt"
+      }
+    ]
+  },
+  {
+    "name": "Material Icons Outlined",
+    "version": "2022-08-02",
+    "license": "Apache-2.0",
+    "authors": "Google LLC",
+    "project": "https://github.com/google/material-design-icons",
+    "notices": [
+      {
+        "label": "License",
+        "href": "/licenses/material-icons-license.txt"
+      }
+    ]
+  },
+  {
     "name": "Microsoft.AspNetCore.App.Runtime.win-x64",
     "version": "10.0.13",
     "license": "MIT",
@@ -1752,6 +1778,19 @@
     ]
   },
   {
+    "name": "Roboto",
+    "version": "3.015",
+    "license": "OFL-1.1",
+    "authors": "The Roboto Project Authors",
+    "project": "https://github.com/googlefonts/roboto-classic",
+    "notices": [
+      {
+        "label": "License",
+        "href": "/licenses/roboto-license.txt"
+      }
+    ]
+  },
+  {
     "name": "SQLite",
     "version": "3.54.1",
     "license": "Public Domain",
@@ -1959,6 +1998,19 @@
       {
         "label": "YamlDotNet",
         "href": "/licenses/YamlDotNet-18.1.0-license.txt"
+      }
+    ]
+  },
+  {
+    "name": "Zen Kaku Gothic New",
+    "version": "1.002",
+    "license": "OFL-1.1",
+    "authors": "The Zen Kaku Gothic Project Authors",
+    "project": "https://github.com/googlefonts/zen-kakugothic",
+    "notices": [
+      {
+        "label": "License",
+        "href": "/licenses/zen-kaku-gothic-new-license.txt"
       }
     ]
   },

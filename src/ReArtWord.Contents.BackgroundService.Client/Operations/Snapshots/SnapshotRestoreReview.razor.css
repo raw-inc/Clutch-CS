@@ -1,0 +1,47 @@
+.restore-scope td {
+    overflow-wrap: anywhere;
+}
+
+.restore-scope code {
+    display: block;
+    margin-block-start: 4px;
+}
+
+.restoration-check {
+    margin-block: 16px;
+}
+
+.restore-draft h3 {
+    margin-block: 0 4px;
+}
+
+.restore-draft > p {
+    margin-block: 4px 8px;
+}
+
+.restore-draft-warning {
+    display: flex;
+    align-items: start;
+    gap: 8px;
+    color: var(--warn);
+    font-weight: 600;
+}
+
+.restore-draft .secondary-details {
+    margin-block-start: 12px;
+}
+
+.clean-restore-drafts {
+    margin-block: 12px;
+}
+
+.clean-restore-drafts code {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 680px) {
+    .restore-scope tbody td[data-field] {
+        align-items: start;
+    }
+}

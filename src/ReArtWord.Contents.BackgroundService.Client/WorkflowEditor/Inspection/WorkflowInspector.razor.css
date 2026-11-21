@@ -42,3 +42,14 @@
 .wire-inspector-summary code {
     color: var(--port-color);
 }
+
+[role="tab"][aria-selected="true"],
+button[aria-pressed="true"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+}
+
+details > summary {
+    padding-block: 8px;
+}

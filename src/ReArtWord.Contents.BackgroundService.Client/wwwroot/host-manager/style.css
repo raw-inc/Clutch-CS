@@ -1,6 +1,9 @@
 .page.host-manager {
-    max-width: 1920px;
-    padding: 18px 24px 34px;
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100dvh - var(--topbar-height) - var(--statusbar-height));
+    padding-bottom: 12px;
+    max-width: 1600px;
     margin: 0 auto;
     color: var(--ink);
 }
@@ -23,7 +26,7 @@
 }
 
 .hm-page-heading h1 {
-    font-size: 22px;
+    font-size: clamp(26px, 3vw, 40px);
     letter-spacing: -0.025em;
     margin: 0 0 5px;
     font-weight: 600;
@@ -42,18 +45,10 @@
     flex: none;
 }
 
-.host-manager button {
+.host-manager button:where(:not(.dialog button)) {
     font-size: 12px;
     min-height: 30px;
     line-height: 1.35;
-}
-
-.host-manager button:focus-visible,
-.host-manager input:focus-visible,
-.host-manager select:focus-visible,
-.host-manager textarea:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
 }
 
 .host-manager button[aria-busy="true"] {
@@ -84,13 +79,7 @@
 .host-manager .primary {
     background: var(--accent);
     border-color: var(--accent);
-    color: var(--paper);
-}
-
-.host-manager .danger {
-    color: var(--warn);
-    border-color: color-mix(in srgb, var(--warn) 35%, var(--line));
-    background: transparent;
+    color: var(--on-accent);
 }
 
 .host-manager .hm-icon-button {
@@ -103,13 +92,14 @@
 
 .hm-workspace {
     display: grid;
-    grid-template-columns: 236px minmax(0, 1fr);
-    height: calc(100dvh - var(--topbar-height) - 94px - var(--statusbar-height));
-    min-height: 430px;
-    border: 1px solid var(--line);
-    border-radius: 6px;
+    grid-template-columns: 12rem minmax(0, 1fr);
+    gap: clamp(20px, 3vw, 48px);
+    flex: 1;
+    min-height: 0;
+    border: 0;
+    border-radius: var(--radius-control);
     overflow: hidden;
-    background: var(--paper);
+    background: transparent;
 }
 
 .hm-sidebar {
@@ -122,42 +112,31 @@
     padding: 14px 12px 0;
 }
 
-.hm-sidebar-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 4px;
-}
-
-.hm-sidebar-heading h2 {
-    font-size: 13px;
-    font-weight: 600;
-    margin: 0;
-}
-
 .hm-sidebar > input {
     width: 100%;
     min-width: 0;
     font-size: 12px;
     padding: 8px 10px;
     background: var(--paper);
-    border: 1px solid var(--line);
-    border-radius: 4px;
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
 }
 
 .hm-selection-tools {
-    display: flex;
     justify-content: space-between;
-    gap: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .hm-selection-tools button {
-    background: transparent;
-    border: 0;
-    min-height: 24px;
-    padding: 2px 4px;
-    font-size: 11px;
+    padding: 3px 4px 1px;
     color: var(--muted);
+    border: 1px solid var(--control);
+    min-height: 40px;
+    padding-inline: 8px;
+    font-size: 12px;
+    border-color: var(--control);
 }
 
 .hm-selection-tools button:hover {
@@ -178,7 +157,7 @@
 
 .hm-host-list .hm-host {
     display: grid;
-    grid-template-columns: 14px 16px minmax(0, 1fr);
+    grid-template-columns: 18px 16px minmax(0, 1fr);
     gap: 9px;
     align-items: center;
     flex: none;
@@ -186,13 +165,13 @@
     padding: 8px 9px;
     min-height: 48px;
     border: 1px solid transparent;
-    border-radius: 4px;
+    border-radius: var(--radius-control);
     cursor: pointer;
     background: transparent;
 }
 
 .hm-host:hover {
-    background: var(--raised);
+    background: light-dark(#f1f2f5, #30343e);
 }
 
 .hm-host[data-selected="true"] {
@@ -233,29 +212,25 @@
     text-overflow: ellipsis;
 }
 
-.hm-selection-count {
-    padding: 11px 4px;
-    border-top: 1px solid var(--line);
-    font-size: 11px;
-    color: var(--muted);
-}
-
 .hm-main {
     min-width: 0;
     min-height: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .hm-tabs {
     display: flex;
     align-items: stretch;
     gap: 3px;
-    padding: 0 16px;
-    background: var(--panel);
+    padding: 4px 8px;
+    background: transparent;
     border-bottom: 1px solid var(--line);
     overflow: auto;
     flex: none;
+    flex-wrap: wrap;
+    border: 0;
 }
 
 .hm-tabs button {
@@ -266,8 +241,8 @@
     border-radius: 0;
     background: transparent;
     color: var(--muted);
-    padding: 12px 16px;
-    min-height: 44px;
+    padding: 8px 12px;
+    min-height: 38px;
     flex: none;
 }
 
@@ -284,16 +259,22 @@
 .hm-content {
     min-height: 0;
     flex: 1;
-    overflow: auto;
+    overflow: hidden;
     scrollbar-width: thin;
+    margin: var(--panel-inset);
+    background: var(--nested);
+    border-radius: var(--radius-inset);
 }
 
 .hm-area {
-    min-height: 100%;
+    min-height: 0;
+    flex: 1;
+    overflow: auto;
     padding: 20px 22px;
     display: flex;
     flex-direction: column;
     gap: 16px;
+    scroll-padding-block: 16px;
 }
 
 .hm-heading {
@@ -318,9 +299,9 @@
 
 .hm-toolbar {
     display: flex;
-    align-items: flex-end;
     gap: 10px;
     flex-wrap: wrap;
+    align-items: end;
 }
 
 .hm-toolbar > .hm-field {
@@ -337,9 +318,9 @@
 .hm-search {
     font-size: 12px;
     padding: 8px 10px;
-    border: 1px solid var(--line);
+    border: 1px solid var(--control);
     background: var(--panel);
-    border-radius: 4px;
+    border-radius: var(--radius-control);
 }
 
 .hm-area > h3 {
@@ -368,7 +349,7 @@
     display: flex;
     align-items: center;
     border: 1px solid var(--line);
-    border-radius: 4px;
+    border-radius: var(--radius-control);
     padding: 2px;
     gap: 2px;
     background: var(--panel);
@@ -378,6 +359,7 @@
 }
 
 .hm-segmented button {
+    border-radius: calc(var(--radius-control) - 3px);
     border: 0;
     background: transparent;
     color: var(--muted);
@@ -386,10 +368,16 @@
     white-space: nowrap;
 }
 
+.host-manager .hm-segmented > button[aria-pressed="false"] {
+    background: transparent;
+    box-shadow: none;
+}
+
 .hm-segmented button[aria-pressed="true"] {
-    color: var(--ink);
-    background: var(--raised);
-    box-shadow: 0 1px 3px #0002;
+    background: var(--accent-soft);
+    box-shadow: inset 0 -2px var(--accent);
+    color: var(--accent);
+    font-weight: 700;
 }
 
 .hm-badge {
@@ -397,8 +385,8 @@
     align-items: center;
     gap: 5px;
     white-space: nowrap;
-    padding: 3px 7px;
-    border-radius: 4px;
+    padding: calc(3px + 0.1em) 7px calc(3px - 0.1em);
+    border-radius: var(--radius-control);
     background: var(--raised);
     font-size: 10px;
     line-height: 1.3;
@@ -417,8 +405,9 @@
 }
 
 .hm-badge.warn {
-    color: var(--warn);
     background: color-mix(in srgb, var(--warn) 10%, var(--panel));
+    color: var(--warn);
+    font-size: 12px;
 }
 
 .hm-empty {
@@ -466,15 +455,15 @@
 }
 
 .hm-badge.vlan-access {
-    color: #a7d5ff;
-    background: #2b6ea52e;
-    box-shadow: inset 0 0 0 1px #73b9f45c;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 60%, transparent);
 }
 
 .hm-badge.vlan-trunk {
-    color: #dfb9ff;
-    background: #8a4fb72e;
-    box-shadow: inset 0 0 0 1px #c08beb66;
+    color: var(--violet);
+    background: color-mix(in srgb, var(--violet) 12%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--violet) 60%, transparent);
 }
 
 .hm-badge.vlan-untagged {
@@ -496,7 +485,7 @@
     gap: 2px;
     padding: 3px;
     border: 1px solid var(--line);
-    border-radius: 5px;
+    border-radius: var(--radius-control);
     background: var(--paper);
     white-space: nowrap;
 }
@@ -539,31 +528,44 @@
 }
 
 .host-manager .hm-protocol {
-    font-size: 10px;
-    min-height: 25px;
     padding: 3px 7px;
     color: var(--muted);
     background: transparent;
-    border-color: var(--line);
     gap: 6px;
+    position: relative;
+    font-size: 12px;
+    min-height: 32px;
+    border-color: var(--control);
 }
 
-.hm-protocol::before {
-    content: '';
-    width: 6px;
-    height: 6px;
+.hm-protocol-track {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    width: 28px;
+    height: 16px;
+    padding: 2px;
+    border: 1px solid var(--control);
+    border-radius: var(--radius-pill);
+    background: var(--panel);
+}
+
+.hm-protocol-track::before {
+    content: "";
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    background: var(--muted);
+    background: var(--control);
 }
 
-.host-manager .hm-protocol[aria-checked="true"] {
-    color: var(--green);
-    border-color: color-mix(in srgb, var(--green) 40%, var(--line));
-    background: color-mix(in srgb, var(--green) 6%, var(--panel));
-}
-
-.hm-protocol[aria-checked="true"]::before {
+.hm-protocol[aria-checked="true"] .hm-protocol-track {
+    justify-content: flex-end;
     background: var(--green);
+    border-color: var(--green);
+}
+
+.hm-protocol[aria-checked="true"] .hm-protocol-track::before {
+    background: var(--paper);
 }
 
 .hm-message:empty,
@@ -598,33 +600,38 @@
     border: 2px solid var(--line);
     border-top-color: var(--accent);
     border-radius: 50%;
-    animation: hm-spin 0.9s linear infinite;
+    animation: hm-spin 1520ms cubic-bezier(0.38, 0.14, 0.62, 0.86) infinite;
 }
 
 @keyframes hm-spin {
-    to {
+    50% {
+        transform: rotate(180deg);
+    }
+
+    100% {
         transform: rotate(360deg);
     }
 }
 
 .hm-read-error {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
     font-size: 12px;
     line-height: 1.6;
     padding: 10px 12px;
     background: color-mix(in srgb, var(--warn) 8%, var(--panel));
-    border-radius: 4px;
+    border-radius: var(--radius-control);
     color: var(--warn);
     margin: 5px 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
 }
 
 .hm-table-wrap {
     width: 100%;
     overflow: auto;
     border: 1px solid var(--line);
-    border-radius: 4px;
+    border-radius: var(--radius-control);
     scrollbar-width: thin;
 }
 
@@ -718,6 +725,9 @@
 .hm-address {
     font-family: Consolas, monospace;
     font-size: 11px;
+    white-space: pre-line;
+    word-break: keep-all;
+    overflow-wrap: normal;
 }
 
 .hm-stacked {
@@ -740,8 +750,7 @@
 }
 
 .hm-selection-bar {
-    position: sticky;
-    bottom: -20px;
+    position: static;
     z-index: 2;
     display: flex;
     align-items: center;
@@ -750,9 +759,9 @@
     flex-wrap: wrap;
     padding: 12px 16px;
     border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
-    border-radius: 5px;
+    border-radius: var(--radius-control);
     background: var(--panel);
-    box-shadow: 0 -8px 20px #0002;
+    box-shadow: none;
     font-size: 12px;
     margin-top: auto;
 }
@@ -791,10 +800,14 @@
     font-size: 12px;
     line-height: 1.5;
     padding: 8px 10px;
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    background: var(--panel);
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
+    background-color: var(--panel);
     color: var(--ink);
+}
+
+.hm-field select {
+    padding-inline-end: 28px;
 }
 
 .hm-field textarea {
@@ -851,47 +864,18 @@
     margin-top: -8px;
 }
 
-.hm-dialog {
-    width: min(880px, calc(100vw - 40px));
-    max-height: calc(100dvh - 64px);
-    padding: 0;
-    color: var(--ink);
-    background: var(--paper);
-    border: 1px solid var(--line);
-    border-radius: 7px;
-    box-shadow: 0 20px 80px #0008;
-    overflow: hidden;
-}
-
-.hm-dialog[open] {
-    display: flex;
-    flex-direction: column;
-}
-
-.hm-dialog::backdrop {
-    background: #080b10a8;
-}
-
-.hm-dialog-title {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 20px;
-    padding: 15px 22px;
-    border-bottom: 1px solid var(--line);
-    background: var(--panel);
-    flex: none;
-}
-
-.hm-dialog-title h2 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
+.dialog.hm-dialog:not(.dialog-compact, .hm-entry-dialog) {
+    width: min(880px, calc(100vw - 24px));
 }
 
 .hm-entry-dialog {
+    --stacked-dialog-width: 640px;
+
     width: min(640px, calc(100vw - 40px));
+}
+
+.dialog.hm-dialog.hm-preview-dialog.dialog-stacked {
+    width: min(840px, calc(100% - 56px));
 }
 
 .hm-text-diff > span {
@@ -915,13 +899,14 @@
 }
 
 .hm-dialog-body {
-    overflow: auto;
-    min-height: 0;
-    padding: 20px 22px;
     display: flex;
     flex-direction: column;
     gap: 16px;
-    scrollbar-width: thin;
+}
+
+.hm-dialog-body > .hm-muted {
+    font-size: inherit;
+    line-height: inherit;
 }
 
 .hm-dialog-body > h3 {
@@ -929,17 +914,6 @@
     font-weight: 500;
     margin: 0;
     color: var(--muted);
-}
-
-.hm-dialog-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-    padding: 13px 22px;
-    border-top: 1px solid var(--line);
-    background: var(--panel);
-    flex: none;
 }
 
 .hm-editor-grid {
@@ -958,7 +932,7 @@
     padding: 14px;
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 4px;
+    border-radius: var(--radius-control);
 }
 
 .hm-editor-pane h3 {
@@ -976,7 +950,7 @@
     margin: 0;
     background: var(--paper);
     border: 1px solid var(--line);
-    border-radius: 4px;
+    border-radius: var(--radius-control);
     padding: 12px;
     flex: 1;
     min-height: 240px;
@@ -1007,7 +981,7 @@
 
 .hm-profile {
     border: 1px solid var(--line);
-    border-radius: 4px;
+    border-radius: var(--radius-panel);
     padding: 14px;
     background: var(--panel);
     display: flex;
@@ -1036,13 +1010,15 @@
 }
 
 .hm-value {
-    max-width: 500px;
     max-height: 72px;
     overflow: hidden;
     font: 11px/1.6 Consolas, monospace;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
     margin: 0;
+    white-space: pre-wrap;
+    word-break: normal;
+    overflow-wrap: normal;
+    max-width: 100%;
+    overflow-x: auto;
 }
 
 .hm-pagination {
@@ -1078,11 +1054,12 @@
 }
 
 .hm-hosts-entry {
-    display: flex;
     align-items: center;
     gap: 7px;
     border-bottom: 1px solid var(--line);
     padding: 12px 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
 }
 
 .hm-hosts-entry:last-child {
@@ -1126,6 +1103,24 @@
     justify-content: flex-end;
 }
 
+.hm-deletion-undo {
+    align-items: center;
+}
+
+.hm-deletion-undo > span {
+    flex: 1 1 14rem;
+    overflow-wrap: anywhere;
+}
+
+.hm-comparison .hm-removal-effect {
+    margin: 0;
+    padding: 10px 14px;
+    border: 1px solid var(--danger);
+    border-radius: var(--radius-control);
+    color: var(--danger);
+    background: var(--danger-soft);
+}
+
 .hm-summary {
     display: flex;
     gap: 8px;
@@ -1165,15 +1160,19 @@
     padding: 8px;
     font: 12px Consolas, monospace;
     background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 3px;
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
 }
 
 .hm-preview-layout {
     display: grid;
+    flex: none;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.hm-preview-layout:has(> .hm-preview-targets) {
     grid-template-columns: 190px minmax(0, 1fr);
     gap: 18px;
-    min-height: 220px;
 }
 
 .hm-preview-targets {
@@ -1185,16 +1184,24 @@
 }
 
 .hm-preview-targets button {
-    text-align: left;
+    display: grid;
+    flex: none;
+    gap: 2px;
+    justify-items: start;
+    justify-content: start;
+    min-height: 44px;
+    text-align: start;
+    overflow-wrap: anywhere;
     white-space: normal;
     background: transparent;
     padding: 10px;
-    border-color: transparent;
-    font-size: 11px;
+    border-color: var(--line);
+    box-shadow: none;
+    font-size: 12px;
 }
 
 .hm-preview-targets button[aria-pressed="true"] {
-    border-color: var(--line);
+    border-color: var(--accent);
     background: var(--panel);
     color: var(--accent);
 }
@@ -1222,7 +1229,7 @@
     background: var(--panel);
     padding: 14px;
     border: 1px solid var(--line);
-    border-radius: 4px;
+    border-radius: var(--radius-control);
     max-height: 340px;
     overflow: auto;
     white-space: pre-wrap;
@@ -1241,9 +1248,8 @@
 .host-manager summary {
     cursor: pointer;
     color: var(--muted);
-    font-size: 11px;
+    font-size: 13px;
     line-height: 1.6;
-    padding: 10px 0;
 }
 
 .host-manager details[open] > summary {
@@ -1252,14 +1258,14 @@
 
 .host-manager details.hm-history-entry {
     border: 1px solid var(--line);
-    border-radius: 4px;
+    border-radius: var(--radius-control);
     padding: 0 14px;
     background: var(--panel);
 }
 
 .hm-history-entry > summary {
     font-size: 12px;
-    padding: 13px 0;
+    padding-block: 13px;
 }
 
 .hm-history-entry > div {
@@ -1296,10 +1302,6 @@
 }
 
 @media (max-width: 1100px) {
-    .hm-workspace {
-        grid-template-columns: 212px minmax(0, 1fr);
-    }
-
     .hm-area {
         padding: 18px 16px;
     }
@@ -1332,6 +1334,8 @@
 
 @media (max-width: 760px) {
     .page.host-manager {
+        display: block;
+        height: auto;
         padding: 14px 10px 32px;
     }
 
@@ -1339,10 +1343,6 @@
         gap: 10px;
         align-items: flex-start;
         flex-wrap: wrap;
-    }
-
-    .hm-page-heading h1 {
-        font-size: 19px;
     }
 
     .hm-page-heading p {
@@ -1364,45 +1364,33 @@
         gap: 9px;
     }
 
-    .hm-sidebar-heading {
-        grid-column: 1;
-    }
-
     .hm-sidebar > input {
-        grid-column: 2;
-        grid-row: 1;
+        grid-column: 1 / -1;
     }
 
     .hm-selection-tools {
-        grid-column: 1;
-    }
-
-    .hm-selection-count {
-        grid-column: 2;
-        grid-row: 2;
-        padding: 4px;
-        border: 0;
-        text-align: right;
+        grid-column: 1 / -1;
+        justify-content: start;
     }
 
     .hm-host-list {
         grid-column: 1/-1;
         grid-row: 3;
-        flex-direction: row;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+        max-height: 11rem;
         padding: 0 0 6px;
         margin: 0;
         overflow: auto;
     }
 
     .hm-host-list .hm-host {
-        min-width: 206px;
-        max-width: 240px;
-        flex: 0 0 auto;
+        min-width: 0;
         min-height: 54px;
     }
 
     .hm-area {
-        min-height: 440px;
+        min-height: 0;
         padding: 16px 12px;
     }
 
@@ -1429,30 +1417,12 @@
 
     .hm-grid,
     .hm-comparison,
-    .hm-preview-layout {
-        grid-template-columns: 1fr;
+    .hm-preview-layout:has(> .hm-preview-targets) {
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .hm-preview-targets {
-        flex-direction: row;
-        max-height: none;
-        overflow: auto;
-    }
-
-    .hm-preview-targets button {
-        flex: 0 0 auto;
-        max-width: 200px;
-    }
-
-    .hm-dialog {
-        width: calc(100vw - 20px);
-        max-height: calc(100dvh - 24px);
-    }
-
-    .hm-dialog-title,
-    .hm-dialog-body,
-    .hm-dialog-actions {
-        padding: 14px;
+        max-height: 12rem;
     }
 
     .hm-selection-bar {
@@ -1491,52 +1461,1001 @@
     gap: 4px;
 }
 
-.hm-protocol-change {
-    font-size: 10px;
+.hm-protocol-change:not([hidden]) {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     color: var(--muted);
     white-space: nowrap;
+    font-size: 13px;
+}
+
+.hm-protocol-change .ui-icon {
+    width: 18px;
+    height: 18px;
 }
 
 .hm-protocol[data-pending="true"] {
-    border-color: #d9b777;
-    outline: 1px solid #d9b777;
-    outline-offset: 2px;
-    animation: hm-protocol-pending 1.8s ease-in-out infinite;
+    border-color: var(--warn);
+    background: var(--warn-soft);
 }
 
 .hm-protocol-drafts {
-    position: sticky;
-    bottom: 0;
-    background: var(--panel, #191c22);
-    border-top: 1px solid var(--border);
-    z-index: 2;
+    min-width: 0;
 }
 
-.hm-protocol-drafts .hm-selection-bar {
-    position: static;
+.hm-protocol-review {
+    min-inline-size: 0;
+    margin-block: 12px;
 }
 
-.hm-protocol-drafts details {
-    padding: 8px 14px;
-    max-height: 240px;
+.hm-protocol-review .hm-table-wrap {
+    margin: 0;
+}
+
+.hm-sidebar,
+.hm-main {
+    border-radius: var(--radius-panel);
+    background: var(--card);
+    border: 0;
+}
+
+.hm-area-picker {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    .hm-area-picker {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 8px;
+    }
+
+    .hm-tabs {
+        display: none;
+    }
+}
+
+.hm-navigation {
+    min-width: 0;
+    overflow-y: auto;
+}
+
+.hm-compact-navigation {
+    display: none;
+}
+
+.hm-target-picker {
+    flex: none;
+    margin: var(--panel-inset) var(--panel-inset) 0;
+    padding-inline: 12px;
+    background: var(--card);
+    border-radius: var(--radius-panel);
+}
+
+.hm-target-picker > summary {
+    font-weight: 600;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+    max-height: 4.5rem;
+    overflow-y: auto;
+}
+
+.hm-target-picker .hm-sidebar {
+    display: grid;
+    grid-template-columns: minmax(8rem, 1fr) auto;
+    align-items: center;
+    padding: 0 0 8px;
+    background: transparent;
+}
+
+.hm-target-picker .hm-host-list {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr));
+    max-height: 8rem;
+    margin: 0;
+    padding: 0;
+}
+
+.hm-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.hm-view-actions {
+    flex: none;
+    max-height: 36%;
     overflow: auto;
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+    justify-content: flex-end;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    position: sticky;
+    z-index: 2;
+    inset-block-end: var(--statusbar-height);
+    overflow-y: auto;
+    padding: 8px 12px;
+    min-height: 56px;
 }
 
-@keyframes hm-protocol-pending {
-    0%,
-    100% {
-        outline-color: #d9b77788;
+.hm-view-actions:empty,
+.hm-view-actions:not(:has(> :not([hidden]))) {
+    display: none;
+}
+
+.hm-view-actions .hm-selection-bar {
+    border: 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    min-height: 40px;
+    padding: 0;
+    justify-content: space-between;
+}
+
+.hm-view-actions > .hm-actions {
+    flex-wrap: wrap;
+    padding: 4px;
+}
+
+@media (max-width: 900px) {
+    .hm-workspace {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+        gap: 12px;
     }
 
-    50% {
-        outline-color: #f2ce8d;
-        box-shadow: 0 0 0 3px #d9b77722;
+    .hm-compact-navigation {
+        display: grid;
+        margin: 0;
+    }
+
+    .hm-compact-navigation select {
+        margin: 0;
     }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .hm-protocol[data-pending="true"] {
-        animation: none;
-        outline-color: #d9b777;
+@media (max-width: 760px) {
+    .hm-target-picker .hm-sidebar {
+        grid-template-columns: minmax(0, 1fr);
     }
+
+    .hm-workspace,
+    .hm-main,
+    .hm-content,
+    .hm-view,
+    .hm-area {
+        overflow: visible;
+    }
+
+    .hm-view-actions {
+        border-end-start-radius: var(--radius-inset);
+        border-end-end-radius: var(--radius-inset);
+        position: sticky;
+        bottom: var(--statusbar-height);
+        z-index: 2;
+        max-height: 32dvh;
+    }
+}
+
+.hm-tabs.workspace-index[role="tablist"] > button {
+    padding-block: 9px;
+}
+
+.hm-warning {
+    border-inline-start: 3px solid var(--warn);
+    padding: 10px 14px;
+    color: var(--warn);
+}
+
+.hm-dialog-body label:has(:disabled) {
+    color: var(--disabled-ink);
+}
+
+@media (max-width: 680px) {
+    .hm-hosts-entry button,
+    .hm-actions button {
+        min-height: 44px;
+    }
+
+    .hm-table-wrap:has(.record-table) {
+        max-height: none;
+        overflow: visible;
+    }
+}
+
+.hm-hosts-entry > .danger,
+.hm-actions > .danger {
+    margin-inline-start: 8px;
+}
+
+.hm-view-actions .hm-selection-bar > strong {
+    margin-inline-end: auto;
+    font-size: 13px;
+}
+
+.hm-host-list label:has(:checked) {
+    background: color-mix(in srgb, var(--accent) 17%, var(--card));
+    border-color: var(--accent);
+}
+
+.hm-read-error[role="alert"] {
+    color: var(--danger);
+    border-inline-start: 3px solid currentcolor;
+    padding: 12px;
+    background: var(--danger-soft);
+}
+
+.hm-read-error[role="alert"] > .ui-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.hm-read-error[role="alert"] > button:enabled {
+    color: var(--ink);
+}
+
+.hm-read-error[role="alert"] > span {
+    word-break: auto-phrase;
+}
+
+.hm-section .hm-table-wrap {
+    margin-bottom: 12px;
+}
+
+.hm-hosts-editor textarea {
+    max-height: 45vh;
+}
+
+.hm-view :is(.hm-tab,.hm-button)[aria-pressed="true"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+}
+
+.hm-section td:last-child .hm-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.hm-selection-bar .danger {
+    margin-inline-start: 12px;
+}
+
+.hm-view .danger {
+    width: fit-content;
+}
+
+.hm-dialog-body .hm-grid {
+    align-items: end;
+    gap: 16px 20px;
+}
+
+.hm-dialog-body label.hm-field {
+    display: grid;
+    gap: 4px;
+}
+
+.hm-dialog-body label:has(input:disabled) {
+    color: var(--disabled-ink);
+}
+
+.hm-toolbar :is(.hm-segmented button, select, input[type="search"]) {
+    min-height: 38px;
+}
+
+.hm-toolbar .hm-badge {
+    margin-block: 0;
+    align-self: center;
+}
+
+.hm-dialog-body .hm-grid > label {
+    align-content: start;
+    row-gap: 4px;
+}
+
+.hm-section td .hm-badge {
+    white-space: nowrap;
+    width: fit-content;
+}
+
+.hm-section .hm-actions {
+    justify-content: flex-end;
+    gap: 8px;
+    align-items: center;
+}
+
+@media (max-width: 680px) {
+    .hm-table-wrap .record-table td:has(> .hm-actions) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hm-table-wrap .record-table td:has(> .hm-actions)::before {
+        grid-row: auto;
+    }
+
+    .hm-table-wrap .record-table td > .hm-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        grid-column: 1 / -1;
+        justify-content: flex-start;
+    }
+
+    .hm-table-wrap .record-table td > .hm-actions button {
+        min-width: 0;
+        max-width: 100%;
+        margin-inline: 0;
+        white-space: normal;
+    }
+}
+
+.hm-area > * {
+    flex-shrink: 0;
+}
+
+.hm-section .hm-tag {
+    justify-self: start;
+    width: fit-content;
+}
+
+@media (max-width: 760px) {
+    .hm-table-wrap tbody tr + tr {
+        border-top: 2px solid var(--line);
+    }
+}
+
+.hm-section > p {
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.hm-section h3 {
+    font-size: 16px;
+}
+
+.hm-dialog-body .hm-field select,
+.hm-dialog-body .hm-field input {
+    margin: 0;
+}
+
+.hm-toolbar .hm-name + .hm-badge,
+.hm-section td div > .hm-badge {
+    margin-inline-start: 6px;
+}
+
+.hm-dialog-body .hm-field {
+    gap: 5px;
+    margin: 0;
+}
+
+.hm-area .hm-section > .hm-toolbar {
+    align-items: center;
+}
+
+.hm-read-state {
+    border-inline-start: 3px solid var(--control);
+    background: var(--nested);
+    padding: 12px;
+    font-size: 14px;
+}
+
+.hm-toolbar .hm-field > span {
+    font-size: 13px;
+}
+
+.hm-view .hm-badge,
+.hm-dialog .hm-badge {
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.hm-area .hm-section > .hm-toolbar h3 {
+    margin: 0;
+    align-self: center;
+}
+
+@media (max-width: 680px) {
+    .hm-facts .record-table {
+        display: table;
+        table-layout: fixed;
+    }
+
+    .hm-facts .record-table thead {
+        display: table-header-group;
+        position: static;
+        width: auto;
+        height: auto;
+        clip-path: none;
+        overflow: visible;
+    }
+
+    .hm-facts .record-table tbody {
+        display: table-row-group;
+    }
+
+    .hm-facts .record-table tr {
+        display: table-row;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+    }
+
+    .hm-facts .record-table :is(th, td) {
+        display: table-cell;
+        width: auto;
+        padding: 8px 5px;
+    }
+
+    .hm-facts .record-table td::before {
+        display: none;
+    }
+}
+
+.hm-warning .ui-icon {
+    width: 16px;
+    height: 16px;
+    margin-inline-end: 6px;
+    vertical-align: middle;
+}
+
+.hm-dialog-body :is(.hm-muted, .hm-field) {
+    word-break: auto-phrase;
+}
+
+.hm-section td .hm-name,
+.hm-section td :is(strong, small) {
+    overflow-wrap: anywhere;
+}
+
+.hm-view .hm-selection-bar > .danger {
+    margin-inline-start: 12px;
+}
+
+.hm-view .hm-toolbar :is(select, input[type="search"], button) {
+    min-height: 40px;
+}
+
+.hm-tabs.workspace-index button:focus-visible {
+    box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+@media (max-width: 680px) {
+    .hm-table-wrap .record-table:not(.hm-facts table) td[data-field] {
+        align-items: center;
+    }
+}
+
+.hm-view .hm-area {
+    scrollbar-width: auto;
+    padding-block-end: 22px;
+    scrollbar-gutter: auto;
+}
+
+.hm-view-actions .hm-button {
+    min-height: 40px;
+}
+
+.hm-view :is(.hm-check, .hm-field) {
+    word-break: auto-phrase;
+}
+
+.hm-schedule-bulk > button:last-child {
+    margin-inline-start: 12px;
+}
+
+@media (max-width: 1150px) {
+    .hm-hosts-entry {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+    }
+
+    .hm-hosts-entry-copy {
+        grid-column: 2 / -1;
+    }
+
+    .hm-hosts-entry > button {
+        justify-self: start;
+    }
+
+    .hm-hosts-entry > button:last-child {
+        grid-column: 3;
+    }
+}
+
+.hm-view .hm-filter-field select,
+.hm-view .hm-search,
+.hm-view .hm-segmented button {
+    min-height: 40px;
+}
+
+.hm-view-actions > button {
+    align-self: end;
+}
+
+.hm-selection-bar .hm-actions > button {
+    min-height: 40px;
+}
+
+.hm-profile-scope {
+    --check-row-height: 28px;
+
+    display: grid;
+    gap: 4px;
+}
+
+.hm-profile-scope > * {
+    margin-block: 0;
+}
+
+.hm-comparison td {
+    word-break: auto-phrase;
+}
+
+@media (max-width: 680px) {
+    .hm-table-wrap .record-table td[data-field]:not(:has(> .hm-actions)) {
+        grid-template-columns: minmax(7.5rem, 38%) minmax(0, 1fr);
+    }
+
+    .hm-table-wrap .record-table td[data-field] > div {
+        align-self: start;
+    }
+}
+
+.hm-view-tabs {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    border-block-end: 1px solid var(--line);
+}
+
+.hm-view-tabs button[aria-pressed="true"] {
+    border-bottom: 2px solid var(--accent);
+    background: transparent;
+}
+
+.hm-workspace,
+.hm-main,
+.hm-content,
+.hm-view,
+.hm-view .hm-area {
+    overflow: visible;
+}
+
+.hm-view-actions .hm-selection-bar > :is(strong, span):first-child {
+    margin-inline-end: auto;
+}
+
+.hm-view-actions > .hm-button {
+    margin-inline-start: auto;
+}
+
+.hm-target-picker > summary,
+.host-manager .hm-history-entry > summary,
+.hm-section details > summary {
+    padding-inline-end: 32px;
+    font-size: 13px;
+}
+
+.hm-facts .record-table {
+    width: 100%;
+    font-size: 13px;
+}
+
+.hm-section .record-table td .hm-name {
+    color: var(--ink);
+}
+
+.hm-section .record-table td .hm-badge {
+    width: fit-content;
+}
+
+.hm-view .record-table td :is(.hm-actions button, .hm-button):not(.hm-record-link) {
+    min-height: 34px;
+    padding-inline: 12px;
+}
+
+@media (max-width: 680px) {
+    .hm-view .record-table td :is(.hm-actions button, .hm-button):not(.hm-record-link) {
+        min-height: 44px;
+    }
+}
+
+.host-manager .hm-view-tabs > button[aria-pressed="true"] {
+    background: transparent;
+    color: var(--accent);
+}
+
+.hm-view .hm-segmented {
+    padding-block: 0;
+}
+
+.hm-view .hm-segmented button {
+    min-height: 38px;
+}
+
+.hm-dialog-body :is(.hm-field, .hm-check) + .hm-field {
+    margin-block-start: 8px;
+}
+
+@media (max-width: 680px) {
+    .hm-selection-tools button,
+    .hm-section .record-table td .hm-button {
+        min-height: 44px;
+    }
+
+    .hm-workspace .hm-view-actions .hm-selection-bar {
+        gap: 6px 10px;
+    }
+
+    .hm-facts .record-table :is(th, td) {
+        border-radius: 0;
+    }
+}
+
+.hm-heading > .hm-actions,
+.hm-heading > .hm-actions > button {
+    max-width: 100%;
+}
+
+.hm-heading > .hm-actions > button {
+    white-space: normal;
+    word-break: auto-phrase;
+}
+
+.hm-view .record-table td .hm-badge {
+    justify-self: start;
+    width: fit-content;
+}
+
+.hm-view .hm-record-link {
+    display: grid;
+    justify-content: start;
+    align-content: start;
+    justify-items: start;
+    gap: 3px;
+    padding: 0;
+    margin: 0;
+    min-height: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--ink);
+    font: inherit;
+    text-align: start;
+}
+
+.hm-view .hm-record-link > span {
+    font-weight: 650;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.hm-view .hm-record-link > small {
+    margin: 0;
+}
+
+.hm-view .hm-record-link:hover {
+    color: var(--accent);
+}
+
+.hm-view .hm-list-heading {
+    font-size: 17px;
+}
+
+.hm-view .hm-toolbar :is(input, select, button):disabled {
+    color: var(--disabled-ink);
+    background-color: var(--disabled-face);
+    border-color: var(--disabled-line);
+    box-shadow: none;
+}
+
+.hm-view-actions button.primary .ui-icon {
+    fill: currentcolor;
+}
+
+.hm-schedule-settings {
+    display: grid;
+    margin-block-end: 14px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+}
+
+.hm-schedule-settings :is(label, .secondary-details) {
+    margin-block: 0;
+}
+
+.hm-schedule-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    align-items: center;
+}
+
+.hm-view .hm-schedule-settings .secondary-details {
+    margin-block-start: 6px;
+}
+
+.hm-view .hm-profile {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.hm-view .hm-profile > button {
+    grid-column: 1 / -1;
+    justify-self: start;
+}
+
+:root .hm-workspace label.hm-host:has(input:focus-visible):not(:has(input:checked)) {
+    background-color: transparent;
+    box-shadow: inset 0 -2px var(--accent);
+}
+
+:root .hm-workspace label.hm-host:has(input:checked) {
+    background-color: light-dark(color-mix(in srgb, var(--accent) 26%, var(--panel)), color-mix(in srgb, var(--accent) 16%, var(--panel)));
+    border-color: var(--accent);
+}
+
+.hm-dialog-body > .hm-field + .hm-field,
+.hm-dialog-body > .hm-grid + .hm-field {
+    margin-block-start: 24px;
+}
+
+.hm-dialog-body .hm-grid > :is(.hm-field, label) > :is(input, select) {
+    min-height: 40px;
+}
+
+@media (max-width: 680px) {
+    .hm-schedule-settings {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .hm-view .hm-table-wrap:not(.hm-facts):has(> .record-table) {
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+    }
+
+    .hm-view .hm-table-wrap:not(.hm-facts) .record-table tbody {
+        display: grid;
+        gap: 10px;
+        padding: 0;
+    }
+
+    .hm-view .hm-table-wrap:not(.hm-facts) .record-table tbody > tr {
+        margin: 0;
+        border: 1px solid var(--line);
+        background: var(--nested);
+        border-radius: var(--radius-control);
+    }
+
+    .hm-schedule-bulk > button:last-child {
+        margin-inline-start: 0;
+    }
+
+    .hm-view .hm-table-wrap .record-table:not(.hm-facts table) td[data-field] {
+        align-items: start;
+    }
+
+    .hm-facts .record-table {
+        table-layout: fixed;
+    }
+
+    .hm-facts .record-table th:first-child {
+        width: 48%;
+    }
+
+    .hm-facts .record-table :is(th, td) {
+        word-break: auto-phrase;
+        border-block-end: 1px solid var(--line);
+    }
+}
+
+.hm-firewall-form > .hm-section {
+    margin-block: 0 8px;
+    padding-block: 10px;
+}
+
+.hm-firewall-form .hm-profile-scope .hm-check {
+    min-height: 28px;
+    margin: 0;
+}
+
+.hm-firewall-form .hm-profile-scope .hm-toolbar {
+    align-items: center;
+    padding-block: 0;
+    gap: 4px 10px;
+    margin-block: 0;
+}
+
+.hm-firewall-form .hm-field > :is(input, select) {
+    height: 40px;
+}
+
+.hm-dialog-body .hm-power-timers .hm-field {
+    gap: 2px;
+}
+
+.hm-dialog-body .hm-power-timers .hm-field + .hm-field {
+    margin-block-start: 14px;
+}
+
+.hm-schedule-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 12px;
+    margin-block-end: 10px;
+}
+
+.hm-schedule-row-actions .hm-check {
+    margin: 0;
+}
+
+@media (min-width: 1150px) {
+    .hm-schedule-row > .hm-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.hm-firewall-form > .hm-section > h3 {
+    font: 700 16px/1.5 var(--font-title);
+    letter-spacing: normal;
+}
+
+.hm-firewall-form .hm-check:has(input:disabled) {
+    color: var(--disabled-ink);
+}
+
+.hm-schedule-rows {
+    display: grid;
+    gap: 12px;
+}
+
+.hm-schedule-rows:not(:empty) {
+    margin-block-end: 12px;
+}
+
+.hm-schedule-row {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    padding: 12px;
+}
+
+.hm-schedule-row .hm-field > :is(select, input) {
+    min-block-size: 40px;
+}
+
+.hm-view .hm-wake-selection {
+    --check-row-height: 28px;
+
+    display: grid;
+    gap: 4px;
+}
+
+.hm-view .hm-wake-selection > .hm-check {
+    min-height: 28px;
+    padding-block: 0;
+}
+
+.hm-view .hm-wake-selection :is(.hm-check, p) {
+    margin: 0;
+}
+
+.hm-view .hm-wake-selection p {
+    padding-inline-start: 23px;
+    font-size: 12px;
+    word-break: auto-phrase;
+}
+
+.hm-view .hm-toolbar input.hm-search:disabled {
+    color: var(--disabled-ink);
+}
+
+.hm-list-skeleton {
+    display: grid;
+    gap: 8px;
+    margin-block: 12px;
+}
+
+.hm-list-skeleton .skeleton-line {
+    min-height: 24px;
+    margin: 0;
+    border-radius: var(--radius-control);
+    background: var(--raised);
+}
+
+.hm-selection-bar details .record-table,
+.hm-view-actions .record-table {
+    font-size: 13px;
+}
+
+.hm-view select:disabled {
+    opacity: 1;
+}
+
+@media (max-width: 680px) {
+    .hm-table-wrap .record-table td > .hm-record-link {
+        min-height: 44px;
+        margin: 0;
+    }
+
+    .hm-view .hm-table-wrap label.hm-check.hm-row-check {
+        display: flex;
+        align-items: center;
+        min-height: 0;
+        padding: 0;
+        margin: 0;
+    }
+
+    .hm-firewall-form .hm-profile-scope {
+        gap: 2px;
+    }
+
+    .hm-firewall-form .hm-profile-scope .hm-toolbar {
+        display: flex;
+        margin: 0;
+    }
+
+    .hm-firewall-form .hm-profile-scope .hm-check {
+        min-height: 28px;
+        padding-block: 0;
+    }
+
+    .hm-section .hm-toolbar > .hm-actions {
+        flex: 1 0 100%;
+    }
+
+    .hm-section .hm-toolbar > .hm-actions,
+    .hm-section > .hm-actions {
+        justify-content: flex-start;
+        margin-inline: 0;
+    }
+
+    .hm-view-actions .hm-protocol-summary > strong {
+        flex-basis: 100%;
+    }
+
+    .hm-view-actions .hm-protocol-summary > .hm-actions {
+        justify-content: flex-start;
+        margin-inline: 0;
+    }
+}
+
+.hm-display-current-mode {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin-block: 12px 16px;
+    font-size: 14px;
+}
+
+.hm-display-current-mode dt {
+    color: var(--muted);
+}
+
+.hm-display-current-mode dd {
+    margin: 0;
+    word-break: keep-all;
+}
+
+.hm-view .hm-firewall-filter {
+    column-gap: 20px;
+}
+
+.hm-record-summary {
+    margin-block-end: 8px;
+}
+
+.hm-view .hm-actions.hm-login-actions {
+    justify-content: flex-start;
 }

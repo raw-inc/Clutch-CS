@@ -77,6 +77,7 @@ export function createTerminalKeys(ctx, options)
 {
     const element = document.createElement('div');
     element.className = 'terminal-keys';
+    element.tabIndex = 0;
     element.setAttribute('role', 'toolbar');
     element.setAttribute('aria-label', ctx.t('Terminal keys', 'ターミナル補助キー'));
     const modifiers = { ctrl: false, alt: false, shift: false }, buttons = [], toggles = [];
@@ -158,13 +159,18 @@ export function createTerminalKeys(ctx, options)
         });
         toggles.push([key, button]);
     }
-    for (const [label, data, description] of [['Esc', '\x1b', 'Escape'], ['Tab', '\t', 'Tab'], ['Del', '\x1b[3~', 'Delete'], ['⌫', '\x7f', 'Backspace'], ['↵', '\r', 'Enter']])
+    for (const [label, data, description] of [['Esc', '\x1b', 'Escape'], ['Tab', '\t', 'Tab'], ['Del', '\x1b[3~', 'Delete'], ['Backspace', '\x7f', 'Backspace'], ['Enter', '\r', 'Enter']])
     {
         add(modifierRow, label, description, () => options.send(transform(data)));
     }
     for (const [label, code, description] of [['←', 'D', 'Left'], ['↑', 'A', 'Up'], ['↓', 'B', 'Down'], ['→', 'C', 'Right'], ['Home', 'H', 'Home'], ['End', 'F', 'End']])
     {
-        add(navigationRow, label, description, () => options.send(transform('\x1b' + (options.applicationCursor() ? 'O' : '[') + code)));
+        const button = add(navigationRow, label, description, () => options.send(transform('\x1b' + (options.applicationCursor() ? 'O' : '[') + code)));
+        if (/^[ABCD]$/.test(code))
+        {
+            button.dataset.direction = description.toLowerCase();
+            button.replaceChildren(ctx.icon('arrow-right'));
+        }
     }
     for (const [label, code] of [['PgUp', '5'], ['PgDn', '6']])
     {

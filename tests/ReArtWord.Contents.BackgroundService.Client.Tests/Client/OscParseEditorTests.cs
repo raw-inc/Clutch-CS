@@ -66,7 +66,7 @@ public sealed class OscParseEditorTests
         model.Import(new("flow", "Flow", [parse], []));
         UiText ui = new(storage);
         await ui.ChangeAsync("ja").ConfigureAwait(true);
-        Assert.Equal("OSCパケットを解析", ui.NodeName(Descriptor()));
+        Assert.Equal("OSC パケットを解析", ui.NodeName(Descriptor()));
         Assert.Equal("引数 1", ui.PortName(parse.Type, "argument1", true));
         using HttpClient client = new();
         ServiceCollection services = new();

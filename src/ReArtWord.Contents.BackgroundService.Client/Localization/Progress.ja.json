@@ -8,7 +8,7 @@
   "progress.invalid": "進捗の入力が不正です。総件数と現在数に0以上の有限数値を指定してください。",
   "progress.activeExecutions": "実行ごとの進捗",
   "setting.progressScope": "進捗の集約単位",
-  "progress.noActiveExecutions": "進行中のWFの進捗はありません",
-  "choice.control.progress.progressScope.workflow": "WFの実行ごと（既定）",
+  "progress.noActiveExecutions": "進行中のワークフローの進捗はありません",
+  "choice.control.progress.progressScope.workflow": "ワークフローの実行ごと（既定）",
   "choice.control.progress.progressScope.iteration": "反復の要素ごと"
 }

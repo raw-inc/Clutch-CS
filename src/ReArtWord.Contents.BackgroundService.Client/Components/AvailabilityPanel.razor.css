@@ -5,3 +5,40 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+@media (max-width: 680px) {
+    .standalone-records .record-table tbody tr {
+        background: var(--nested);
+    }
+}
+
+.storage-policy {
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    background: var(--nested);
+}
+
+.storage-policy + .storage-policy {
+    margin-block-start: 8px;
+}
+
+.storage-policy h3 {
+    margin: 0 0 8px;
+    font-size: 14px;
+}
+
+.storage-policy dl {
+    display: grid;
+    grid-template-columns: minmax(6ch, 2fr) minmax(0, 3fr);
+    gap: 6px 12px;
+    margin: 0;
+}
+
+.storage-policy dt {
+    color: var(--muted);
+}
+
+.storage-policy dd {
+    margin: 0;
+}

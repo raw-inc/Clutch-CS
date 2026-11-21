@@ -1,30 +1,40 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Observability
 
-<section class="card section">
-    <div class="toolbar"><h2>@Ui["Normal policy and temporary tracing"]</h2><button @onclick="RefreshAsync">@Ui["Get status"]</button></div>
-    <p class="small muted">@Ui["Clearing temporary tracing restores the saved normal policy. Saved and effective policies are shown separately."]</p>
+<Modal Open="true" Title="@Ui["Log tracing"]" Close="Close">
+<ChildContent>
+<section class="section trace-settings">
+    <header class="review-heading">
+        <div><h2>@Ui["Normal policy and temporary tracing"]</h2>
+            <p class="small muted">@Ui["Clearing temporary tracing restores the saved normal policy. Saved and effective policies are shown separately."]</p></div>
+        <button @onclick="RefreshAsync">@Ui["Get status"]</button>
+    </header>
     <p class="notice" role="status">@(message?.Invoke())</p>
     @if(state is not null)
     {
-        <table>
-            <thead><tr><th>Workflow</th><th>@Ui["Saved normal"]</th><th>@Ui["Effective normal"]</th><th>@Ui["Current effective decision"]</th><th>@Ui["Temporary"]</th><th>@Ui["Retrieved"]</th></tr></thead>
+        <div class="table-wrap"><table class="record-table trace-status">
+            <thead><tr><th>@Ui["Workflow"]</th><th>@Ui["Saved normal"]</th><th>@Ui["Effective normal"]</th><th>@Ui["Current effective decision"]</th><th>@Ui["Temporary"]</th><th>@Ui["Retrieved"]</th></tr></thead>
             <tbody>
             @foreach(var item in state.States)
             {
-                <tr><td>@item.WorkflowId</td><td>@Ui[(item.Saved.Enabled).ToString() ?? "Unconfirmed"]</td><td>@Ui[(item.ActiveNormal?.Enabled).ToString() ?? "Unconfirmed"]</td><td>@Ui[(item.Effective.Enabled).ToString() ?? "Unconfirmed"]</td><td>@Ui[(item.Temporary).ToString() ?? "Unconfirmed"]</td><td>@Ui[(item.Loaded).ToString() ?? "Unconfirmed"] · @item.Reason</td></tr>
+                <tr>
+                    <td class="trace-workflow"><strong>@item.WorkflowId</strong></td>
+                    <td data-field="@Ui["Saved normal"]">@Flag(item.Saved.Enabled)</td>
+                    <td data-field="@Ui["Effective normal"]">@Flag(item.ActiveNormal?.Enabled)</td>
+                    <td data-field="@Ui["Current effective decision"]">@Flag(item.Effective.Enabled)</td>
+                    <td data-field="@Ui["Temporary"]">@Flag(item.Temporary)</td>
+                    <td data-field="@Ui["Retrieved"]"><span>@Flag(item.Loaded)@if(!string.IsNullOrWhiteSpace(item.Reason)){<small>@Ui[item.Reason]</small>}</span></td>
+                </tr>
             }
             </tbody>
-        </table>
+        </table></div>
         <label>@Ui["Target workflow"]<select @bind="workflow">@foreach(var item in state.States){<option value="@item.WorkflowId">@item.WorkflowId</option>}</select></label>
-        <div class="toolbar">
+        <div class="trace-content-options">
             <label><input type="checkbox" @bind="inputs" />@Ui["Record inputs"]</label>
             <label><input type="checkbox" @bind="outputs" />@Ui["Record outputs"]</label>
             <label><input type="checkbox" @bind="raw" />@Ui["Record communication bodies and frames"]</label>
-            <label>@Ui["Leading bytes (empty means full content)"]<input type="text" inputmode="numeric" @bind="rawLimit" @bind:event="oninput" /></label>
         </div>
+        <label>@Ui["Leading bytes (empty means full content)"]<span class="unit-entry"><input class="count-entry" type="text" inputmode="numeric" @bind="rawLimit" @bind:event="oninput" /> @Ui["bytes"]</span></label>
         <p class="small muted">@Ui["With no content options selected, only metadata is recorded. Secrets remain redacted even in detailed tracing."]</p>
-        <button @onclick="EnableAsync" disabled="@(!state.Loaded||state.Closing.OperationId is not null)">@Ui["Start temporary tracing with this selection"]</button>
-        <button @onclick="DisableAsync" disabled="@(!state.Loaded)">@Ui["Clear temporary tracing and restore normal policy"]</button>
         @if(state.Closing.OperationId is Guid closing)
         {
             <p>@Ui.Format("Restart is on hold because of stop request {0}.", closing)</p>
@@ -33,13 +43,33 @@
         }
         else
         {
-            <button @onclick="()=>stopOpen=true" disabled="@(!state.Loaded)">@Ui["Clear temporary tracing and request cluster stop"]</button>
+            <div class="destructive-action">
+                @if(state.Targets.Count>0){<p class="small trace-stop-targets">@Ui["Affected peers"] · @string.Join(", ",state.Targets.Select(target=>target.PeerId))</p>}
+                <p class="small muted">@Ui["Stopping CoreService also clears temporary tracing. To keep it running, restore normal tracing."]</p>
+                <button class="danger" @onclick="()=>pendingStop=state" disabled="@(!state.Loaded||state.Targets.Count==0)"><UiIcon Name="stop" /><span class="control-label">@Ui["Request CoreService stop"]</span></button>
+            </div>
         }
         <JsonDetails Value="state" Title="@Ui["Trace scope and fixed targets"]" />
     }
 </section>
-<Modal Open="stopOpen" Title="@Ui["Clear tracing and request cluster stop"]" Close="()=>stopOpen=false">
-    <p>@Ui["Request stop for the displayed peer instances. Acceptance does not confirm every process has exited."]</p>
-    <JsonDetails Value="state?.Targets" Title="@Ui["Instances fixed at the start"]" />
-    <button @onclick="StopAsync">@Ui["Request stop for these instances"]</button>
+</ChildContent>
+<Actions>
+    @if(state is not null)
+    {
+        <button @onclick="DisableAsync" disabled="@(!state.Loaded)">@Ui["Restore normal tracing"]</button>
+        <button class="primary" @onclick="EnableAsync" disabled="@(!state.Loaded||state.Closing.OperationId is not null)">@Ui["Start temporary tracing"]</button>
+    }
+</Actions>
+</Modal>
+<Modal Open="@(pendingStop is not null)" Compact="true" Title="@Ui["Request CoreService stop"]" Close="()=>pendingStop=null">
+    <ChildContent>
+        @if(pendingStop is {} confirmation)
+        {
+            <ul aria-label="@Ui["Affected peers"]">
+                @foreach(var target in confirmation.Targets){<li><strong>@target.PeerId</strong> · <code>@target.InstanceId</code></li>}
+            </ul>
+        }
+        <p class="notice warning trace-stop-message"><UiIcon Name="warning" /><span>@Ui["Request stop for the displayed peer instances. Acceptance does not confirm every process has exited."]</span></p>
+    </ChildContent>
+    <Actions><button class="danger confirm-action" @onclick="StopAsync"><UiIcon Name="stop" /><span class="control-label">@Ui.Format("Request stop for {0} peers",pendingStop?.Targets.Count??0)</span></button></Actions>
 </Modal>

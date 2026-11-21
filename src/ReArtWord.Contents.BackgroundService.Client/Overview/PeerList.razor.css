@@ -1,5 +1,5 @@
 .peer-identity strong {
-    font-weight: 500;
+    font-weight: 650;
 }
 
 .peer-identity small {
@@ -15,7 +15,7 @@
 tbody th {
     background: transparent;
     color: var(--ink);
-    font-size: 12px;
+    font-size: 14px;
 }
 
 td,
@@ -28,6 +28,7 @@ th {
     max-width: 420px;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-size: 13px;
 }
 
 .peer-list-footer {
@@ -41,10 +42,41 @@ th {
     max-width: 75%;
 }
 
-.health-indicator .health-label {
-    max-width: none;
-    opacity: 1;
-    transform: translateX(0);
-    margin-left: 8px;
-    transition: none;
+.version small {
+    font: inherit;
+    font-size: inherit;
+}
+
+@media (max-width: 760px) {
+    .peer-list .record-table tbody tr {
+        padding-block: 12px;
+        border-block-end: 1px solid var(--line);
+    }
+
+    .version span {
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 760px) {
+    .table-wrap:has(.record-table) {
+        border: 0;
+        background: transparent;
+    }
+
+    .record-table tbody {
+        gap: 8px;
+    }
+
+    .record-table .version {
+        column-gap: 8px;
+    }
+}
+
+@media (max-width: 760px) {
+    .peer-list .record-table tbody tr {
+        border: 1px solid var(--line);
+        border-radius: var(--radius-control);
+        background: var(--panel);
+    }
 }

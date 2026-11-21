@@ -1,0 +1,30 @@
+.operation-lookup .field-actions > label:nth-child(2) {
+    flex: 1 1 20rem;
+}
+
+.operation-lookup input {
+    font-family: monospace;
+}
+
+.operation-lookup + .section {
+    margin-block-start: 20px;
+}
+
+dialog .operation-lookup + .section {
+    border-block-start: 1px solid var(--line);
+    padding-block-start: 16px;
+}
+
+.operation-lookup + .section > h3 {
+    margin-block: 0 8px;
+    font-size: 16px;
+    letter-spacing: normal;
+}
+
+@media (max-width: 680px) {
+    .operation-lookup .field-actions > label,
+    .operation-lookup .field-actions select {
+        flex-basis: 100%;
+        width: 100%;
+    }
+}

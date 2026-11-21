@@ -1,23 +1,16 @@
-.host-card.stale {
-    opacity: 0.75;
-}
-
 .host-card header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 10px;
+    align-items: center;
+    align-content: start;
 }
 
 .host-name {
     display: flex;
     gap: 10px;
     min-width: 0;
-    align-items: center;
-}
-
-.host-name > div {
-    min-width: 0;
+    align-items: start;
 }
 
 .host-icon {
@@ -31,28 +24,43 @@
 
 h3 {
     margin: 0 0 4px;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 18px;
+    font-weight: 700;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
 }
 
-.host-name small {
-    font-size: 10px;
+.host-context {
+    display: grid;
+    grid-column: 1 / -1;
+    gap: 2px;
+    padding-inline-start: 34px;
+    overflow-wrap: anywhere;
+}
+
+.host-context small {
+    font-size: 12px;
     color: var(--muted);
+}
+
+.host-context .observation-status,
+.host-context .metric-alert {
+    color: var(--warn);
+    font-weight: 700;
 }
 
 .primary-metrics {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
     margin-top: 20px;
 }
 
 .metric-label {
     color: var(--muted);
-    font-size: 10px;
+    font-size: 12px;
+    font-weight: 700;
     letter-spacing: 0.08em;
 }
 
@@ -65,29 +73,30 @@ h3 {
 }
 
 .metric-number small {
-    font-size: 11px;
-    color: var(--muted);
     margin-left: 5px;
     font-weight: 400;
+    font-size: 0.6em;
+    color: var(--muted);
 }
 
 .metric-cell {
     min-width: 0;
-    min-height: 150px;
-    position: relative;
-    background: color-mix(in srgb, var(--panel) 55%, transparent);
+    display: grid;
+    grid-template-rows: auto auto;
+    align-content: start;
+    gap: 14px;
+    padding: 14px;
+    border-radius: var(--radius-control);
+    background: var(--nested);
 }
 
 .metric-content {
-    position: relative;
-    z-index: 1;
-    padding: 10px 8px 24px;
-    text-shadow: 0 0 1px #0006;
+    min-width: 0;
 }
 
 .metric-detail {
     margin-top: 8px;
-    font-size: 10px;
+    font-size: 12px;
     line-height: 1.6;
     font-variant-numeric: tabular-nums;
     color: var(--ink);
@@ -105,11 +114,13 @@ h3 {
     justify-content: space-between;
     gap: 14px;
     margin-top: 12px;
-    font-size: 11px;
+    font-size: 12px;
+    align-items: baseline;
 }
 
 .device-line > span:first-child {
     color: var(--muted);
+    line-height: 1.5;
 }
 
 .unavailable {
@@ -124,13 +135,14 @@ h3 {
 
 .network-caption {
     display: flex;
-    justify-content: space-between;
     color: var(--muted);
-    font-size: 10px;
+    font-size: 12px;
+    justify-content: start;
+    gap: 6px;
 }
 
 .network-caption span {
-    font-size: 9px;
+    font-size: 12px;
     letter-spacing: 0.05em;
 }
 
@@ -151,7 +163,7 @@ h3 {
 }
 
 .network small {
-    font-size: 9px;
+    font-size: 12px;
     color: var(--muted);
     display: block;
     margin-top: 7px;
@@ -162,16 +174,16 @@ h3 {
     justify-content: space-between;
     gap: 10px;
     color: var(--muted);
-    font-size: 9px;
+    font-size: 12px;
     border-top: 0;
-    margin-top: 16px;
-    padding-top: 11px;
+    margin-top: auto;
+    padding-top: 27px;
 }
 
 .sample-status,
 .warning,
 .activity-warning {
-    color: #c9aa73;
+    color: var(--warn);
 }
 
 @media (min-width: 1000px) {
@@ -225,7 +237,7 @@ h3 {
 
 .gpu-reading small {
     color: var(--muted);
-    font-size: 9px;
+    font-size: 12px;
     max-width: 155px;
     white-space: nowrap;
     overflow: hidden;
@@ -242,24 +254,21 @@ h3 {
     margin-top: 14px;
 }
 
-.host-card.summary .metric-cell {
-    min-height: 120px;
+.host-card {
+    display: flex;
+    flex-direction: column;
+    container-type: inline-size;
 }
 
 .host-card.summary .metric-number {
     font-size: clamp(18px, 2vw, 26px);
 }
 
-.host-card.summary .memory-number {
-    font-size: clamp(13px, 1.6vw, 21px);
-    margin-top: 9px;
-}
-
 .throughput-breakdown {
-    display: flex;
     flex-wrap: wrap;
-    gap: 0 4px;
-    font-size: 9px;
+    font-size: 12px;
+    display: grid;
+    gap: 2px;
 }
 
 .throughput-breakdown > span {
@@ -270,35 +279,119 @@ h3 {
     color: var(--muted);
 }
 
-@media (max-width: 600px) {
+@container (max-width: 31rem) {
     .host-card.summary .primary-metrics {
-        gap: 5px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
     }
 
-    .host-card.summary .metric-content {
-        padding: 8px 4px 18px;
-    }
-
-    .host-card.summary .metric-detail {
-        font-size: 9px;
-    }
-
-    .host-card.summary .throughput-cell .metric-number {
-        font-size: clamp(12px, 3.6vw, 18px);
+    .metric-cell {
+        padding: 10px;
     }
 }
 
+.metric-cell:has(.metric-unavailable) {
+    align-self: stretch;
+}
+
+.gpu-unavailable-reason,
 .gpu-name {
     color: var(--muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow-wrap: anywhere;
+    word-break: auto-phrase;
 }
 
-.host-card.summary .cpu-name {
+.host-card.summary :is(.cpu-name, .gpu-name) {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     overflow-wrap: normal;
     margin-top: 0;
+}
+
+.device-line,
+.network {
+    background: var(--nested);
+    padding: 8px 12px;
+    border-radius: var(--radius-control);
+}
+
+.metric-alert {
+    color: var(--warn);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.gpu-reading,
+.gpu-reading b,
+.network-values {
+    font-size: 13px;
+}
+
+@media (max-width: 600px) {
+    .gpu-values {
+        align-items: start;
+    }
+}
+
+.metric-label + .metric-alert {
+    margin-inline-start: 0.5em;
+    padding-inline: 0.35em;
+    border: 1px solid currentcolor;
+    border-radius: var(--radius-control);
+    white-space: nowrap;
+}
+
+.host-name h3 {
+    margin: 0;
+    line-height: 24px;
+}
+
+.host-name .host-icon {
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    width: 24px;
+    padding: 0;
+}
+
+@container (max-width: 370px) {
+    .device-line:has(.gpu-values) {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .device-line .gpu-values {
+        width: 100%;
+    }
+}
+
+.host-heading {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+}
+
+.host-heading h3 {
+    overflow: visible;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    min-width: 0;
+    margin: 0;
+}
+
+.stale :is(.metric-number, .metric-detail, .device-metrics, .network-values) {
+    color: var(--muted);
+}
+
+.stale .metric-cell {
+    background: color-mix(in srgb, var(--raised) 30%, var(--nested));
+}
+
+.metric-unavailable {
+    font-size: 15px;
+    margin-block: 8px 0;
+    color: var(--muted);
 }

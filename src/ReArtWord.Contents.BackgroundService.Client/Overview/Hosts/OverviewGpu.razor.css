@@ -4,6 +4,11 @@
     width: 100%;
     min-width: 0;
     padding: 8px 0;
+    container-type: inline-size;
+}
+
+.gpu + .gpu {
+    border-block-start: 1px solid var(--line);
 }
 
 .gpu-heading,
@@ -15,27 +20,26 @@
 }
 
 .gpu-heading span {
-    font-size: 11px;
+    font-size: 13px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .gpu-heading b {
-    font-size: 13px;
+    font-size: 14px;
     white-space: nowrap;
     font-weight: 550;
 }
 
 .gpu-memory small,
 .unavailable {
-    font-size: 9px;
+    font-size: 13px;
     color: var(--muted);
 }
 
 .gpu-memory {
-    flex-wrap: wrap;
-    font-size: 10px;
+    font-size: 13px;
     color: var(--muted);
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -56,4 +60,18 @@
 .gpu-memory small {
     text-align: right;
     white-space: nowrap;
+}
+
+@container (min-width: 26rem) {
+    .gpu-memory {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 7ch;
+    }
+
+    .gpu-memory > span {
+        grid-column: auto;
+    }
+
+    .gpu-memory b {
+        text-align: end;
+    }
 }

@@ -21,12 +21,12 @@ before(async () =>
             if (pathname === '/')
             {
                 response.setHeader('Content-Type', 'text/html; charset=utf-8');
-                response.end('<!doctype html><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-desktop.css"><main id="desktop"></main>');
+                response.end('<!doctype html><link rel="stylesheet" href="/styles/fonts.css"><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-desktop.css"><main id="desktop"></main>');
                 return;
             }
             const file = path.resolve(root, '.' + decodeURIComponent(pathname));
             assert(file.startsWith(root + path.sep));
-            response.setHeader('Content-Type', file.endsWith('.css') ? 'text/css' : 'text/javascript');
+            response.setHeader('Content-Type', file.endsWith('.css') ? 'text/css' : file.endsWith('.svg') ? 'image/svg+xml' : file.endsWith('.woff2') ? 'font/woff2' : 'text/javascript');
             response.end(await readFile(file));
         }
         catch
@@ -85,14 +85,16 @@ async function mountAsync(page, experimental, supported = true)
     let remote;
     await page.routeWebSocket('**/client/desktop?*', socket =>
     {
-        assert.equal(new URL(socket.url()).searchParams.get('clipboard'), '1');
+        const target = new URL(socket.url()).searchParams;
+        assert.equal(target.get('clipboard'), '1');
+        const hostId = target.get('host');
         remote = socket;
         let details = null, videoTimer = null, timestamp = 0;
         socket.onClose(() => clearInterval(videoTimer));
         socket.onMessage(message =>
         {
             const bytes = Buffer.from(message), values = Array.from({ length: 6 }, (_, index) => bytes.readInt32BE(index * 4));
-            messages.push({ kind: values[0], values, text: values[0] === 16 ? bytes.subarray(24).toString('utf8') : null });
+            messages.push({ hostId, kind: values[0], values, text: values[0] === 16 ? bytes.subarray(24).toString('utf8') : null });
             if (values[0] === 9)
             {
                 details = { maximumKeyFrameInterval: values[2], maximumPFrames: values[3] === -1 ? null : values[3], maximumBFrames: values[4], quality: values[5] === -1 ? null : values[5] };
@@ -116,7 +118,7 @@ async function mountAsync(page, experimental, supported = true)
                 videoTimer.unref();
             }
         });
-        socket.send(frame(7, { clusterId: 'test', hostId: 'remote', localAudioMuted: false, codecDetails: true, variableBitrate: true, viewOnly: true, clipboardText: supported }));
+        socket.send(frame(7, { clusterId: 'test', hostId, localAudioMuted: hostId === 'local', codecDetails: true, variableBitrate: true, viewOnly: true, clipboardText: supported }));
         socket.send(frame(1, monitors));
     });
     await page.goto(origin + (experimental ? '/?experimental=true' : '/?experimental=false'));
@@ -147,7 +149,7 @@ async function mountAsync(page, experimental, supported = true)
 
             icon: () => document.createElement('span'),
 
-            peers: async () => [{ hostId: 'remote', clusterId: 'test' }],
+            peers: async () => ['remote', 'second', 'local'].map(hostId => ({ hostId, clusterId: 'test' })),
 
             /** 製品のボタン操作を実DOMへ接続します。
              * @returns 押下可能な要素です。
@@ -186,7 +188,22 @@ async function mountAsync(page, experimental, supported = true)
         remote.send(frame(15, payload));
     }
 
-    return { messages, notify };
+    return { messages, notify,
+
+        disconnect: () => remote.close({ code: 1011, reason: 'Desktop.UpstreamDisconnected' }) };
+}
+
+/** 展開した表示・入力欄から、現在の操作を選びます。
+ * @returns 押下する操作です。
+ */
+async function desktopControlAsync(page, name)
+{
+    const controls = page.locator('.desktop-deck > details');
+    if (!await controls.evaluate(element => element.open))
+    {
+        await controls.locator('summary').click();
+    }
+    return page.getByRole('button', { name, exact: true });
 }
 
 for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' }], ['Firefox', firefox, {}]])
@@ -244,11 +261,11 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         const { messages, notify } = await mountAsync(page, false);
-        const button = page.getByRole('button', { name: 'Clipboard synchronization', exact: true });
+        const button = page.locator('button[aria-label="Clipboard synchronization"]');
         assert.equal(await button.getAttribute('aria-pressed'), 'false');
         assert.equal(await page.getByRole('button', { name: 'Cursor synchronization', exact: true }).evaluate(element => element.nextElementSibling.getAttribute('aria-label')), 'Clipboard synchronization');
         assert.equal(messages.some(message => message.kind === 15 || message.kind === 16), false);
-        await button.click();
+        await (await desktopControlAsync(page, 'Clipboard synchronization')).click();
         await untilAsync(() => messages.some(message => message.kind === 16));
         const initial = messages.findLast(message => message.kind === 16);
         assert.equal(initial.text, 'initial client');
@@ -308,7 +325,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         await untilAsync(() => messages.slice(start).some(message => message.kind === 4 && message.values[4] === 65 && message.values[5] === 1));
         const keys = messages.slice(start).filter(message => message.kind === 4 && message.values[5] === 1).map(message => message.values[4]);
         assert((0) <= (keys.indexOf(86)) && keys.indexOf(86) < keys.indexOf(65));
-        await page.getByRole('button', { name: 'View-only mode', exact: true }).click();
+        await (await desktopControlAsync(page, 'View-only mode')).click();
         assert(await button.isDisabled());
         await page.evaluate(() => window.desktop.dispose());
         assert.deepEqual(errors, []);
@@ -363,21 +380,23 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         context.after(() => browser.close());
         const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
         const { messages, notify } = await mountAsync(page, false);
-        const button = page.getByRole('button', { name: 'Clipboard synchronization', exact: true });
+        const button = page.locator('button[aria-label="Clipboard synchronization"]');
         assert.equal(await button.getAttribute('aria-pressed'), 'true');
         assert(messages.some(message => message.kind === 15 && message.values[1] === 1));
         assert.equal(messages.some(message => message.kind === 16), false);
-        await page.locator('.desktop-viewport').click({ position: { x: 100, y: 100 } });
+        await page.mouse.move(0, 0);
+        await page.locator('.desktop-viewport').hover({ position: { x: 100, y: 100 } });
         await untilAsync(() => messages.some(message => message.kind === 16));
+        await page.locator('.desktop-viewport').click({ position: { x: 100, y: 100 } });
         const initial = messages.findLast(message => message.kind === 16);
         assert.equal(initial.text, 'initial client');
         notify(1, initial.values[1], 1);
         notify(0, 0, 2, 'host copy');
         await page.waitForFunction(() => window.clipboardValue === 'host copy');
-        await page.getByRole('button', { name: 'View-only mode', exact: true }).click();
+        await (await desktopControlAsync(page, 'View-only mode')).click();
         assert(await button.isDisabled());
-        await page.getByRole('button', { name: 'View-only mode', exact: true }).click();
-        await button.click();
+        await (await desktopControlAsync(page, 'View-only mode')).click();
+        await (await desktopControlAsync(page, 'Clipboard synchronization')).click();
         assert.equal(await button.getAttribute('aria-pressed'), 'false');
         await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
         const beforeReconnect = messages.length;
@@ -388,8 +407,132 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         await page.evaluate(() => window.desktop.dispose());
         const reopened = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
         await mountAsync(reopened, false);
-        assert.equal(await reopened.getByRole('button', { name: 'Clipboard synchronization', exact: true }).getAttribute('aria-pressed'), 'true');
+        assert.equal(await reopened.locator('button[aria-label="Clipboard synchronization"]').getAttribute('aria-pressed'), 'true');
         await reopened.evaluate(() => window.desktop.dispose());
+    });
+
+    test(`${name}: reconnect discards a pending read and waits for input before reading again`, { timeout: 30000 }, async context =>
+    {
+        const browser = await engine.launch({ headless: true, ...options });
+        context.after(() => browser.close());
+        const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+        const { messages, disconnect, notify } = await mountAsync(page, false);
+        await page.evaluate(() =>
+        {
+            navigator.clipboard.readText = () =>
+            {
+                window.clipboardReads++;
+                if (window.clipboardReads === 1)
+                {
+                    return new Promise(resolve =>
+                    {
+                        window.finishRead = resolve;
+                    });
+                }
+                return Promise.resolve('new connection');
+            };
+        });
+        const viewport = page.locator('.desktop-viewport');
+        await viewport.hover({ position: { x: 100, y: 100 } });
+        await viewport.focus();
+        await page.waitForFunction(() => typeof window.finishRead === 'function');
+        const before = messages.length;
+        await disconnect();
+        await untilAsync(() => messages.slice(before).some(message => message.kind === 15 && message.values[1] === 1));
+        await page.evaluate(() => window.finishRead('previous connection'));
+        assert.equal(await page.evaluate(() => window.clipboardReads), 1);
+        await viewport.hover({ position: { x: 105, y: 105 } });
+        await untilAsync(() => messages.some(message => message.kind === 16));
+        assert.deepEqual(messages.filter(message => message.kind === 16).map(message => message.text), ['new connection']);
+        notify(1, messages.findLast(message => message.kind === 16).values[1], 1);
+        await page.evaluate(() => window.desktop.dispose());
+    });
+
+    test(`${name}: entering view-only while clipboard permission is pending discards the read`, { timeout: 30000 }, async context =>
+    {
+        const browser = await engine.launch({ headless: true, ...options });
+        context.after(() => browser.close());
+        const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+        const { messages, notify } = await mountAsync(page, false);
+        await page.evaluate(() =>
+        {
+            navigator.clipboard.readText = () => new Promise(resolve =>
+            {
+                window.finishRead = resolve;
+            });
+        });
+        const viewport = page.locator('.desktop-viewport');
+        await viewport.focus();
+        await page.waitForFunction(() => typeof window.finishRead === 'function');
+        await (await desktopControlAsync(page, 'View-only mode')).click();
+        await untilAsync(() => messages.some(message => message.kind === 15 && message.values[1] === 0));
+        await page.evaluate(() => window.finishRead('unapproved transfer'));
+        notify(0, 0, 1, 'view-only host');
+        await viewport.focus();
+        await (await desktopControlAsync(page, 'View-only mode')).click();
+        await untilAsync(() => messages.filter(message => message.kind === 15 && message.values[1] === 1).length === 2);
+        assert.equal(await page.evaluate(() => window.clipboardValue), 'initial client');
+        assert.equal(messages.some(message => message.kind === 16), false);
+        await page.evaluate(() => window.desktop.dispose());
+    });
+
+    test(`${name}: a previous host's pending paste is discarded after switching hosts and same-PC sessions never synchronize`, { timeout: 30000 }, async context =>
+    {
+        const browser = await engine.launch({ headless: true, ...options });
+        context.after(() => browser.close());
+        const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+        const { messages, notify } = await mountAsync(page, false);
+        const viewport = page.locator('.desktop-viewport');
+        await viewport.focus();
+        await untilAsync(() => messages.some(message => message.kind === 16));
+        notify(1, messages.findLast(message => message.kind === 16).values[1], 1);
+        await page.evaluate(() =>
+        {
+            navigator.clipboard.readText = () => new Promise(resolve =>
+            {
+                window.finishRead = resolve;
+            });
+        });
+        await viewport.dispatchEvent('keydown', { code: 'KeyV', key: 'v', ctrlKey: true });
+        await page.waitForFunction(() => typeof window.finishRead === 'function');
+        for (const nextHost of ['second', 'local'])
+        {
+            await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
+            await page.getByLabel('Host', { exact: true }).selectOption(nextHost);
+            await page.getByRole('button', { name: 'Connect', exact: true }).click();
+            await page.waitForFunction(() => document.querySelector('.desktop-connection')?.textContent === 'Connected');
+            if (nextHost === 'second')
+            {
+                await page.evaluate(() => window.finishRead('previous host'));
+                await page.evaluate(() =>
+                {
+                    navigator.clipboard.readText = async () => 'second host text';
+                });
+                await viewport.focus();
+                await untilAsync(() => messages.some(message => message.kind === 16 && message.hostId === 'second'));
+                assert.deepEqual(messages.filter(message => message.hostId === 'second' && message.kind === 16).map(message => message.text), ['second host text']);
+                assert.equal(messages.some(message => message.hostId === 'second' && message.kind === 4 && message.values[4] === 86), false);
+                notify(1, messages.findLast(message => message.kind === 16).values[1], 1);
+            }
+            else
+            {
+                assert.ok(await page.locator('button[aria-label="Clipboard synchronization"]').isDisabled());
+                await page.evaluate(() =>
+                {
+                    navigator.clipboard.readText = () =>
+                    {
+                        window.clipboardReads++;
+                        return Promise.resolve('local host');
+                    };
+                });
+                const reads = await page.evaluate(() => window.clipboardReads);
+                await viewport.focus();
+                await viewport.hover({ position: { x: 100, y: 100 } });
+                assert.equal(await page.evaluate(() => window.clipboardReads), reads);
+                assert.equal(messages.some(message => message.hostId === 'local' && [15, 16].includes(message.kind)), false);
+            }
+        }
+        await page.evaluate(() => window.desktop.dispose());
     });
 
     test(`${name}: normal and experimental pages disable clipboard controls for older hosts`, { timeout: 30000 }, async context =>
@@ -400,7 +543,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         {
             const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
             const { messages } = await mountAsync(page, experimental, false);
-            const button = page.getByRole('button', { name: 'Clipboard synchronization', exact: true });
+            const button = page.locator('button[aria-label="Clipboard synchronization"]');
             assert.equal(await button.count(), 1);
             assert(await button.isDisabled());
             assert.equal(messages.some(message => message.kind === 15 || message.kind === 16), false);

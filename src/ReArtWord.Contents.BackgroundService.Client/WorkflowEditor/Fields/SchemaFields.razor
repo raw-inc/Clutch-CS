@@ -21,7 +21,7 @@
         </div>
         continue;
     }
-    <label @key="key" class="@(Inline ? "node-inline-field" : null)" data-setting-key="@key" title="@(guidance is not null?Ui[guidance]:schema.TryGetProperty("description",out var hint)?Ui[hint.GetString()??string.Empty]:null)">@(label is null?Ui.SettingName(key):Ui[label]) @(Required(key)?"*":"")
+    <label @key="key" class="@(Inline ? "node-inline-field" : null)" data-setting-key="@key" title="@(guidance is not null?Ui[guidance]:schema.TryGetProperty("description",out var hint)?Ui[hint.GetString()??string.Empty]:null)"><span class="field-caption" title="@(label is null?Ui.SettingName(key):Ui[label])">@(label is null?Ui.SettingName(key):Ui[label]) @(Required(key)?"*":"")</span>
     @if(schema.TryGetProperty("x-legacy",out var legacy)&&legacy.ValueKind==JsonValueKind.True)
     {
         <small>@Ui["This saved setting is not used by this operation."]</small>
@@ -91,6 +91,10 @@
         else if(!connected&&raw.Length!=0&&!found){<small class="error">@Ui["The saved value is not in the current choices."]</small>}
         @if(!Inline){<small>@Ui["Execution peer"]: @network.PeerId <button type="button" @onclick="RefreshNetworkAsync">@Ui["Refresh choices"]</button></small>}
     }
+    else if (Inline && connected && type is "string" or "number" or "integer" or "boolean")
+    {
+        <NodeReadout Text='@(value.ValueKind == JsonValueKind.Undefined ? Ui["Value pending"] : raw)' />
+    }
     else if(type=="boolean")
     {
         <select disabled="@connected" value="@raw" @onchange="e=>CommitAsync(key,e.Value?.ToString()??string.Empty,type)">
@@ -111,11 +115,11 @@
     }
     @if(NodeSettingVisibility.AllowsNull(schema))
     {
-        <button type="button" disabled="@connected" @onclick='()=>CommitAsync(key,"null","json")'>@Ui[key=="timeoutMs"?"No time limit":"Set null explicitly"]</button>
+        <button class="null-action" type="button" disabled="@connected" @onclick='()=>CommitAsync(key,"null","json")'>@Ui[key=="timeoutMs"?"No time limit":"Set null explicitly"]</button>
     }
     @if(!connected&&(schema.TryGetProperty("enum",out var options)&&Missing(raw,options)||type=="boolean"&&raw.Length!=0&&raw is not ("true" or "false"))){<small class="error">@Ui["The saved value is not in the current choices."]</small>}
     @if(!connected && !Required(key) && value.ValueKind==JsonValueKind.Undefined && schema.TryGetProperty("default",out var defaultValue)){<small>@Ui.Format("Default: {0}",Text(defaultValue))</small>}
-    @if(connected){<small class="node-inline-reason" title="@Ui["Input overrides setting · saved value retained"]">@Ui[value.ValueKind==JsonValueKind.Undefined?"Connected value is not available without execution":"Connected value preview · read-only"]</small>}
+    @if(connected){<small class="node-inline-reason" title="@Ui["Input overrides setting · saved value retained"]">@Ui[value.ValueKind==JsonValueKind.Undefined?"Value pending":"Connected value preview · read-only"]</small>}
     @if(!connected&&Model.ReadInput(NodeId+"/settings/"+key) is not null){<span class="small error">@Ui["Check the value type and JSON format."]</span>}
     @if(!Inline && schema.TryGetProperty("description",out var description)){<small>@Ui[description.GetString()??string.Empty]</small>}
     @if(!Inline && guidance is not null){<small>@Ui[guidance]</small>}

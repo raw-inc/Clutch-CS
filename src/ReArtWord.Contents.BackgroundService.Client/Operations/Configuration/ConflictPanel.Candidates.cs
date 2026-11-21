@@ -15,6 +15,28 @@ namespace ReArtWord.Contents.BackgroundService.Client.Operations.Configuration;
 /// <summary>競合候補の比較・編集と解消要求の組立を担当します。</summary>
 public sealed partial class ConflictPanel
 {
+    /// <summary>表示する候補に共通する文字列を両端から除き、相違部分を強調する範囲を求めます。</summary>
+    /// <returns>すべてのプレビューに共通する先頭と末尾の文字数です。</returns>
+    private static (int Prefix, int Suffix) DifferingRange(string[] previews)
+    {
+        if (previews.Length == 0)
+        {
+            return (0, 0);
+        }
+        string first = previews[0];
+        int shortest = previews.Min(value => value.Length);
+        int prefix = 0, suffix = 0;
+        while (prefix < shortest && previews.All(value => value[prefix] == first[prefix]))
+        {
+            prefix++;
+        }
+        while (prefix + suffix < shortest && previews.All(value => value[^(suffix + 1)] == first[^(suffix + 1)]))
+        {
+            suffix++;
+        }
+        return (prefix, suffix);
+    }
+
     /// <summary>候補の種類と内容に応じて直接編集できるかを判定します。</summary>
     /// <returns>指定した条件を満たすかどうかです。</returns>
     internal static bool CanEdit(StateConflict conflict, StateConflictCandidate? candidate) => conflict.Resolvable && !conflict.ValuesHidden && candidate?.Value?.Kind == EValueKind.Json && (conflict.Scope is "workflows" or "workflow.activation" or "cluster.operational" or "cluster.operational.activation" or "cluster.operational.history" or "state:cluster" || conflict.Scope.StartsWith("workflow:", StringComparison.Ordinal) || conflict.Scope.StartsWith("workflow.history:", StringComparison.Ordinal));

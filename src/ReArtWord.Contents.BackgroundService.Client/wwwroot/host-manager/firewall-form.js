@@ -1,10 +1,11 @@
-import { node, input, select, checkbox, values, field, section, details, action } from './dom.js';
+import { node, input, select, checkbox, values, field, section, details, action, hostCount } from './dom.js';
 
 /** ファイアウォール規則の入力と検証を構成します。 */
 export function firewallForm(ctx, hosts)
 {
     const dialog = ctx.dialog('Add rule'), basic = section(ctx.t('Rule')), grid = node('div', '', 'hm-grid');
     const name = input(''), direction = select(['Inbound', 'Outbound'].map(value => [value, ctx.t(value)]), 'Inbound'), effect = select(['Allow', 'Block'].map(value => [value, ctx.t(value)]), 'Allow'), enabled = checkbox(ctx.t('Enabled'), true);
+    dialog.root.append(node('p', `${ctx.t('Target hosts')}: ${hosts.map(host => host.target.hostId).join(', ')} (${hostCount(ctx, hosts.length)})`));
     basic.append(field(ctx.t('Name'), name));
     grid.append(field(ctx.t('Direction'), direction), field(ctx.t('Action'), effect));
     basic.append(grid, enabled.root);
@@ -27,13 +28,15 @@ export function firewallForm(ctx, hosts)
     {
         choice.control.disabled = all.control.checked;
     });
+    scope.classList.add('hm-profile-scope');
     scope.append(all.root, choices);
     const advanced = node('div', '', 'hm-grid');
     for (const [label, control] of [['Remote ports', remotePorts], ['Local addresses', localAddresses], ['Remote addresses', remoteAddresses], ['Program', program]])
     {
         advanced.append(field(ctx.t(label), control));
     }
-    dialog.root.append(node('p', `${ctx.t('Affected hosts')}: ${hosts.map(host => host.target.hostId).join(', ')}`, 'hm-muted'), basic, traffic, scope, details(ctx.t('Advanced conditions'), advanced));
+    dialog.root.classList.add('hm-firewall-form');
+    dialog.root.append(basic, traffic, scope, details(ctx.t('Advanced conditions'), advanced));
     dialog.footer.append(ctx.button('Cancel', dialog.close), action(ctx, 'Preview changes', 'check', () =>
     {
         const profile = all.control.checked ? 'Any' : profileChoices.filter(choice => choice.control.checked).map(choice => choice.value).join(',');

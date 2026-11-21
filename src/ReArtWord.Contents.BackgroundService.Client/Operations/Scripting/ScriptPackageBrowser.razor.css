@@ -1,5 +1,5 @@
 .package-browser {
-    margin-block: 1rem 2rem;
+    margin-block: 0 1rem;
 }
 
 .package-search,
@@ -10,6 +10,7 @@
 }
 
 .package-search label {
+    margin: 0;
     display: grid;
     gap: 0.4rem;
     flex: 1;
@@ -59,7 +60,7 @@
     min-width: 0;
     padding: 1rem;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     align-self: start;
 }
 
@@ -80,5 +81,26 @@
 
     .package-detail {
         grid-row: 1;
+    }
+}
+
+.package-search input,
+.package-search button {
+    min-height: 40px;
+    margin: 0;
+}
+
+.package-browser .footer-note {
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.package-search {
+    align-items: end;
+}
+
+@media (max-width: 680px) {
+    .package-search :is(input, button) {
+        min-height: 44px;
     }
 }

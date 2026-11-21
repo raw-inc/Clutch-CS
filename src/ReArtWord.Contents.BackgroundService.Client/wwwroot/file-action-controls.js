@@ -1,4 +1,5 @@
 import { validFolderName } from './file-mutations.js';
+import { setControlLabel } from './ui-icons.js';
 
 /** 二種類のファイル画面で、対象の確認・実行中のロック・一覧更新を揃えます。
  * @returns ボタンと操作状態、画面終了時の解放処理です。
@@ -78,6 +79,12 @@ export function fileActionControls(root, ctx, actions)
                 await ctx.guard(() => actions.refresh(snapshot));
             }
             actions.changed();
+
+            // 確認中は呼び出し元ボタンを無効にするため、ダイアログを閉じるだけではフォーカスが戻らない。
+            if (!attempted && current(snapshot) && document.activeElement === document.body)
+            {
+                (creating ? create : remove).focus({ preventScroll: true });
+            }
         }
     }
 
@@ -89,14 +96,26 @@ export function fileActionControls(root, ctx, actions)
         return new Promise(resolve =>
         {
             dialog = document.createElement('dialog');
-            dialog.className = 'file-action-dialog';
+            dialog.className = 'dialog dialog-compact file-action-dialog';
+            const scroll = document.createElement('clutch-scroll-area');
             const form = document.createElement('form'), title = document.createElement('h2'), location = document.createElement('p');
+            form.className = 'dialog-content';
             title.textContent = creating ? ctx.t('New folder', 'フォルダー作成') : ctx.t('Delete selected items', '選択項目を削除');
             title.id = 'file-action-' + crypto.randomUUID();
+            form.id = title.id + '-form';
             dialog.setAttribute('aria-labelledby', title.id);
             location.className = 'file-action-location';
             location.textContent = snapshot.label + ' · ' + (snapshot.directory || '/');
-            form.append(title, location);
+            form.noValidate = true;
+            const heading = document.createElement('header');
+            heading.className = 'dialog-heading';
+            const close = ctx.button(ctx.t('Close dialog', '閉じる'), () => dialog.close());
+            close.type = 'button';
+            close.className = 'quiet icon-button';
+            close.setAttribute('aria-label', close.textContent);
+            close.replaceChildren(ctx.icon('close'));
+            heading.append(title, close);
+            form.append(location);
             const name = document.createElement('input');
             if (creating)
             {
@@ -106,14 +125,33 @@ export function fileActionControls(root, ctx, actions)
                 name.required = true;
                 name.maxLength = 255;
                 name.autofocus = true;
-                name.oninput = () => name.setCustomValidity('');
+                const error = document.createElement('p'), problem = document.createElement('span');
+                error.append(ctx.icon('warning'), problem);
+                error.id = title.id + '-name-error';
+                error.className = 'file-name-error';
+                error.hidden = true;
+                name.setAttribute('aria-describedby', error.id);
+                name.oninvalid = () =>
+                {
+                    problem.textContent = name.validationMessage;
+                    error.hidden = false;
+                    name.setAttribute('aria-invalid', 'true');
+                };
+                name.oninput = () =>
+                {
+                    name.setCustomValidity('');
+                    name.removeAttribute('aria-invalid');
+                    error.hidden = true;
+                };
                 label.append(name);
-                form.append(label);
+                form.append(label, error);
             }
             else
             {
-                const warning = document.createElement('p'), list = document.createElement('ul');
-                warning.textContent = ctx.t('Permanently delete these files and folders, including folder contents? They will not be moved to the recycle bin.', '選択したファイル・フォルダーを完全に削除しますか？ フォルダーの内容も削除され、ゴミ箱には移動しません。');
+                const warning = document.createElement('p'), description = document.createElement('span'), list = document.createElement('ul');
+                warning.className = 'notice warning';
+                description.textContent = ctx.t('Permanently delete these files and folders, including folder contents? They will not be moved to the recycle bin.', '選択した項目は完全に削除されます。フォルダー内のファイルも削除され、ゴミ箱から復元することはできません。');
+                warning.append(ctx.icon('warning'), description);
                 list.className = 'file-action-items';
                 for (const entry of snapshot.entries)
                 {
@@ -121,31 +159,37 @@ export function fileActionControls(root, ctx, actions)
                     item.textContent = entry.name + (entry.isDirectory ? '/' : '');
                     list.append(item);
                 }
-                form.append(warning, list);
+                form.append(list, warning);
             }
-            const footer = document.createElement('div'), cancel = document.createElement('button'), submit = document.createElement('button');
+            const footer = document.createElement('footer'), cancel = document.createElement('button'), submit = document.createElement('button');
             footer.className = 'toolbar';
             cancel.type = 'button';
             cancel.autofocus = !creating;
             cancel.textContent = ctx.t('Cancel', 'キャンセル');
             cancel.onclick = () => dialog.close();
             submit.type = 'submit';
-            submit.className = creating ? 'primary' : 'danger';
+            submit.setAttribute('form', form.id);
+            submit.className = creating ? 'primary' : 'danger confirm-action';
             submit.textContent = creating ? ctx.t('Create folder', '作成') : ctx.t('Delete permanently', '完全に削除');
+            if (!creating)
+            {
+                setControlLabel(submit, ctx.icon('trash'));
+            }
             form.onsubmit = event =>
             {
                 event.preventDefault();
                 if (creating && !validFolderName(name.value))
                 {
-                    name.setCustomValidity(ctx.t('Enter one folder name without path separators or reserved characters.', 'パス区切りや予約文字を含まないフォルダー名を入力してください。'));
-                    name.reportValidity();
+                    name.setCustomValidity(ctx.t('Enter one folder name without path separators or reserved characters.', '記号・予約名は使えません。末尾の空白やピリオドも使えません。'));
+                    name.checkValidity();
+                    name.focus();
                     return;
                 }
                 dialog.close('apply');
             };
             footer.append(cancel, submit);
-            form.append(footer);
-            dialog.append(form);
+            scroll.append(form);
+            dialog.append(heading, scroll, footer);
             dialog.onclose = () =>
             {
                 const apply = 'apply', accepted = dialog.returnValue === apply;

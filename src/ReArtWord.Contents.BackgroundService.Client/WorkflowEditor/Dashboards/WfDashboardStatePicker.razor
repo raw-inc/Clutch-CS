@@ -2,7 +2,7 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Workflow
 @using ReArtWord.Contents.BackgroundService.Contracts.Workflow.Dashboards
 @inject ManagementApi Api
-<details class="state-picker">
+<details class="state-picker secondary-details">
     <summary>@Ui["Add State"]</summary>
     <label>@Ui["Scope"]<select @bind="scope"><option value="@EInternalDataScope.Shared">@Ui["Workflow shared"]</option><option value="@EInternalDataScope.Peer">@Ui["Selected peer"]</option><option value="@EInternalDataScope.Cluster">Cluster State</option></select></label>
     @if(scope!=EInternalDataScope.Cluster)

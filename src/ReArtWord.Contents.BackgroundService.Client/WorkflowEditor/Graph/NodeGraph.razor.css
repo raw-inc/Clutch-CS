@@ -3,45 +3,32 @@
     user-select: none;
 }
 
-.node-box {
-    fill: #272a31;
-    stroke: #4b5360;
-    stroke-width: 1;
-    filter: drop-shadow(0 3px 5px #0003);
-}
-
 .graph-node {
     cursor: grab;
     outline: none;
 }
 
-.node-type {
-    font-size: 10px;
-    fill: #98a4b6;
-    pointer-events: none;
-}
-
 .graph-node > g > text,
 .port-label {
-    font-size: 10px;
-    fill: #adb8c9;
+    font-size: 11px;
+    fill: var(--muted);
     pointer-events: none;
 }
 
 .port {
-    fill: #242932;
-    stroke: #9bb9df;
+    fill: var(--panel);
+    stroke: var(--accent);
     stroke-width: 2;
     cursor: crosshair;
 }
 
 .port:hover {
-    fill: #9bb9df;
+    fill: var(--accent);
 }
 
 .wire {
     fill: none;
-    stroke: #718daa;
+    stroke: var(--control);
     stroke-width: 2;
     cursor: pointer;
     pointer-events: stroke;
@@ -54,13 +41,13 @@
 }
 
 .wire-label {
-    font-size: 9px;
-    fill: #a1b8d5;
+    font-size: 11px;
+    fill: var(--muted);
     pointer-events: none;
 }
 
 .node-card-fields {
-    font: 11px/1.4 "Segoe UI", "Yu Gothic UI", sans-serif;
+    font: 11px/1.4 var(--font-ui);
     color: var(--ink);
     cursor: default;
     user-select: text;
@@ -73,19 +60,19 @@
 }
 
 .node-card-fields ::deep .node-inline-group {
-    font-size: 9px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.8px;
-    color: #92a0b5;
-    border-top: 1px solid #3c434e;
+    color: var(--muted);
+    border-top: 1px solid var(--line);
     padding-top: 4px;
 }
 
 .node-card-fields ::deep .node-inline-field {
     margin: 0;
-    padding: 3px 0 5px;
-    font-size: 10px;
-    color: #abb6c7;
+    padding: 1px 4px;
+    font-size: 12px;
+    color: var(--muted);
     line-height: 16px;
 }
 
@@ -94,12 +81,12 @@
 ::deep .node-inline-field > textarea {
     display: block;
     width: 100%;
-    margin-top: 4px;
-    font-size: 11px;
+    margin-top: 2px;
+    font-size: 12px;
     padding: 5px 7px;
-    border-color: #464e5c;
-    border-bottom-color: #64748b;
-    background: #20242b;
+    border-color: var(--line);
+    border-bottom-color: var(--control);
+    background-color: var(--panel);
 }
 
 ::deep .node-inline-field > input,
@@ -118,13 +105,13 @@
 ::deep .node-inline-field > small,
 ::deep .node-inline-field > .small {
     display: block;
-    font-size: 9px;
-    line-height: 14px;
+    font-size: 13px;
+    line-height: 15px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     margin-top: 2px;
-    color: #8d9ab0;
+    color: var(--muted);
 }
 
 ::deep .node-inline-field .error {
@@ -134,9 +121,9 @@
 ::deep .node-inline-field > input:disabled,
 ::deep .node-inline-field > select:disabled,
 ::deep .node-inline-field > textarea:disabled {
-    background: #272a30;
-    color: #818894;
-    border-color: #3a404a;
+    background: var(--raised);
+    color: var(--muted);
+    border-color: var(--line);
 }
 
 .graph-node:focus-visible {
@@ -144,43 +131,70 @@
 }
 
 .graph-node .node-box {
-    fill: #25282e;
-    stroke: #444b54;
-    filter: none;
-    rx: 6px;
+    fill: var(--panel);
+    stroke: light-dark(color-mix(in srgb, var(--control) 60%, var(--line)), color-mix(in srgb, var(--control) 42%, var(--line)));
+    rx: var(--radius-panel);
+    stroke-width: 1.5px;
+    vector-effect: non-scaling-stroke;
+}
+
+.graph-node .node-header {
+    clip-path: inset(0 round calc(var(--radius-panel) - 1px) calc(var(--radius-panel) - 1px) 0 0) fill-box;
+    fill: var(--card);
 }
 
 .graph-node .category-strip {
     fill: var(--category-color);
 }
 
-.graph-node .node-type {
-    fill: #929ca8;
-    font-size: 9px;
+.node-identity div {
+    font-size: 11px;
+    line-height: 18px;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .graph-node .node-kind {
     fill: var(--category-color);
-    font: 8px Consolas, monospace;
-    letter-spacing: 0.6px;
+    font: 600 11px var(--font-ui);
+    letter-spacing: 0.25px;
     pointer-events: none;
 }
 
-.graph-node .port-group > text {
-    fill: #c4cad2;
-    font-size: 10px;
+.port-caption span,
+.port-caption small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.port-caption span {
+    font: 600 12px/17px var(--font-ui);
+    color: var(--ink);
+}
+
+.port-caption small {
+    font: 500 13px/12px var(--font-ui);
+    color: var(--muted);
+}
+
+.port-output {
+    text-align: right;
 }
 
 .graph-node .port-group .port-type {
     fill: var(--port-color);
-    font: 8px Consolas, monospace;
+    font: 500 11px var(--font-ui);
     letter-spacing: 0.3px;
     pointer-events: none;
 }
 
 .graph-node .port {
     stroke: var(--port-color);
-    fill: #20242a;
+    fill: var(--panel);
     stroke-width: 1.8;
 }
 
@@ -191,34 +205,30 @@
 .graph-node .port.wire-snap-target,
 .graph-node .port.wire-endpoint-hover {
     fill: var(--port-color);
-    stroke: #eff3f7;
+    stroke: var(--ink);
     stroke-width: 2;
 }
 
 .graph-node:focus .node-box,
 .graph-node.selected .node-box {
-    stroke: var(--category-color);
-    stroke-width: 1.8;
+    stroke: var(--accent);
+    stroke-width: 2;
 }
 
 .graph-node .node-card-fields ::deep .node-inline-group {
-    font-size: 8px;
-    letter-spacing: 0.4px;
-    color: #848e9b;
-    border-color: #353b45;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    border-color: var(--line);
 }
 
 .graph-node ::deep .node-inline-field > input,
 .graph-node ::deep .node-inline-field > select,
 .graph-node ::deep .node-inline-field > textarea {
-    border-color: #3c434d;
-    border-bottom-color: #545f6d;
-    background: #1e2228;
-}
-
-.graph-node ::deep .node-inline-field > small {
-    font-size: 8px;
-    color: #838b97;
+    border-color: var(--line);
+    border-bottom-color: var(--control);
+    background-color: var(--panel);
 }
 
 .wire-group .wire {
@@ -267,11 +277,11 @@
     gap: 8px;
     max-width: calc(100% - 28px);
     padding: 7px 10px;
-    background: #232830f2;
-    border: 1px solid #444d58;
-    border-radius: 4px;
-    font-size: 10px;
-    color: #c5cbd3;
+    background: color-mix(in srgb, var(--panel) 97%, transparent);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    font-size: 11px;
+    color: var(--ink);
     box-shadow: 0 3px 12px #0003;
 }
 
@@ -281,7 +291,7 @@
 
 .graph-connection-pending button {
     padding: 2px 7px;
-    font-size: 10px;
+    font-size: 11px;
 }
 
 .graph-wire-details {
@@ -344,7 +354,7 @@
 
 .graph-node[data-search-match] > .node-box {
     vector-effect: non-scaling-stroke;
-    stroke: #e4b561;
+    stroke: var(--warn);
     stroke-width: 2px;
     stroke-dasharray: 7 3;
 }
@@ -352,7 +362,7 @@
 .graph-node[data-search-active] > .node-box,
 .graph-node[data-navigation-target] > .node-box {
     vector-effect: non-scaling-stroke;
-    stroke: #d3a5f5;
+    stroke: var(--violet);
     stroke-width: 3px;
     stroke-dasharray: none;
 }
@@ -360,4 +370,29 @@
 .graph.scope-highlight .graph-node.outside-scope {
     opacity: 0.35;
     filter: brightness(0.65);
+}
+
+.graph-node .node-kind,
+.graph-node .node-identity div {
+    font-size: 14px;
+}
+
+.graph-node .port-caption {
+    font-size: 13px;
+}
+
+.graph-code-open {
+    display: none;
+}
+
+@media (max-width: 760px) {
+    .graph-code-field > ::deep .code-block-fields {
+        display: none;
+    }
+
+    .graph-code-open {
+        display: inline-flex;
+        min-height: 50px;
+        font-size: 16px;
+    }
 }

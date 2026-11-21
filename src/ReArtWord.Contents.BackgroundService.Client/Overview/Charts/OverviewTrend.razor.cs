@@ -66,11 +66,24 @@ public sealed partial class OverviewTrend : IAsyncDisposable
         set;
     } = 100;
 
-    /// <summary>線からの距離だけで透明度を変える、共有形状の描画段数です。</summary>
-    private static int ShadowLayers => 24;
+    /// <summary>縦軸の上端に表示する値と単位です。</summary>
+    [Parameter]
+    public string ScaleLabel
+    {
+        get;
+        set;
+    } = "100 %";
 
-    private readonly string gradient = "usage-" + Guid.NewGuid().ToString("N");
+    /// <summary>現在値を確認できない場合は、保存された測定範囲として表示します。</summary>
+    [Parameter]
+    public bool Historical
+    {
+        get;
+        set;
+    }
+
     private string path = string.Empty;
+    private string highlight = string.Empty;
     private ElementReference chart;
     private IJSObjectReference? module;
     private long? origin;
@@ -79,7 +92,7 @@ public sealed partial class OverviewTrend : IAsyncDisposable
     /// <summary>親から渡された値に合わせて表示用の状態を更新します。</summary>
     protected override void OnParametersSet()
     {
-        path = DashboardMetrics.Trend(Samples, Metric, Target, Maximum);
+        (path, highlight) = DashboardMetrics.TrendPaths(Samples, Metric, Target, Maximum);
         origin = Samples.Count == 0 ? null
                                     : Samples[^1].ObservedAt.ToUnixTimeMilliseconds();
     }
@@ -119,7 +132,9 @@ public sealed partial class OverviewTrend : IAsyncDisposable
 
             if (module is not null)
             {
-                await module.InvokeVoidAsync("update", UiCancellation, chart, path, origin, Api.UtcNow.ToUnixTimeMilliseconds()).ConfigureAwait(true);
+                long? animatedOrigin = Historical ? null
+                                                  : origin;
+                await module.InvokeVoidAsync("update", UiCancellation, chart, path, animatedOrigin, Api.UtcNow.ToUnixTimeMilliseconds(), highlight).ConfigureAwait(true);
             }
         }
         finally

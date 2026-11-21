@@ -74,7 +74,7 @@ public sealed class ApplicationRemovalTests
         {
             Microsoft.AspNetCore.Components.Web.HtmlRendering.HtmlRootComponent output = await renderer.RenderComponentAsync<ProcessPanel>().ConfigureAwait(true);
             ProcessPanel panel = activator.Panel!;
-            Assert.Contains(">Remove registration</button>", output.ToHtmlString(), StringComparison.Ordinal);
+            Assert.Contains(">Remove registration</span>", output.ToHtmlString(), StringComparison.Ordinal);
             Invoke(panel, "ConfirmRemoval", original);
             await panel.SetParametersAsync(ParameterView.Empty).ConfigureAwait(true);
             Assert.Contains("A running application will not be stopped.", output.ToHtmlString(), StringComparison.Ordinal);

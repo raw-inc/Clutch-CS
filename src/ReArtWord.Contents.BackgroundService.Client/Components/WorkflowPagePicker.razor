@@ -1,4 +1,18 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Workflow
-<label>Workflow<select @onchange="ChooseAsync" disabled="@busy"><option value="">@Ui["Select a target"]</option>@foreach(var item in entries){<option value="@item.Id" disabled="@(item.Id is null)">@item.Name / @item.Id @item.DetailReason</option>}</select></label>
-<button @onclick="()=>LoadAsync(false)" disabled="@busy">@Ui["Refresh workflows"]</button><button @onclick="()=>LoadAsync(true)" disabled="@(busy||cursor is null)">@Ui["Next page"]</button>
-<p class="notice">@(message?.Invoke())</p>
+<label>@Ui["Workflow"]<select @onchange="ChooseAsync" disabled="@busy"><option value="">@Ui["Select a target"]</option>@foreach(var item in entries){<option value="@item.Id" disabled="@(item.Id is null)">@item.Name / @item.Id @item.DetailReason</option>}</select></label>
+<div class="toolbar">
+    <button @onclick="()=>LoadAsync(false, true)" disabled="@busy">@Ui["Refresh workflow list"]</button>
+    @if(cursor is not null)
+    {
+        <button @onclick="()=>LoadAsync(true, true)" disabled="@busy">@Ui["Next page"]</button>
+    }
+</div>
+@if(busy){<p class="small muted" role="status">@Ui["Loading workflow list…"]</p>}
+else if(failed)
+{
+    <p class="notice warning" role="status"><UiIcon Name="warning" /><span>@Ui["Could not load the workflow list. Use Refresh workflow list to try again."]</span></p>
+}
+else if(showLoaded)
+{
+    <p class="notice success" role="status"><UiIcon Name="check" /><span>@Ui.Format("Workflows loaded: {0}.", entries.Count)</span></p>
+}

@@ -33,6 +33,14 @@ public sealed partial class Modal : IAsyncDisposable
         get; set;
     }
 
+    /// <summary>確認する対象と操作を短いダイアログへまとめます。</summary>
+    [Parameter]
+    public bool Compact
+    {
+        get;
+        set;
+    }
+
     /// <summary>画面に表示する見出しまたは翻訳キーです。</summary>
     [Parameter]
     public string Title
@@ -55,6 +63,34 @@ public sealed partial class Modal : IAsyncDisposable
     {
         get;
         set;
+    }
+
+    /// <summary>確定操作の前にダイアログ下部で入力する項目です。</summary>
+    [Parameter]
+    public RenderFragment? ActionFields
+    {
+        get; set;
+    }
+
+    /// <summary>ダイアログ下部に固定する確定操作です。</summary>
+    [Parameter]
+    public RenderFragment? Actions
+    {
+        get; set;
+    }
+
+    /// <summary>長い閲覧画面を本文の末尾から閉じられるようにします。</summary>
+    [Parameter]
+    public bool ShowCloseAction
+    {
+        get; set;
+    }
+
+    /// <summary>入力済みの編集を閉じる際に破棄を確認します。</summary>
+    [Parameter]
+    public bool ConfirmDiscard
+    {
+        get; set;
     }
 
     private readonly string focusId = Guid.NewGuid().ToString("N");
@@ -89,6 +125,17 @@ public sealed partial class Modal : IAsyncDisposable
     private async Task KeyAsync(KeyboardEventArgs args)
     {
         if (string.Equals(args.Key, EscapeKey, StringComparison.Ordinal))
+        {
+            await RequestCloseAsync(UiCancellation).ConfigureAwait(true);
+        }
+    }
+
+    /// <summary>編集中の値を破棄できる場合に親へ閉じる操作を通知します。</summary>
+    /// <returns>確認と終了通知の完了です。</returns>
+    private async Task RequestCloseAsync(CancellationToken cancellationToken = default)
+    {
+        bool allowed = !ConfirmDiscard || await Script.InvokeAsync<bool>("contentsBrowser.mayDiscardDialog", cancellationToken, dialog, Ui["Discard unapplied changes?"]).ConfigureAwait(true);
+        if (allowed)
         {
             await Close.InvokeAsync().ConfigureAwait(true);
         }

@@ -1,12 +1,16 @@
 .editor-navigator {
-    --editor-overlay-background: #1d2127b6;
+    --editor-overlay-background: var(--panel);
 
-    position: fixed;
+    position: relative;
     z-index: 3;
-    display: grid;
-    justify-items: end;
-    gap: 6px;
-    pointer-events: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    min-width: 0;
+    padding: 3px 8px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
 }
 
 .editor-navigator:not([data-navigation-ready]) {
@@ -23,9 +27,13 @@
     padding: 4px;
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 6px;
-    box-shadow: 0 3px 12px #0004;
-    pointer-events: auto;
+    border-radius: var(--radius-control);
+}
+
+.navigation-tools {
+    margin-inline-start: auto;
+    padding: 0;
+    border: 0;
 }
 
 .navigation-tools button,
@@ -38,6 +46,8 @@
 .navigation-tools button[aria-pressed="true"] {
     background: var(--accent-soft);
     color: var(--accent);
+    border-color: var(--accent);
+    box-shadow: inset 0 -2px var(--accent);
 }
 
 .editor-find input {
@@ -57,11 +67,15 @@
 }
 
 .editor-minimap {
+    position: absolute;
+    inset-block-start: calc(100% + 4px);
+    inset-inline-end: 8px;
+    z-index: 2;
     width: 240px;
     max-width: 100%;
     height: 160px;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     background: var(--editor-overlay-background);
     box-shadow: 0 3px 12px #0004;
     pointer-events: auto;
@@ -71,43 +85,45 @@
 }
 
 .editor-minimap ::deep .map-node {
-    fill: #728094;
+    fill: var(--raised);
+    stroke: var(--control);
+    stroke-width: 1px;
 }
 
 .editor-minimap ::deep .map-node[data-search-match] {
-    fill: #e4b561;
+    fill: var(--warn);
 }
 
 .editor-minimap ::deep .map-node[data-search-active] {
-    fill: #d3a5f5;
+    fill: var(--violet);
 }
 
 .editor-minimap ::deep .map-node[data-running] {
-    fill: #55d6be;
-    stroke: #a5ffe4;
+    fill: var(--green);
+    stroke: var(--green);
     stroke-width: 1px;
 }
 
 .editor-minimap ::deep .map-node[data-running][data-search-match] {
-    stroke: #e4b561;
+    stroke: var(--warn);
     stroke-width: 2px;
 }
 
 .editor-minimap ::deep .map-node[data-running][data-search-active] {
-    stroke: #d3a5f5;
+    stroke: var(--violet);
     stroke-width: 2px;
 }
 
 .map-viewport {
-    fill: #9dc5fd12;
-    stroke: #b7d5ff;
+    fill: color-mix(in srgb, var(--accent) 10%, transparent);
+    stroke: var(--accent);
     stroke-width: 1.5px;
     pointer-events: none;
 }
 
 .map-selection {
-    fill: #d3a5f52b;
-    stroke: #d3a5f5;
+    fill: color-mix(in srgb, var(--violet) 16%, transparent);
+    stroke: var(--violet);
     stroke-width: 1.5px;
     stroke-dasharray: 4 2;
     pointer-events: none;
@@ -127,4 +143,11 @@
 .editor-find[hidden],
 .editor-minimap[hidden] {
     display: none;
+}
+
+@media (max-width: 760px) {
+    .editor-minimap {
+        width: 140px;
+        height: 90px;
+    }
 }

@@ -30,6 +30,13 @@ internal sealed class EditorCollaboration(EditorDocument model, ManagementApi ap
         remove => positions.Changed -= value;
     }
 
+    /// <summary>キャンバス横の一覧に載せる編集者や選択情報の変更です。</summary>
+    internal event Action? RosterChanged
+    {
+        add => positions.RosterChanged += value;
+        remove => positions.RosterChanged -= value;
+    }
+
     /// <summary>追加オプションのリアルタイム座標共有です。</summary>
     internal bool RealtimePointer
     {
@@ -70,6 +77,10 @@ internal sealed class EditorCollaboration(EditorDocument model, ManagementApi ap
 
     /// <summary>期限内としてAPIが報告した編集者情報です。</summary>
     public IReadOnlyList<PresenceView> Presence => positions.Items;
+
+    /// <summary>一覧とキャンバスで同じ順番になるよう、このワークフローの編集者を返します。</summary>
+    /// <returns>自身を除いた編集中の画面です。</returns>
+    internal IEnumerable<PresenceView> OtherEditors(string workflowId) => Presence.Where(item => item.Presence.UiInstanceId != UiInstanceId && string.Equals(item.Presence.WorkflowId, workflowId, StringComparison.Ordinal));
 
     /// <summary>サーバーが拒否した入力の理由です。</summary>
     public IReadOnlyList<ValidationIssue> Validation => validation;

@@ -27,6 +27,6 @@ internal static class GraphSettingPorts
 
     /// <summary>設定行の描画と線端点で同じ座標を使用します。</summary>
     /// <returns>ノード左上からの縦位置です。</returns>
-    internal static double Y(int inputs, int outputs, int index, GraphViewOptions view)
-        => 90 + Math.Max(inputs, outputs) * GraphPresentation.PortSpacing(view) + 20 + index * 64 + 32;
+    internal static double Y(int inputs, int outputs, int index, int buttonHeight, GraphViewOptions view)
+        => 90 + Math.Max(inputs, outputs) * GraphPresentation.PortSpacing(view) + buttonHeight + 20 + index * 64 + 32;
 }

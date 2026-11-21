@@ -34,7 +34,7 @@ WebClientの更新対象は、セットアップで導入され、自動起動�
 
 WebClientの設定、保存データ、ポート番号、起動方法は保持されます。更新中は管理画面への接続が一時的に切れます。新しい版の起動に失敗した場合は旧版へ戻し、復帰を確認した結果が表示されます。
 
-管理画面から更新する場合は Dashboard の **Settings & maintenance** を使用できます。
+管理画面から更新する場合は Dashboard の **Settings & maintenance → Software updates** を使用できます。
 複数クラスターの一括更新、日時予約、CLI の操作は[更新の仕様](../reference/update-process.md)を参照してください。
 
 ## 更新に失敗した場合

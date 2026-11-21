@@ -1,3 +1,4 @@
+import { setControlLabel } from './ui-icons.js';
 import { hostIds, resolveHosts, currentPeer } from './file-transfer-selection.js';
 import { uploadBrowserFile, uploadBrowserDirectory } from './browser-file-upload.js';
 import { appendFileRows } from './file-pane-rows.js';
@@ -13,7 +14,7 @@ export async function browserFilesView(root, ctx)
 {
     root.className = 'files-tool';
     const toolbar = document.createElement('div');
-    toolbar.className = 'tool-toolbar';
+    toolbar.className = 'tool-toolbar file-transfer-scope browser-file-scope tool-connection';
     const cluster = document.createElement('select'), host = document.createElement('select');
     cluster.setAttribute('aria-label', ctx.t('Cluster', 'クラスタ'));
     host.setAttribute('aria-label', ctx.t('Host', 'ホスト'));
@@ -25,7 +26,7 @@ export async function browserFilesView(root, ctx)
     const summary = document.createElement('summary');
     summary.textContent = ctx.t('Transfer help', '転送の使い方');
     const explanation = document.createElement('p');
-    explanation.textContent = ctx.t('Choose a local folder and grant browser access for two-pane file and folder copying. Click to select; double-click or Enter to open folders. Drag onto a destination folder or copy selected items. Keep this page open. Interrupted folder copies may leave completed or empty entries. Without folder access, use file selection and Download links.', 'ローカルフォルダーを選び、ブラウザーでアクセスを許可すると、左右のペインでファイル・フォルダーをコピーできます。クリックで選択、ダブルクリックまたはEnterで開きます。フォルダーへのドラッグ、または選択項目のコピーを使えます。転送中は画面を開いたままにしてください。同名項目は上書きせず、中断時は完了済み・空の項目が残る場合があります。フォルダーを許可しない場合はファイル選択とダウンロードを使えます。');
+    explanation.textContent = ctx.t('Choose a local folder and grant browser access for two-pane file and folder copying. Click to select; double-click or Enter to open folders. Drag onto a destination folder or copy selected items. Keep this page open. Interrupted folder copies may leave completed or empty entries. Without folder access, use file selection and Download links.', 'ローカルフォルダーを選び、ブラウザーでアクセスを許可すると、この端末と接続先の間でファイルやフォルダーをコピーできます。クリックで選択、ダブルクリックまたはEnterで開きます。フォルダーへのドラッグ、または選択項目のコピーを使えます。転送中は画面を開いたままにしてください。同名項目は上書きせず、中断時は完了済み・空の項目が残る場合があります。フォルダーを許可しない場合はファイル選択とダウンロードを使えます。');
     help.append(summary, explanation);
     const split = document.createElement('div');
     split.className = 'file-workspace';
@@ -35,8 +36,13 @@ export async function browserFilesView(root, ctx)
     let peers = [], target, localRoot, busy = false, disposed = false, transfer, drag, choosing = false, jobTimer;
     const jobs = [], panes = [];
     const reload = ctx.button(ctx.t('Refresh hosts', 'ホスト一覧を更新'), loadAsync);
-    reload.prepend(ctx.icon('refresh'));
-    toolbar.append(cluster, host, reload, status);
+    setControlLabel(reload, ctx.icon('refresh'));
+    const clusterLabel = document.createElement('label'), hostLabel = document.createElement('label');
+    clusterLabel.textContent = ctx.t('Cluster', 'クラスタ');
+    hostLabel.textContent = ctx.t('Host', 'ホスト');
+    clusterLabel.append(cluster);
+    hostLabel.append(host);
+    toolbar.append(clusterLabel, hostLabel, status, reload);
 
     /** 現在の接続・選択・処理中の状態を操作欄へ反映します。 */
     function updateControls()
@@ -137,16 +143,22 @@ export async function browserFilesView(root, ctx)
         footer.className = 'file-pane-footer';
         const count = document.createElement('span');
         count.setAttribute('role', 'status');
-        const copy = ctx.button(local ? ctx.t('Copy selected →', '右へコピー →') : ctx.t('← Copy selected', '← 左へコピー'), () => copyItemsAsync(state, [...state.selected].map(path => state.entries.get(path)), panes[local ? 1 : 0].directory));
+        const copy = ctx.button(local ? ctx.t('Copy to host', 'ホストにコピー') : ctx.t('Copy to this device', 'この端末にコピー'), () => copyItemsAsync(state, [...state.selected].map(path => state.entries.get(path)), panes[local ? 1 : 0].directory));
         copy.className = 'primary';
         const home = ctx.button(local ? ctx.t('Folder root', '選択フォルダー') : ctx.t('Drives', 'ドライブ'), () => openAsync(local ? '' : null));
         home.prepend(ctx.icon(local ? 'folder' : 'drive'));
-        const up = ctx.button(ctx.t('↑ Up', '↑ 上へ'), () => openAsync(state.parent));
+        const up = ctx.button(ctx.t('Up', '上へ'), () => openAsync(state.parent));
+        up.prepend(ctx.icon('up'));
         const refresh = ctx.button(ctx.t('Refresh', '更新'), () => openAsync(state.directory));
         refresh.prepend(ctx.icon('refresh'));
+        const atRoot = document.createElement('p');
+        atRoot.className = 'file-root-note';
+        const rootText = document.createElement('span');
+        atRoot.append(ctx.icon('info'), rootText);
+        atRoot.hidden = true;
         navigation.append(home, up, refresh);
-        footer.append(count, copy);
-        section.append(title, navigation, location, tree, footer);
+        footer.append(count);
+        section.append(title, location, navigation, atRoot, tree, footer);
         split.append(section);
         state.actions = fileActionControls(section, ctx, {
             read: () => ({ generation: state.generation, directory: state.directory, peer: target, root: localRoot,
@@ -164,7 +176,8 @@ export async function browserFilesView(root, ctx)
 
             refresh: snapshot => openAsync(snapshot.directory)
         });
-        navigation.append(state.actions.create, state.actions.remove);
+        navigation.append(state.actions.create);
+        footer.append(state.actions.remove, copy);
         let picker, chooser;
         if (local)
         {
@@ -188,6 +201,7 @@ export async function browserFilesView(root, ctx)
                     }
                     localRoot = handle;
                     chooser.value = '';
+                    fileNames.textContent = ctx.t('No file selected', 'ファイル未選択');
                     title.textContent = ctx.t('This device · ', 'この端末 · ') + handle.name;
                     title.prepend(ctx.icon('monitor'));
                     await openAsync('');
@@ -207,10 +221,12 @@ export async function browserFilesView(root, ctx)
                     updateControls();
                 }
             });
+            picker.classList.add('local-folder');
             chooser = document.createElement('input');
             chooser.type = 'file';
             chooser.multiple = true;
-            chooser.setAttribute('aria-label', ctx.t('Choose local files', '端末のファイルを選択'));
+            const chooseFilesLabel = ctx.t('Choose local files', '端末のファイルを選択');
+            chooser.setAttribute('aria-label', chooseFilesLabel);
             chooser.onchange = () =>
             {
                 if (busy || choosing || panes.some(pane => pane.actions?.busy))
@@ -226,9 +242,11 @@ export async function browserFilesView(root, ctx)
                 state.selected.clear();
                 state.entries.clear();
                 const files = [...chooser.files];
+                fileNames.textContent = files.length ? files.map(file => file.name).join(', ') : ctx.t('No file selected', 'ファイル未選択');
                 if ((4096) < (files.length) || new Set(files.map(file => file.name)).size !== files.length)
                 {
                     chooser.value = '';
+                    fileNames.textContent = ctx.t('No file selected', 'ファイル未選択');
                     ctx.say(ctx.t('Select at most 4096 files with distinct names.', '重複しない名前のファイルを4096件以内で選択してください。'));
                     render([]);
                     updateControls();
@@ -246,8 +264,14 @@ export async function browserFilesView(root, ctx)
             permission.textContent = typeof globalThis.showDirectoryPicker === 'function'
                 ? ctx.t('Only the folder you allow is accessible.', '許可したフォルダーの範囲だけにアクセスします。')
                 : ctx.t('Folder access is unavailable in this browser. File selection and downloads remain available.', 'このブラウザーではフォルダーへのアクセスを利用できません。ファイル選択とダウンロードを利用できます。');
-            access.append(picker, chooser, permission);
-            section.insertBefore(access, navigation);
+            const filesLabel = document.createElement('label'), filesCaption = document.createElement('span'), fileNames = document.createElement('span');
+            filesLabel.className = 'file-picker-control';
+            filesCaption.textContent = chooseFilesLabel;
+            fileNames.textContent = ctx.t('No file selected', 'ファイル未選択');
+            filesLabel.append(filesCaption, chooser);
+            fileNames.className = 'file-picker-result';
+            access.append(picker, filesLabel, fileNames, permission);
+            section.insertBefore(access, location);
         }
 
         /** ドロップされた対象を確認して受け付けます。 */
@@ -316,6 +340,7 @@ export async function browserFilesView(root, ctx)
                         link.textContent = ctx.t('Download', 'ダウンロード');
                         link.href = browserDownloadUrl(target, entry.path);
                         link.download = entry.name;
+                        link.prepend(ctx.icon('download'));
                         row.append(link);
                     }
                 }
@@ -324,7 +349,7 @@ export async function browserFilesView(root, ctx)
             {
                 const empty = document.createElement('p');
                 empty.className = 'remote-empty';
-                empty.textContent = local && !localRoot ? ctx.t('Choose a folder or files on this device.', 'この端末のフォルダーまたはファイルを選択してください。') : ctx.t('This folder is empty.', 'このフォルダーは空です。');
+                empty.textContent = local && !localRoot ? ctx.t('Choose a folder or files on this device.', 'フォルダーかファイルを選んでください。') : ctx.t('This folder is empty.', 'このフォルダーは空です。');
                 tree.append(empty);
             }
             drop(tree, state.directory);
@@ -390,7 +415,7 @@ export async function browserFilesView(root, ctx)
                         }
                         state.directory = path || '';
                         state.parent = path ? path.split('/').slice(0, -1).join('/') : null;
-                        address.value = path || '';
+                        address.value = path ? '/' + path : '/';
                         render(result.entries);
                     }
                     else
@@ -445,11 +470,22 @@ export async function browserFilesView(root, ctx)
             return !locked && !!target && !!state.selected.size && destination?.directory != null && !destination?.browsing && (local || !!localRoot);
         }
 
+        /** 現在表示している場所に合わせて、パス欄と操作の補足を更新します。 */
+        function updatePathHint(available)
+        {
+            const drivesListed = !local && !state.browsing && state.directory === null && state.entries.size !== 0;
+            address.placeholder = drivesListed ? ctx.t('Choose a drive or enter a folder path', 'ドライブを選ぶかパスを入力') : '';
+            rootText.textContent = drivesListed ? ctx.t('Open a drive to create folders.', 'ドライブを開くとフォルダーを作成できます。')
+                : ctx.t('Top of the permitted transfer folders.', 'このフォルダーが転送範囲の最上位です。');
+            atRoot.hidden = !available || (!drivesListed && (state.directory === null || state.parent !== null));
+        }
+
         state.update = () =>
         {
             const available = local ? !!localRoot : !!target, locked = busy || state.browsing || choosing || panes.some(pane => pane.actions?.busy);
             home.disabled = refresh.disabled = address.disabled = go.disabled = !available || locked;
             up.disabled = !available || state.parent === null || locked;
+            updatePathHint(available);
             if (picker)
             {
                 picker.disabled = locked || typeof globalThis.showDirectoryPicker !== 'function';
@@ -471,14 +507,25 @@ export async function browserFilesView(root, ctx)
     }
 
     panes.push(pane(true), pane(false));
+    renderJobs();
 
     /** 転送ジョブの状態と進捗を一覧へ表示します。 */
     function renderJobs()
     {
         queue.replaceChildren();
         const heading = document.createElement('h2');
-        heading.textContent = ctx.t('Browser transfers · keep this page open', '端末との転送 · この画面を開いたままにしてください');
-        queue.append(heading);
+        heading.textContent = ctx.t('Transfer queue', '転送キュー');
+        const hint = document.createElement('p');
+        hint.className = 'small muted';
+        hint.textContent = ctx.t('Keep this page open during transfers.', '転送が終わるまで、この画面を開いたままにしてください。');
+        queue.append(heading, hint);
+        if (!jobs.length)
+        {
+            const empty = document.createElement('p');
+            empty.className = 'remote-empty';
+            empty.textContent = ctx.t('No transfers.', '転送はありません。');
+            queue.append(empty);
+        }
         for (const job of jobs)
         {
             const row = document.createElement('div');

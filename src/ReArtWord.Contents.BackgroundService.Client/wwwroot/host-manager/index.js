@@ -1,5 +1,6 @@
+import { setControlLabel } from '../ui-icons.js';
 import { keys } from './labels.js';
-import { node, input, checkbox, icon, action, badge, empty } from './dom.js';
+import { node, input, field, checkbox, icon, action, empty } from './dom.js';
 import { networkView } from './network.js';
 import { hostsView } from './hosts.js';
 import { firewallView } from './firewall.js';
@@ -15,7 +16,7 @@ import { showPreview, showHistory } from './operations.js';
 const screens = new WeakMap();
 const areas = [['network', 'NetworkIF', 'network', networkView], ['hosts', 'Hosts', 'file', hostsView],
     ['firewall', 'Firewall', 'shield', firewallView], ['environment', 'PATH', 'code', environmentView], ['display', 'Display', 'monitor', displayView], ['power', 'Power', 'power', powerView],
-    ['powerSchedules', 'powerSchedule.title', 'power', powerSchedulesView], ['windowsUpdate', 'Windows Update', 'refresh', windowsUpdateView], ['login', 'Login', 'user', loginView], ['wakeOnLan', 'wake.title', 'power', wakeOnLanView]];
+    ['powerSchedules', 'powerSchedule.title', 'history', powerSchedulesView], ['windowsUpdate', 'Windows Update', 'download', windowsUpdateView], ['login', 'Login', 'user', loginView], ['wakeOnLan', 'wake.title', 'signal', wakeOnLanView]];
 
 /** 画面の文言と表示するキーを対応付けます。
  * @returns 呼出し元が使用する値です。
@@ -65,24 +66,34 @@ export async function mount(element, labels)
     title.append(titleCopy, titleTools);
     const workspace = node('div', '', 'hm-workspace'), sidebar = node('aside', '', 'hm-sidebar'), main = node('div', '', 'hm-main');
     const tabs = node('div', '', 'hm-tabs');
+    tabs.classList.add('workspace-index');
     tabs.setAttribute('role', 'tablist');
+    tabs.setAttribute('aria-orientation', 'vertical');
     tabs.setAttribute('aria-label', 'HostManager');
     const message = node('div', '', 'hm-message');
     message.setAttribute('role', 'status');
     const content = node('div', '', 'hm-content'), activity = node('button', '', 'hm-activity');
     activity.type = 'button';
     activity.hidden = true;
-    main.append(tabs, message, content, activity);
-    workspace.append(sidebar, main);
+    const areaPicker = node('select', '', 'hm-area-picker');
+    areaPicker.setAttribute('aria-label', labels['Settings category'] ?? 'Settings category');
+    areaPicker.addEventListener('change', () => tabs.querySelector('#hm-tab-' + areaPicker.value)?.click(), { signal: screen.abort.signal });
+    const navigation = node('nav', '', 'hm-navigation');
+    navigation.setAttribute('aria-label', labels['Settings category'] ?? 'Settings category');
+    const pickerLabel = field(labels['Settings category'] ?? 'Settings category', areaPicker);
+    pickerLabel.className = 'hm-compact-navigation';
+    navigation.append(tabs, pickerLabel);
+    const targets = node('details', '', 'hm-target-picker'), summary = node('summary');
+    targets.open = true;
+    targets.append(summary, sidebar);
+    main.append(targets, message, content, activity);
+    workspace.append(navigation, main);
     element.append(title, workspace);
     const search = input('', 'search');
     search.placeholder = labels['Search hosts'];
     search.setAttribute('aria-label', labels['Search hosts']);
-    const hostList = node('div', '', 'hm-host-list'), selection = node('span', '', 'hm-selection-count'), total = badge('0');
-    const sidebarHeading = node('div', '', 'hm-sidebar-heading');
-    sidebarHeading.append(node('h2', labels['Hosts']), total);
-    const selectionTools = node('div', '', 'hm-selection-tools');
-    sidebar.append(sidebarHeading, search, selectionTools, hostList, selection);
+    const hostList = node('div', '', 'hm-host-list'), selectionTools = node('div', '', 'hm-selection-tools');
+    sidebar.append(search, selectionTools, hostList);
     sidebar.setAttribute('aria-label', labels['Target hosts']);
 
     /** 未適用の編集内容が残っているか確認します。
@@ -172,6 +183,10 @@ export async function mount(element, labels)
         {
             const button = node('button', ctx.t(label), className);
             button.type = 'button';
+            if (className.split(' ').includes('danger'))
+            {
+                setControlLabel(button, icon('trash'));
+            }
             button.onclick = () =>
             {
                 const expectedTrue = 'true';
@@ -201,8 +216,9 @@ export async function mount(element, labels)
          */
         dialog(label)
         {
-            const dialog = node('dialog', '', 'hm-dialog'), header = node('div', '', 'hm-dialog-title'), body = node('div', '', 'hm-dialog-body'), footer = node('div', '', 'hm-dialog-actions');
-            const previous = document.activeElement;
+            const dialog = node('dialog', '', 'dialog hm-dialog'), header = node('div', '', 'dialog-heading hm-dialog-title');
+            const body = node('div', '', 'dialog-content hm-dialog-body'), footer = node('footer', '', 'toolbar hm-dialog-actions');
+            const previous = document.activeElement, left = window.scrollX, top = window.scrollY;
 
             /** 対象を閉じ、関連する状態を整理します。 */
             const close = () =>
@@ -217,7 +233,8 @@ export async function mount(element, labels)
             };
 
             const dismiss = action(ctx, 'Close', 'close', close);
-            dismiss.classList.add('hm-icon-button');
+            dismiss.classList.add('icon-button', 'quiet');
+            dismiss.querySelector('.control-label')?.remove();
             dismiss.setAttribute('aria-label', ctx.t('Close'));
             dismiss.title = ctx.t('Close');
             const heading = node('h2', ctx.t(label));
@@ -228,7 +245,9 @@ export async function mount(element, labels)
             feedback.dataset.hmFeedback = '';
             feedback.setAttribute('role', 'status');
             body.append(feedback);
-            dialog.append(header, body, footer);
+            const scroll = node('clutch-scroll-area');
+            scroll.append(body);
+            dialog.append(header, scroll, footer);
             element.append(dialog);
             screen.dialogs.add(dialog);
             dialog.addEventListener('cancel', event =>
@@ -236,12 +255,17 @@ export async function mount(element, labels)
                 event.preventDefault();
                 close();
             });
+            dialog.classList.toggle('dialog-stacked', !!document.querySelector('dialog.dialog:modal'));
             dialog.showModal();
+            if (window.scrollX !== left || window.scrollY !== top)
+            {
+                window.scrollTo({ left, top, behavior: 'instant' });
+            }
             queueMicrotask(() =>
             {
                 if (dialog.open)
                 {
-                    body.querySelector('input:not(:disabled),textarea:not(:disabled),select:not(:disabled)')?.focus();
+                    body.querySelector('input:not(:disabled),textarea:not(:disabled),select:not(:disabled)')?.focus({ preventScroll: true });
                 }
             });
             return { root: body, footer, element: dialog, close };
@@ -257,12 +281,13 @@ export async function mount(element, labels)
                 return ctx.guard(run);
             }
             const dialog = ctx.dialog('Discard unsaved changes?');
+            dialog.element.classList.add('dialog-compact');
             dialog.root.append(node('p', ctx.t('Your edited settings have not been applied.')));
             dialog.footer.append(ctx.button('Keep editing', dialog.close), ctx.button('Discard changes', async () =>
             {
                 dialog.close();
                 await run();
-            }, 'danger'));
+            }, 'danger confirm-action'));
         },
 
         /** 適用前の変更内容を確認表示へ渡します。
@@ -277,7 +302,7 @@ export async function mount(element, labels)
              */
             const current = () => generation === screen.generation && [...screen.dialogs].at(-1) === editor && (!editor || editor.isConnected && editor.open);
 
-            return Promise.resolve(typeof changes === 'function' ? changes() : changes).then(prepared => current() ? showPreview(ctx, prepared, refreshHistoryAsync, current, submitted) : undefined)
+            return Promise.resolve(typeof changes === 'function' ? changes() : changes).then(prepared => current() ? showPreview(ctx, prepared, refreshHistoryAsync, current, submitted, !!(editor || submitted)) : undefined)
                 .finally(() =>
                 {
                     if (editor && !editor.isConnected && generation === screen.generation)
@@ -321,13 +346,15 @@ export async function mount(element, labels)
         }
         if (!screen.views.has(screen.area))
         {
-            const root = node('section', '', 'hm-area');
+            const root = node('section', '', 'hm-view'), body = node('div', '', 'hm-area'), actions = node('div', '', 'hm-view-actions');
+            body.tabIndex = 0;
+            root.append(body, actions);
             root.id = 'hm-panel-' + screen.area;
             root.setAttribute('role', 'tabpanel');
             root.setAttribute('aria-labelledby', 'hm-tab-' + screen.area);
             content.append(root);
             const build = areas.find(item => item[0] === screen.area)[3];
-            screen.views.set(screen.area, { root, view: build(root, ctx) });
+            screen.views.set(screen.area, { root, view: build(body, ctx, actions) });
         }
         const active = screen.views.get(screen.area);
         if (active.stale && !active.view.hasChanges?.())
@@ -379,7 +406,6 @@ export async function mount(element, labels)
         const left = hostList.scrollLeft, top = hostList.scrollTop;
         let focusedPick;
         hostList.replaceChildren();
-        total.textContent = String(screen.hosts.length);
         const visible = visibleHosts();
         for (const host of visible)
         {
@@ -436,7 +462,9 @@ export async function mount(element, labels)
                 }
             }
         }
-        selection.textContent = `${ctx.t('Selected hosts')}: ${ctx.hosts().length}`;
+        const targets = ctx.hosts();
+        const count = targets.length + ' / ' + screen.hosts.length;
+        summary.textContent = ctx.t('Target hosts') + ' · ' + (targets.length === 1 ? targets[0].target.hostId : count);
     }
 
     for (const [area, label, glyph] of areas)
@@ -444,6 +472,7 @@ export async function mount(element, labels)
         const button = action(ctx, label, glyph, () =>
         {
             screen.area = area;
+            areaPicker.value = area;
             for (const item of tabs.children)
             {
                 const selected = item === button;
@@ -458,26 +487,30 @@ export async function mount(element, labels)
         button.setAttribute('aria-controls', 'hm-panel-' + area);
         button.tabIndex = area === screen.area ? 0 : -1;
         tabs.append(button);
+        const option = node('option', ctx.t(label));
+        option.value = area;
+        option.selected = area === screen.area;
+        areaPicker.append(option);
     }
     tabs.addEventListener('keydown', event =>
     {
         const expectedHome = 'Home';
         const expectedEnd = 'End';
-        const expectedArrowright = 'ArrowRight';
+        const nextKeys = ['ArrowDown', 'ArrowRight'];
 
-        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key))
+        if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key))
         {
             return;
         }
         event.preventDefault();
         const buttons = [...tabs.children], index = buttons.indexOf(document.activeElement);
-        const next = event.key === expectedHome ? 0 : event.key === expectedEnd ? buttons.length - 1 : (index + (event.key === expectedArrowright ? 1 : -1) + buttons.length) % buttons.length;
+        const next = event.key === expectedHome ? 0 : event.key === expectedEnd ? buttons.length - 1 : (index + (nextKeys.includes(event.key) ? 1 : -1) + buttons.length) % buttons.length;
         buttons[next].click();
         buttons[next].focus();
     });
     search.oninput = renderTargets;
     selectionTools.append(ctx.button('Select visible', () => changeSelection(new Set([...screen.selected, ...visibleHosts().filter(supportedHost).map(host => host.target.hostId)]))), ctx.button('Clear selection', () => changeSelection(new Set())));
-    const historyButton = action(ctx, 'Operation history', 'history', openHistory), refreshButton = action(ctx, 'Refresh hosts', 'refresh', () => ctx.discard(refreshHostsAsync));
+    const historyButton = action(ctx, 'Host configuration history', 'history', openHistory), refreshButton = action(ctx, 'Refresh hosts', 'refresh', () => ctx.discard(refreshHostsAsync));
     titleTools.append(refreshButton, historyButton);
     activity.onclick = openHistory;
 
@@ -526,7 +559,7 @@ export async function mount(element, labels)
         {
             return;
         }
-        screen.historyDialog = ctx.dialog('Operation history');
+        screen.historyDialog = ctx.dialog('Host configuration history');
         screen.historyDialog.element.classList.add('hm-history-dialog');
         showHistory(screen.historyDialog.root, ctx, screen.history, refreshHistoryAsync);
     }

@@ -15,11 +15,23 @@ public sealed class LanguageSelectorRenderingTests
 {
     /// <summary>現在の言語を表示し、同じメニューで既存の二言語だけを選択できます。</summary>
     /// <returns>実際のRazor描画結果の検証です。</returns>
-    [Theory]
+    [Theory(Skip = "旧表示では日本語を国コード JP で表示していました。")]
     [InlineData("en", "EN", "English", false)]
     [InlineData("ja", "JP", "日本語", false)]
     [InlineData("ja", "JP", "日本語", true)]
-    public async Task CurrentLanguageAndPersistenceProblemAreVisibleAsync(string language, string code, string label, bool failWrites)
+    public Task CurrentLanguageAndPersistenceProblemAreVisibleAsync(string language, string code, string label, bool failWrites) => RenderSelectionAsync(language, code, label, failWrites);
+
+    /// <summary>現在の言語コードと保存時のエラーを表示します。</summary>
+    /// <returns>セレクターの表示確認です。</returns>
+    [Theory]
+    [InlineData("en", "EN", "English", false)]
+    [InlineData("ja", "JA", "日本語", false)]
+    [InlineData("ja", "JA", "日本語", true)]
+    public Task LanguageCodesAndStorageStatusAreVisibleAsync(string language, string code, string label, bool failWrites) => RenderSelectionAsync(language, code, label, failWrites);
+
+    /// <summary>選択状態・表記・保存失敗を確認します。</summary>
+    /// <returns>描画と検証が完了した時点です。</returns>
+    private static async Task RenderSelectionAsync(string language, string code, string label, bool failWrites)
     {
         BrowserTestRuntime js = new() { FailWrites = failWrites };
         UiText ui = new(new(js));

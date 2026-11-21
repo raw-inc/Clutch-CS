@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { loginStatus, loginView } from '../../../src/ReArtWord.Contents.BackgroundService.Client/wwwroot/host-manager/login.js';
 import { sealLoginCredentialAsync } from '../../../src/ReArtWord.Contents.BackgroundService.Client/wwwroot/host-manager/login-credential.js';
 import { previewValues } from '../../../src/ReArtWord.Contents.BackgroundService.Client/wwwroot/host-manager/operations.js';
-import { createDocument, descendants } from './host-manager-dom.mjs';
+import { createDocument, descendants, DomNode } from './host-manager-dom.mjs';
 
 /** パスワード本文を持たない画面用状態を用意します。
  * @returns 自動ログインが保存済みの状態です。
@@ -69,6 +69,7 @@ test('login view permits account configuration with a notice and keeps notice re
 {
     const previous = Object.getOwnPropertyDescriptor(globalThis, 'document');
     globalThis.document = createDocument();
+    globalThis.Node = DomNode;
     t.after(() =>
     {
         if (previous)
@@ -78,6 +79,7 @@ test('login view permits account configuration with a notice and keeps notice re
         else
         {
             delete globalThis.document;
+            delete globalThis.Node;
         }
     });
     const cases = [

@@ -7,41 +7,60 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Execution
 @using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor
 
-<ClusterArchivePanel />
 <section class="card section">
     <h2>@Ui["Cluster operational settings"]</h2>
-    <button @onclick="OpenAsync"><UiIcon Name="settings" />@Ui["Review saved and effective revisions"]</button>
+    <button @onclick="OpenAsync"><UiIcon Name="settings" /><span class="control-label">@Ui["Review saved and effective revisions"]</span></button>
     <p class="notice" role="status">@(message?.Invoke())</p>
 </section>
 <Modal Open="open" Title="@Ui["Operational settings"]" Close="()=>open=false">
+    <ChildContent>
     @if(open){<EditorRestoreProtection IsConfigurationParticipant="true" WorkflowId="cluster-operational" ReadOnlyChanged="value=>restoreReadOnly=value" />}
-    <fieldset disabled="@restoreReadOnly">
+    <fieldset class="operational-fields" disabled="@restoreReadOnly">
     <p>@Ui["NIC, IP, storage paths and allowed roots are peer-specific. These shared settings apply to new inputs."]</p>
-    <p>@Ui["Saved revision"]: @(state?.Saved?.Revision??Ui["None"])</p>
-    <p>@Ui["Effective revision on this peer"]: @(state?.Effective?.Revision??Ui["Unconfirmed"])</p>
+    <dl class="revision-facts">
+        @if(state?.Saved?.Revision is { } savedRevision && savedRevision == state.Effective?.Revision)
+        {
+            <div><dt>@Ui["Saved and applied on this peer"]</dt><dd>@savedRevision</dd></div>
+        }
+        else
+        {
+            <div><dt>@Ui["Saved revision"]</dt><dd>@(state?.Saved?.Revision??Ui["None"])</dd></div>
+            <div><dt>@Ui["Effective revision on this peer"]</dt><dd>@(state?.Effective?.Revision??Ui["Unconfirmed"])</dd></div>
+        }
+    </dl>
     @if(state?.Effective?.DerivedFromVersions is {Count: > 0})
     {
         <div class="notice"><strong>@Ui["Some fields are waiting for conflict resolution."]</strong><p>@Ui["Only confirmed fields are applied. Work that depends on unresolved fields remains on hold."]</p><p>@Ui["Unresolved"]: @string.Join(", ",state.Effective.UnresolvedFields??[])</p><p class="small">@Ui["Compare the original candidates in Resolve conflicts."]</p></div>
     }
+    <div class="settings-fields operational-options">
     <label>@Ui["display.timezone.operational"]<input @bind="timeZone" @bind:event="oninput" placeholder="UTC / Asia/Tokyo" /></label>
     <label>@Ui["File conflicts"]<select @bind="conflict"><option value="@EFileConflictPolicy.Fail">@Ui["Fail explicitly"]</option><option value="@EFileConflictPolicy.Wait">@Ui["Wait and revalidate preconditions"]</option></select></label>
     <label>@Ui["Partial file failure on one PC"]<select @bind="failure"><option value="@EFileInternalFailurePolicy.Keep">@Ui["Keep the progress made"]</option><option value="@EFileInternalFailurePolicy.Restore">@Ui["Restore the pre-operation state"]</option></select></label>
     <label>@Ui["Confirm temporary safety actions"]<select @bind="confirmation"><option value="@ESafetyConfirmation.None">@Ui["No additional confirmation"]</option><option value="@ESafetyConfirmation.Continue">@Ui["Confirm temporary continuation only"]</option><option value="@ESafetyConfirmation.Always">@Ui["Confirm temporary stop and continuation"]</option></select></label>
+    </div>
+    <div class="configuration-save-mode">
+    <label>@Ui["Apply after saving"]<select @bind="policy"><option value="@EActivationPolicy.Auto">@Ui["Apply automatically after a successful snapshot"]</option><option value="@EActivationPolicy.Explicit">@Ui["Save only"]</option><option value="@EActivationPolicy.ConfirmImpact">@Ui["Apply after impact confirmation"]</option></select></label>
+    </div>
     <h3>@Ui["Host groups (flat sets of host IDs)"]</h3>
+    <p class="small muted">@Ui["Each group contains host IDs and has no subgroups."]</p>
     <p class="small muted">@Ui["Observed host IDs"]: @string.Join(", ",Connection.Current?.Peers.Select(peer=>peer.HostId).Distinct()??[])</p>
     @foreach(var group in groups)
     {
         <div class="toolbar" @key="group"><label>@Ui["Group name"]<input @bind="group.Name" @bind:event="oninput" /></label><label>@Ui["Host IDs (comma separated)"]<input @bind="group.Hosts" @bind:event="oninput" /></label><button @onclick="()=>groups.Remove(group)">@Ui["Remove row"]</button></div>
     }
     <button @onclick="()=>groups.Add(new())">@Ui["Add group"]</button>
-    <label>@Ui["Apply after saving"]<select @bind="policy"><option value="@EActivationPolicy.Auto">@Ui["Apply automatically after a successful snapshot"]</option><option value="@EActivationPolicy.Explicit">@Ui["Save only"]</option><option value="@EActivationPolicy.ConfirmImpact">@Ui["Apply after impact confirmation"]</option></select></label>
-    <button @onclick="SaveAsync">@Ui["Save and share this candidate"]</button>
+
+
     @if(state?.Saved is not null&&state.Saved.Revision!=state.Effective?.Revision)
     {
         <ConfigurationImpactPanel @key="(state.Saved.Revision,Api.SelectedClusterId,Api.SelectedPeerId)" WorkflowId="cluster-operational" Revision="@state.Saved.Revision" Operational="true" Changed="value=>activationImpact=value" />
         <button @onclick="ActivateAsync" disabled="@(activationImpact is null)">@Ui["Confirm impact and apply the saved revision"]</button>
     }
     <p class="notice">@(message?.Invoke())</p>
-    <JsonDetails Value="state" Title="@Ui["Exact saved and effective settings"]" />
+    <JsonDetails Value="state" Title="@Ui["Exact saved and effective settings"]" ExpandBody="true" />
     </fieldset>
+    </ChildContent>
+    <Actions>
+        <button class="primary" disabled="@restoreReadOnly" @onclick="SaveAsync">@Ui["Save and share this candidate"]</button>
+    </Actions>
 </Modal>

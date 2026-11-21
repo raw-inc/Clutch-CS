@@ -217,6 +217,11 @@ public sealed partial class ApplicationGroupPanel
         }
     }, cancellationToken);
 
+    /// <summary>ミリ秒で入力した待機時間を秒で確認できるようにします。</summary>
+    /// <returns>入力途中の値を除いた秒数の表示です。</returns>
+    private string Seconds(string value) => int.TryParse(value, out int milliseconds) ? Ui.Format("{0} seconds", milliseconds / 1000m)
+                                                                                      : string.Empty;
+
     /// <summary>保存中以外は編集を閉じます。</summary>
     private void CloseEditor()
     {

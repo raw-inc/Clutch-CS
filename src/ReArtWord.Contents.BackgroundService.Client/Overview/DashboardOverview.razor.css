@@ -79,12 +79,12 @@
 }
 
 .connection-dot.connected {
-    background: #80b69a;
+    background: var(--green);
 }
 
 .state-chip,
 .window-chip {
-    font-size: 10px;
+    font-size: 12px;
     white-space: nowrap;
     color: var(--muted);
     border: 0;
@@ -119,7 +119,7 @@ h2 {
 .secondary-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
+    gap: 24px;
 }
 
 .activity-panel,
@@ -168,13 +168,13 @@ h2 {
 }
 
 .activity-row small {
-    font-size: 9px;
+    font-size: 12px;
     color: var(--muted);
 }
 
 .activity-track {
-    height: 4px;
-    background: var(--line);
+    height: 12px;
+    background: var(--nested);
     border-radius: 2px;
     margin-top: 9px;
     overflow: hidden;
@@ -184,8 +184,7 @@ h2 {
     height: 100%;
     display: block;
     background: var(--accent);
-    opacity: 0.7;
-    border-radius: 2px;
+    border-radius: 0 var(--radius-chart) var(--radius-chart) 0;
 }
 
 .activity-warning {
@@ -196,7 +195,7 @@ h2 {
 .activity-panel footer,
 .logs-panel footer,
 .range-note {
-    font-size: 10px;
+    font-size: 12px;
     line-height: 1.7;
     color: var(--muted);
     margin-top: 18px;
@@ -213,7 +212,7 @@ h2 {
 
 .log-row time {
     color: var(--muted);
-    font-size: 10px;
+    font-size: 12px;
     padding-top: 3px;
     font-variant-numeric: tabular-nums;
 }
@@ -230,7 +229,7 @@ h2 {
 }
 
 .log-level {
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 600;
     padding: 3px 4px;
     border: 0;
@@ -240,11 +239,11 @@ h2 {
 }
 
 .log-level.error {
-    color: #d59c98;
+    color: var(--danger);
 }
 
 .log-level.warning {
-    color: #c9aa73;
+    color: var(--warn);
 }
 
 .log-row p {
@@ -257,7 +256,7 @@ h2 {
 }
 
 .log-row small {
-    font-size: 9px;
+    font-size: 12px;
     color: var(--muted);
     display: block;
     margin-top: 4px;
@@ -300,10 +299,44 @@ h2 {
 }
 
 .kicker {
-    font-size: 9px;
+    font-size: 12px;
     font-weight: 650;
     letter-spacing: 0.16em;
     color: var(--muted);
     margin: 0 0 6px;
     text-transform: uppercase;
+}
+
+.cluster-title h2 {
+    font-size: 20px;
+    margin: 0;
+}
+
+.panel-links a {
+    font-size: 13px;
+}
+
+.panel-links a .ui-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.activity-empty,
+.logs-panel .empty {
+    color: var(--ink);
+    font-size: 14px;
+    text-align: start;
+}
+
+.panel-heading :is(.window-chip, .panel-links > span) {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.panel-content > .empty {
+    margin-inline: 0;
+    padding-inline: 0;
+    min-height: 44px;
+    justify-content: start;
+    text-align: start;
 }

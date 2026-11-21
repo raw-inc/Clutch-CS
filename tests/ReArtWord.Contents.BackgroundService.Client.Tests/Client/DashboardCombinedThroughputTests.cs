@@ -36,6 +36,28 @@ public sealed class DashboardCombinedThroughputTests
         Assert.Equal("M297.000,60.00 L300.000,20.00 ", DashboardMetrics.Trend([first, last], "network.transfer.rate", "machine", maximum));
     }
 
+    /// <summary>80%を超えた部分だけを補間し、欠測区間や転送速度には強調線を描きません。</summary>
+    [Theory]
+    [InlineData("cpu.usage", true)]
+    [InlineData("memory.usage", true)]
+    [InlineData("gpu.usage", true)]
+    [InlineData("gpu.memory.usage", true)]
+    [InlineData("disk.transfer.rate", false)]
+    [InlineData("network.transfer.rate", false)]
+    public void HighlightFollowsUsageCrossings(string metric, bool isUsage)
+    {
+        ResourceSample first = Sample(0, 0);
+        ResourceSample At(int seconds, double value) => first with
+        {
+            ObservedAt = first.ObservedAt.AddSeconds(seconds),
+            Metrics = [new(metric, "machine", value, "percent")]
+        };
+        ResourceSample[] samples = [At(0, 70), At(4, 90), At(8, 70), At(12, 80), At(16, 80), At(40, 99)];
+        string highlight = DashboardMetrics.TrendPaths(samples, metric, "machine", 100).Highlight;
+        Assert.Equal(isUsage ? "M262.000,20.00 L264.000,10.00 M264.000,10.00 L266.000,20.00 "
+                             : string.Empty, highlight);
+    }
+
     /// <summary>片側欠測・負値・非有限値や加算時のオーバーフローを部分合計で代替しません。</summary>
     [Theory]
     [InlineData(null, 1d)]

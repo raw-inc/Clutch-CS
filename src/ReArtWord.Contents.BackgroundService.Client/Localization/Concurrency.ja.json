@@ -26,5 +26,5 @@
   "port.type.concurrencyScope": "制限区間の対応",
   "port.description.concurrencyScope": "同時実行枠を保持する区間の開始と終了を対応付けます。通常の値は渡しません。",
   "Select both execution boundaries when extracting a SubWorkflow.": "SubWorkflowへ分離する場合は、実行区間の開始と終了を両方選択してください。",
-  "Add supported nodes from workflows in this cluster.": "このクラスタのWFから、表示・操作するノードを追加してください。"
+  "Add supported nodes from workflows in this cluster.": "このクラスタのワークフローから、表示・操作するノードを追加してください。"
 }

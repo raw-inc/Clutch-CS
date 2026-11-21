@@ -1,3 +1,4 @@
+import { setControlLabel } from './ui-icons.js';
 import { appendFileRows } from './file-pane-rows.js';
 import { hostIds, resolveHosts, samePeer, currentPeer } from './file-transfer-selection.js';
 import { fileActionControls } from './file-action-controls.js';
@@ -17,20 +18,20 @@ export async function filesView(root, ctx)
     const clusters = document.createElement('select');
     clusterLabel.append(clusters);
     const clusterStatus = document.createElement('p');
-    clusterStatus.className = 'small muted';
+    clusterStatus.className = 'tool-status';
     clusterStatus.setAttribute('role', 'status');
     const split = document.createElement('div');
     split.className = 'file-workspace';
     const queue = document.createElement('section');
     queue.className = 'transfer-jobs';
     const toolbar = document.createElement('div');
-    toolbar.className = 'tool-toolbar';
+    toolbar.className = 'tool-toolbar file-transfer-scope tool-connection';
     const help = document.createElement('details');
     help.className = 'tool-help';
     const summary = document.createElement('summary');
     summary.textContent = ctx.t('Transfer help', '転送の使い方');
     help.append(summary, explanation);
-    toolbar.append(clusterLabel, clusterStatus);
+    toolbar.append(clusterLabel);
     root.append(toolbar, help, split, queue);
     let peers = await ctx.peers(), drag = null, disposed = false, timer, offset = 0;
     const panes = [];
@@ -45,7 +46,7 @@ export async function filesView(root, ctx)
         clusterOptions();
         await selectHostsAsync();
     });
-    reload.prepend(ctx.icon('refresh'));
+    setControlLabel(reload, ctx.icon('refresh'));
 
     /** 到達可能なクラスタを選択肢へ反映します。 */
     function clusterOptions()
@@ -73,7 +74,7 @@ export async function filesView(root, ctx)
         drag = null;
         const resolved = resolveHosts(peers, panes.map(pane => pane.hostId), clusters.value);
         clusterStatus.textContent = resolved.problem ? ctx.t('No available common cluster. Select hosts in the same cluster or refresh discovery.', '利用可能な共通クラスタがありません。同じクラスタのホストを選ぶか、一覧を更新してください。')
-            : resolved.clusterId ? ctx.t('Using cluster: ', '使用クラスタ: ') + resolved.clusterId : '';
+            : resolved.clusterId ? ctx.t('Using cluster: ', '転送に使用するクラスタ：') + resolved.clusterId : '';
         await Promise.all(panes.map((pane, index) => pane.bind(resolved.peers[index])));
     }
 
@@ -143,7 +144,6 @@ export async function filesView(root, ctx)
         location.className = 'file-location';
         const address = document.createElement('input');
         address.setAttribute('aria-label', ctx.t('Folder path', 'フォルダーパス'));
-        address.placeholder = ctx.t('Drives / enter a folder path', 'ドライブ / フォルダーパスを入力');
         const go = document.createElement('button');
         go.type = 'submit';
         go.textContent = ctx.t('Go', '移動');
@@ -160,19 +160,32 @@ export async function filesView(root, ctx)
         footer.className = 'file-pane-footer';
         const count = document.createElement('span');
         count.setAttribute('role', 'status');
-        const copy = ctx.button(index === 0 ? ctx.t('Copy selected →', '右へコピー →') : ctx.t('← Copy selected', '← 左へコピー'), async () =>
+        const copyHint = document.createElement('p');
+        copyHint.className = 'file-copy-hint';
+        copyHint.id = 'file-copy-hint-' + index;
+        copyHint.textContent = ctx.t('Open a folder on the destination host to copy here.', 'コピー先のホストでフォルダーを開いてください。');
+        copyHint.hidden = true;
+        const copy = ctx.button(ctx.t('Copy selected files', '選択したファイルをコピー'), async () =>
         {
             const other = panes[1 - index];
             await enqueueAsync(state, other, other.directory, [...state.selected]);
         });
         copy.className = 'primary';
         const drives = ctx.button(ctx.t('Drives', 'ドライブ'), () => openAsync(null));
-        drives.prepend(ctx.icon('drive'));
-        const up = ctx.button(ctx.t('↑ Up', '↑ 上へ'), () => openAsync(state.parent));
+        setControlLabel(drives, ctx.icon('drive'));
+        const up = ctx.button(ctx.t('Up', '上へ'), () => openAsync(state.parent));
+        setControlLabel(up, ctx.icon('up'));
         const refresh = ctx.button(ctx.t('Refresh', '更新'), () => openAsync(state.directory));
+        setControlLabel(refresh, ctx.icon('refresh'));
         toolbar.append(drives, up, refresh);
-        footer.append(count, copy);
-        section.append(label, toolbar, location, tree, footer);
+        footer.append(count);
+        const driveHint = document.createElement('p');
+        driveHint.className = 'file-root-note';
+        const hintText = document.createElement('span');
+        hintText.textContent = ctx.t('Open a drive to create folders.', 'ドライブを開くとフォルダーを作成できます。');
+        driveHint.append(ctx.icon('info'), hintText);
+        driveHint.hidden = true;
+        section.append(label, location, toolbar, driveHint, tree, copyHint, footer);
         split.append(section);
         state.actions = fileActionControls(section, ctx, {
             read: () => ({ generation: state.generation, directory: state.directory, peer: state.peer, label: state.peer?.hostId ?? '',
@@ -187,14 +200,35 @@ export async function filesView(root, ctx)
 
             refresh: snapshot => Promise.all(panes.filter(item => samePeer(item.peer, snapshot.peer) && item.directory === snapshot.directory).map(item => item.refresh()))
         });
-        toolbar.append(state.actions.create, state.actions.remove);
+        toolbar.append(state.actions.create);
+        footer.append(state.actions.remove, copy);
+
+        /** 転送先が決まっていないとき、フォルダーを開く場所を示します。 */
+        function updateCopyAction(locked)
+        {
+            const other = panes[1 - index], destination = other?.hostId;
+            copy.textContent = destination ? ctx.t('Copy to ' + destination, destination + ' にコピー') : ctx.t('Copy selected files', '選択したファイルをコピー');
+            copy.disabled = locked || !state.peer || !state.selected.size || !other?.directory || other.busy || state.peer.clusterId !== other.peer?.clusterId;
+            copyHint.hidden = locked || !state.selected.size || !other?.peer || other.busy || other.directory !== null;
+            if (copyHint.hidden)
+            {
+                copy.removeAttribute('aria-describedby');
+            }
+            else
+            {
+                copy.setAttribute('aria-describedby', copyHint.id);
+            }
+        }
 
         /** 現在の設定と状態から表示を更新します。 */
         function update()
         {
             const locked = state.busy || panes.some(item => item.actions?.busy);
+            const drivesListed = !!state.peer && !state.busy && state.directory === null && state.entries.size !== 0;
+            address.placeholder = drivesListed ? ctx.t('Choose a drive or enter a folder path', 'ドライブを選ぶかパスを入力') : '';
+            driveHint.hidden = !drivesListed;
             count.textContent = ctx.t(state.selected.size + ' selected', state.selected.size + ' 件を選択');
-            copy.disabled = locked || !state.peer || !state.selected.size || !panes[1 - index]?.directory || panes[1 - index]?.busy || state.peer.clusterId !== panes[1 - index]?.peer?.clusterId;
+            updateCopyAction(locked);
             drives.disabled = refresh.disabled = address.disabled = go.disabled = !state.peer || locked;
             up.disabled = !state.peer || !state.directory || locked;
             hosts.disabled = clusters.disabled = panes.some(item => item.actions?.busy);
@@ -389,7 +423,7 @@ export async function filesView(root, ctx)
     }
 
     panes.push(pane(0), pane(1));
-    toolbar.append(reload);
+    toolbar.append(clusterStatus, reload);
 
     /** 処理結果を照会し、進捗の表示へ反映します。
      * @returns 処理の完了と結果を伝えるPromiseです。
@@ -439,6 +473,7 @@ export async function filesView(root, ctx)
         if (!jobs.length)
         {
             const empty = document.createElement('p');
+            empty.className = 'remote-empty';
             empty.textContent = ctx.t('No queued copies.', 'コピー待ちはありません。');
             queue.append(empty);
         }

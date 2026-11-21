@@ -1,9 +1,12 @@
 .state-picker {
+    margin: 0;
+    padding: 0;
+    font-size: 12px;
+}
+
+.state-picker[open] {
     display: grid;
     gap: 8px;
-    border-bottom: 1px solid var(--line);
-    padding: 14px;
-    font-size: 12px;
 }
 
 .state-picker label {

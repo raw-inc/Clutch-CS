@@ -1,4 +1,4 @@
-import { node, input, select, field, heading, action, badge, checkbox } from './dom.js';
+import { table, node, input, select, field, heading, action, badge, checkbox, hostCount } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 import { sealLoginCredentialAsync } from './login-credential.js';
 
@@ -116,14 +116,19 @@ function editLogin(ctx, state)
 function renderState(root, ctx, state)
 {
     const value = state.snapshot.data, section = node('section', '', 'hm-section');
-    section.append(node('h3', state.host.target.hostId), badge(ctx.t(loginStatus(value))));
-    section.append(node('p', `${ctx.t('Configured account')}: ${loginAccount(value, ctx.t)}`));
+    const header = node('div', '', 'hm-toolbar');
+    header.append(node('h3', state.host.target.hostId), badge(ctx.t(loginStatus(value))));
+    section.append(header);
+    const facts = table([ctx.t('Setting'), ctx.t('Value')]);
+    facts.root.classList.add('hm-facts');
+    facts.add([ctx.t('Configured account'), loginAccount(value, ctx.t)]);
+    section.append(facts.root);
     if (value.remainingLogons != null)
     {
-        section.append(node('p', `${ctx.t('Remaining automatic logins')}: ${value.remainingLogons}`));
+        facts.add([ctx.t('Remaining automatic logins'), value.remainingLogons]);
     }
     const stored = value.protectedPasswordPresent == null ? 'Unconfirmed' : value.protectedPasswordPresent ? 'Present' : 'Absent';
-    section.append(node('p', `${ctx.t('Protected automatic login password')}: ${ctx.t(stored)}`));
+    facts.add([ctx.t('Protected automatic login password'), ctx.t(stored)]);
     if (value.plaintextPasswordPresent)
     {
         section.append(node('p', ctx.t('A legacy plaintext login password exists. Configuring or disabling automatic login here removes it.'), 'hm-muted'));
@@ -140,8 +145,12 @@ function renderState(root, ctx, state)
     }
     const disable = action(ctx, 'Disable automatic login', 'close', () => ctx.preview([{ host: state.host, query: { area: 'login' }, action: 'login',
         baseRevision: state.snapshot.revision, change: { enabled: false }, label: ctx.t('Login') }]));
-    disable.disabled = !state.host.capabilities.elevated;
-    const buttons = node('div', '', 'hm-actions');
+    disable.disabled = !state.host.capabilities.elevated || (value.enabled === false && !value.plaintextPasswordPresent && !value.protectedPasswordPresent);
+    if (enable.disabled && !value.users.some(user => user.selectable))
+    {
+        section.append(node('p', ctx.t('No selectable local account.'), 'hm-muted'));
+    }
+    const buttons = node('div', '', 'hm-actions hm-login-actions');
     buttons.append(enable, disable);
     section.append(buttons);
     root.append(section);
@@ -157,7 +166,7 @@ export function loginView(root, ctx)
     {
         return noSelection(root, ctx);
     }
-    const title = heading(ctx.t('Login'), `${ctx.t('Selected hosts')}: ${hosts.length}`), status = node('div'), listing = node('div');
+    const title = heading(ctx.t('Login settings'), `${ctx.t('Selected hosts')}: ${hostCount(ctx, hosts.length)}`), status = node('div'), listing = node('div');
     const reader = createReader(ctx, hosts, () => ({ area: 'login' }), render);
     title.append(action(ctx, 'Refresh settings', 'refresh', () => reader.load()));
     root.append(title, node('p', ctx.t('Choose a local account for the next Windows login. Applying this setting does not sign out, restart the PC or register application startup entries.'), 'hm-muted'), status, listing);

@@ -7,8 +7,8 @@
 .scope-toolbar {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
     gap: 7px;
+    align-items: center;
 }
 
 .scope-search {
@@ -30,11 +30,17 @@
 .scope-status {
     margin: 0;
     color: var(--muted);
-    font-size: 11px;
     font-variant-numeric: tabular-nums;
+    word-break: auto-phrase;
+    line-height: 1.6;
+    text-wrap: pretty;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    font-size: 13px;
 }
 
-.capturing .scope-status {
+.scope-status.warn {
     color: var(--warn);
 }
 
@@ -42,7 +48,7 @@
 .scope-advanced,
 .scope-limits {
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     padding: 7px 10px;
 }
 
@@ -50,10 +56,12 @@
     display: grid;
     grid-template-columns: 310px minmax(0, 1fr);
     min-width: 0;
-    border: 1px solid var(--line);
-    border-radius: 6px;
+    border: 0;
+    border-radius: var(--radius-control);
     overflow: hidden;
-    background: var(--paper);
+    background: transparent;
+    gap: 12px;
+    align-items: stretch;
 }
 
 .scope-sidebar {
@@ -63,6 +71,7 @@
     padding: 10px;
     border-right: 1px solid var(--line);
     background: var(--panel);
+    border: 0;
 }
 
 .scope-sidebar > .scope-sources {
@@ -86,8 +95,8 @@
     display: grid;
     align-content: start;
     gap: 8px;
-    min-width: 0;
     padding: 10px;
+    min-width: 0;
 }
 
 .scope-advanced .scope-toolbar {
@@ -106,9 +115,9 @@
 
 .scope-hosts label {
     display: flex;
-    align-items: start;
-    gap: 7px;
     overflow-wrap: anywhere;
+    align-items: center;
+    gap: 8px;
 }
 
 .scope-hosts small {
@@ -121,6 +130,9 @@
     padding: 9px 0;
     cursor: pointer;
     font-size: 11px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
 }
 
 .scope-host-heading label {
@@ -155,6 +167,7 @@
     padding: 2px 0 12px 20px;
     font-size: 11px;
     color: var(--muted);
+    padding-inline-start: 24px;
 }
 
 .scope-interfaces[hidden] {
@@ -173,12 +186,13 @@
 }
 
 .scope-list {
-    height: clamp(220px, 40vh, 600px);
+    height: clamp(220px, 32vh, 460px);
     overflow: auto;
     overflow-anchor: none;
-    background: var(--panel);
+    scrollbar-color: var(--control) var(--raised);
+    background-color: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
 }
 
 .scope-packets {
@@ -217,16 +231,20 @@
 }
 
 .scope-packets th:nth-child(3) {
-    width: 76px;
+    width: 7rem;
 }
 
 .scope-packets th:nth-child(4),
 .scope-packets th:nth-child(5) {
-    width: 20%;
+    width: max(8.5rem, 20%);
 }
 
 .scope-packets th:nth-child(7) {
     width: 55px;
+}
+
+.signal-scope.all-columns .scope-packets th:nth-child(6) {
+    width: 11rem;
 }
 
 .scope-packets tr[data-packet] {
@@ -267,10 +285,13 @@
     padding: 12px;
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 6px;
-    font-size: 11px;
+    border-radius: var(--radius-control);
+    font-size: 13px;
+    font-family: Consolas, monospace;
     line-height: 1.55;
     tab-size: 4;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
 
 @media (max-width: 900px) {
@@ -296,5 +317,332 @@
 
     .scope-search {
         min-width: 180px;
+    }
+}
+
+.scope-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+    border-radius: var(--radius-control);
+    background: var(--card);
+    align-items: end;
+}
+
+.scope-sidebar > .scope-toolbar {
+    margin-bottom: 12px;
+}
+
+.scope-sidebar,
+.scope-results {
+    border-radius: var(--radius-panel);
+    padding: 12px;
+    background: var(--panel);
+}
+
+.scope-filters .scope-search {
+    min-width: min(100%, 12rem);
+    width: 100%;
+}
+
+.scope-filters label {
+    min-width: 0;
+    flex: 1;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.scope-filters select,
+.scope-filters button {
+    align-self: end;
+    min-height: 36px;
+}
+
+.scope-workspace pre {
+    font: 13px/1.55 Consolas, monospace;
+}
+
+.scope-packets :is(th,td):is(:first-child,:nth-child(7)) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 680px) {
+    .scope-list {
+        overflow-x: auto;
+    }
+
+    .scope-packets {
+        min-width: 42rem;
+    }
+
+    .scope-sidebar {
+        max-height: none;
+        height: auto;
+        overflow: visible;
+    }
+}
+
+@media (min-width: 681px) {
+    .signal-scope .scope-filters > label.scope-column-choice:has(> input[type="checkbox"]) {
+        display: none;
+    }
+}
+
+@media (max-width: 680px) {
+    .signal-scope.all-columns .scope-packets {
+        min-width: 50rem;
+    }
+
+    .signal-scope.all-columns .scope-packets th:is(:nth-child(4), :nth-child(5)) {
+        width: 9rem;
+    }
+
+    .signal-scope:not(.all-columns) .scope-packets {
+        min-width: 0;
+    }
+
+    .signal-scope:not(.all-columns) .scope-packets tr > :is(:nth-child(1),:nth-child(4),:nth-child(5),:nth-child(7)):not(.scope-spacer) {
+        display: none;
+    }
+
+    .signal-scope:not(.all-columns) .scope-packets th:nth-child(6) {
+        width: auto;
+    }
+}
+
+@media (max-width: 680px) {
+    .scope-filters {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+    }
+
+    .scope-filters > label:first-child {
+        grid-column: 1 / -1;
+    }
+
+    .scope-filters .scope-search {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .scope-filters .scope-column-choice {
+        grid-column: 1 / -1;
+        flex: none;
+        min-height: 40px;
+        white-space: nowrap;
+    }
+
+    .signal-scope:not(.all-columns) .scope-packets,
+    .signal-scope:not(.all-columns) .scope-packets :is(thead,tbody) {
+        display: block;
+    }
+
+    .signal-scope:not(.all-columns) .scope-packets thead {
+        position: sticky;
+        inset-block-start: 0;
+        z-index: 2;
+    }
+
+    .signal-scope:not(.all-columns) .scope-packets tr {
+        display: grid;
+        grid-template-columns: 6rem 3.25rem minmax(0, 1fr);
+    }
+
+    .signal-scope:not(.all-columns) .scope-packets tr > :is(td,th) {
+        width: auto;
+        min-width: 0;
+    }
+
+    .signal-scope:not(.all-columns) .scope-packets .scope-spacer {
+        grid-column: 1/-1;
+    }
+
+    .scope-hosts label {
+        display: flex;
+        align-items: center;
+        margin: 0;
+        gap: 6px;
+        padding: 4px 0;
+        min-height: 36px;
+    }
+}
+
+.scope-workspace > .scope-sidebar {
+    max-height: none;
+}
+
+.scope-workspace > section,
+.scope-sidebar {
+    border: 1px solid var(--line);
+}
+
+.scope-sidebar input,
+.scope-sidebar select {
+    min-height: 38px;
+}
+
+.scope-sidebar input[type="checkbox"] {
+    min-height: 0;
+}
+
+.scope-details section {
+    min-width: 0;
+}
+
+.scope-hosts,
+.scope-interfaces {
+    align-content: start;
+    gap: 6px;
+}
+
+.scope-hosts .scope-host-heading,
+.scope-interfaces label {
+    margin-block: 0;
+}
+
+.scope-host-address {
+    font-size: 13px;
+}
+
+.scope-sidebar input[type="checkbox"]:disabled {
+    opacity: 0.8;
+}
+
+.scope-workspace .scope-host-state {
+    font-size: 12px;
+}
+
+.scope-toolbar input,
+.scope-toolbar button {
+    min-height: 38px;
+    margin-block: 0;
+}
+
+.scope-toolbar .badge {
+    min-height: 20px;
+    border-radius: var(--radius-control);
+}
+
+.scope-sidebar .scope-hosts {
+    margin-block: 8px;
+}
+
+.scope-filters > label {
+    margin: 0;
+}
+
+.scope-filters :is(.scope-search, select, button) {
+    min-height: 40px;
+}
+
+.scope-filters > button[aria-pressed="true"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-color: var(--accent);
+    box-shadow: inset 0 -2px var(--accent);
+}
+
+.scope-filters select {
+    font-size: 13px;
+    min-width: 0;
+}
+
+.scope-status > span {
+    white-space: nowrap;
+}
+
+.scope-hosts .scope-host-heading {
+    min-height: 44px;
+    padding: 6px 28px 6px 0;
+    font-size: 13px;
+}
+
+.scope-host-heading label,
+.scope-interfaces label {
+    margin: 0;
+}
+
+.scope-sidebar > details summary,
+.scope-sidebar .scope-sources h2 {
+    font-size: 13px;
+}
+
+.scope-detail-empty {
+    display: none;
+    min-height: 40px;
+    margin-block: 8px 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.scope-details[data-empty="true"] .scope-detail-empty {
+    display: block;
+}
+
+.scope-details[data-empty="true"] pre {
+    display: none;
+}
+
+@media (max-width: 680px) {
+    .signal-scope:not(.all-columns) .scope-packets tr {
+        grid-template-columns: 5.5rem 5.4rem minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .scope-filters {
+        display: flex;
+        align-items: center;
+        justify-content: start;
+    }
+
+    .scope-filters > label:first-child {
+        flex-basis: 100%;
+    }
+
+    .scope-filters > :is(select, button) {
+        flex: 0 1 auto;
+    }
+}
+
+.scope-packet-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    justify-content: space-between;
+    margin-block-start: 8px;
+}
+
+.scope-packet-heading h2 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.scope-filter-example,
+.scope-scroll-hint {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.scope-filter-example {
+    margin: 6px 12px 0;
+}
+
+.scope-scroll-hint {
+    display: none;
+    margin: 0;
+}
+
+@media (max-width: 680px) {
+    .scope-results:has(.scope-list[data-scrollable="true"]) .scope-scroll-hint {
+        display: block;
+    }
+
+    .scope-packet-heading button {
+        min-height: 44px;
     }
 }

@@ -1,4 +1,9 @@
 .dashboard-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 24px;
     padding: 12px 18px;
     background: var(--panel);
     border-bottom: 1px solid var(--line);
@@ -7,6 +12,8 @@
 .dashboard-name {
     max-width: 320px;
     min-width: 140px;
+    border-width: 0 0 1px;
+    background: transparent;
 }
 
 .dashboard-workspace {
@@ -22,12 +29,14 @@
 }
 
 .dashboard-library {
+    display: flex;
+    min-block-size: 0;
     background: var(--panel);
     border-right: 1px solid var(--line);
-    overflow: auto;
 }
 
 .dashboard-board {
+    flex: 1;
     overflow: auto;
     min-width: 0;
     padding: 22px;
@@ -37,7 +46,7 @@
     container-type: inline-size;
     container-name: wf-dashboard;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
     gap: 16px;
     align-items: start;
 }
@@ -45,9 +54,10 @@
 .dashboard-card {
     min-width: 0;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius-panel);
     background: var(--panel);
     overflow: hidden;
+    border-color: var(--line);
 }
 
 .dashboard-card.drop-target {
@@ -59,8 +69,9 @@
     gap: 10px;
     align-items: center;
     justify-content: space-between;
-    min-height: 40px;
-    padding: 8px 12px;
+    min-height: 44px;
+    background: var(--card);
+    padding: 10px 14px;
     border-bottom: 1px solid var(--line);
     cursor: grab;
     user-select: none;
@@ -71,8 +82,9 @@
 }
 
 .dashboard-card strong {
-    overflow-wrap: anywhere;
     font-size: 13px;
+    word-break: normal;
+    overflow-wrap: anywhere;
 }
 
 .dashboard-line-break {
@@ -142,10 +154,88 @@
     }
 }
 
+@media (max-width: 600px) {
+    .dashboard-workspace.with-catalog {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
+    }
+
+    .dashboard-library {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .dashboard-board {
+        padding: 12px;
+    }
+}
+
 @media (min-width: 801px) {
     @container wf-dashboard (min-width: 516px) {
         .dashboard-card.concurrency-card {
             grid-column: span 2;
         }
+    }
+}
+
+.dashboard-edit-tools {
+    padding: 4px;
+    border-radius: var(--radius-control);
+    background: transparent;
+    gap: 8px;
+}
+
+.save-state {
+    display: inline-flex;
+    gap: 5px;
+    align-items: center;
+    color: var(--muted);
+}
+
+.dashboard-library ::deep .dashboard-catalog-item {
+    justify-items: start;
+    justify-content: stretch;
+}
+
+.dashboard-edit-tools button[aria-expanded="true"] {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+    box-shadow: inset 0 -2px var(--accent);
+}
+
+.dashboard-heading .toolbar > button[aria-label] {
+    flex: none;
+}
+
+.dashboard-card > .board-action-note {
+    display: block;
+    padding: 0 14px 16px;
+    margin: 0;
+    line-height: 1.5;
+}
+
+@media (max-width: 680px) {
+    .dashboard-heading,
+    .dashboard-heading > .toolbar {
+        gap: 4px 8px;
+    }
+
+    .dashboard-heading > .toolbar {
+        padding-block: 4px;
+    }
+
+    .dashboard-workspace.with-catalog {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .dashboard-workspace.with-catalog .dashboard-library {
+        flex: none;
+        block-size: min(49dvh, 21rem);
+    }
+
+    .dashboard-workspace.with-catalog .dashboard-board-scroll {
+        flex: 1;
     }
 }

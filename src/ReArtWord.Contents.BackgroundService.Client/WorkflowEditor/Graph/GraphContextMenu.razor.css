@@ -10,11 +10,11 @@
     z-index: 81;
     width: 244px;
     padding: 5px;
-    border: 1px solid var(--stroke, #3c4148);
-    border-radius: 7px;
-    background: var(--surface, #24272c);
+    border: 1px solid var(--stroke, var(--line));
+    border-radius: var(--radius-panel);
+    background: var(--surface, var(--raised));
     box-shadow: 0 8px 24px #0005;
-    color: var(--text, #e3e6ea);
+    color: var(--text, var(--ink));
 }
 
 .graph-context-menu button {
@@ -31,12 +31,12 @@
 }
 
 .graph-context-menu button:hover:not(:disabled) {
-    background: #ffffff0b;
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
 }
 
 .graph-context-menu kbd {
     font-size: 11px;
-    opacity: 0.65;
+    color: var(--muted);
 }
 
 .graph-context-menu small {

@@ -1,13 +1,16 @@
+@using ReArtWord.Contents.BackgroundService.Client.Overview.Telemetry
 @using ReArtWord.Contents.BackgroundService.Client.Components
 @using ReArtWord.Contents.BackgroundService.Contracts.Management
-@if(problem is not null){<p class="notice warn">@Ui[problem]</p>}
+@if(problem is not null){<p class="notice warn metrics-warning">@Ui[problem]</p>}
 @if(displayPeers.Count==0){<div class="overview-empty"><UiIcon Name="monitor" /><strong>@Ui["Waiting for PC measurements"]</strong></div>}
 else
 {
-    <div class="host-grid @(Detailed ? "detailed" : "summary") @(ClusterId is null ? "all-clusters" : null)">
+    var busyHosts = displayPeers.Where(peer => !Previous(peer) && DashboardMetrics.AboveThreshold(peer.Latest) > 0).Select(peer => peer.Peer.HostId).Distinct(StringComparer.Ordinal).ToArray();
+    @if (busyHosts.Length > 0){<p class="notice warn metrics-warning"><UiIcon Name="warning" />@Ui["PCs above 80%"]: @string.Join(", ",busyHosts)</p>}
+    <clutch-card-rows><div class="host-grid @(Detailed ? "detailed" : "summary") @(ClusterId is null ? "all-clusters" : null)">
     @foreach(var host in displayPeers.GroupBy(item=>item.Peer.HostId).OrderBy(group=>group.Key))
     {
         <OverviewHostCard @key="host.Key" Peers="host.ToArray()" PowerPeers="records.Where(item=>item.Peer.HostId==host.Key).ToArray()" Detailed="Detailed" IsPrevious="Previous" Removed="ReloadAsync" Memberships="@string.Join(", ",host.Select(item=>item.ClusterId+" / "+item.Peer.PeerId).Distinct())" />
     }
-    </div>
+    </div></clutch-card-rows>
 }

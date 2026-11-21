@@ -3,23 +3,47 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Management
 @using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor
 
-<button class="connection-button" @onclick="OpenAsync" title="@Ui["Select network, cluster and peer"]">
-    <span class="connection-dot @(Connected?"online":string.Empty)"></span>
+<button class="connection-button" aria-haspopup="dialog" aria-expanded="@(open ? "true" : "false")" @onclick="OpenAsync" title="@(ClusterId is null ? Ui["Select network, cluster and peer"] : ClusterId + " / " + PeerId + " · " + Ui[Connected?"Connected":"Disconnected"])" aria-label="@Ui["Select network, cluster and peer"]">
+    <span class="connection-symbol @(Connected?"online":null)" aria-hidden="true"><UiIcon Name="@(Connected?"check":"plug")" /></span>
     @if(ClusterId is not null){<span class="connection-name">@ClusterId <small>/ @PeerId</small></span>}
-    else{<span>@Ui["Select connection"]</span>}
-    <UiIcon Name="chevron" />
+    else{<span class="connection-name">@Ui["Select connection"]</span>}
+    <span class="connection-chevron" aria-hidden="true"><UiIcon Name="chevron" /></span>
 </button>
-<Modal Open="open" Title="@Ui["Clusters visible from this PC"]" Close="()=>open=false">
-    <p>@Ui["ClientHost observes the configured networks together. It does not join any cluster as a Core peer."]</p>
-    <p class="notice" role="status">@Ui[message??string.Empty]</p>
+<Modal Open="open" ShowCloseAction="true" Title="@Ui["Clusters visible from this PC"]" Close="()=>open=false">
+    <p class="connection-help">@Ui["ClientHost observes the configured networks together. It does not join any cluster as a Core peer."]</p>
+    @if(!string.IsNullOrEmpty(message)){<p class="notice @(Connection.Connected && message == "The selected cluster and peer responded." ? "success" : null)" role="status">@if(Connection.Connected && message == "The selected cluster and peer responded."){<UiIcon Name="check" />}<span>@Ui[message]</span></p>}
+    <button @onclick="RefreshAsync" disabled="@busy">@Ui["Refresh observations"]</button>
+    @if(clusters.Count==0)
+    {
+        <p>@Ui["No clusters have been observed. Check the interface, IP, broadcast address and Core UDP port."]</p>
+    }
+    @foreach(var cluster in clusters)
+    {
+        <section class="card section" @key="cluster.ClusterId">
+            <h3>@cluster.ClusterId</h3>
+            <p class="small muted">@Ui["Last received"] @FormatTime(cluster.LastSeen) · @Ui["Coordinator candidates:"] @string.Join(", ",cluster.CoordinatorCandidates)</p>
+            @if(cluster.CoordinatorCandidates.Count>1)
+            {
+                <p>@Ui["Coordinator candidates disagree. Select a peer explicitly."]</p>
+            }
+            <table class="peer-connections"><thead><tr><th>@Ui["Peer / Host"]</th><th>@Ui["Observed state"]</th><th>@Ui["Instance ID"]</th><th>@Ui["Connect"]</th></tr></thead><tbody>
+            @foreach(var peer in cluster.Peers)
+            {
+                var selected = Connected && cluster.ClusterId == ClusterId && peer.PeerId == PeerId && peer.InstanceId == Connection.Current?.InstanceId;
+                <tr @key="peer.InstanceId"><td data-label="@Ui["Peer / Host"]">@peer.PeerId / @peer.HostId</td><td data-label="@Ui["Observed state"]">@Ui[peer.Status.ToString()]</td><td data-label="@Ui["Instance ID"]"><code class="small mono">@peer.InstanceId</code></td><td>@if(selected){<span class="tag">@Ui["Connected"]</span>}else{<button @onclick="()=>SelectAsync(cluster.ClusterId,peer.PeerId,peer.InstanceId)" disabled="@busy">@Ui["Connect"]</button>}</td></tr>
+            }
+            </tbody></table>
+        </section>
+    }
+    <details class="secondary-details"><summary>@Ui["Network settings"]</summary>
     @if(network is not null)
     {
         @foreach(var status in Bindings)
         {
-            <p class="small muted">@(network.Interfaces.FirstOrDefault(item=>item.InterfaceId==status.Binding.InterfaceId)?.Name??status.Binding.InterfaceId) / @status.Binding.BindAddress → @status.Binding.BroadcastAddress : @status.Binding.Port · @Ui[status.Listening?"Listening":"Not listening"] @status.Problem
-                <button class="quiet" @onclick="()=>EditBinding(status.Binding)" disabled="@busy">@Ui["Edit"]</button>
-                <button class="quiet" @onclick="()=>RemoveBindingAsync(status.Binding)" disabled="@busy">@Ui["Stop discovery"]</button>
-            </p>
+            <div class="discovery-binding"><p class="small muted">@(network.Interfaces.FirstOrDefault(item=>item.InterfaceId==status.Binding.InterfaceId)?.Name??status.Binding.InterfaceId) / @status.Binding.BindAddress → @status.Binding.BroadcastAddress : @status.Binding.Port · @Ui[status.Listening?"Listening":"Not listening"] @status.Problem
+                </p><div class="toolbar"><button @onclick="()=>EditBinding(status.Binding)" disabled="@busy">@Ui["Edit"]</button>
+                <button class="danger" @onclick="()=>removingBinding=status.Binding" disabled="@busy"><UiIcon Name="offline" /><span class="control-label">@Ui["Stop discovery"]</span></button>
+            </div></div>
         }
         <label>NIC<select value="@interfaceId" @onchange="InterfaceChanged">
             <option value="">@Ui["Choose explicitly"]</option>
@@ -29,9 +53,10 @@
             }
             @foreach(var item in network.Interfaces.Where(item=>item.Addresses.Count>0||item.InterfaceId==interfaceId))
             {
-                <option value="@item.InterfaceId">@item.Name · @item.InterfaceId · @Ui[item.Available?"Available":"Unavailable"]</option>
+                <option value="@item.InterfaceId">@item.Name · @string.Join(", ",item.Addresses.Select(address=>address.Address))</option>
             }
         </select></label>
+        @if(interfaceId.Length!=0){<small class="muted">NIC ID: @interfaceId</small>}
         <label>@Ui["IPv4 on this interface"]<select value="@bindAddress" @onchange="AddressChanged">
             <option value="">@Ui["Choose explicitly"]</option>
             @if(bindAddress.Length!=0&&!Addresses.Any(item=>item.Address==bindAddress))
@@ -47,26 +72,17 @@
         <label>@Ui["UDP port shared with Core"]<input type="text" inputmode="numeric" @bind="portText" @bind:event="oninput" /></label>
         <button @onclick="BindAsync" disabled="@busy">@Ui["Add or update this network"]</button>
     }
-    <button @onclick="RefreshAsync" disabled="@busy">@Ui["Refresh observations"]</button>
-    @if(clusters.Count==0)
-    {
-        <p>@Ui["No clusters have been observed. Check the interface, IP, broadcast address and Core UDP port."]</p>
-    }
-    @foreach(var cluster in clusters)
-    {
-        <section class="card section" @key="cluster.ClusterId">
-            <h3>Cluster @cluster.ClusterId</h3>
-            <p class="small muted">@Ui["Last received"] @FormatTime(cluster.LastSeen) · @Ui["Coordinator candidates:"] @string.Join(", ",cluster.CoordinatorCandidates)</p>
-            @if(cluster.CoordinatorCandidates.Count>1)
-            {
-                <p>@Ui["Coordinator candidates disagree. Select a peer explicitly."]</p>
-            }
-            <table><thead><tr><th>Peer / Host</th><th>@Ui["Observed state"]</th><th>@Ui["Instance"]</th><th>@Ui["Connect"]</th></tr></thead><tbody>
-            @foreach(var peer in cluster.Peers)
-            {
-                <tr @key="peer.InstanceId"><td>@peer.PeerId / @peer.HostId</td><td>@Ui[peer.Status.ToString()]</td><td class="small mono">@peer.InstanceId</td><td><button @onclick="()=>SelectAsync(cluster.ClusterId,peer.PeerId,peer.InstanceId)" disabled="@busy">@Ui["Connect to this cluster and peer"]</button></td></tr>
-            }
-            </tbody></table>
-        </section>
-    }
+    </details>
+</Modal>
+
+<Modal Open="@(removingBinding is not null)" Title='@Ui["Stop discovery"]' Compact="true" Close="()=>removingBinding=null">
+    <ChildContent>
+        @if(removingBinding is { } binding)
+        {
+            var name = network?.Interfaces.FirstOrDefault(item=>item.InterfaceId==binding.InterfaceId)?.Name ?? binding.InterfaceId;
+            <p>@name<br /><code>@binding.BindAddress → @binding.BroadcastAddress : @binding.Port</code></p>
+            <p class="notice warning"><UiIcon Name="warning" />@Ui.Format("Stopping observation for {0} can remove clusters only visible through it.", name)</p>
+        }
+    </ChildContent>
+    <Actions><button class="danger confirm-action" disabled="@busy" @onclick="()=>ConfirmRemovalAsync(UiCancellation)"><UiIcon Name="offline" /><span class="control-label">@Ui["Stop discovery"]</span></button></Actions>
 </Modal>

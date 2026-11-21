@@ -35,7 +35,7 @@ export function virtualSwitchesView(root, ctx)
     let entries = [];
     const create = action(ctx, 'Create virtual switch', 'plus', () => form(), true);
     create.disabled = true;
-    toolbar.append(create, node('span', ctx.t('Manage External, Internal and Private switches. Review connected adapters before deleting.'), 'hm-muted'));
+    toolbar.append(node('p', ctx.t('Manage External, Internal and Private switches. Review connected adapters before deleting.'), 'hm-muted'), create);
     root.append(toolbar, status, listing);
 
     /** 現在の値を表示内容へ反映します。 */
@@ -45,7 +45,7 @@ export function virtualSwitchesView(root, ctx)
         entries = [...states.values()].filter(item => item.snapshot).map(item => ({ host: item.host, state: item.snapshot.data }));
         create.disabled = !entries.length;
         listing.replaceChildren();
-        const rows = table(['Virtual switch', 'Host', 'Switch type', 'Physical interface', 'Connected adapters', 'Edit'].map(ctx.t));
+        const rows = table(['Virtual switch', 'Host', 'Switch type', 'Physical interface', 'Connected adapters', 'Actions'].map(ctx.t));
         let count = 0;
         for (const entry of entries)
         {

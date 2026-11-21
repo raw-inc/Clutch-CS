@@ -1,4 +1,5 @@
 {
+  "Run": "実行",
   "process.registrationChanged": "対象の設定が変更されています。一覧を更新して再確認してください。",
   "process.launchUnconfirmed": "起動結果を確認できません。アプリの詳細画面で実際のプロセスを確認してください。",
   "process.previousStateUnconfirmed": "以前の起動結果を確認できないため、起動を保留しています。",

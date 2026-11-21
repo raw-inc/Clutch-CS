@@ -1,5 +1,5 @@
 {
-  "Add State": "Stateを追加",
+  "Add State": "State を追加",
   "Select a workflow": "ワークフローを選択",
   "Refresh workflows": "ワークフローを再取得",
   "Shows persisted state. Updates when the value changes.": "永続化されたStateを表示し、値の変更時に更新します。",

@@ -2,7 +2,7 @@
     <h2>@Ui["Cluster archive"]</h2>
     <p>@Ui["Export shared settings and saved and active workflows. Logs retained by the cluster members can be included."]</p>
     <label><input type="checkbox" @bind="includeLogs" disabled="@working" />@Ui["Include retained log entries"]</label>
-    <button @onclick="ExportAsync" disabled="@(working || !Connection.Connected)"><UiIcon Name="save" />@Ui["Export cluster archive"]</button>
+    <button @onclick="ExportAsync" disabled="@(working || !Connection.Connected)"><UiIcon Name="save" /><span class="control-label">@Ui["Export cluster archive"]</span></button>
     <p class="muted">@Ui["Restore archives from the CLI or Setup → Repair."]</p>
     @if (working)
     {

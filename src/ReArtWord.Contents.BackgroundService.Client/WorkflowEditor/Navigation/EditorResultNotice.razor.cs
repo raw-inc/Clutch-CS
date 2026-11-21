@@ -55,6 +55,7 @@ public sealed partial class EditorResultNotice
     private Func<string>? observed;
     private bool visible, hovered, focused, exitStarted;
     private int remaining;
+    private static string EscapeKey => "Escape";
 
     /// <summary>通知の有無だけを確認し、時間経過でグラフ全体を再描画しません。</summary>
     // 抑制理由: 開始した監視をexpiryで保持し、DisposeAsyncで取消後にawaitします。

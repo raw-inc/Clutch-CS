@@ -44,7 +44,16 @@ public sealed partial class ProcessPanel
     private Func<string>? message;
     private JsonElement? result;
     private bool busy, refreshing, stopOpen, resolveOpen, registrationOpen, restarting;
+    private string stopPolicy = "waitForManual";
     private string gracefulSeconds = "30", pid = string.Empty, startedAt = string.Empty, resolveMode = string.Empty;
+
+    private string? RemovalUnavailable => (refreshing, busy, target) switch
+    {
+        (true, _, _) => "Wait for the application list to finish refreshing.",
+        (_, true, _) => "Wait for the current application operation to finish.",
+        (_, _, null) => "Confirm the application host before removing a registration.",
+        _ => null
+    };
 
     private string Owner => (Connection.Current?.Peers.FirstOrDefault(item => string.Equals(item.PeerId, peer, StringComparison.Ordinal))?.HostId ?? peer)
         + " / " + cluster + " / " + peer;
@@ -164,7 +173,34 @@ public sealed partial class ProcessPanel
         await LoadAsync(token).ConfigureAwait(true);
     }, cancellationToken);
 
-    /// <summary>停止方針を明示した操作だけを受付けます。</summary>
+    private string StopImpact
+    {
+        get
+        {
+            string forcePolicy = "force";
+            if (!string.Equals(stopPolicy, forcePolicy, StringComparison.Ordinal))
+            {
+                return Ui["If the application does not exit in time, stop it manually."];
+            }
+
+            if (int.TryParse(gracefulSeconds, out int seconds) && seconds is >= 1 and <= 3600)
+            {
+                return Ui.Format("If the application does not exit within {0} seconds, it will be terminated. Unsaved data may be lost.", seconds);
+            }
+
+            return Ui["Enter the time to wait before forcing the application to stop. Unsaved data may be lost."];
+        }
+    }
+
+    /// <summary>操作を開き直したときは、強制終了の選択を引き継ぎません。</summary>
+    private void OpenStop(bool restart)
+    {
+        restarting = restart;
+        stopPolicy = "waitForManual";
+        stopOpen = true;
+    }
+
+    /// <summary>確認した停止方針と待機時間で操作を要求します。</summary>
     /// <returns>停止または終了確認後の再起動です。</returns>
     private Task StopAsync(string policy, CancellationToken cancellationToken = default)
     {
@@ -288,7 +324,7 @@ public sealed partial class ProcessPanel
         {
             return "Unknown";
         }
-        return item.Observed.Status?.Running switch { true => "Running", false => "Stopped", _ => "Unknown" };
+        return item.Observed.Status?.Running switch { true => "Running", false => "Process stopped", _ => "Unknown" };
     }
 
     /// <summary>登録操作の公開応答です。</summary>

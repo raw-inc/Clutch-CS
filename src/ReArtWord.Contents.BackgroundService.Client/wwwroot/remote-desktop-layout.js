@@ -13,7 +13,11 @@ export function createDesktopLayout(root, viewport, getViews, signal, getScaleMo
     function fitWorkspace()
     {
         const fullscreen = document.fullscreenElement === root;
-        const bottom = fullscreen ? 0 : (document.querySelector('.app-statusbar')?.getBoundingClientRect().height ?? 0) + 12;
+        const connected = 'connected';
+        const gap = root.dataset?.state === connected ? 0 : 12;
+        const footer = document.querySelector('.app-statusbar'), fixed = 'fixed';
+        const footerHeight = footer && getComputedStyle(footer).position === fixed ? footer.getBoundingClientRect().height : 0;
+        const bottom = fullscreen ? 0 : footerHeight + gap;
         const top = fullscreen ? 0 : Math.max(0, root.getBoundingClientRect().top + window.scrollY);
         const visible = window.visualViewport;
         const bottomEdge = visible ? visible.height + visible.offsetTop + window.scrollY : window.innerHeight;

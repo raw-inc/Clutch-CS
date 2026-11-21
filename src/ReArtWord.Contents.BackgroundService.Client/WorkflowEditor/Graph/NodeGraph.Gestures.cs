@@ -11,6 +11,7 @@ public sealed partial class NodeGraph
     private WorkflowDefinition? dragDocument;
     private readonly Dictionary<string, NodePosition> dragOrigins = new(StringComparer.Ordinal);
     private NodeSize? sizeOrigin, sizePreview;
+    private NodePosition? startClient;
 
     /// <summary>既存のポインター捕捉を使い、位置ではなく寸法を変更します。</summary>
     /// <returns>寸法変更の開始です。</returns>
@@ -97,6 +98,7 @@ public sealed partial class NodeGraph
         dragDocument = Model.Draft.Document;
         original = Position(node);
         dragging = node.Id;
+        startClient = new(e.ClientX, e.ClientY);
         int generation = Model.Generation;
         NodePosition? point = await Script.InvokeAsync<NodePosition>("contentsBrowser.beginDrag", UiCancellation, canvas, e.ClientX, e.ClientY, e.PointerId).ConfigureAwait(true);
         if (!string.Equals(dragging, node.Id, StringComparison.Ordinal) || generation != Model.Generation || !ReferenceEquals(dragDocument, Model.Draft.Document))
@@ -175,6 +177,15 @@ public sealed partial class NodeGraph
             await CancelDragAsync().ConfigureAwait(true);
             return;
         }
+
+        // 選択でペインの幅が変わっても、ポインターを動かさなければ配置は確定しません。
+        double dxClient = args.ClientX - (startClient?.X ?? args.ClientX);
+        double dyClient = args.ClientY - (startClient?.Y ?? args.ClientY);
+        if (dxClient * dxClient + dyClient * dyClient < 16)
+        {
+            await CancelDragAsync().ConfigureAwait(true);
+            return;
+        }
         MovePointer(point.X, point.Y, version);
         if (resizing && dragging is not null && sizePreview is not null)
         {
@@ -189,6 +200,7 @@ public sealed partial class NodeGraph
         }
 
         dragOrigins.Clear();
+        startClient = null;
         resizing = false;
         sizeOrigin = sizePreview = null;
         dragging = null;
@@ -206,6 +218,7 @@ public sealed partial class NodeGraph
     private async Task CancelDragAsync()
     {
         dragOrigins.Clear();
+        startClient = null;
         resizing = false;
         sizeOrigin = sizePreview = null;
         dragging = null;

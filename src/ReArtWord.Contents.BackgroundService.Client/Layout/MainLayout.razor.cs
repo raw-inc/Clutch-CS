@@ -96,6 +96,21 @@ public sealed partial class MainLayout : IAsyncDisposable
     }
 
     private Contracts.Management.ClientBranding branding = new();
+    private static readonly (string Route, string Icon, string Name)[] navigationItems =
+    [
+        ("dashboard", "dashboard", "Dashboard"), ("editor", "nodes", "WorkflowEditor"),
+        ("host-manager", "hosts", "HostManager"), ("file-transfer", "folder", "FileTransfer"),
+        ("terminal", "terminal", "Terminal"), ("desktop", "monitor", "RemoteDesktop"),
+        ("signal-scope", "signal", "SignalScope"), ("logs", "logs", "LogViewer")
+    ];
+
+    private string NavigationRoute => new Uri(Navigation.Uri).AbsolutePath.Trim('/') switch
+    {
+        "" => "dashboard",
+        "browser-transfer" => "file-transfer",
+        var route => route
+    };
+
     private bool IsRemoteTools => new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/') is "/terminal" or "/file-transfer" or "/browser-transfer" or "/desktop" or "/licenses" or "/host-manager" or "/signal-scope";
     private bool IsEditor => new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/').EndsWith("/editor", StringComparison.OrdinalIgnoreCase);
     private bool IsDashboard => new Uri(Navigation.Uri).AbsolutePath.TrimEnd('/') is "" or "/dashboard";

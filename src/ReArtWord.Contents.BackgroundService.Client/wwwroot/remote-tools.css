@@ -2,7 +2,7 @@
     margin-bottom: 18px;
 }
 
-.remote-tools h2 {
+.remote-tools :where(h2:not(.dialog-heading > h2)) {
     font-size: 14px;
 }
 
@@ -10,11 +10,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-}
-
-.remote-tools button:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
 }
 
 .remote-message:empty {
@@ -32,9 +27,10 @@
 
 .remote-empty {
     padding: 24px 12px;
-    color: var(--muted);
-    font-size: 12px;
     line-height: 1.8;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--muted);
 }
 
 /* Shared quiet surfaces and compact controls match the desktop and dashboard. */
@@ -46,7 +42,7 @@
     padding: 8px 10px;
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     font-size: 11px;
 }
 
@@ -55,7 +51,7 @@
     min-width: 130px;
     max-width: 260px;
     height: 30px;
-    padding: 4px 8px;
+    padding-block: 4px;
     font-size: 11px;
 }
 
@@ -66,6 +62,7 @@
     margin: 0;
     color: var(--muted);
     font-size: 11px;
+    white-space: nowrap;
 }
 
 .tool-toolbar button {
@@ -99,8 +96,11 @@
 }
 
 .tool-help summary {
-    cursor: pointer;
-    width: fit-content;
+    min-height: 38px;
+    font-size: 13px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    background: var(--panel);
 }
 
 .tool-help p {
@@ -120,7 +120,7 @@
     min-height: 240px;
     align-items: stretch;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     overflow: hidden;
     background: var(--paper);
 }
@@ -131,17 +131,6 @@
     border-bottom: 1px solid var(--line);
     border-radius: 0;
     gap: 6px;
-}
-
-.terminal-toolbar button:not(.primary) {
-    background: transparent;
-    border-color: transparent;
-    color: var(--muted);
-}
-
-.terminal-toolbar button:hover:not(:disabled) {
-    background: var(--raised);
-    color: var(--ink);
 }
 
 .terminal-toolbar .terminal-fullscreen {
@@ -156,10 +145,6 @@
     height: 32px;
     min-width: 32px;
     padding: 6px;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    background: transparent;
-    color: var(--muted);
     font-size: 0;
     gap: 0;
 }
@@ -167,11 +152,6 @@
 .terminal-workspace .terminal-action .ui-icon {
     width: 17px;
     height: 17px;
-}
-
-.terminal-workspace .terminal-action:hover {
-    background: var(--raised);
-    color: var(--ink);
 }
 
 .terminal-workspace .terminal-action[aria-pressed="true"] {
@@ -260,26 +240,47 @@
 .terminal-session {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 6px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--line);
+    padding: 8px;
+    border-inline-start: 2px solid transparent;
+    border-block-end: 1px solid var(--line);
+    border-radius: var(--radius-inset);
 }
 
 .terminal-session.selected {
-    border-left: 2px solid var(--accent);
-    padding-left: 10px;
+    border-inline-start-color: var(--accent);
+    background: var(--accent-soft);
 }
 
-.terminal-session span {
-    width: 100%;
+.terminal-session > span:first-child {
+    flex-basis: 100%;
     overflow-wrap: anywhere;
     font-size: 11px;
 }
 
-.terminal-session button,
+.terminal-session > .badge {
+    justify-self: start;
+}
+
+.terminal-session > button,
 .remote-sidebar .toolbar button {
     font-size: 11px;
     padding: 4px 7px;
+}
+
+.terminal-session > button {
+    min-width: 0;
+    min-height: 34px;
+    gap: 4px;
+    padding-inline: 12px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.terminal-session > button > .ui-icon {
+    width: 14px;
+    height: 14px;
 }
 
 .terminal-panel {
@@ -303,6 +304,8 @@
 }
 
 .terminal-screen {
+    color: var(--ink);
+    caret-color: var(--accent);
     display: flex;
     flex: 1;
     min-width: 0;
@@ -318,15 +321,19 @@
 }
 
 .terminal-screen:empty::after {
-    content: '>_';
     font: 36px Consolas, monospace;
-    color: var(--line);
+    content: attr(data-empty-hint);
+    display: block;
+    margin: 16px;
+    color: var(--muted);
+    font-size: 14px;
 }
 
 .terminal-surface {
     flex: 1;
     min-width: 0;
     min-height: 0;
+    scrollbar-color: var(--control) var(--panel);
 }
 
 .terminal-surface > .xterm {
@@ -341,7 +348,7 @@
     background: var(--raised);
     padding: 5px;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     box-shadow: 0 8px 30px #0006;
 }
 
@@ -357,57 +364,61 @@
     background: var(--accent-soft);
 }
 
-.terminal-keys {
-    display: block;
+.terminal-key-scroll {
     flex-shrink: 0;
-    border-top: 1px solid var(--line);
-    padding-top: 8px;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
+    border-block-start: 1px solid var(--line);
+    padding-block-start: 8px;
+}
+
+.terminal-keys {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(max-content, 1fr));
+    gap: 4px;
 }
 
 .terminal-keys > div {
-    display: grid;
-    grid-template-columns: repeat(8, minmax(44px, 1fr));
-    gap: 4px;
-    min-width: 380px;
-}
-
-.terminal-keys > div + div {
-    margin-top: 4px;
+    display: contents;
 }
 
 .terminal-keys button {
+    min-inline-size: 44px;
     min-height: 44px;
     padding: 4px;
-    font-size: 12px;
     touch-action: manipulation;
-    background: var(--panel);
-    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
 }
 
-.terminal-keys button[aria-pressed="true"] {
+.terminal-keys button:enabled[aria-pressed="true"] {
     background: var(--accent-soft);
     border-color: var(--accent);
     color: var(--accent);
 }
 
 .transfer-modes {
-    display: flex;
-    gap: 24px;
-    border-bottom: 1px solid var(--line);
-    margin: 0 0 18px;
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px;
+    margin-bottom: 16px;
+    border-radius: var(--radius-panel);
+    background: var(--card);
 }
 
 .transfer-modes a {
-    padding: 10px 2px;
+    padding: 8px 14px;
+    border-radius: var(--radius-control);
     color: var(--muted);
-    font-size: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
 }
 
 .transfer-modes a[aria-current="page"] {
-    border-bottom: 2px solid var(--accent);
-    color: var(--ink);
+    background: var(--accent-soft);
+    color: var(--accent);
+    box-shadow: inset 0 -2px var(--accent);
+    font-weight: 650;
 }
 
 .file-workspace {
@@ -415,15 +426,17 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 14px;
     margin: 12px 0 20px;
-    align-items: start;
+    align-items: stretch;
 }
 
 .file-pane {
     min-width: 0;
     background: var(--paper);
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .file-pane > label,
@@ -435,8 +448,8 @@
     border-bottom: 1px solid var(--line);
     padding: 10px 12px;
     margin: 0;
-    font-size: 11px;
-    font-weight: 500;
+    font-size: 14px;
+    font-weight: 600;
     color: var(--muted);
 }
 
@@ -461,41 +474,15 @@
 }
 
 .file-navigation button {
-    font-size: 11px;
-    padding: 5px 9px;
-    background: transparent;
-    border-color: transparent;
-    color: var(--muted);
-    min-height: 30px;
+    font-size: 12px;
+    padding: 6px 9px 4px;
+    min-height: 36px;
 }
 
-.file-navigation button:hover {
-    background: var(--raised);
-    color: var(--ink);
-}
-
-.file-navigation button.danger {
+.file-name-error {
+    margin-block: 4px 12px;
     color: var(--danger);
-}
-
-.file-action-dialog {
-    width: min(480px, calc(100vw - 48px));
-    max-height: calc(100vh - 48px);
-    box-sizing: border-box;
-    padding: 24px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: var(--paper);
-    color: var(--ink);
-    overflow: auto;
-}
-
-.file-action-dialog::backdrop {
-    background: rgb(0 0 0 / 55%);
-}
-
-.file-action-dialog h2 {
-    margin-top: 0;
+    overflow-wrap: anywhere;
 }
 
 .file-action-location {
@@ -509,11 +496,6 @@
     overflow-wrap: anywhere;
 }
 
-.file-action-dialog .toolbar {
-    justify-content: flex-end;
-    margin-top: 20px;
-}
-
 .file-location {
     display: flex;
     gap: 6px;
@@ -525,7 +507,7 @@
     min-width: 0;
     height: 30px;
     padding: 5px 8px;
-    font: 11px Consolas, monospace;
+    font: 14px Consolas, monospace;
     background: var(--paper);
 }
 
@@ -535,6 +517,8 @@
 }
 
 .file-tree {
+    --file-download-width: 8.75rem;
+
     height: 44vh;
     min-height: 230px;
     overflow: auto;
@@ -597,8 +581,6 @@
 .file-pane-footer {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
     padding: 10px 12px;
     border-top: 1px solid var(--line);
     font-size: 11px;
@@ -606,10 +588,16 @@
     background: var(--panel);
     min-height: 52px;
     box-sizing: border-box;
+    margin-top: auto;
+    flex-wrap: wrap;
+    justify-content: start;
+    gap: 8px;
 }
 
 .file-pane-footer button {
-    font-size: 11px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 12px;
     padding: 5px 9px;
     min-height: 30px;
 }
@@ -653,7 +641,7 @@
     font-size: 11px;
     padding: 6px 10px;
     border: 1px solid var(--line);
-    border-radius: 4px;
+    border-radius: var(--radius-control);
 }
 
 .transfer-jobs {
@@ -682,7 +670,7 @@
 
 .transfer-job progress {
     width: 100%;
-    height: 5px;
+    height: 8px;
     accent-color: var(--accent);
 }
 
@@ -692,31 +680,36 @@
 }
 
 .license-list {
-    max-width: 1100px;
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
+}
+
+.license-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+    gap: 16px;
+    align-items: start;
+    overflow-wrap: anywhere;
+}
+
+.license-list > .page-description {
+    grid-column: 1 / -1;
+    max-width: 80ch;
 }
 
 .license-list section {
-    padding: 18px 0;
-    border-bottom: 1px solid var(--line);
+    padding: clamp(16px, 2vw, 24px);
+    min-width: 0;
+    background: var(--card);
+    border-radius: var(--radius-panel);
+    font-size: 14px;
 }
 
 .license-list h2 {
-    font-size: 16px;
-}
-
-.license-list details {
-    margin-top: 12px;
-}
-
-.license-list pre {
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    font-size: 12px;
-    line-height: 1.6;
-    padding: 16px;
-    background: var(--raised);
-    border: 1px solid var(--line);
-    border-radius: 6px;
+    font-size: 18px;
+    margin-bottom: 6px;
 }
 
 @media (max-width: 950px) {
@@ -795,8 +788,914 @@
     }
 
     .transfer-modes {
-        gap: 14px;
-        overflow-x: auto;
+        gap: 2px;
+    }
+}
+
+.terminal-session-actions,
+.terminal-screen-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.terminal-session-actions label {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.terminal-screen-actions {
+    margin-inline-start: auto;
+}
+
+.remote-tools .terminal-toolbar,
+.file-pane > label,
+.file-pane .file-pane-title {
+    background: var(--card);
+    padding: 12px;
+}
+
+.file-pane,
+.terminal-workspace {
+    border-radius: var(--radius-panel);
+    background: var(--panel);
+}
+
+.terminal-session-actions .terminal-shell {
+    max-width: min(65vw, 18rem);
+    min-width: min(12rem, 58vw);
+}
+
+.license-filter {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 24rem)) auto;
+    align-items: end;
+    justify-content: start;
+    gap: 8px 12px;
+    margin: 0;
+}
+
+.license-back {
+    justify-self: start;
+}
+
+.license-filter output {
+    white-space: nowrap;
+    align-self: end;
+    padding-block-end: 8px;
+    font-size: 13px;
+}
+
+.license-filter label {
+    margin: 0;
+    min-width: 0;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.license-filter label :is(input, select) {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    font-size: 14px;
+}
+
+.license-filter .search-field {
+    margin: 0;
+    min-height: 42px;
+}
+
+.license-filter label > select {
+    min-height: 42px;
+}
+
+.file-name-error:not([hidden]) {
+    display: flex;
+    align-items: start;
+    gap: 6px;
+}
+
+.file-name-error .ui-icon {
+    flex: none;
+}
+
+.transfer-jobs:empty {
+    display: none;
+}
+
+@media (max-width: 680px) {
+    .file-tree {
+        min-height: 6rem;
+    }
+
+    .file-row a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+    }
+}
+
+.terminal-state {
+    align-self: start;
+}
+
+.terminal-sidebar {
+    min-height: 0;
+    overflow: auto;
+    padding-bottom: 20px;
+    overflow-y: auto;
+}
+
+.terminal-keybar button:disabled {
+    background: var(--disabled-face);
+    color: var(--disabled-ink);
+}
+
+.license-list .license-cards {
+    display: block;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-panel);
+    overflow: clip;
+}
+
+.license-cards > section:last-child {
+    border-block-end: 0;
+}
+
+.license-cards > section {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 6px 16px;
+    padding: 12px 16px;
+    border-block-end: 1px solid var(--line);
+    margin: 0;
+    border-radius: 0;
+}
+
+.license-cards pre {
+    font: 14px/1.6 var(--font-body, system-ui);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+    overflow: auto;
+    padding: 8px 0;
+    border: 0;
+    background: transparent;
+}
+
+.file-pane-title,
+.transfer-jobs h2 {
+    font-size: 18px;
+}
+
+.file-mode-header label {
+    white-space: nowrap;
+}
+
+.terminal-sidebar h2,
+.file-pane-title {
+    align-self: start;
+}
+
+.file-row a[download] {
+    display: inline-flex;
+    flex: none;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+    width: var(--file-download-width);
+    border: 1px solid var(--button-line);
+    border-bottom-color: var(--button-line-bottom);
+    border-radius: var(--radius-control);
+    padding: 4px 8px;
+    background: var(--button-face);
+    color: var(--ink);
+    box-shadow: var(--button-shadow);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.file-row a[download]:hover {
+    background: var(--button-hover);
+}
+
+@media (min-width: 681px) {
+    .file-tree:has(a[download]) .file-row > .file-kind:last-child {
+        margin-inline-end: calc(var(--file-download-width) + 9px);
+    }
+}
+
+@media (max-width: 680px) {
+    .file-row a[download] {
+        min-height: 44px;
+    }
+}
+
+.file-transfer-scope label,
+.files-tool .tool-toolbar > label {
+    white-space: nowrap;
+}
+
+.files-tool :is(.tool-toolbar, .file-pane > label, .file-pane-title) select {
+    align-self: center;
+    font-size: 14px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+}
+
+.terminal-keys button[data-direction] .ui-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.terminal-keys button[data-direction="up"] .ui-icon {
+    transform: rotate(-90deg);
+}
+
+.terminal-keys button[data-direction="down"] .ui-icon {
+    transform: rotate(90deg);
+}
+
+.terminal-keys button[data-direction="left"] .ui-icon {
+    transform: rotate(180deg);
+}
+
+.terminal-screen .xterm .xterm-viewport {
+    scrollbar-color: var(--control) var(--paper);
+    background: var(--paper);
+}
+
+.license-list .license-cards,
+.license-list .license-filter {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.license-filter > :is(select,input) {
+    max-width: 100%;
+}
+
+.files-tool > .tool-toolbar {
+    display: flex;
+    align-items: end;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+}
+
+.files-tool > .tool-toolbar > button {
+    margin-inline-start: auto;
+}
+
+.license-cards > section h2 {
+    grid-column: 1;
+    margin: 0;
+}
+
+.license-website {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.license-metadata .license-website {
+    display: flex;
+    width: fit-content;
+    margin-block-start: 2px;
+}
+
+.license-cards > section > p {
+    grid-column: 1 / -1;
+    margin: 0;
+    margin-block: 0;
+    font-size: 13px;
+}
+
+@media (max-width: 680px) {
+    .terminal-panel .terminal-screen {
+        min-height: 14rem;
+    }
+}
+
+@media (max-width: 680px) {
+    .files-tool .file-tree {
+        min-height: 0;
+        height: auto;
+        max-height: 40dvh;
+    }
+}
+
+.files-tool .tool-toolbar {
+    align-items: center;
+    border: 0;
+}
+
+.terminal-panel .terminal-target {
+    align-items: center;
+}
+
+.file-pane > .file-pane-title {
+    align-self: stretch;
+    width: 100%;
+    margin: 0;
+}
+
+.file-pane .file-navigation button:disabled {
+    color: var(--disabled-ink);
+    background: var(--disabled-face);
+    border-color: var(--line);
+    opacity: 1;
+}
+
+.file-pane .file-picker-control,
+.file-pane .file-location + button {
+    min-height: 40px;
+}
+
+.transfer-jobs > .remote-empty {
+    padding: 0;
+    margin: 0 0 12px;
+    color: var(--ink);
+}
+
+.file-root-note {
+    display: flex;
+    align-items: start;
+    gap: 6px;
+    margin: 0;
+    padding-inline: 12px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.file-root-note[hidden] {
+    display: none;
+}
+
+.file-root-note .ui-icon {
+    margin-block-start: 3px;
+    width: 14px;
+    height: 14px;
+}
+
+.file-picker-result {
+    flex-basis: 100%;
+    overflow-wrap: anywhere;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.license-website .ui-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.license-columns,
+.license-cards > section {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(4.25rem, 0.65fr) minmax(5rem, 0.8fr) minmax(0, 1.4fr) 11.5rem;
+    gap: 4px 12px;
+    align-items: center;
+    padding: 7px 12px;
+}
+
+.license-columns {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.license-cards .license-metadata {
+    display: contents;
+}
+
+.license-cards .license-metadata > span {
+    grid-row: 1;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+@media (min-width: 761px) {
+    .license-cards > section > h2 {
+        grid-row: 1;
+    }
+
+    .license-metadata > span:nth-child(1) {
+        grid-column: 2;
+    }
+
+    .license-metadata > span:nth-child(2) {
+        grid-column: 3;
+    }
+
+    .license-metadata > span:nth-child(3) {
+        grid-column: 4;
+    }
+}
+
+.license-toggle {
+    grid-column: -2;
+    grid-row: 1;
+    justify-self: end;
+    min-height: 38px;
+    width: 11.5rem;
+    max-width: 100%;
+    white-space: nowrap;
+    margin: 0;
+}
+
+.license-toggle[aria-expanded="true"] {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: none;
+}
+
+.license-toggle[aria-expanded="true"] > .ui-icon {
+    rotate: 180deg;
+}
+
+.license-notices {
+    grid-column: 1 / -1;
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+}
+
+.license-notice-pin {
+    position: sticky;
+    z-index: 2;
+    inset-block-start: 0;
+    height: 0;
+}
+
+.license-notice-actions {
+    position: absolute;
+    inset-inline: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 12px;
+    border-block-end: 1px solid var(--line);
+    background: var(--panel);
+}
+
+.license-notice-actions > strong {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+}
+
+.license-notice-actions button {
+    flex: none;
+    margin: 0;
+}
+
+.license-notice {
+    padding: 12px;
+}
+
+.license-notice + .license-notice {
+    border-block-start: 1px solid var(--line);
+}
+
+.license-notice > h3,
+.license-notice-text h4 {
+    font-size: 15px;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.license-notice-text h4 {
+    margin-block-start: 16px;
+    padding-block-start: 12px;
+    border-block-start: 1px solid var(--line);
+}
+
+.license-notice-text > pre {
+    max-height: none;
+    margin: 0;
+    overflow: visible;
+}
+
+.license-author-address {
+    display: inline-block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+    .license-columns {
+        display: none;
+    }
+
+    .license-cards > section {
+        grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: 8px;
+    }
+
+    .license-toggle {
+        grid-row: 2;
+        min-height: 44px;
+    }
+
+    .license-prose {
+        white-space: normal;
+    }
+
+    .license-cards > section > h2 {
+        grid-column: 1 / -1;
+    }
+
+    .license-cards .license-metadata {
+        display: flex;
+        grid-column: 1 / -1;
+        flex-wrap: wrap;
+        gap: 4px 12px;
+    }
+
+    .license-cards .license-metadata > span:nth-child(3) {
+        flex-basis: 100%;
+    }
+
+    .license-cards .license-metadata > span::before {
+        content: attr(data-label) " ";
+        color: var(--muted);
+    }
+}
+
+.files-tool .button-link {
+    text-decoration: none;
+}
+
+.terminal-shell {
+    padding-inline-end: 32px;
+}
+
+.file-action-dialog [role="alert"] {
+    max-width: none;
+    word-break: auto-phrase;
+}
+
+.terminal-sources {
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--control) transparent;
+}
+
+.terminal-sources .terminal-sidebar {
+    overflow: visible;
+    border-inline-end: 0;
+}
+
+@media (min-width: 651px) {
+    .terminal-source-scroll {
+        align-self: stretch;
+        border-inline-end: 1px solid var(--line);
+    }
+}
+
+.terminal-sidebar-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.terminal-sidebar-heading h2 {
+    align-self: center;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.terminal-sidebar details > summary {
+    min-height: 36px;
+}
+
+.terminal-session-actions .terminal-shell-field {
+    flex: 0 1 auto;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.terminal-launch-hint,
+.terminal-shell-path {
+    flex: 0 0 100%;
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.terminal-shell-path {
+    order: 1;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+}
+
+.terminal-launch-hint {
+    order: 2;
+}
+
+.terminal-panel > .terminal-state {
+    margin-block: 6px;
+}
+
+.file-pane .file-tree {
+    height: auto;
+    min-height: 7rem;
+    max-height: min(34dvh, 24rem);
+}
+
+.file-pane-footer > button:not(.danger) {
+    margin-inline-start: auto;
+}
+
+.file-pane :is(.file-picker-control, .file-picker-control > span:first-child, button.local-folder) {
+    min-height: 40px;
+    font-weight: 600;
+}
+
+.file-transfer-scope,
+.remote-tools .terminal-toolbar {
+    align-items: end;
+    background: var(--card);
+}
+
+.files-tool > .file-transfer-scope {
+    display: grid;
+    grid-template-columns: minmax(0, 18rem) auto;
+    align-items: end;
+    gap: 8px 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+}
+
+.file-transfer-scope > label {
+    display: grid;
+    gap: 4px;
+    font-size: 13px;
+    white-space: normal;
+}
+
+.file-transfer-scope > label select {
+    width: 100%;
+    min-width: 0;
+}
+
+.file-transfer-scope > button {
+    justify-self: start;
+}
+
+.file-transfer-scope > .tool-status {
+    grid-column: 1 / -1;
+    font-size: 13px;
+}
+
+.file-transfer-scope > .tool-status:empty {
+    display: none;
+}
+
+@media (min-width: 1100px) {
+    .remote-tools .terminal-toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: start;
+    }
+
+    .terminal-screen-actions {
+        margin-block-start: calc(7px + 1.5em);
+        font-size: 13px;
+    }
+}
+
+@media (min-width: 651px) {
+    .terminal-sources > summary {
+        display: none;
+    }
+
+    .terminal-sources::details-content {
+        block-size: auto;
+        opacity: 1;
+    }
+}
+
+@media (max-width: 650px) {
+    .terminal-workspace {
+        grid-template-rows: auto auto auto;
+    }
+
+    .terminal-sources {
+        overflow: visible;
+        border-block-end: 1px solid var(--line);
+    }
+
+    .terminal-sources > summary {
+        position: relative;
+        font-size: 14px;
+        padding-inline-start: 14px;
+        min-height: 44px;
+        background: var(--panel);
+    }
+
+    .terminal-sources > summary::after {
+        inset-inline-end: 22px;
+    }
+
+    .terminal-session-actions .terminal-shell-field {
+        flex-basis: 100%;
+    }
+
+    .terminal-shell-path {
+        order: 0;
+    }
+
+    .terminal-session-actions .terminal-shell {
+        max-width: 100%;
+    }
+
+    .terminal-sidebar button,
+    .terminal-sidebar details > summary,
+    .remote-tools .terminal-toolbar button,
+    .terminal-session-actions select,
+    .file-pane :is(.file-picker-control, .file-picker-control > span:first-child, button.local-folder) {
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 650px), (max-height: 650px) {
+    .terminal-workspace .terminal-screen:not(:fullscreen) {
+        flex: 1 0 clamp(14rem, 36dvh, 25rem);
+    }
+
+    .terminal-workspace:fullscreen {
+        overflow-y: auto;
+    }
+}
+
+@media (max-width: 650px) {
+    .file-transfer-scope > label {
+        flex: 1 0 100%;
+    }
+
+    .file-transfer-scope > .tool-status {
+        margin-block: 0 4px;
+    }
+
+    .file-transfer-scope > label select {
+        width: 100%;
+        max-width: none;
+    }
+
+    .files-tool .file-transfer-scope > button {
+        margin-inline: 0;
+    }
+
+    .file-pane :is(.file-navigation button, .file-location :is(input, button), .file-pane-footer button, .file-pane-title select, .file-row > .button-link),
+    .file-pane > label select,
+    .tool-help summary {
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 680px) {
+    .license-filter {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (min-width: 651px) {
+    .terminal-sidebar-heading > h2 {
         white-space: nowrap;
     }
+
+    .terminal-sidebar-heading > button {
+        margin-inline-start: auto;
+    }
+}
+
+:is(.tool-connection, .desktop-targets) {
+    --tool-control-height: 40px;
+
+    color: var(--ink);
+}
+
+:is(.tool-connection, .desktop-targets) label {
+    display: grid;
+    gap: 4px;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+:is(.tool-connection, .desktop-targets) :is(button, select) {
+    min-height: var(--tool-control-height);
+    font-size: 13px;
+}
+
+:is(.tool-connection, .desktop-targets) label select {
+    font-size: 14px;
+}
+
+:is(.tool-connection, .desktop-targets) button {
+    gap: 8px;
+}
+
+.file-location input::placeholder {
+    font: 13px var(--font-ui);
+    color: var(--muted);
+    opacity: 1;
+}
+
+:is(.tool-connection, .desktop-targets) button > .ui-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.terminal-session-actions {
+    align-items: end;
+}
+
+.terminal-sidebar .terminal-session > button {
+    width: auto;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.terminal-sidebar .terminal-session > :is(.terminal-claim, .terminal-connected) {
+    inline-size: 5.25rem;
+    flex: none;
+}
+
+.terminal-sidebar .terminal-session > .terminal-end-session {
+    padding-inline: 8px;
+}
+
+.file-copy-hint {
+    margin: 0;
+    padding: 6px 12px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.terminal-sidebar-heading > button {
+    min-height: 32px;
+}
+
+.terminal-keys button:enabled:not([aria-pressed="true"]) {
+    box-shadow: var(--button-shadow);
+    border-color: var(--button-line);
+}
+
+.transfer-jobs > .remote-empty,
+.transfer-jobs > .empty {
+    font-size: 16px;
+}
+
+@media (max-width: 650px) {
+    :is(.tool-connection, .desktop-targets) {
+        --tool-control-height: 44px;
+    }
+
+    .terminal-source-scroll > .terminal-sources {
+        overflow: visible;
+    }
+}
+
+.files-tool > .browser-file-scope {
+    grid-template-columns: repeat(2, minmax(0, 18rem)) auto;
+}
+
+.files-tool > .file-transfer-scope > button {
+    grid-column: -2;
+    grid-row: 1;
+    justify-self: end;
+}
+
+@media (max-width: 650px) {
+    .files-tool > .file-transfer-scope {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .files-tool > .file-transfer-scope > button {
+        grid-column: 1;
+        grid-row: auto;
+        justify-self: start;
+    }
+}
+
+.terminal-confirm-session {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
 }

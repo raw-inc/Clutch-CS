@@ -1,18 +1,18 @@
 .dashboard-comment {
-    padding: 12px;
+    padding: 12px 5px;
 }
 
 .comment-text {
     display: block;
     width: 100%;
     min-height: 36px;
-    padding: 2px;
-    border: 0;
-    border-radius: 3px;
+    padding: 8px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
     background: transparent;
     color: var(--ink);
     font: inherit;
-    font-size: 13px;
+    font-size: 16px;
     line-height: 1.6;
     text-align: left;
     white-space: pre-wrap;
@@ -30,13 +30,12 @@
     cursor: default;
 }
 
-.comment-text:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 3px;
-}
-
 .dashboard-comment textarea {
     width: 100%;
+    padding: 8px;
+    font: inherit;
+    font-size: 16px;
+    line-height: 1.6;
     min-height: 96px;
     resize: vertical;
 }
@@ -44,4 +43,25 @@
 .dashboard-comment small {
     display: block;
     margin-top: 6px;
+}
+
+p.comment-text {
+    white-space: pre-wrap;
+    font-size: 16px;
+    line-height: 1.6;
+    cursor: text;
+}
+
+:lang(ja) :is(.comment-text, .dashboard-comment textarea) {
+    word-break: auto-phrase;
+}
+
+.comment-continuation {
+    margin-inline: 8px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+}
+
+.comment-continuation > p {
+    padding-inline: 8px;
 }

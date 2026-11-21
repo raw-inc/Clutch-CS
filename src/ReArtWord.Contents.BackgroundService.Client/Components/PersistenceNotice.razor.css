@@ -4,10 +4,31 @@
     height: 22px;
     border: 0;
     background: transparent;
-    font-size: 10px;
+    font-size: inherit;
     color: var(--muted);
 }
 
 .app-statusbar .statusbar-action.warn {
     color: var(--warn);
+}
+
+.statusbar-action {
+    font-size: 12px;
+}
+
+.persistence-counts td {
+    align-items: baseline;
+}
+
+@media (max-width: 680px) {
+    .table-wrap:has(.persistence-counts) {
+        border: 0;
+        background: transparent;
+    }
+
+    .persistence-counts tbody tr {
+        border: 1px solid var(--line);
+        background: var(--nested);
+        margin: 0 0 10px;
+    }
 }

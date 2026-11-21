@@ -6,28 +6,33 @@
 @using ReArtWord.Contents.BackgroundService.Client.Overview.Updates
 <CascadingValue Name="DisplayLanguage" Value="Ui.Language">
 <CascadingValue Name="DisplayTimeZone" Value="DisplayTime.Zone">
+<div class="app-shell">
 <header class="topbar">
     <a href="/dashboard" class="brand" aria-label="@(branding.ContentsName + " " + branding.Subtitle)" title="@(branding.ContentsName + " " + branding.Subtitle)">
-        <span class="brand-mark">@if(branding.HeaderLogo is {} logo){<img src="@logo" alt="" />}else{<UiIcon Name="nodes" />}</span>
+        <span class="brand-mark">@if(branding.HeaderLogo is {} logo){<img src="@logo" alt="" />}else{<UiIcon Name="brand" />}</span>
         <span class="brand-name">@if(branding.ContentsLogo is {} wordmark){<img class="brand-wordmark" src="@wordmark" alt="@branding.ContentsName" />}else{<strong>@branding.ContentsName</strong>}<small>@branding.Subtitle</small></span>
     </a>
     <nav class="navigation" aria-label="@Ui["Main navigation"]">
-        <NavLink href="dashboard"><UiIcon Name="dashboard" />Dashboard</NavLink>
-        <NavLink href="editor"><UiIcon Name="nodes" />WorkflowEditor</NavLink>
-        <NavLink href="host-manager"><UiIcon Name="settings" />HostManager</NavLink>
-        <NavLink href="file-transfer"><UiIcon Name="folder" />FileTransfer</NavLink>
-        <NavLink href="terminal"><UiIcon Name="terminal" />Terminal</NavLink>
-        <NavLink href="desktop"><UiIcon Name="monitor" />RemoteDesktop</NavLink>
-        <NavLink href="signal-scope"><UiIcon Name="signal" />SignalScope</NavLink>
-        <NavLink href="logs"><UiIcon Name="logs" />LogViewer</NavLink>
+        <div class="navigation-links">
+        @foreach (var item in navigationItems)
+        {
+            <a href="@item.Route" class="@(NavigationRoute == item.Route ? "active" : null)" aria-current="@(NavigationRoute == item.Route ? "page" : null)"><UiIcon Name="@item.Icon" /><span class="control-label">@item.Name</span></a>
+        }
+        </div>
+        <details class="route-menu" @key="Navigation.Uri">
+            <summary aria-label='@Ui["Main navigation"]'><UiIcon Name="menu" /><span class="control-label">@(navigationItems.FirstOrDefault(item=>item.Route==NavigationRoute).Name ?? Ui["Menu"])</span></summary>
+            <div>
+                @foreach (var item in navigationItems)
+                {
+                    <a href="@item.Route" aria-current="@(NavigationRoute == item.Route ? "page" : null)"><UiIcon Name="@item.Icon" /><span class="control-label">@item.Name</span></a>
+                }
+            </div>
+        </details>
     </nav>
     <LanguageSelector />
     <div class="connection"><ConnectionPicker TargetChanged="StateHasChanged" ClusterId="@Api.SelectedClusterId" PeerId="@Api.SelectedPeerId" Connected="Connection.Connected" /></div>
 </header>
-<footer class="app-statusbar">
-    <div class="statusbar-left"><a href="/licenses">OSS License</a><span aria-hidden="true">|</span>@if(Api.SelectedClusterId is not null&&Api.SelectedPeerId is not null){<PersistenceNotice @key="(Api.SelectedClusterId,Api.SelectedPeerId)" Peers="@(Connection.Current?.Peers??[])" Connected="Connection.Connected" />}<TransferProgressPopup @ref="transfers" ActiveCount="transferCount" CountUnconfirmed="transferCountUnconfirmed" /><FleetUpdateFooter Updates="@Fleet.Activities" StaleOperations="@Fleet.StaleOperations" Unavailable="@Fleet.Unavailable" /><PwaStatus /></div>
-    <div class="statusbar-right"><span>Clutch-CS - © raw inc.</span><span aria-hidden="true">|</span><span title="@(Ui["footer.version"]+": "+FullUiVersion)">v@(ShortUiVersion)</span></div>
-</footer>
+<div class="app-content">
 @if(initialized)
 {
     @if(IsEditor){<EditorClusterTabs TargetChanged="StateHasChanged" />}
@@ -40,5 +45,11 @@
         <main class="page"><h1>@Ui["Select a cluster"]</h1>@if(!IsEditor){<p>@Ui["Use the connection picker to choose this PC’s network and cluster."]</p>}</main>
     }
 }
+</div>
+<footer class="app-statusbar">
+    <div class="statusbar-left"><a href="/licenses">OSS License</a>@if(Api.SelectedClusterId is not null&&Api.SelectedPeerId is not null){<PersistenceNotice @key="(Api.SelectedClusterId,Api.SelectedPeerId)" Peers="@(Connection.Current?.Peers??[])" Connected="Connection.Connected" />}<TransferProgressPopup @ref="transfers" ActiveCount="transferCount" CountUnconfirmed="transferCountUnconfirmed" /><FleetUpdateFooter Updates="@Fleet.Activities" StaleOperations="@Fleet.StaleOperations" Unavailable="@Fleet.Unavailable" /></div>
+    <div class="statusbar-right"><PwaStatus /><span>Clutch-CS - © raw inc.</span><span title="@(Ui["footer.version"]+": "+FullUiVersion)">v@(ShortUiVersion)</span></div>
+</footer>
+</div>
 </CascadingValue>
 </CascadingValue>

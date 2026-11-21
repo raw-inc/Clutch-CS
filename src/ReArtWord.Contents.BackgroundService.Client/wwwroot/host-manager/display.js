@@ -1,4 +1,4 @@
-import { node, select, field, heading, action, badge, table, empty } from './dom.js';
+import { node, select, field, heading, action, badge, table, empty, hostCount } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 
 /** ドライバーが公開したモードを、表示設定で選ぶ説明に変換します。
@@ -6,7 +6,7 @@ import { createReader, readStatus, noSelection } from './loader.js';
  */
 export function displayModeLabel(mode, translate = key => key)
 {
-    return `${mode.width} × ${mode.height} · ${mode.refreshRate} Hz · ${mode.bitsPerPixel} bit${mode.flags & 2 ? ` · ${translate('Interlaced')}` : ''}`;
+    return `${mode.width} × ${mode.height} · ${mode.refreshRate} Hz · ${mode.bitsPerPixel}\u00a0bit${mode.flags & 2 ? ` · ${translate('Interlaced')}` : ''}`;
 }
 
 /** 対応モードを確認して、保存対象の寸法・Hzを組として固定します。
@@ -32,7 +32,7 @@ export function displayView(root, ctx)
     {
         return noSelection(root, ctx);
     }
-    const title = heading(ctx.t('Display settings'), `${ctx.t('Selected hosts')}: ${hosts.length}`), status = node('div'), listing = node('div');
+    const title = heading(ctx.t('Display settings'), `${ctx.t('Selected hosts')}: ${hostCount(ctx, hosts.length)}`), status = node('div'), listing = node('div');
     const reader = createReader(ctx, hosts, () => ({ area: 'display' }), render);
     title.append(action(ctx, 'Refresh settings', 'refresh', () => reader.load()));
     root.append(title, node('p', ctx.t('Choose a mode reported by the connected display. Desktop position, rotation and the primary display are retained.'), 'hm-muted'), status, listing);
@@ -43,11 +43,19 @@ export function displayView(root, ctx)
         const dialog = ctx.dialog('Change display mode');
         const current = display.modes.findIndex(mode => JSON.stringify(mode) === JSON.stringify(display.current));
         const modes = select(display.modes.map((mode, index) => [String(index), displayModeLabel(mode, ctx.t)]), String(current));
-        dialog.root.append(node('p', `${host.target.hostId} · ${display.name}`), field(ctx.t('Resolution and refresh rate'), modes));
-        dialog.footer.append(ctx.button('Cancel', dialog.close), action(ctx, 'Preview changes', 'check', () => ctx.preview([
+        const currentMode = node('dl', '', 'hm-display-current-mode');
+        currentMode.append(node('dt', ctx.t('Current mode')), node('dd', displayModeLabel(display.current, ctx.t)));
+        dialog.root.append(node('p', `${ctx.t('Target hosts')}: ${host.target.hostId} · ${display.name}`), currentMode, field(ctx.t('Resolution and refresh rate'), modes), node('p', ctx.t('Choose a different mode to preview the change.'), 'hm-muted'));
+        const preview = action(ctx, 'Preview changes', 'check', () => ctx.preview([
             { host, query: { area: 'display', resourceId: display.id }, action: 'display', baseRevision: display.revision,
                 change: displayChange(display, modes.value.length ? Number(modes.value) : Number.NaN), label: display.name }
-        ]), true));
+        ]), true);
+        preview.disabled = true;
+        modes.onchange = () =>
+        {
+            preview.disabled = !modes.value || Number(modes.value) === current;
+        };
+        dialog.footer.append(ctx.button('Cancel', dialog.close), preview);
     }
 
     /** 読取りが確認できたHostだけに編集操作を表示します。 */

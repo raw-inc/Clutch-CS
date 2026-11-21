@@ -47,6 +47,13 @@ public sealed partial class OverviewHostCard
     private static readonly string[] powerActions = ["restart", "shutdown"];
     private bool powerBusy;
     private string? powerProblem;
+    private string HealthState => (Offline, stale) switch
+    {
+        (true, _) => "Offline",
+        (_, true) => "Previous / unconfirmed",
+        _ => (PowerTarget?.Peer.Status ?? item.Peer.Status).ToString()
+    };
+
     private bool Offline => PowerPeers.Count != 0 && PowerPeers.All(peer => !peer.Online);
     private DashboardHostPeer? PowerTarget => PowerPeers.Where(peer => peer.Online && peer.Peer.Status is EPeerStatus.Ready or EPeerStatus.Syncing)
         .OrderByDescending(peer => peer.Peer.InstanceId == item.Peer.InstanceId).ThenBy(peer => peer.ClusterId, StringComparer.Ordinal).FirstOrDefault();
@@ -233,8 +240,14 @@ public sealed partial class OverviewHostCard
                                                                : value.Value.ToString("0.0", CultureInfo.CurrentCulture) + " °C";
 
     /// <summary>取得不能を区別して通信量を毎秒の単位で表示します。</summary>
-    /// <returns>MiB/sまたはKiB/sの通信量、取得不能ならダッシュです。</returns>
-    private static string Rate(double? value) => value is null ? "—"
-                                                               : 1048576 <= value.Value ? (value.Value / 1048576).ToString("0.00", CultureInfo.CurrentCulture) + " MiB/s"
-                                                                                        : (value.Value / 1024).ToString("0.0", CultureInfo.CurrentCulture) + " KiB/s";
+    /// <returns>概要と同じ毎秒ビット数で表した通信量です。</returns>
+    private static string Rate(double? value)
+    {
+        if (value is null)
+        {
+            return "—";
+        }
+        var (number, unit) = NetworkThroughput(value);
+        return number + " " + unit;
+    }
 }

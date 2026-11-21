@@ -1,0 +1,70 @@
+:root {
+    color-scheme: light dark;
+
+    --paper: light-dark(#f5f5f2, #111);
+    --panel: light-dark(#fcfcfa, #202227);
+    --raised: light-dark(#e1e5ed, #2d3038);
+    --card: light-dark(#e1e5ed, #282b32);
+    --nested: light-dark(#f1f2f5, #17191d);
+    --ink: light-dark(#17181d, #f2f6f6);
+    --muted: light-dark(#424858, #cacfce);
+    --line: light-dark(#bac3d2, #494d57);
+    --control: light-dark(#616b80, #9caac2);
+    --button-face: light-dark(var(--panel), color-mix(in srgb, var(--raised), var(--control) 18%));
+    --button-hover: light-dark(color-mix(in srgb, var(--panel), var(--raised) 35%), color-mix(in srgb, var(--raised), var(--control) 26%));
+    --button-line: color-mix(in srgb, var(--line), var(--control) 40%);
+    --button-line-bottom: light-dark(color-mix(in srgb, var(--line), var(--control) 70%), var(--button-line));
+    --button-shadow: 0 1px 2px light-dark(rgb(23 24 29 / 20%), rgb(0 0 0 / 60%));
+    --accent: light-dark(#3f49b2, #8fa3fa);
+    --accent-hover: light-dark(#39419c, #a1b2f9);
+    --on-accent: light-dark(#f5f5f2, #111631);
+    --accent-soft: light-dark(#e1e2eb, #252f65);
+    --warn: light-dark(#963607, #ffac8a);
+    --warn-soft: light-dark(#f6e6da, #492718);
+    --green: light-dark(#1f674d, #83d9b5);
+    --green-soft: light-dark(#d9eee3, #19392f);
+    --danger: light-dark(#b02232, #ff9da8);
+    --danger-soft: light-dark(#f7dfe1, #40252d);
+    --danger-fill: light-dark(#b02232, #e7909c);
+    --danger-fill-hover: light-dark(#99212f, #ff9da8);
+    --warn-fill: light-dark(#963607, #de977e);
+    --warn-fill-hover: light-dark(#83320a, #ffac8a);
+    --violet: light-dark(#70468e, #d3acf1);
+    --disabled-ink: light-dark(#535b68, #9097a4);
+    --disabled-face: light-dark(#d1d6de, #25272d);
+    --disabled-line: light-dark(#a4acb9, #4a505c);
+    --backdrop: rgb(13 16 22 / 58%);
+    --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%23768093' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    --motion-fast: 140ms;
+    --motion-base: 240ms;
+    --motion-close: 320ms;
+    --ease-action: cubic-bezier(0.2, 0, 0, 1);
+    --ease-panel: cubic-bezier(0.22, 0.69, 0.4, 1);
+    --control-label-offset: 0.16em;
+    --radius-control: 6px;
+    --radius-panel: 12px;
+    --panel-inset: 8px;
+    --radius-inset: max(0px, calc(var(--radius-panel) - var(--panel-inset)));
+    --radius-chart: 3px;
+    --focus-face: color-mix(in srgb, var(--accent) 20%, var(--panel));
+    --radius-pill: 999px;
+    --font-title: roboto, "Zen Kaku Gothic New", "M PLUS 2", meiryo, system-ui, sans-serif;
+    --font-ui: roboto, "M PLUS 2", "Yu Gothic UI", meiryo, system-ui, sans-serif;
+
+    font: 500 16px/1.75 var(--font-ui);
+    background: var(--paper);
+    color: var(--ink);
+}
+
+/* カードとその直下の面は、対応ブラウザーでは同じ曲線で角をつなぎます。 */
+:where(.card, .health-card, .dialog, .dashboard-card, .metric-cell, .workspace-index, .hm-main, .hm-content, .hm-target-picker, .scope-sidebar, .scope-results, .file-pane, .terminal-workspace, .desktop-workspace, .license-list section, .file-action-dialog, .hm-dialog, .update-splash, .manual, clutch-card-rows > :first-child > *) {
+    corner-shape: superellipse(1.5);
+}
+
+:root[data-theme="light"] {
+    color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+}

@@ -129,25 +129,47 @@ internal static class GraphPresentation
     internal static int PortSpacing(GraphViewOptions view) => view.ShowPortTypes ? 32
                                                                                  : 22;
 
-    /// <summary>スキーマ表示と同じpropertiesだけを数えます。</summary>
-    /// <returns>inline設定数です。</returns>
-    internal static int SettingsCount(NodeDescriptor? descriptor)
+    /// <summary>スキーマから編集欄と配置計算で使う設定項目を取得します。</summary>
+    /// <returns>スキーマに設定項目がなければ空の列挙子です。</returns>
+    internal static JsonElement.ObjectEnumerator SettingProperties(NodeDescriptor? descriptor)
     {
         string key = "properties";
-        return descriptor?.SettingsSchema.ValueKind == JsonValueKind.Object && descriptor.SettingsSchema.TryGetProperty(key, out JsonElement properties) && properties.ValueKind == JsonValueKind.Object ? properties.EnumerateObject().Count()
-                                                                                                                                                                                                         : 0;
+        if (descriptor?.SettingsSchema.ValueKind == JsonValueKind.Object &&
+            descriptor.SettingsSchema.TryGetProperty(key, out JsonElement properties) && properties.ValueKind == JsonValueKind.Object)
+        {
+            return properties.EnumerateObject();
+        }
+        return default;
+    }
+
+    /// <summary>編集欄に表示する設定項目を数えます。</summary>
+    /// <returns>設定項目の数です。</returns>
+    internal static int SettingsCount(NodeDescriptor? descriptor) => SettingProperties(descriptor).Count();
+
+    /// <summary>実行ボタンと無効理由が占める領域を返します。</summary>
+    /// <returns>キャンバス上の高さです。</returns>
+    internal static int ButtonHeight(bool showReason) => showReason ? 88
+                                                                    : 52;
+
+    /// <summary>保存値と拡縮中の仮値を、コードやプレビューを表示できる範囲に収めます。</summary>
+    /// <returns>無効な値には既定値を使った寸法です。</returns>
+    internal static NodeSize ResizableNodeSize(NodeSize? size)
+    {
+        double width = size is not null && double.IsFinite(size.Width) ? Math.Clamp(size.Width, 360, 1600)
+                                                                       : 560;
+        double height = size is not null && double.IsFinite(size.Height) ? Math.Clamp(size.Height, 400, 2000)
+                                                                         : 520;
+        return new(width, height);
     }
 
     /// <summary>空の設定欄を作らずHTML編集欄と外枠の高さを合わせます。</summary>
     /// <returns>card全体の高さです。</returns>
-    internal static double CardHeight(NodeDescriptor? descriptor, int inputs, int outputs, bool details, GraphViewOptions view)
+    internal static double CardHeight(NodeDescriptor? descriptor, int inputs, int outputs, bool details, GraphViewOptions view, int buttonHeight = 0, bool applyingPlacement = false)
     {
-        int height = 90 + Math.Max(inputs, outputs) * PortSpacing(view);
-        string buttonType = "control.button", toggleType = "control.toggleButton";
-        if (string.Equals(descriptor?.Type, buttonType, StringComparison.Ordinal) || string.Equals(descriptor?.Type, toggleType, StringComparison.Ordinal))
-        {
-            height += 56;
-        }
+        // 新しい配置を草稿に反映すると未保存になり、実行できない理由を表示するための高さが必要になります。
+        int controls = applyingPlacement && 0 < buttonHeight ? ButtonHeight(true)
+                                                             : buttonHeight;
+        int height = 90 + Math.Max(inputs, outputs) * PortSpacing(view) + controls;
         int settings = SettingsCount(descriptor);
         int constants = descriptor?.Inputs.Count ?? 0;
         if (!details || settings + constants == 0)

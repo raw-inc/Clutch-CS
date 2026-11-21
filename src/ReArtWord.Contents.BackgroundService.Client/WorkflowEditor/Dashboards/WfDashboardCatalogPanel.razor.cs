@@ -27,6 +27,15 @@ public sealed partial class WfDashboardCatalogPanel
     private string? problem;
     private int? next;
     private int generation;
+
+    /// <summary>参照ノードと一緒に表示するStateの追加フォームです。</summary>
+    [Parameter]
+    public RenderFragment? ChildContent
+    {
+        get;
+        set;
+    }
+
     private bool busy;
     private CancellationTokenSource? searchCancellation;
 

@@ -1,3 +1,5 @@
+using Microsoft.JSInterop;
+using Microsoft.AspNetCore.Components;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Components.Forms;
@@ -18,8 +20,83 @@ namespace ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Pages;
 /// <summary>草稿のノード配置・検証・取込と書出しを管理します。</summary>
 public sealed partial class WorkflowEditorPage
 {
+    /// <summary>共同編集の一覧でキャンバスと同じノード名を表示します。</summary>
+    /// <returns>現在の草稿にないノードは元のIDを返します。</returns>
+    private string SelectedNodeName(string id)
+    {
+        NodeDefinition? node = Model.Draft.Document.Nodes.FirstOrDefault(item => string.Equals(item.Id, id, StringComparison.Ordinal));
+        return node is null ? id
+                            : Ui.NodeName(node, catalog.FirstOrDefault(item => string.Equals(item.Type, node.Type, StringComparison.Ordinal)));
+    }
+
     private bool recipePreviewOpen;
     private string recipePreviewNode = string.Empty, recipePreviewWorkflow = string.Empty, recipePreviewCluster = string.Empty;
+
+    /// <summary>狭いキャンバスでは、開いたパネルからもう一方へ切り替えます。</summary>
+    /// <returns>画面幅に応じた開閉状態の反映です。</returns>
+    private async Task TogglePanelAsync(bool catalog, CancellationToken cancellationToken = default)
+    {
+        bool compact = await Script.InvokeAsync<bool>("contentsBrowser.narrowEditor", cancellationToken).ConfigureAwait(true);
+        navigator?.CloseMap();
+        if (catalog)
+        {
+            catalogOpen = !catalogOpen;
+            inspectorOpen &= !compact || !catalogOpen;
+        }
+        else
+        {
+            inspectorOpen = !inspectorOpen;
+            catalogOpen &= !compact || !inspectorOpen;
+        }
+    }
+
+    /// <summary>狭い画面ではカタログとインスペクタを重ねず、コード入力時はキャンバスを空けます。</summary>
+    private void AdjustCompactPanels(bool editingCode)
+    {
+        if (catalogOpen || editingCode)
+        {
+            inspectorOpen = false;
+        }
+        if (editingCode)
+        {
+            catalogOpen = false;
+        }
+    }
+
+    private (string Workflow, string Node)? codeEditor;
+
+    private NodeDefinition? CodeEditorNode => codeEditor is { } target && string.Equals(target.Workflow, Model.Draft.Document.Id, StringComparison.Ordinal) ? Model.Draft.Document.Nodes.FirstOrDefault(node => string.Equals(node.Id, target.Node, StringComparison.Ordinal) && string.Equals(node.Type, "value.code", StringComparison.Ordinal))
+                                                                                                                                                            : null;
+
+    /// <summary>編集中の草稿とノードを指定してコード編集欄を開きます。</summary>
+    private void OpenCodeEditor(string node) => codeEditor = (Model.Draft.Document.Id, node);
+
+    private bool nodesOverlap;
+    private int? automaticInputGeneration;
+
+    /// <summary>自動入力の有効化は、対象の草稿を固定して確認します。</summary>
+    private void SetAutomaticInputs(bool enabled)
+    {
+        if (enabled)
+        {
+            automaticInputGeneration = Model.Generation;
+        }
+        else
+        {
+            Model.Change(document => document with { Enabled = false });
+        }
+    }
+
+    /// <summary>確認中に草稿や編集権限が変わった場合は、別の対象へ適用しません。</summary>
+    private void ConfirmAutomaticInputs()
+    {
+        int? expected = automaticInputGeneration;
+        automaticInputGeneration = null;
+        if (expected == Model.Generation && !busy && !Model.Locks.Whole(Model.Draft.Document.Id))
+        {
+            Model.Change(document => document with { Enabled = true });
+        }
+    }
 
     /// <summary>編集中の定義を切り替えず、実効配置を別画面で表示します。</summary>
     private void PreviewRecipe(string node)
@@ -129,6 +206,10 @@ public sealed partial class WorkflowEditorPage
         NodeDefinition? node = new NodeDefinition(id, descriptor.Type, JsonSerializer.SerializeToElement(settings),
             Position: position ?? new(60 + (Model.Draft.Document.Nodes.Count % 3) * 390, 65 + (Model.Draft.Document.Nodes.Count / 3) * 420),
             StartOnLoad: descriptor.Kind == ENodeKind.Source, ContractVersion: descriptor.ContractVersion);
+        if (position is null && graph is not null && node.Position is { } preferred)
+        {
+            node = node with { Position = graph.PlaceBelowNodes(node, preferred) };
+        }
         Model.Change(document => document with { Nodes = [.. document.Nodes, node] });
         Model.SelectedNode = id;
         Model.SelectedWire = null;

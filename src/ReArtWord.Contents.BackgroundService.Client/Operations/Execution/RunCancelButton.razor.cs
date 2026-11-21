@@ -11,11 +11,21 @@ namespace ReArtWord.Contents.BackgroundService.Client.Operations.Execution;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1515", Justification = "Razorが生成する公開宣言と同じ型を構成するため。")]
 public sealed partial class RunCancelButton
 {
+    private bool confirming;
+
     [Inject]
     private OperationJournal Journal
     {
         get; set;
     } = null!;
+
+    /// <summary>確認画面に表示する実行元ワークフローです。</summary>
+    [Parameter]
+    public string? WorkflowId
+    {
+        get;
+        set;
+    }
 
     /// <summary>元のワークフロー実行。</summary>
     [Parameter]

@@ -19,12 +19,12 @@ before(async () =>
             if (pathname === '/')
             {
                 response.setHeader('Content-Type', 'text/html; charset=utf-8');
-                response.end('<!doctype html><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/signal-scope.css"><main id="scope" class="page"></main>');
+                response.end('<!doctype html><link rel="stylesheet" href="/styles/fonts.css"><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/styles/controls.css"><link rel="stylesheet" href="/signal-scope.css"><main id="scope" class="page"></main>');
                 return;
             }
             const file = path.resolve(root, '.' + decodeURIComponent(pathname));
             assert(file.startsWith(path.resolve(root) + path.sep));
-            response.setHeader('Content-Type', file.endsWith('.css') ? 'text/css' : 'text/javascript');
+            response.setHeader('Content-Type', file.endsWith('.css') ? 'text/css' : file.endsWith('.svg') ? 'image/svg+xml' : file.endsWith('.woff2') ? 'font/woff2' : 'text/javascript');
             response.end(await readFile(file));
         }
         catch
@@ -149,11 +149,14 @@ async function mountAsync(page, experimental)
     await page.evaluate(async () =>
     {
         const { signalScopeViewAsync } = await import('/signal-scope.js');
+        const { uiIcon } = await import('/ui-icons.js');
         window.scopeErrors = [];
         window.scopeLifetime = new AbortController();
         window.scope = await signalScopeViewAsync(document.querySelector('#scope'), { signal: window.scopeLifetime.signal, timeZone: 'UTC',
 
             t: en => en,
+
+            icon: uiIcon,
 
             say: message => window.scopeErrors.push(message),
 
@@ -170,6 +173,7 @@ async function mountAsync(page, experimental)
                 return button;
             } });
     });
+    await page.evaluate(() => document.fonts.ready);
     return { commands, closed, sockets };
 }
 
@@ -228,11 +232,29 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         const sidebar = await page.locator('.scope-sidebar').boundingBox();
         const results = await page.locator('.scope-results').boundingBox();
         assert(sidebar.x + sidebar.width <= results.x);
+        const columnChoice = page.locator('.scope-column-choice');
+        assert.equal(await columnChoice.isVisible(), false);
+        await page.setViewportSize({ width: 768, height: 900 });
+        assert.equal(await columnChoice.isVisible(), false);
         await page.setViewportSize({ width: 390, height: 844 });
         const narrowSidebar = await page.locator('.scope-sidebar').boundingBox();
         const narrowResults = await page.locator('.scope-results').boundingBox();
-        assert(narrowSidebar.y + narrowSidebar.height <= narrowResults.y);
+
+        // Firefoxでは個別に取得した座標と高さの和に端数が残るため、描画ピクセルで上下の境界を比較します。
+        assert(Math.round(narrowSidebar.y + narrowSidebar.height) <= Math.round(narrowResults.y));
         assert(narrowResults.x + narrowResults.width <= 390);
+        const columnToggle = page.getByRole('checkbox', { name: 'All columns', exact: true });
+        const toggleBox = await columnToggle.boundingBox();
+        assert(toggleBox.height < 24 && Math.abs(toggleBox.width - toggleBox.height) <= 1);
+        assert.ok(await columnChoice.evaluate(label => label.scrollWidth <= label.clientWidth + 1
+            && label.getBoundingClientRect().right <= label.parentElement.getBoundingClientRect().right));
+        await columnChoice.click();
+        assert.equal(await columnToggle.isChecked(), true);
+        const columns = page.locator('.scope-packets th');
+        assert(await columns.nth(3).evaluate(cell => 136 <= cell.clientWidth));
+        assert(await columns.nth(4).evaluate(cell => 136 <= cell.clientWidth));
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth);
+        assert.equal(overflow, 390);
         await page.evaluate(async () =>
         {
             window.scopeLifetime.abort();
@@ -288,6 +310,9 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         assert((await page.locator('[data-packet]').innerText()).includes('host-b:9000'));
         await page.locator('[data-packet]').click();
         await page.waitForFunction(() => document.querySelector('.scope-details pre')?.textContent.includes('OSC packet 42'));
+        const details = await page.locator('.scope-details pre').first().innerText();
+        assert.match(details, /Source: 192\.168\.10\.10:9001/);
+        assert.match(details, /Destination: 192\.168\.20\.10:9000/);
         assert((await page.locator('.scope-details pre').nth(1).innerText()).includes('74 65 73 74'));
         assert.equal(commands.filter(item => item.type === 'detail').length, 1);
         await page.getByRole('searchbox', { name: 'Search captured packets' }).fill('host-a AND "and" AND "or"');
@@ -299,7 +324,7 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
         await page.waitForFunction(() => !document.querySelector('.signal-scope').classList.contains('capturing'));
         assert.equal(commands.filter(item => item.type === 'stop').length, 2);
         assert((await page.locator('.scope-details pre').first().innerText()).includes('OSC packet 42'));
-        await page.getByRole('button', { name: 'Clear', exact: true }).click();
+        await page.locator('.scope-packet-heading').getByRole('button', { name: 'Clear captured packets', exact: true }).click();
         await page.waitForFunction(() => document.querySelectorAll('[data-packet]').length === 0);
         assert.deepEqual(await page.evaluate(() => window.scopeErrors.filter(Boolean)), []);
         assert.equal(commands.filter(item => item.type === 'search').length, 0);

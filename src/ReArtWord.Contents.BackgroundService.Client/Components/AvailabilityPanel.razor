@@ -1,15 +1,15 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Persistence.Availability
 @using ReArtWord.Contents.BackgroundService.Contracts.Persistence
 <section class="section">
-    <div class="section-heading"><h2>@Ui["Connected peer storage status"]</h2><button disabled="@busy" @onclick="()=>LoadAsync(false)"><UiIcon Name="refresh" />@Ui["Refresh"]</button></div>
+    <div class="section-heading"><h2>@Ui["Connected peer storage status"]</h2><button disabled="@busy" @onclick="()=>LoadAsync(false)"><UiIcon Name="refresh" /><span class="control-label">@Ui["Refresh"]</span></button></div>
     @if(message is not null){<p class="notice">@(message?.Invoke())</p>}
     @if(page is not null)
     {
         <p class="small muted">@Ui.Format("{0} / {1} · checked at {2}", cluster, peer, FormatTime(observed,"HH:mm:ss"))</p>
-        <div class="table-wrap"><table><thead><tr><th>@Ui["Purpose / dataset"]</th><th>@Ui["Saved revision"]</th><th>@Ui["Effective revision"]</th><th>@Ui["Recovery revision"]</th><th>@Ui["Status"]</th></tr></thead><tbody>
+        <div class="table-wrap standalone-records"><table class="record-table"><thead><tr><th>@Ui["Purpose / dataset"]</th><th>@Ui["Saved revision"]</th><th>@Ui["Effective revision"]</th><th>@Ui["Recovery revision"]</th><th>@Ui["Status"]</th></tr></thead><tbody>
         @foreach(var item in page.Entries)
         {
-            <tr><td>@Ui[item.Purpose.ToString()]<small class="dataset-id" title="@item.DatasetId">@item.DatasetId</small></td><td class="mono" title="@item.SavedRevision">@Revision(item.SavedRevision)</td><td class="mono" title="@item.EffectiveRevision">@Revision(item.EffectiveRevision)</td><td class="mono" title="@item.RecoveryRevision">@Revision(item.RecoveryRevision)</td><td>@State(item)<small class="muted">@item.Reason</small></td></tr>
+            <tr><td data-field='@Ui["Purpose / dataset"]'>@Ui[item.Purpose.ToString()]<small class="dataset-id" title="@item.DatasetId">@item.DatasetId</small></td><td data-field='@Ui["Saved revision"]' class="mono" title="@item.SavedRevision">@Revision(item.SavedRevision)</td><td data-field='@Ui["Effective revision"]' class="mono" title="@item.EffectiveRevision">@Revision(item.EffectiveRevision)</td><td data-field='@Ui["Recovery revision"]' class="mono" title="@item.RecoveryRevision">@Revision(item.RecoveryRevision)</td><td data-field='@Ui["Status"]'>@(string.IsNullOrWhiteSpace(State(item)) ? "—" : State(item))<small class="muted">@item.Reason</small></td></tr>
         }
         </tbody></table></div>
         @if(page.Entries.Count==0){<p class="empty">@Ui["This peer has no retained storage status."]</p>}
@@ -18,7 +18,14 @@
         @foreach(var purpose in new[]{EStoragePurpose.Configuration,EStoragePurpose.Runtime})
         {
             var policy=page.Options.Purposes?.GetValueOrDefault(purpose)??new AvailabilityPolicy();
-            <p><strong>@Ui[purpose.ToString()]</strong> · @Ui["On save failure"]: @(policy.SaveFailure==EAvailabilitySaveFailure.UseUnsaved?Ui["UseUnsaved"]:Ui["KeepConfirmed"]) · @Ui["When disconnected"]: @Ui[Offline(policy.Offline)] · @Ui["Fallback storage"]: @(policy.FallbackBackend?.ToString()??Ui["Not configured"])</p>
+            <section class="storage-policy">
+                <h3>@Ui[purpose.ToString()]</h3>
+                <dl>
+                    <dt>@Ui["On save failure"]</dt><dd>@(policy.SaveFailure==EAvailabilitySaveFailure.UseUnsaved?Ui["UseUnsaved"]:Ui["KeepConfirmed"])</dd>
+                    <dt>@Ui["When disconnected"]</dt><dd>@Ui[Offline(policy.Offline)]</dd>
+                    <dt>@Ui["Fallback storage"]</dt><dd>@(policy.FallbackBackend?.ToString()??Ui["Not configured"])</dd>
+                </dl>
+            </section>
         }
         </details>
     }

@@ -14,6 +14,20 @@ namespace ReArtWord.Contents.BackgroundService.Client.Connectivity;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1515", Justification = "Razor が生成する公開 partial 宣言と同じコンポーネント型を構成するため。")]
 public sealed partial class ConnectionPicker : IAsyncDisposable
 {
+    private ClientNetworkBinding? removingBinding;
+
+    /// <summary>確認画面に表示したネットワークの監視を停止します。</summary>
+    /// <returns>停止要求の完了です。</returns>
+    private async Task ConfirmRemovalAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (removingBinding is { } binding)
+        {
+            removingBinding = null;
+            await RemoveBindingAsync(binding).ConfigureAwait(true);
+        }
+    }
+
     [Inject]
     private ManagementApi Api
     {

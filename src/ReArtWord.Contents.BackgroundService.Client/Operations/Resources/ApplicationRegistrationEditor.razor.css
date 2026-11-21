@@ -4,15 +4,17 @@
 
 .application-owner {
     padding: 12px 14px;
-    background: var(--panel);
-    border-radius: 8px;
+    border-radius: var(--radius-panel);
     overflow-wrap: anywhere;
+    padding-inline: 0;
+    background: transparent;
 }
 
 .application-fields {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px 18px;
+    align-items: end;
 }
 
 .application-fields .wide {
@@ -26,6 +28,7 @@
 }
 
 .executable-field label {
+    margin: 0;
     flex: 1;
     min-width: 0;
 }
@@ -50,10 +53,6 @@
     gap: 8px;
 }
 
-.check-row input {
-    width: auto;
-}
-
 .argument-row {
     margin-bottom: 8px;
 }
@@ -71,11 +70,31 @@
     padding: 14px;
     margin-bottom: 12px;
     border: 1px solid rgb(255 255 255 / 12%);
-    border-radius: 8px;
+    border-radius: var(--radius-panel);
 }
 
 @media (max-width: 600px) {
     .application-fields {
         grid-template-columns: minmax(0, 1fr);
     }
+}
+
+.application-fields label:has(input[type="checkbox"]) {
+    align-self: start;
+}
+
+.application-fields > label,
+.application-restart-conditions > label {
+    margin: 0;
+}
+
+.application-restart-conditions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 20px;
+    align-items: center;
+}
+
+.application-section .section-start-action {
+    margin-inline-start: -12px;
 }

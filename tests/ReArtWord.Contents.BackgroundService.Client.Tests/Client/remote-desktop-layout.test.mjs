@@ -56,7 +56,7 @@ test('normal and fullscreen layouts fit mixed monitors after labels and chrome w
             }
         },
 
-        getComputedStyle: () => ({ columnGap: '8px', paddingLeft: '2px', paddingRight: '2px', paddingTop: '2px', paddingBottom: '2px' })
+        getComputedStyle: () => ({ position: 'fixed', columnGap: '8px', paddingLeft: '2px', paddingRight: '2px', paddingTop: '2px', paddingBottom: '2px' })
     });
     t.after(() =>
     {
