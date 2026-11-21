@@ -114,9 +114,19 @@ public sealed partial class SnapshotRestoreReview
                 throw UiError.InvalidOperation("This result does not belong to the original restore request.");
             }
 
-            message = preparation.Ready ? Ui.Deferred("No unsaved edits block this restore. This is checked again immediately before starting.")
-                                        : (preparation.Reason) is null ? Ui.Deferred("Check unsaved edits or the restore already in progress.")
-                                                                       : Ui.Deferred("{0}", preparation.Reason);
+            string unsavedEdits = "Snapshot.UnsavedEdits";
+            if (preparation.Ready)
+            {
+                message = Ui.Deferred("Restore is ready. The state is checked again immediately before restoring.");
+            }
+            else if (string.Equals(preparation.Reason, unsavedEdits, StringComparison.Ordinal))
+            {
+                message = Ui.Deferred("Save or discard the unsaved changes before restoring.");
+            }
+            else
+            {
+                message = Ui.Deferred("Check the target and any restore in progress, then check again.");
+            }
         }
         catch (Exception exception) when (exception is HttpRequestException or JsonException or InvalidOperationException or JSException or OperationCanceledException)
         {

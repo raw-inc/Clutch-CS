@@ -6,11 +6,17 @@
 @using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor
 <Modal Open="@(Request is not null)" Title="@Ui["Review edits before restore"]" Close="CancelAsync">
     <ChildContent>
-        <p>@Ui["Review the fixed original restore request. Out-of-scope changes and unsaved input in other pages are not discarded automatically."]</p>
+        <p>@Ui["Review the restore scope and check for unsaved changes."]</p>
         <p class="notice">@(message?.Invoke())</p>
         @if(preparation is not null)
         {
-            <p>@Ui["Operation"] @preparation.OperationId @preparation.Reason</p>
+            <p>
+                @Ui["Operation"] @preparation.OperationId
+                @if(preparation.Reason is {} reason)
+                {
+                    <span class="muted"> · @reason</span>
+                }
+            </p>
             <JsonDetails Value="preparation.Targets" Title="@Ui["Fixed restore scope"]" />
             @foreach(var editor in preparation.Editors)
             {
