@@ -442,7 +442,7 @@ export const keys = [
     "Private connects VMs only and does not create a management OS vNIC.",
     "Connect management OS adapters to an existing switch. Create or delete switches in Virtual switches.",
     "No virtual switch with this name",
-    "Removing these switches also removes their management OS adapters and may interrupt the connection. I have checked the impact.",
+    "Removing these switches also removes their management OS adapters and may interrupt the connection. The physical NIC is retained. I have checked the impact.",
     "MAC address",
     "VLAN ID",
     "Keep each host unchanged",

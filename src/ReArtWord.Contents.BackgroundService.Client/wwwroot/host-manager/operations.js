@@ -181,7 +181,7 @@ function impactMessage(previews)
     }
     if (previews.every(item => item.action === 'virtualSwitchDelete'))
     {
-        return 'Removing these switches also removes their management OS adapters and may interrupt the connection. I have checked the impact.';
+        return 'Removing these switches also removes their management OS adapters and may interrupt the connection. The physical NIC is retained. I have checked the impact.';
     }
     if (previews.every(item => item.query.area === 'firewall'))
     {

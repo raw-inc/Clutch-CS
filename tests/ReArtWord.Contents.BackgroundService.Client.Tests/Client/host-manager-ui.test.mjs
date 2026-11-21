@@ -201,7 +201,7 @@ async function fixtureAsync(t)
         dialogs: () => descendants(root).filter(element => element.tag === 'dialog' && element.open) };
 }
 
-test('multi-host Hosts defaults to other and applies only explicitly changed entries to fresh files', async t =>
+test('multi-host Hosts keeps each host unchanged by default and applies only explicitly changed entries to fresh files', async t =>
 {
     const f = await fixtureAsync(t);
     f.content['host-a'] = '# A\n192.0.2.1 app\n192.0.2.2 keep\n';
@@ -210,7 +210,7 @@ test('multi-host Hosts defaults to other and applies only explicitly changed ent
     await f.pick('host-b');
     await f.click('Hosts');
     const toggle = f.find('div', '192.0.2.1 · app');
-    assert.equal(f.button('other', toggle).getAttribute('aria-checked'), 'true');
+    assert.equal(f.button('Keep each host unchanged', toggle).getAttribute('aria-checked'), 'true');
     assert.equal(f.button('Preview changes').disabled, true);
     await f.click('enable', toggle);
     f.content['host-b'] += '192.0.2.9 external\n';
@@ -222,7 +222,7 @@ test('multi-host Hosts defaults to other and applies only explicitly changed ent
     assert.equal(changes[0].request.change.content, '# B\n192.0.2.1\tapp\n192.0.2.9 external\n');
     assert.match(f.content['host-a'], /192.0.2.2 keep/);
 });
-test('other cancels a staged Hosts change and missing definitions remain absent', async t =>
+test('Keep each host unchanged cancels a staged Hosts change and missing definitions remain absent', async t =>
 {
     const f = await fixtureAsync(t);
     f.content['host-a'] = '192.0.2.1 app\n';
@@ -233,7 +233,7 @@ test('other cancels a staged Hosts change and missing definitions remain absent'
     const toggle = f.find('div', '192.0.2.1 · app');
     await f.click('disable', toggle);
     assert.equal(f.button('Preview changes').disabled, false);
-    await f.click('other', toggle);
+    await f.click('Keep each host unchanged', toggle);
     assert.equal(f.button('Preview changes').disabled, true);
     assert.equal(f.batches.length, 0);
 });
@@ -376,7 +376,7 @@ test('Firewall three-state selection copies a supported rule to a missing host a
     await tick();
     const toggle = f.find('div', 'Fixture app · TCP · 1234');
     assert.ok(toggle);
-    assert.equal(f.button('other', toggle).getAttribute('aria-checked'), 'true');
+    assert.equal(f.button('Keep each host unchanged', toggle).getAttribute('aria-checked'), 'true');
     await f.click('enable', toggle);
     await f.click('Preview changes');
     assert.equal(f.button('Apply confirmed changes').disabled, true);

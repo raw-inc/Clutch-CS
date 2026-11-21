@@ -145,7 +145,7 @@
   "Delete {0} items": "{0}件の項目を削除",
   "Delete {0} variables": "変数を{0}件削除",
   "Apps that use this value may behave differently the next time they start.": "この値を使うアプリは、次回の起動時に動作が変わることがあります。",
-  "Removing these switches also removes their management OS adapters and may interrupt the connection. I have checked the impact.": "仮想スイッチに接続した管理OS用アダプターも削除され、通信が切れることがあります。影響を確認しました。",
+  "Removing these switches also removes their management OS adapters and may interrupt the connection. The physical NIC is retained. I have checked the impact.": "仮想スイッチに接続した管理OS用アダプターも削除され、通信が切れることがあります。物理NICは保持されます。影響を確認しました。",
   "MAC address": "MACアドレス",
   "VLAN ID": "VLAN ID",
   "Keep each host unchanged": "変更しない",
