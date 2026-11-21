@@ -250,6 +250,11 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
             && label.getBoundingClientRect().right <= label.parentElement.getBoundingClientRect().right));
         await columnChoice.click();
         assert.equal(await columnToggle.isChecked(), true);
+        const columns = page.locator('.scope-packets th');
+        assert(await columns.nth(3).evaluate(cell => 136 <= cell.clientWidth));
+        assert(await columns.nth(4).evaluate(cell => 136 <= cell.clientWidth));
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth);
+        assert.equal(overflow, 390);
         await page.evaluate(async () =>
         {
             window.scopeLifetime.abort();

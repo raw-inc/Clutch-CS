@@ -19,7 +19,7 @@ before(async () =>
             if (pathname === '/')
             {
                 response.setHeader('Content-Type', 'text/html; charset=utf-8');
-                response.end('<!doctype html><link rel="stylesheet" href="/script-editor.css"><fieldset><div class="code-input"><pre></pre><textarea aria-label="Script code"></textarea></div></fieldset><button id="next">Next</button>');
+                response.end('<!doctype html><link rel="stylesheet" href="/styles/controls.css"><link rel="stylesheet" href="/script-editor.css"><fieldset><div class="code-input"><pre></pre><textarea aria-label="Script code"></textarea></div></fieldset><button id="next">Next</button>');
                 return;
             }
             const file = path.resolve(root, '.' + decodeURIComponent(pathname));
@@ -60,6 +60,7 @@ async function openEditorAsync(context, language, text)
     await page.addStyleTag({ content: '.code-input{height:280px;width:700px;--ink:#eee;--paper:#202329;--line:#555;--muted:#aaa;--accent:#aac}' });
     await page.evaluate(async ({ language, text }) =>
     {
+        await import('/scroll-area.js');
         const { attachCodeEditor } = await import('/script-code.js');
         const input = document.querySelector('textarea');
         input.value = text;
@@ -287,4 +288,23 @@ test('IME変換中には解析せず、確定した文字列を解析へ渡す',
     await session.send('Input.insertText', { text: '日本' });
     await page.clock.fastForward(1000);
     assert.deepEqual(await page.evaluate(() => window.analyses), ['日本']);
+});
+
+test('the code editor indicates clipped text at the correct horizontal edge', async context =>
+{
+    const source = 'const longLine = "' + 'z'.repeat(240) + '";';
+    const page = await openEditorAsync(context, 'javascript', source);
+    const surface = page.locator('clutch-scroll-area.script-editor-surface');
+    const port = surface.locator('.cm-scroller');
+    await port.evaluate(element =>
+    {
+        element.scrollLeft = 0;
+    });
+    await page.waitForSelector('.script-editor-surface[data-scroll-after]:not([data-scroll-before])');
+    await port.evaluate(element =>
+    {
+        element.scrollLeft = element.scrollWidth;
+    });
+    await page.waitForSelector('.script-editor-surface[data-scroll-before]:not([data-scroll-after])');
+    assert.equal(await page.locator('textarea').inputValue(), source);
 });

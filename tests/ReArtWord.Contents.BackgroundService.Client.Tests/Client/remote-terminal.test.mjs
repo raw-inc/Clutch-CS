@@ -162,6 +162,8 @@ async function endSessionAsync(fixture, target, confirm)
     const pending = row.children.find(item => item.getAttribute('aria-label') === 'End session').onclick();
     const dialog = all(fixture.root).find(item => item.tag === 'dialog' && item.open);
     assert.ok(dialog);
+    assert.ok(dialog.textContent.includes(row.children[0].textContent));
+    assert.equal(dialog.textContent.includes('This screen will also disconnect.'), row.getAttribute('aria-current') === 'true');
     const action = all(dialog).find(item => item.tag === 'button' && item.textContent === (confirm ? 'End session' : 'Cancel'));
     assert.ok(action);
     dialog.close(action.value);

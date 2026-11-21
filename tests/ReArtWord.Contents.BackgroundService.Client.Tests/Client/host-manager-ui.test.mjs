@@ -476,9 +476,26 @@ test('removing a hosts entry only edits the draft and can restore its original l
     await f.click('Delete · 127.0.0.1');
     assert.equal(f.dialogs().length, 0);
     assert.equal(f.batches.length, 0);
-    await f.click('Undo removal');
+    await f.click('Undo last removal');
     await f.click('Text editor');
     assert.equal(f.find('textarea', 'Replace hosts content').value, '# keep\r\n127.0.0.1  localhost\r\n');
+    assert.equal(f.batches.length, 0);
+});
+test('hosts draft can undo consecutive deletions without changing the original comments and line order', async t =>
+{
+    const f = await fixtureAsync(t);
+    await f.pick('host-a');
+    await f.click('Hosts');
+    await f.click('Text editor');
+    const original = '# keep\r\n127.0.0.1  localhost\r\n\r\n192.0.2.10 stage.local  # monitor';
+    await f.set('textarea', 'Replace hosts content', original);
+    await f.click('Entry editor');
+    await f.click('Delete · 127.0.0.1');
+    await f.click('Delete · 192.0.2.10');
+    await f.click('Undo last removal');
+    await f.click('Undo last removal');
+    await f.click('Text editor');
+    assert.equal(f.find('textarea', 'Replace hosts content').value, original);
     assert.equal(f.batches.length, 0);
 });
 test('DNS bulk editing preserves pinned NICs and sends no unrelated settings', async t =>
@@ -624,7 +641,7 @@ test('switching to Private clears External-only fields and deletion previews aff
     await f.click('Delete');
     assert.match(f.dialogs().at(-1).textContent, /Host adapter/);
     assert.match(f.dialogs().at(-1).textContent, /physical NIC is retained/);
-    await f.click('Back to editing');
+    await f.click('Cancel');
     assert.equal(f.batches.length, 0);
 });
 test('new guest connections between listing and preview prevent switch deletion', async t =>
