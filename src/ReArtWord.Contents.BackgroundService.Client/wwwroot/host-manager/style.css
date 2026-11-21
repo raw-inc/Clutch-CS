@@ -864,43 +864,8 @@
     margin-top: -8px;
 }
 
-.hm-dialog {
-    width: min(880px, calc(100vw - 40px));
-    max-height: calc(100dvh - 64px);
-    padding: 0;
-    color: var(--ink);
-    background: var(--paper);
-    border-radius: var(--radius-panel);
-    box-shadow: 0 8px 24px #0002;
-    overflow: hidden;
-    border: 1px solid var(--line);
-}
-
-.hm-dialog[open] {
-    display: flex;
-    flex-direction: column;
-}
-
-.hm-dialog::backdrop {
-    background: var(--backdrop);
-}
-
-.hm-dialog-title {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 22px;
-    border-bottom: 1px solid var(--line);
-    background: var(--card);
-    flex: none;
-}
-
-.hm-dialog-title h2 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
+.dialog.hm-dialog:not(.dialog-compact, .hm-entry-dialog) {
+    width: min(880px, calc(100vw - 24px));
 }
 
 .hm-entry-dialog {
@@ -928,13 +893,9 @@
 }
 
 .hm-dialog-body {
-    overflow: auto;
-    min-height: 0;
-    padding: 20px 22px;
     display: flex;
     flex-direction: column;
     gap: 16px;
-    scrollbar-width: thin;
 }
 
 .hm-dialog-body > h3 {
@@ -942,17 +903,6 @@
     font-weight: 500;
     margin: 0;
     color: var(--muted);
-}
-
-.hm-dialog-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-    padding: 10px 22px;
-    border-top: 1px solid var(--line);
-    background: var(--card);
-    flex: none;
 }
 
 .hm-editor-grid {
@@ -1142,6 +1092,27 @@
     justify-content: flex-end;
 }
 
+.hm-deletion-undo {
+    align-items: center;
+}
+
+.hm-deletion-undo > span {
+    flex: 1 1 14rem;
+    overflow-wrap: anywhere;
+}
+
+.hm-comparison .hm-removal-effect {
+    border-color: var(--danger);
+    color: var(--danger);
+    background: var(--danger-soft);
+}
+
+@media (max-width: 680px) {
+    .hm-confirm-footer > .hm-actions > button {
+        min-height: 44px;
+    }
+}
+
 .hm-summary {
     display: flex;
     gap: 8px;
@@ -1201,7 +1172,14 @@
 }
 
 .hm-preview-targets button {
-    text-align: left;
+    display: grid;
+    flex: none;
+    gap: 2px;
+    justify-items: start;
+    justify-content: start;
+    min-height: 44px;
+    text-align: start;
+    overflow-wrap: anywhere;
     white-space: normal;
     background: transparent;
     padding: 10px;
@@ -1437,19 +1415,8 @@
     }
 
     .hm-preview-targets button {
-        flex: 0 0 auto;
-        max-width: 200px;
-    }
-
-    .hm-dialog {
-        width: calc(100vw - 20px);
-        max-height: calc(100dvh - 24px);
-    }
-
-    .hm-dialog-title,
-    .hm-dialog-body,
-    .hm-dialog-actions {
-        padding: 14px;
+        width: min(12rem, 56vw);
+        flex: none;
     }
 
     .hm-selection-bar {
@@ -1684,11 +1651,6 @@
 
 .hm-dialog-body label:has(:disabled) {
     color: var(--disabled-ink);
-}
-
-.hm-dialog-title,
-.hm-dialog-actions {
-    flex: none;
 }
 
 @media (max-width: 680px) {

@@ -122,7 +122,7 @@ export function firewallView(root, ctx, actionArea)
             if (rule.editable)
             {
                 actions.append(ctx.button(rule.enabled ? 'Disable rule' : 'Enable rule', () => ctx.preview([{ host, query: { area: 'firewall', resourceId: 'rule/' + rule.id }, action: 'firewallRuleEnabled', change: { enabled: !rule.enabled }, label: rule.name }])),
-                    ctx.button('Remove rule', () => ctx.preview([{ host, query: { area: 'firewall', resourceId: 'rule/' + rule.id }, action: 'firewallRuleRemove', change: {}, label: rule.name }]), 'danger'));
+                    ctx.button('Remove rule', () => ctx.preview([{ host, query: { area: 'firewall', resourceId: 'rule/' + rule.id }, action: 'firewallRuleRemove', change: {}, label: `${ctx.t('Remove rule')} · ${rule.name}` }]), 'danger'));
             }
             else
             {

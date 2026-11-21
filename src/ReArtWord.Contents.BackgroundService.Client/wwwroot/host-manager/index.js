@@ -216,7 +216,8 @@ export async function mount(element, labels)
          */
         dialog(label)
         {
-            const dialog = node('dialog', '', 'hm-dialog'), header = node('div', '', 'hm-dialog-title'), body = node('div', '', 'hm-dialog-body'), footer = node('div', '', 'hm-dialog-actions');
+            const dialog = node('dialog', '', 'dialog hm-dialog'), header = node('div', '', 'dialog-heading hm-dialog-title');
+            const body = node('div', '', 'dialog-content hm-dialog-body'), footer = node('footer', '', 'toolbar hm-dialog-actions');
             const previous = document.activeElement, left = window.scrollX, top = window.scrollY;
 
             /** 対象を閉じ、関連する状態を整理します。 */
@@ -232,7 +233,7 @@ export async function mount(element, labels)
             };
 
             const dismiss = action(ctx, 'Close', 'close', close);
-            dismiss.classList.add('hm-icon-button', 'quiet');
+            dismiss.classList.add('icon-button', 'quiet');
             dismiss.setAttribute('aria-label', ctx.t('Close'));
             dismiss.title = ctx.t('Close');
             const heading = node('h2', ctx.t(label));
@@ -278,6 +279,7 @@ export async function mount(element, labels)
                 return ctx.guard(run);
             }
             const dialog = ctx.dialog('Discard unsaved changes?');
+            dialog.element.classList.add('dialog-compact');
             dialog.root.append(node('p', ctx.t('Your edited settings have not been applied.')));
             dialog.footer.append(ctx.button('Keep editing', dialog.close), ctx.button('Discard changes', async () =>
             {
@@ -298,7 +300,7 @@ export async function mount(element, labels)
              */
             const current = () => generation === screen.generation && [...screen.dialogs].at(-1) === editor && (!editor || editor.isConnected && editor.open);
 
-            return Promise.resolve(typeof changes === 'function' ? changes() : changes).then(prepared => current() ? showPreview(ctx, prepared, refreshHistoryAsync, current, submitted) : undefined)
+            return Promise.resolve(typeof changes === 'function' ? changes() : changes).then(prepared => current() ? showPreview(ctx, prepared, refreshHistoryAsync, current, submitted, !!(editor || submitted)) : undefined)
                 .finally(() =>
                 {
                     if (editor && !editor.isConnected && generation === screen.generation)

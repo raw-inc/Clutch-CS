@@ -10,6 +10,8 @@ import { windowsUpdatePreview } from './windows-update.js';
 import { loginPreview } from './login.js';
 import { wakePreview } from './wake-on-lan.js';
 
+const firewallRuleRemoval = 'firewallRuleRemove';
+
 /** 現在の値を確認用の説明に変換します。
  * @returns 呼出し元が使用する値です。
  */
@@ -61,7 +63,8 @@ function virtualNicValues(item, translate)
  */
 export function previewValues(item, translate = key => key)
 {
-    const custom = { power: powerPreview, display: displayPreview, windowsUpdate: windowsUpdatePreview, login: loginPreview, wakeOnLan: wakePreview };
+    const custom = { power: powerPreview, display: displayPreview, windowsUpdate: windowsUpdatePreview, login: loginPreview, wakeOnLan: wakePreview,
+        [firewallRuleRemoval]: firewallRemovalValues };
     if (custom[item.action])
     {
         return custom[item.action](item, translate);
@@ -133,7 +136,18 @@ export function previewValues(item, translate = key => key)
  */
 function deletesResource(item)
 {
-    return ['virtualNicDelete', 'virtualSwitchDelete', 'firewallRuleRemove'].includes(item.action) || item.change.delete;
+    return ['virtualNicDelete', 'virtualSwitchDelete', firewallRuleRemoval].includes(item.action) || item.change.delete;
+}
+
+/** 削除する規則の条件だけを確認できるようにします。
+ * @returns 適用前の規則と削除後の状態です。
+ */
+function firewallRemovalValues(item, translate)
+{
+    const { name, enabled, direction, action, protocol, profile, localPorts, remotePorts, localAddresses, remoteAddresses, program } = item.before.data;
+    const current = { name, enabled, direction: translate(direction), action: translate(action),
+        protocol, profile, localPorts, remotePorts, localAddresses, remoteAddresses, program };
+    return [describe(current, translate), translate('Delete')];
 }
 
 /** 表示モードの変更前後を説明します。
@@ -150,6 +164,14 @@ function displayPreview(item, translate)
 function impactMessage(previews)
 {
     const display = 'display', power = 'power', updates = 'windowsUpdate', login = 'login';
+    if (previews.every(item => item.action === firewallRuleRemoval))
+    {
+        return 'I checked the affected traffic. Removing these rules can block permitted connections or allow traffic that was blocked.';
+    }
+    if (previews.every(item => item.query.area === 'firewall'))
+    {
+        return 'I checked the affected profiles, rules and access path. Firewall changes can affect which connections are allowed.';
+    }
     if (previews.some(item => item.query.area === login))
     {
         return 'I reviewed the account, physical access and login policies, including any selected login notice removal.';
@@ -302,7 +324,7 @@ async function preparePreviewAsync(ctx, item, inventories)
  * @returns 処理の完了と結果を伝えるPromiseです。
  * @contract 公開済みのJavaScriptメソッド名と呼出し側の契約を維持します。
  */
-export async function showPreview(ctx, proposed, refreshHistory, current = () => true, submitted)
+export async function showPreview(ctx, proposed, refreshHistory, current = () => true, submitted, returnToEditor = false)
 {
     if (!proposed.length)
     {
@@ -365,7 +387,7 @@ export async function showPreview(ctx, proposed, refreshHistory, current = () =>
             target.setAttribute('aria-pressed', String(target === button));
         }
         const card = node('section', '', 'hm-preview');
-        card.append(node('h3', item.label ?? item.action));
+        card.append(node('p', item.host.target.hostId, 'hm-muted'), node('h3', item.label ?? item.action));
         if (['network', 'networkProtocols'].includes(item.action))
         {
             card.append(badge(vlanLabel(item.before.data.vlanMode, item.before.data.vlanId, ctx.t), vlanTone(item.before.data.vlanMode)));
@@ -373,6 +395,10 @@ export async function showPreview(ctx, proposed, refreshHistory, current = () =>
         const columns = node('div', '', 'hm-comparison');
         const [beforeText, afterText] = previewValues(item, ctx.t);
         const contents = item.action === expectedHosts ? hostsDiff(item.before.data.content, item.change.content, ctx) : [node('pre', beforeText), node('pre', afterText)];
+        if (deletesResource(item))
+        {
+            contents[1].classList.add('hm-removal-effect');
+        }
         for (const [index, label] of ['Before', 'After'].entries())
         {
             const column = node('div');
@@ -398,15 +424,15 @@ export async function showPreview(ctx, proposed, refreshHistory, current = () =>
     for (const item of previews)
     {
         const button = ctx.button(item.host.target.hostId, () => show(item, button));
-        button.append(node('small', item.label ?? ctx.t(item.query.area)));
+        button.replaceChildren(node('strong', item.host.target.hostId), node('small', item.label ?? ctx.t(item.query.area)));
         targets.append(button);
     }
     show(previews[0], targets.firstElementChild);
-    appendPreviewActions(ctx, dialog, previews, { needsAcknowledgement, hasDeletion, deletionOnly }, refreshHistory, submitted);
+    appendPreviewActions(ctx, dialog, previews, { needsAcknowledgement, hasDeletion, deletionOnly, returnToEditor }, refreshHistory, submitted);
 }
 
 /** 変更内容に応じた確認と確定操作をプレビューの下部に表示します。 */
-function appendPreviewActions(ctx, dialog, previews, { needsAcknowledgement, hasDeletion, deletionOnly }, refreshHistory, submitted)
+function appendPreviewActions(ctx, dialog, previews, { needsAcknowledgement, hasDeletion, deletionOnly, returnToEditor }, refreshHistory, submitted)
 {
     const risk = previews.some(item => ['network', 'firewall', 'display', 'power', 'windowsUpdate', 'login'].includes(item.query.area));
     const acknowledgement = checkbox(ctx.t(impactMessage(previews)));
@@ -422,7 +448,11 @@ function appendPreviewActions(ctx, dialog, previews, { needsAcknowledgement, has
         footer.append(previous.root);
     }
     const actions = node('div', '', 'hm-actions');
-    const label = deletionOnly ? 'Delete selected items' : hasDeletion ? 'Apply changes including deletions' : 'Apply confirmed changes';
+    let label = hasDeletion ? 'Apply changes including deletions' : 'Apply confirmed changes';
+    if (deletionOnly)
+    {
+        label = previews.length === 1 && previews[0].action === firewallRuleRemoval ? 'Remove rule' : 'Delete selected items';
+    }
 
     /** 確認した対象と変更内容だけを送信します。
      * @returns 操作の送信と履歴の再取得が完了するまでのPromiseです。
@@ -453,6 +483,7 @@ function appendPreviewActions(ctx, dialog, previews, { needsAcknowledgement, has
     }
 
     const confirm = hasDeletion ? action(ctx, label, 'trash', applyAsync) : ctx.button(label, applyAsync, 'primary');
+    confirm.classList.toggle('danger', hasDeletion);
     confirm.classList.toggle('confirm-action', hasDeletion);
     confirm.disabled = risk || needsAcknowledgement;
 
@@ -463,7 +494,7 @@ function appendPreviewActions(ctx, dialog, previews, { needsAcknowledgement, has
     };
 
     acknowledgement.control.onchange = previous.control.onchange = check;
-    actions.append(ctx.button('Back to editing', dialog.close), confirm);
+    actions.append(ctx.button(returnToEditor ? 'Back to editing' : 'Cancel', dialog.close), confirm);
     footer.append(actions);
 }
 
