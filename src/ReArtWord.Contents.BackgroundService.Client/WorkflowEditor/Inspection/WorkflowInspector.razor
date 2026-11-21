@@ -32,7 +32,6 @@
 else
 {
     <fieldset disabled="@Model.Locks.Whole(Model.Draft.Document.Id)">
-    <h3>@Ui["Workflow settings"]</h3>
     <label><input type="checkbox" checked="@Model.Draft.Document.IsRecipe" @onchange="e=>Model.Change(document=>document with{IsRecipe=(bool)e.Value!})" />@Ui["Keep as a reusable SubWorkflow without public ports"]</label>
     <p class="small muted">@Ui["Public input or output nodes also make this a SubWorkflow. Remove those nodes and clear this option to use it as a regular workflow."]</p>
     <details class="secondary-details"><summary>@Ui["Activation by change kind"]</summary>

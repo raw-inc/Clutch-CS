@@ -216,23 +216,14 @@
     border-color: var(--accent);
 }
 
-@media (max-width: 680px) {
-    .dashboard-workspace.with-catalog {
-        overflow-y: auto;
-    }
-
-    .dashboard-workspace.with-catalog .dashboard-library {
-        max-height: none;
-    }
-}
-
 .dashboard-heading .toolbar > button[aria-label] {
     flex: none;
 }
 
 .dashboard-card > .board-action-note {
-    padding-inline: 12px;
-    margin-block-end: 16px;
+    display: block;
+    padding: 0 14px 16px;
+    margin: 0;
     line-height: 1.5;
 }
 
@@ -251,13 +242,17 @@
         flex-direction: column;
     }
 
-    .dashboard-workspace.with-catalog :is(.dashboard-library, .dashboard-board, .dashboard-board-scroll) {
-        flex: 0 0 auto;
-        overflow: visible;
+    .dashboard-workspace.with-catalog .dashboard-library {
+        flex: none;
+        max-block-size: min(35dvh, 17rem);
+        overflow: auto;
+    }
+
+    .dashboard-workspace.with-catalog .dashboard-board-scroll {
+        flex: 1;
     }
 
     .dashboard-workspace.with-catalog .dashboard-library ::deep .dashboard-catalog-items {
-        max-height: none;
         min-height: 0;
     }
 }

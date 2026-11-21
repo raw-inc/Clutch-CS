@@ -1,5 +1,5 @@
 .dashboard-comment {
-    padding: 12px;
+    padding: 12px 5px;
 }
 
 .comment-text {
@@ -57,10 +57,11 @@ p.comment-text {
 }
 
 .comment-continuation {
+    margin-inline: 8px;
     border: 1px solid var(--line);
     border-radius: var(--radius-control);
 }
 
 .comment-continuation > p {
-    padding-inline: 12px;
+    padding-inline: 8px;
 }

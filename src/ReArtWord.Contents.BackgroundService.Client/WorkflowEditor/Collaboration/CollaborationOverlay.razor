@@ -4,17 +4,26 @@
 @inject EditorDocument Model
 @inject EditorNodeActivity Activity
 <g class="collaboration-overlay" pointer-events="none">
-    @foreach(var (peer,index) in Collaboration.OtherEditors(Model.Draft.Document.Id).Select((peer,index)=>(peer,index)))
+    @{
+        var editors = Collaboration.OtherEditors(Model.Draft.Document.Id).ToArray();
+        var selections = editors.SelectMany((peer,index)=>peer.Presence.SelectedNodeIds.Select(id=>(Id:id,Presence:peer.Presence,Index:index))).GroupBy(item=>item.Id,StringComparer.Ordinal);
+    }
+    @foreach(var group in selections)
+    {
+        @if(Bounds.TryGetValue(group.Key,out var box))
+        {
+            @foreach(var item in group)
+            {
+                <rect class="collaborator-selection" x="@(box.Position.X-3)" y="@(box.Position.Y-3)" width="@(box.Size.Width+6)" height="@(box.Size.Height+6)" fill="none" stroke="@Color(item.Index)" stroke-width="2" stroke-dasharray="6 4"><title>@Label(item.Presence) · @group.Key</title></rect>
+            }
+            var identifiers = string.Join(", ", group.Take(4).Select(item=>ShortIdentifier(item.Presence)));
+            <g><text class="collaborator-selection-name" x="@(box.Position.X+box.Size.Width-3)" y="@(box.Position.Y-8)" text-anchor="end">@Ui.Format("Selected by {0}", identifiers+(group.Count()>4 ? "…" : ""))</text></g>
+        }
+    }
+    @foreach(var (peer,index) in editors.Select((peer,index)=>(peer,index)))
     {
         var presence=peer.Presence;
         var color=Color(index);
-        @foreach(var selected in presence.SelectedNodeIds)
-        {
-            @if(Bounds.TryGetValue(selected,out var box))
-            {
-                <rect class="collaborator-selection" x="@(box.Position.X-3)" y="@(box.Position.Y-3)" width="@(box.Size.Width+6)" height="@(box.Size.Height+6)" fill="none" stroke="@color" stroke-width="2" stroke-dasharray="6 4"><title>@Label(presence) · @selected</title></rect>
-            }
-        }
         @if(presence.DragPosition is {} position && Model.Draft.Document.Nodes.Any(node=>string.Equals(node.Id,presence.DragNodeId,StringComparison.Ordinal)))
         {
             <g><rect x="@position.X" y="@position.Y" width="320" height="64" class="drag-outline" fill="none" stroke="@color" stroke-width="2" stroke-dasharray="6 4" />

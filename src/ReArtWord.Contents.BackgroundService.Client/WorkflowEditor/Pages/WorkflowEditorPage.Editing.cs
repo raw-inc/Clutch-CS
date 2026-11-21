@@ -20,6 +20,15 @@ namespace ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Pages;
 /// <summary>草稿のノード配置・検証・取込と書出しを管理します。</summary>
 public sealed partial class WorkflowEditorPage
 {
+    /// <summary>共同編集の一覧でキャンバスと同じノード名を表示します。</summary>
+    /// <returns>現在の草稿にないノードは元のIDを返します。</returns>
+    private string SelectedNodeName(string id)
+    {
+        NodeDefinition? node = Model.Draft.Document.Nodes.FirstOrDefault(item => string.Equals(item.Id, id, StringComparison.Ordinal));
+        return node is null ? id
+                            : Ui.NodeName(node, catalog.FirstOrDefault(item => string.Equals(item.Type, node.Type, StringComparison.Ordinal)));
+    }
+
     private bool recipePreviewOpen;
     private string recipePreviewNode = string.Empty, recipePreviewWorkflow = string.Empty, recipePreviewCluster = string.Empty;
 

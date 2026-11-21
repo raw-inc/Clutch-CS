@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Fields;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Workflow;
 
@@ -56,14 +57,37 @@ public sealed partial class NodeGraph
         get; set;
     }
 
+    private static double CardGap => 24;
     private readonly Dictionary<string, NodePosition> displayPositions = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> buttonHeights = new(StringComparer.Ordinal);
     private (WorkflowDefinition? Document, GraphTypeInference? Inference, bool Details, bool PortTypes) displayLayout;
 
     /// <summary>重なるカードを表示上だけ離し、保存済みの座標は編集操作まで保持します。</summary>
     private void RefreshDisplayPositions()
     {
         (WorkflowDefinition Document, GraphTypeInference Inference, bool Details, bool PortTypes) input = (Model.Draft.Document, inference, ShowDetails, View.ShowPortTypes);
-        if (displayLayout != input && dragging is null)
+        if (dragging is not null)
+        {
+            return;
+        }
+        bool geometryChanged = displayLayout != input;
+        if (geometryChanged)
+        {
+            buttonHeights.Clear();
+        }
+        string button = "control.button", toggle = "control.toggleButton";
+        foreach (NodeDefinition node in input.Document.Nodes)
+        {
+            if (string.Equals(node.Type, button, StringComparison.Ordinal) || string.Equals(node.Type, toggle, StringComparison.Ordinal))
+            {
+                string? reason = ButtonNodeControl.UnavailableReason(Model, node, ButtonPressed.HasDelegate, ToggleStates.GetValueOrDefault(node.Id));
+                int height = reason is null ? 52
+                                            : 88;
+                geometryChanged |= buttonHeights.GetValueOrDefault(node.Id) != height;
+                buttonHeights[node.Id] = height;
+            }
+        }
+        if (geometryChanged)
         {
             displayPositions.Clear();
             foreach ((string id, NodePosition position) in SeparatedPositions(false))
@@ -93,7 +117,7 @@ public sealed partial class NodeGraph
                                                                                                        : node;
     }
 
-    /// <summary>カードが交差するときだけ、同じ列の次の空きへ移します。</summary>
+    /// <summary>縦方向の間隔が狭いカードを、同じ列の次の空きへ移します。</summary>
     /// <returns>表示時、または草稿へ反映する際に移動する座標です。</returns>
     private Dictionary<string, NodePosition> SeparatedPositions(bool preserveLocks)
     {
@@ -113,7 +137,7 @@ public sealed partial class NodeGraph
                 {
                     if (Intersects(box))
                     {
-                        top = box.Bottom + 24;
+                        top = box.Bottom + CardGap;
                     }
                 }
                 moved[node.Id] = at with { Y = top };
@@ -122,7 +146,7 @@ public sealed partial class NodeGraph
             occupied.Add((at.X, at.X + width, top, top + height));
 
             bool Intersects((double Left, double Right, double Top, double Bottom) box) =>
-                at.X < box.Right - 2 && box.Left < at.X + width - 2 && top < box.Bottom - 2 && box.Top < top + height - 2;
+                at.X < box.Right - 2 && box.Left < at.X + width - 2 && top < box.Bottom + CardGap && box.Top < top + height + CardGap;
         }
 
         return moved;
@@ -143,7 +167,8 @@ public sealed partial class NodeGraph
 
     /// <summary>ノードの表示設定とポート数からカードの高さを求めます。</summary>
     /// <returns>キャンバス座標におけるカードの高さです。</returns>
-    private double CardHeight(NodeDescriptor? descriptor, int inputs, int outputs) => GraphPresentation.CardHeight(descriptor, inputs, outputs, ShowDetails, View);
+    private double CardHeight(NodeDefinition node, NodeDescriptor? descriptor, int inputs, int outputs)
+        => GraphPresentation.CardHeight(descriptor, inputs, outputs, ShowDetails, View, buttonHeights.GetValueOrDefault(node.Id));
 
     /// <summary>コードブロックだけ利用者指定のサイズを持ち、壊れた保存値は既定へ戻します。</summary>
     /// <returns>描画に使用できる有限の寸法です。</returns>
@@ -173,13 +198,13 @@ public sealed partial class NodeGraph
     {
         if (ShowDetails && ConcurrencyNodeTypes.IsStart(node.Type))
         {
-            return CardHeight(descriptor, inputs, outputs) + 220;
+            return CardHeight(node, descriptor, inputs, outputs) + 220;
         }
         if (ShowDetails && (string.Equals(node.Type, CodeBlockType, StringComparison.Ordinal) || string.Equals(node.Type, ProgressType, StringComparison.Ordinal) || string.Equals(node.Type, PreviewType, StringComparison.Ordinal)))
         {
             return CodeSize(node).Height;
         }
-        return CardHeight(descriptor, inputs, outputs);
+        return CardHeight(node, descriptor, inputs, outputs);
     }
 
     /// <summary>表示幅に合わせて長い文字列を省略します。</summary>
@@ -278,7 +303,7 @@ public sealed partial class NodeGraph
 
     /// <summary>設定入力ポートの縦位置を求めます。</summary>
     /// <returns>カード内の設定ポートのY座標です。</returns>
-    private double SettingY(int inputs, int outputs, int index, string? nodeType) => GraphSettingPorts.Y(inputs, outputs, index, nodeType, View);
+    private double SettingY(int inputs, int outputs, int index, NodeDefinition node) => GraphSettingPorts.Y(inputs, outputs, index, buttonHeights.GetValueOrDefault(node.Id), View);
 
     /// <summary>固定入力欄に渡すポートの表示情報を組み立てます。</summary>
     /// <returns>設定入力または推測した入力型に対応する表示情報です。</returns>
@@ -301,7 +326,7 @@ public sealed partial class NodeGraph
             int settingIndex = SettingProperties(descriptor).Select(item => item.Name).ToList().IndexOf(property);
             if (0 <= settingIndex)
             {
-                return new(position.X, position.Y + SettingY(Ports(descriptor, false, id).Count, Ports(descriptor, true, id).Count, settingIndex, descriptor?.Type));
+                return new(position.X, position.Y + SettingY(Ports(descriptor, false, id).Count, Ports(descriptor, true, id).Count, settingIndex, node));
             }
         }
 

@@ -30,13 +30,13 @@ clutch-scroll-area::after {
     pointer-events: none;
 }
 
-clutch-scroll-area[data-scroll-before]::before {
+clutch-scroll-area:not([data-scroll-controls])[data-scroll-before]::before {
     content: "";
     inset-block-start: var(--scroll-edge-block-start, 0);
     background: linear-gradient(var(--scroll-edge), transparent);
 }
 
-clutch-scroll-area[data-scroll-after]::after {
+clutch-scroll-area:not([data-scroll-controls])[data-scroll-after]::after {
     content: "";
     inset-block-end: 0;
     background: linear-gradient(transparent, var(--scroll-edge));

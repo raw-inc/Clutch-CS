@@ -17,6 +17,7 @@ internal sealed class EditorPresence(EditorDocument model, ManagementApi api)
     private long? lastRead, lastSent, lastMovement;
     private int readInterval = 1000;
     private string visible = string.Empty;
+    private readonly List<PresenceView> roster = [];
     private EditorDraft? scopeBasis;
     private readonly List<string> dirtyNodes = [];
     private bool scopeKnown;
@@ -58,6 +59,9 @@ internal sealed class EditorPresence(EditorDocument model, ManagementApi api)
 
     /// <summary>表示位置が変わった場合だけ重ね表示を更新します。</summary>
     internal event Action? Changed;
+
+    /// <summary>参加者や選択中のノードが変わったときに一覧を更新します。</summary>
+    internal event Action? RosterChanged;
 
     /// <summary>現在位置は保持し、既定ではクリック・変更操作だけを公開します。</summary>
     internal void SetPointer(NodePosition? point, string? node, NodePosition? position, bool interaction)
@@ -179,7 +183,15 @@ internal sealed class EditorPresence(EditorDocument model, ManagementApi api)
         finally
         {
             busy = false;
-            string snapshot = ContractJson.Hash(items.Where(item => item.Presence.UiInstanceId != Id && item.IsCurrent(api.UtcNow)).Select(item => item.Presence));
+            DateTimeOffset at = api.UtcNow;
+            PresenceView[] current = items.Where(item => item.Presence.UiInstanceId != Id && item.IsCurrent(at)).ToArray();
+            if (roster.Count != current.Length || !roster.Zip(current).All(pair => SameRosterEntry(pair.First, pair.Second)))
+            {
+                roster.Clear();
+                roster.AddRange(current);
+                RosterChanged?.Invoke();
+            }
+            string snapshot = ContractJson.Hash(current.Select(item => item.Presence));
             if (!string.Equals(snapshot, visible, StringComparison.Ordinal))
             {
                 visible = snapshot;
@@ -188,6 +200,16 @@ internal sealed class EditorPresence(EditorDocument model, ManagementApi api)
             }
         }
     }
+
+    /// <summary>ポインターだけが動いたときは、キャンバス外の一覧を描き直しません。</summary>
+    /// <returns>一覧に表示する情報が一致するかです。</returns>
+    private static bool SameRosterEntry(PresenceView left, PresenceView right)
+        => left.Presence.UiInstanceId == right.Presence.UiInstanceId
+            && string.Equals(left.PeerId, right.PeerId, StringComparison.Ordinal)
+            && string.Equals(left.Presence.WorkflowId, right.Presence.WorkflowId, StringComparison.Ordinal)
+            && string.Equals(left.Presence.DisplayName, right.Presence.DisplayName, StringComparison.Ordinal)
+            && left.Presence.Dirty == right.Presence.Dirty
+            && left.Presence.SelectedNodeIds.SequenceEqual(right.Presence.SelectedNodeIds, StringComparer.Ordinal);
 
     /// <summary>前のWFの座標・選択を新しいWFへ送信しません。</summary>
     private void EnsureGeneration()

@@ -94,23 +94,30 @@ else
         }
         else
         {
-            <span class="collaborator-swatch roster-swatch" aria-hidden="true"></span>
+            <span class="collaborator-swatches" aria-hidden="true">
+                @for(var index=0; index<Math.Min(4,collaborators.Length); index++)
+                {
+                    <span class="collaborator-swatch" style="@("--editor-color:"+CollaborationOverlay.Color(index))"></span>
+                }
+            </span>
             <span>@Ui.Format("{0} editors",collaborators.Length)</span>
         }
     </summary>
-                            <ul>
+                            <clutch-scroll-area class="participants-list"><ul tabindex="0">
                             @foreach(var (peer,index) in collaborators.Select((peer,index)=>(peer,index)))
                             {
                                 <li style="@("--editor-color:"+CollaborationOverlay.Color(index))">
-                                    <strong>@CollaborationOverlay.Label(peer.Presence)</strong>
-                                    <span class="muted">@peer.PeerId @if(peer.Presence.Dirty){<span>· @Ui["Unsaved"]</span>}</span>
+                                    <div class="collaborator-name">
+                                        <strong>@CollaborationOverlay.Label(peer.Presence)</strong>
+                                        <span class="muted">@peer.PeerId @if(peer.Presence.Dirty){<span>· @Ui["Unsaved"]</span>}</span>
+                                    </div>
                                     @if(peer.Presence.SelectedNodeIds.Count>0)
                                     {
                                         <small class="collaborator-nodes">@Ui.Format("Selected nodes: {0}", string.Join(", ", peer.Presence.SelectedNodeIds.Select(SelectedNodeName)))</small>
                                     }
                                 </li>
                             }
-                            </ul>
+                            </ul></clutch-scroll-area>
                         </details>
                     }
                 </Participants>
@@ -122,7 +129,7 @@ else
             </section>
         </div>
         <NodeQuickAdd CanvasHost="canvasContainer" Catalog="catalog" Disabled="@(busy||Model.Locks.Whole(Model.Draft.Document.Id))" Add="AddAtAsync" />
-        <aside class="inspector" hidden="@(!inspectorOpen)"><div class="inspector-heading"><h2>@(Model.SelectedWire is not null?Ui["Connection"]:Model.SelectedNode is not null?Ui["Selected node"]:Ui["Workflow settings"])</h2><div class="toolbar">@if(Model.SelectedNode is not null || Model.SelectedWire is not null){<button class="quiet" @onclick="SelectWorkflow"><UiIcon Name="settings" /><span class="control-label">@Ui["Workflow settings"]</span></button>}<button class="quiet icon-button" aria-label="@Ui["Close inspector"]" @onclick="()=>inspectorOpen=false"><UiIcon Name="close" /></button></div></div>
+        <aside class="inspector" hidden="@(!inspectorOpen)"><div class="inspector-heading @(Model.SelectedNode is not null || Model.SelectedWire is not null ? "with-selection" : null)"><h2>@(Model.SelectedWire is not null?Ui["Connection"]:Model.SelectedNode is not null?Ui["Selected node"]:Ui["Workflow settings"])</h2><div class="toolbar">@if(Model.SelectedNode is not null || Model.SelectedWire is not null){<button class="quiet" @onclick="SelectWorkflow"><UiIcon Name="settings" /><span class="control-label">@Ui["Workflow settings"]</span></button>}<button class="quiet icon-button" aria-label="@Ui["Close inspector"]" @onclick="()=>inspectorOpen=false"><UiIcon Name="close" /></button></div></div>
             <clutch-scroll-area><div class="inspector-content">
             @if(Model.SelectedNode is not null){<NodeInspector ToggleState="@ToggleStates.Find(Model.ClusterId,Model.Draft.Document.Id).GetValueOrDefault(Model.SelectedNode)" ButtonPressed="RunCoreAsync" @key="Model.SelectedNode" Visible="inspectorOpen" Catalog="catalog" InvalidChanged="value=>invalid=value" />}else{<WorkflowInspector Visible="inspectorOpen" Routes="@(inspectorOpen?AllRoutes:[])" Catalog="catalog" />}
             </div></clutch-scroll-area>

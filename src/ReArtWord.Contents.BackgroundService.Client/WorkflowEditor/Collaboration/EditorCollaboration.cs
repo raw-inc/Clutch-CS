@@ -30,6 +30,13 @@ internal sealed class EditorCollaboration(EditorDocument model, ManagementApi ap
         remove => positions.Changed -= value;
     }
 
+    /// <summary>キャンバス横の一覧に載せる編集者や選択情報の変更です。</summary>
+    internal event Action? RosterChanged
+    {
+        add => positions.RosterChanged += value;
+        remove => positions.RosterChanged -= value;
+    }
+
     /// <summary>追加オプションのリアルタイム座標共有です。</summary>
     internal bool RealtimePointer
     {

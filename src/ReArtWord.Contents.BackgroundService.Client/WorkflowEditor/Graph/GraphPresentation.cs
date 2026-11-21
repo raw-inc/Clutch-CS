@@ -140,9 +140,9 @@ internal static class GraphPresentation
 
     /// <summary>空の設定欄を作らずHTML編集欄と外枠の高さを合わせます。</summary>
     /// <returns>card全体の高さです。</returns>
-    internal static double CardHeight(NodeDescriptor? descriptor, int inputs, int outputs, bool details, GraphViewOptions view)
+    internal static double CardHeight(NodeDescriptor? descriptor, int inputs, int outputs, bool details, GraphViewOptions view, int buttonHeight = 0)
     {
-        int height = 90 + Math.Max(inputs, outputs) * PortSpacing(view) + ButtonControlHeight(descriptor?.Type);
+        int height = 90 + Math.Max(inputs, outputs) * PortSpacing(view) + buttonHeight;
         int settings = SettingsCount(descriptor);
         int constants = descriptor?.Inputs.Count ?? 0;
         if (!details || settings + constants == 0)
@@ -158,15 +158,6 @@ internal static class GraphPresentation
             height += 20 + constants * 64;
         }
         return height + 24;
-    }
-
-    /// <summary>実行ボタンと無効の理由を設定欄の手前に収める高さです。</summary>
-    /// <returns>操作欄がないノードは0です。</returns>
-    internal static int ButtonControlHeight(string? nodeType)
-    {
-        string button = "control.button", toggle = "control.toggleButton";
-        return string.Equals(nodeType, button, StringComparison.Ordinal) || string.Equals(nodeType, toggle, StringComparison.Ordinal) ? 88
-                                                                                                                                      : 0;
     }
 
     /// <summary>cardのポート中心と接続線端点を同じ座標で求めます。</summary>

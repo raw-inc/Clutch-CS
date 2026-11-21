@@ -826,7 +826,7 @@
 }
 
 @media (max-width: 1100px) {
-    .studio aside.inspector .inspector-heading {
+    .studio aside.inspector .inspector-heading.with-selection {
         display: grid;
         grid-template-columns: minmax(0, 1fr);
         gap: 8px;
@@ -913,18 +913,21 @@
     white-space: nowrap;
 }
 
-.editor-participants > ul {
+.editor-participants > .participants-list {
     position: absolute;
     z-index: 3;
     width: max-content;
-    max-width: min(18rem, 80vw);
-    max-height: 30dvh;
-    overflow: auto;
-    margin: 0;
-    padding: 6px 12px;
+    max-width: min(20rem, 80vw);
     border: 1px solid var(--control);
     border-radius: var(--radius-control);
+    overflow: hidden;
     background: var(--panel);
+}
+
+.participants-list > ul {
+    max-block-size: min(30dvh, 18rem);
+    margin: 0;
+    padding: 6px 12px;
     font-size: 13px;
     list-style: none;
 }
@@ -949,8 +952,11 @@
     margin-block-start: 6px;
 }
 
-.roster-swatch {
-    --editor-color: var(--muted);
+.collaborator-name {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+    align-items: baseline;
 }
 
 .editor-view-options .live-policy.unavailable {

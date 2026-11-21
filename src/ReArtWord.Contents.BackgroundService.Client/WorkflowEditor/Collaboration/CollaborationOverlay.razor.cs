@@ -35,7 +35,11 @@ public sealed partial class CollaborationOverlay
 
     /// <summary>同じ表示名のブラウザーも区別できるようにします。</summary>
     /// <returns>短い実体識別を添えた編集者名です。</returns>
-    internal static string Label(PresenceUpdate presence) => presence.DisplayName + " · " + presence.UiInstanceId.ToString("N")[..4];
+    internal static string Label(PresenceUpdate presence) => presence.DisplayName + " · " + ShortIdentifier(presence);
+
+    /// <summary>一覧とキャンバスに同じ画面識別子を表示します。</summary>
+    /// <returns>画面実体IDの先頭4桁です。</returns>
+    internal static string ShortIdentifier(PresenceUpdate presence) => presence.UiInstanceId.ToString("N")[..4];
 
     /// <summary>他の編集者の位置更新をこの表示だけで購読します。</summary>
     protected override void OnInitialized()

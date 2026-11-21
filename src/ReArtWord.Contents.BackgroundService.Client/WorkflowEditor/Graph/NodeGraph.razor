@@ -28,7 +28,7 @@
         var position=Position(node);var descriptor=inference.EditorDescriptor(node.Id);var inputs=Ports(descriptor,false,node.Id);var outputs=Ports(descriptor,true);
         bounds[node.Id]=(position,new(CardWidth(node),NodeHeight(node,descriptor,inputs.Count,outputs.Count)));
         var nodeError=string.Join("\n",nodeIssues[node.Id].Select(issue=>Ui[issue.Message]));
-        var buttonHeight = GraphPresentation.ButtonControlHeight(node.Type);
+        var buttonHeight = buttonHeights.GetValueOrDefault(node.Id);
         <g @key="node.Id" data-node-id="@node.Id" data-selected-scope="@regions.SelectedScope(node.Id)" data-scope-membership="@regions.Membership(node.Id)" data-running="@(running.Contains(node.Id)?"true":null)" @onpointerdown="e=>BeginAsync(node,e)" role="button" tabindex="0" aria-label="@(Ui.NodeName(node,descriptor)+" "+node.Id)" @onkeydown="e=>NodeKeyAsync(node.Id,e)" transform="@FormattableString.Invariant($"translate({position.X} {position.Y})")" class="graph-node @(Model.Selection.Nodes.Contains(node.Id)?"selected":null) @(nodeError.Length>0?"has-error":null)" aria-invalid="@(nodeError.Length>0?"true":"false")" data-category="@GraphPresentation.CategoryKey(descriptor?.Category??string.Empty)">
             @if(nodeError.Length>0){<title>@nodeError</title>}
             <rect class="node-box" width="@CardWidth(node)" height="@(NodeHeight(node,descriptor,inputs.Count,outputs.Count))" />
@@ -96,7 +96,7 @@
                 var top=90+Math.Max(inputs.Count,outputs.Count)*GraphPresentation.PortSpacing(View)+buttonHeight;
                 @foreach(var setting in SettingProperties(descriptor).Select((property,index)=>(property,index)))
                 {
-                    var settingPort=SettingPorts.Name(setting.property.Name);var settingInfo=inference.Port(node.Id,settingPort,false);var settingY=SettingY(inputs.Count,outputs.Count,setting.index,node.Type);
+                    var settingPort=SettingPorts.Name(setting.property.Name);var settingInfo=inference.Port(node.Id,settingPort,false);var settingY=SettingY(inputs.Count,outputs.Count,setting.index,node);
                     @if(GraphSettingPorts.Visible(Model.Draft.Document,node.Id,descriptor,settingPort))
                     {
                     <g class="port-group kind-@settingInfo.Key" @onpointerdown:stopPropagation="true" data-wire-node="@node.Id" data-wire-port="@settingPort" data-wire-output="false" @onclick="()=>Input(node.Id,settingPort)">
@@ -105,7 +105,7 @@
                     </g>
                     }
                 }
-                <foreignObject x="12" y="@top" width="266" height="@(CardHeight(descriptor,inputs.Count,outputs.Count)-top)">
+                <foreignObject x="12" y="@top" width="266" height="@(CardHeight(node,descriptor,inputs.Count,outputs.Count)-top)">
                     <div xmlns="http://www.w3.org/1999/xhtml" class="node-card-fields" @onpointerdown:stopPropagation="true" @onpointerup:stopPropagation="true" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true" @onfocusin="()=>SelectNodeAsync(node.Id)">
                         <NodeInlineFields Node="node" Descriptor="descriptor" ReadOnly="@Model.Locks.Node(Model.Draft.Document.Id,node.Id)" ChoicesVersion="@choicesVersion" />
                     </div>
@@ -113,7 +113,7 @@
             }
             @if(ShowDetails && ConcurrencyNodeTypes.IsStart(node.Type))
             {
-                <foreignObject x="12" y="@CardHeight(descriptor,inputs.Count,outputs.Count)" width="266" height="210">
+                <foreignObject x="12" y="@CardHeight(node,descriptor,inputs.Count,outputs.Count)" width="266" height="210">
                     <div xmlns="http://www.w3.org/1999/xhtml" @onpointerdown:stopPropagation="true" @onpointerup:stopPropagation="true" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
                         <ConcurrencyQueuePanel Snapshot="@ConcurrencyQueues.Find(Model.ClusterId,Model.Draft.Document.Id,node.Id)" Compact="true" />
                     </div>
