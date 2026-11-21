@@ -1186,7 +1186,8 @@
 }
 
 @media (max-width: 650px), (pointer: coarse) {
-    .desktop-deck details[open] .desktop-toolbar button {
+    .desktop-deck details[open] .desktop-toolbar button,
+    .desktop-deck details[open] .desktop-toolbar .desktop-action.icon-button {
         min-width: 44px;
         min-height: 44px;
     }
