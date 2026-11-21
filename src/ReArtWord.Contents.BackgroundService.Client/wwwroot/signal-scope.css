@@ -243,6 +243,10 @@
     width: 55px;
 }
 
+.signal-scope.all-columns .scope-packets th:nth-child(6) {
+    width: 11rem;
+}
+
 .scope-packets tr[data-packet] {
     cursor: pointer;
 }

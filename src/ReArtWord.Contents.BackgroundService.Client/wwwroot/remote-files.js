@@ -160,6 +160,10 @@ export async function filesView(root, ctx)
         footer.className = 'file-pane-footer';
         const count = document.createElement('span');
         count.setAttribute('role', 'status');
+        const copyHint = document.createElement('p');
+        copyHint.className = 'file-copy-hint';
+        copyHint.textContent = ctx.t('Open a folder on the destination host to copy here.', 'コピー先のホストでフォルダーを開いてください。');
+        copyHint.hidden = true;
         const copy = ctx.button(ctx.t('Copy selected files', '選択したファイルをコピー'), async () =>
         {
             const other = panes[1 - index];
@@ -196,7 +200,16 @@ export async function filesView(root, ctx)
             refresh: snapshot => Promise.all(panes.filter(item => samePeer(item.peer, snapshot.peer) && item.directory === snapshot.directory).map(item => item.refresh()))
         });
         toolbar.append(state.actions.create);
-        footer.append(state.actions.remove, copy);
+        footer.append(state.actions.remove, copy, copyHint);
+
+        /** 転送先が決まっていないとき、フォルダーを開く場所を示します。 */
+        function updateCopyAction(locked)
+        {
+            const other = panes[1 - index], destination = other?.hostId;
+            copy.textContent = destination ? ctx.t('Copy to ' + destination, destination + ' にコピー') : ctx.t('Copy selected files', '選択したファイルをコピー');
+            copy.disabled = locked || !state.peer || !state.selected.size || !other?.directory || other.busy || state.peer.clusterId !== other.peer?.clusterId;
+            copyHint.hidden = locked || !state.selected.size || !other?.peer || other.busy || other.directory !== null;
+        }
 
         /** 現在の設定と状態から表示を更新します。 */
         function update()
@@ -206,9 +219,7 @@ export async function filesView(root, ctx)
             address.placeholder = drivesListed ? ctx.t('Choose a drive or enter a folder path', 'ドライブを選ぶかパスを入力') : '';
             driveHint.hidden = !drivesListed;
             count.textContent = ctx.t(state.selected.size + ' selected', state.selected.size + ' 件を選択');
-            const destination = panes[1 - index]?.hostId;
-            copy.textContent = destination ? ctx.t('Copy to ' + destination, destination + ' にコピー') : ctx.t('Copy selected files', '選択したファイルをコピー');
-            copy.disabled = locked || !state.peer || !state.selected.size || !panes[1 - index]?.directory || panes[1 - index]?.busy || state.peer.clusterId !== panes[1 - index]?.peer?.clusterId;
+            updateCopyAction(locked);
             drives.disabled = refresh.disabled = address.disabled = go.disabled = !state.peer || locked;
             up.disabled = !state.peer || !state.directory || locked;
             hosts.disabled = clusters.disabled = panes.some(item => item.actions?.busy);

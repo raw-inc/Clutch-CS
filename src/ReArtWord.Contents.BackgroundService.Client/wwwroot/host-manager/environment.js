@@ -113,7 +113,7 @@ export function environmentView(root, ctx, actionArea)
             actions.append(action(ctx, 'Edit', 'settings', () => edit(variable)), ctx.button('Delete', () => ctx.preview(hosts.map(target => ({ host: target, query: query(target, variable.name), action: 'environment', change: { value: null, delete: true, expandable: variable.expandable }, label: `${ctx.t('Delete variable')} · ${variable.name}` }))), 'danger'));
             rows.add([name, value, actions]);
         }
-        const summary = node('div', '', 'hm-toolbar');
+        const summary = node('div', '', 'hm-toolbar hm-record-summary');
         summary.append(badge(recordCount(ctx, 'count.variables', variables.length)), node('span', `${host.target.hostId} · ${ctx.t(scope)}`, 'hm-muted'));
         listing.append(summary, rows.root);
     }

@@ -498,12 +498,29 @@
     touch-action: auto;
 }
 
-.desktop-deck {
+.desktop-deck-scroll {
     grid-column: 1 / -1;
-    min-width: 0;
     max-height: 45dvh;
-    overflow: auto;
+}
+
+.desktop-deck {
+    min-width: 0;
     background: var(--card);
+}
+
+.desktop-control-scroll {
+    display: contents;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-deck-scroll {
+    display: contents;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-deck-scroll::before,
+.desktop-workspace[data-state="connected"] .desktop-deck-scroll::after,
+.desktop-workspace:not([data-state="connected"]) .desktop-control-scroll::before,
+.desktop-workspace:not([data-state="connected"]) .desktop-control-scroll::after {
+    content: none;
 }
 
 .desktop-targets {
@@ -568,6 +585,10 @@
 
     .desktop-targets .desktop-connection {
         justify-self: start;
+    }
+
+    .desktop-targets > label:has(.desktop-transmission-preset) {
+        grid-column: 1 / -1;
     }
 }
 
@@ -907,7 +928,8 @@
     flex: none;
 }
 
-.desktop-workspace[data-state="connected"] .desktop-deck details[open] .desktop-toolbar {
+.desktop-workspace[data-state="connected"] .desktop-deck details[open] > .desktop-control-scroll {
+    display: flex;
     position: absolute;
     z-index: 3;
     grid-column: 1 / -1;
@@ -915,12 +937,14 @@
     inset: 4px 4px auto auto;
     width: min(540px, calc(100% - 8px));
     max-height: calc(100% - 8px);
-    overflow-y: auto;
-    align-items: center;
-    padding: 8px;
     border: 1px solid var(--control);
     border-radius: var(--radius-control);
     background: var(--panel);
+}
+
+.desktop-workspace[data-state="connected"] .desktop-control-scroll > .desktop-toolbar {
+    align-items: center;
+    padding: 8px;
 }
 
 .desktop-workspace .desktop-deck > details > summary {
@@ -1015,7 +1039,7 @@
         border-block: 0;
     }
 
-    .desktop-workspace[data-state="connected"] :is(.desktop-viewport, .desktop-popover, details[open] .desktop-toolbar) {
+    .desktop-workspace[data-state="connected"] :is(.desktop-viewport, .desktop-popover, details[open] > .desktop-control-scroll) {
         grid-row: 3;
     }
 }

@@ -57,6 +57,10 @@ export async function terminalView(root, ctx)
     shellLabel.className = 'terminal-shell-field';
     shellLabel.textContent = ctx.t('Shell', 'シェル');
     shellLabel.append(shellSelect);
+    const shellPath = document.createElement('p');
+    shellPath.className = 'terminal-shell-path';
+    shellPath.id = 'terminal-shell-path';
+    shellSelect.setAttribute('aria-describedby', shellPath.id);
     const adminHint = document.createElement('p');
     adminHint.className = 'terminal-launch-hint';
     adminHint.id = 'terminal-launch-hint';
@@ -191,10 +195,12 @@ export async function terminalView(root, ctx)
                 row.append(name);
                 if (current)
                 {
-                    const indicator = document.createElement('span');
+                    const status = document.createElement('span'), indicator = document.createElement('span');
+                    status.className = 'terminal-connected';
                     indicator.className = 'badge good';
                     indicator.textContent = ctx.t('Connected', '接続中');
-                    row.append(indicator);
+                    status.append(indicator);
+                    row.append(status);
                 }
                 const claim = current ? null : ctx.button(ctx.t('Take over', '引き継ぐ'), () => connectAsync(value, false, selected));
                 claim?.setAttribute('aria-label', ctx.t('Take over', '接続を引き継ぐ'));
@@ -216,6 +222,7 @@ export async function terminalView(root, ctx)
                 terminate.disabled = item.failed;
                 if (claim)
                 {
+                    claim.classList.add('terminal-claim');
                     claim.disabled = item.failed;
                     row.append(claim);
                 }
@@ -538,11 +545,21 @@ export async function terminalView(root, ctx)
         {
             const option = document.createElement('option');
             option.value = shell.path;
-            option.textContent = `${shell.name}${index === 0 ? ctx.t(' (default)', '（既定）') : ''} · ${shell.path}`;
+            const name = shell.name + (index === 0 ? ctx.t(' (default)', '（既定）') : '');
+            option.textContent = shells.some(item => item !== shell && item.name === shell.name) ? name + ' · ' + shell.path : name;
             shellSelect.append(option);
         }
         shellSelect.value = selected;
-        shellSelect.title = selected || message;
+        updateShellPath(message);
+    }
+
+    /** 選択したシェルのパスを、選択欄の幅に制限されない場所に表示します。 */
+    function updateShellPath(message = '')
+    {
+        const path = shellSelect.value;
+        shellPath.textContent = path;
+        shellPath.hidden = !path;
+        shellSelect.title = path || message;
     }
 
     /** シェル一覧の件数と必須項目を検証します。 */
@@ -619,7 +636,7 @@ export async function terminalView(root, ctx)
         {
             catalog.selected = shellSelect.value;
         }
-        shellSelect.title = shellSelect.value;
+        updateShellPath();
     };
 
     /** 選択された内容をクリップボードへコピーします。
@@ -789,7 +806,7 @@ export async function terminalView(root, ctx)
     {
         sessionActions.append(tokenPolicy);
     }
-    sessionActions.append(adminHint);
+    sessionActions.append(shellPath, adminHint);
     const peerTitle = document.createElement('h2'), sessionTitle = document.createElement('h2');
     peerTitle.textContent = ctx.t('Clusters & peers', 'クラスタ・ピア');
     sessionTitle.textContent = ctx.t('Shared sessions', '共有セッション');

@@ -171,7 +171,7 @@
 }
 
 .hm-host:hover {
-    background: var(--raised);
+    background: light-dark(#f1f2f5, #30343e);
 }
 
 .hm-host[data-selected="true"] {
@@ -1705,12 +1705,7 @@
 
 .hm-hosts-entry > .danger,
 .hm-actions > .danger {
-    color: var(--danger);
     margin-inline-start: 8px;
-}
-
-.hm-actions > .danger:disabled {
-    color: var(--disabled-ink);
 }
 
 .hm-view-actions .hm-selection-bar > strong {
@@ -1769,7 +1764,6 @@
 
 .hm-view .danger {
     width: fit-content;
-    color: var(--danger);
 }
 
 .hm-dialog-body .hm-grid {
@@ -1954,11 +1948,6 @@
     overflow-wrap: anywhere;
 }
 
-.hm-section .hm-actions button.danger:enabled,
-.hm-hosts-editor button.danger:enabled {
-    border-color: var(--danger);
-}
-
 .hm-view .hm-selection-bar > .danger {
     margin-inline-start: 12px;
 }
@@ -2113,12 +2102,6 @@
     }
 }
 
-.hm-view .hm-button.danger:not(:disabled),
-.hm-dialog .hm-button.danger:not(:disabled) {
-    border-color: var(--danger);
-    color: var(--danger);
-}
-
 .host-manager .hm-view-tabs > button[aria-pressed="true"] {
     background: transparent;
     color: var(--accent);
@@ -2246,6 +2229,7 @@
 }
 
 :root .hm-workspace label.hm-host:has(input:focus-visible):not(:has(input:checked)) {
+    background-color: transparent;
     box-shadow: inset 0 -2px var(--accent);
 }
 
@@ -2502,4 +2486,16 @@
 .hm-display-current-mode dd {
     margin: 0;
     word-break: keep-all;
+}
+
+.hm-view .hm-firewall-filter {
+    column-gap: 20px;
+}
+
+.hm-record-summary {
+    margin-block-end: 8px;
+}
+
+.hm-view .hm-actions.hm-login-actions {
+    justify-content: flex-start;
 }

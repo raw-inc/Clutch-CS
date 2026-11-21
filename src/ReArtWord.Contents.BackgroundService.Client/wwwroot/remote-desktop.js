@@ -433,6 +433,9 @@ export async function desktopView(root, ctx)
     connectedTarget.hidden = true;
     targets.className = 'desktop-targets';
     deck.className = 'desktop-deck';
+    const deckScroll = document.createElement('clutch-scroll-area'), controlScroll = document.createElement('clutch-scroll-area');
+    deckScroll.className = 'desktop-deck-scroll';
+    controlScroll.className = 'desktop-control-scroll';
     const controls = document.createElement('details'), controlsLabel = document.createElement('summary');
     controlsLabel.textContent = ctx.t('Display and input', '表示・入力');
     const compactControlsWidth = 1000, connectedState = 'connected';
@@ -447,9 +450,11 @@ export async function desktopView(root, ctx)
             controls.open = root.dataset.state !== connectedState && !compact;
         }
     }, { signal: ctx.signal });
-    controls.append(controlsLabel, toolbar);
+    controlScroll.append(toolbar);
+    controls.append(controlsLabel, controlScroll);
     deck.append(targets, controls);
-    root.append(deck, rail, viewport);
+    deckScroll.append(deck);
+    root.append(deckScroll, rail, viewport);
     viewport.append(empty, overlay);
     let peers = [], socket, monitors = [], views = [], selected = 0, disposed = false, generation = 0, render = 0, pointer;
     const input = new ArrayBuffer(24), inputView = new DataView(input);

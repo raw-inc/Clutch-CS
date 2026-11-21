@@ -21,7 +21,7 @@ export function scopeTable(container, ctx, send, report)
     const panels = document.createElement('div'), description = document.createElement('pre'), hex = document.createElement('pre');
     panels.className = 'scope-details';
     panels.dataset.empty = 'true';
-    const detailHint = ctx.t('Select a packet to view its contents.', 'パケットを選ぶと内容を表示します。');
+    const detailHint = ctx.t('Select a packet to view its full contents.', 'パケットを選ぶと内容の全文を表示します。');
     for (const [name, content] of [[ctx.t('Packet details', 'パケット詳細'), description], ['Hex / ASCII', hex]])
     {
         const section = document.createElement('section'), title = document.createElement('h2');

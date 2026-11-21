@@ -1040,6 +1040,7 @@
     background: var(--button-face);
     color: var(--ink);
     box-shadow: var(--button-shadow);
+    font-size: 12px;
     font-weight: 600;
     text-decoration: none;
 }
@@ -1065,9 +1066,11 @@
     white-space: nowrap;
 }
 
-.files-tool .tool-toolbar select {
+.files-tool :is(.tool-toolbar, .file-pane > label, .file-pane-title) select {
     align-self: center;
+    font-size: 14px;
     line-height: 1.35;
+    text-overflow: ellipsis;
 }
 
 .terminal-keys button[data-direction] .ui-icon {
@@ -1380,6 +1383,10 @@
         gap: 4px 12px;
     }
 
+    .license-cards .license-metadata > span:nth-child(3) {
+        flex-basis: 100%;
+    }
+
     .license-cards .license-metadata > span::before {
         content: attr(data-label) " ";
         color: var(--muted);
@@ -1444,12 +1451,18 @@
     min-width: 0;
 }
 
-.terminal-launch-hint {
+.terminal-launch-hint,
+.terminal-shell-path {
     flex: 0 0 100%;
     margin: 0;
     color: var(--muted);
     font-size: 13px;
     overflow-wrap: anywhere;
+}
+
+.terminal-shell-path {
+    font-family: var(--font-mono);
+    font-size: 12px;
 }
 
 .terminal-panel > .terminal-state {
@@ -1671,6 +1684,17 @@
     width: auto;
     min-width: 0;
     white-space: nowrap;
+}
+
+.terminal-sidebar .terminal-session > :is(.terminal-claim, .terminal-connected) {
+    inline-size: 4.75rem;
+    flex: none;
+}
+
+.file-copy-hint {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 12px;
 }
 
 .terminal-sidebar-heading > button {

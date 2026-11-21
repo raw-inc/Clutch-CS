@@ -150,7 +150,7 @@ function renderState(root, ctx, state)
     {
         section.append(node('p', ctx.t('No selectable local account.'), 'hm-muted'));
     }
-    const buttons = node('div', '', 'hm-actions');
+    const buttons = node('div', '', 'hm-actions hm-login-actions');
     buttons.append(enable, disable);
     section.append(buttons);
     root.append(section);

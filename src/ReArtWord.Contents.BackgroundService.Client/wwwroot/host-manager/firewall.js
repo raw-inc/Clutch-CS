@@ -22,15 +22,14 @@ export function firewallView(root, ctx, actionArea)
     const title = heading(ctx.t('Firewall rules'), `${ctx.t('Selected hosts')}: ${hostCount(ctx, hosts.length)}`), status = node('div'), profiles = node('div', '', 'hm-profile-grid');
     const hostPick = select(hosts.map(host => [host.target.hostId, host.target.hostId]), hosts[0].target.hostId), filter = input('', 'search');
     filter.className = 'hm-search';
-    filter.placeholder = ctx.t('Search rules');
     filter.setAttribute('aria-label', ctx.t('Search rules'));
-    const tools = node('div', '', 'hm-toolbar'), listing = node('div'), pager = node('div', '', 'hm-pagination'), range = node('span');
+    const tools = node('div', '', 'hm-toolbar hm-firewall-filter'), listing = node('div'), pager = node('div', '', 'hm-pagination'), range = node('span');
     const previous = ctx.button('Previous', () => loadPageAsync(Math.max(0, (pages.get(hostPick.value)?.offset ?? 0) - 10))), next = ctx.button('Next', () => loadPageAsync(current()?.nextOffset));
     const search = ctx.button('Search rules', () => loadPageAsync(0));
     const actions = node('div', '', 'hm-actions');
     actions.append(action(ctx, 'Refresh settings', 'refresh', reload), action(ctx, 'Add rule', 'plus', () => firewallForm(ctx, hosts), true));
     title.append(actions);
-    tools.append(field(ctx.t('Rules on host'), hostPick), field(ctx.t('Filter'), filter), search);
+    tools.append(field(ctx.t('Rules on host'), hostPick), field(ctx.t('Search rules'), filter), search);
     pager.append(range, previous, next);
     const profileRows = document.createElement('clutch-card-rows');
     profileRows.append(profiles);
