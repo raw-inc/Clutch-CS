@@ -18,7 +18,7 @@ public sealed class SynchronizationConflictRaceTests
 {
     /// <summary>保存後の競合解消と、保存時点の未統合結果の到着を明示的に交差させます。</summary>
     /// <returns>現在の候補と参加状態が一致することです。</returns>
-    [Theory]
+    [Theory(Skip = "新規参加の前に同名ピアを確認しなかった旧仕様の試験です。現行の参加手順で同じ競合解消を新しいケースに移しました。")]
     [InlineData(false)]
     [InlineData(true)]
     public async Task ResolutionBeforeImportReturnsDoesNotRestoreConflict(bool resolve)
@@ -58,6 +58,64 @@ public sealed class SynchronizationConflictRaceTests
             repository.Release.TrySetResult();
             await ((Task)importing).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
+        Assert.Equal(resolve, await importing.ConfigureAwait(true));
+        Assert.Equal(resolve ? EPeerStatus.Ready
+                             : EPeerStatus.Conflict, Assert.Single(cluster.GetPeers()).Status);
+        Assert.Equal(resolve ? 0
+                             : 2, (await repository.GetConflictsAsync(scope, timeout.Token).ConfigureAwait(true)).Count);
+    }
+
+    /// <summary>初回の参加確認を終えたPeerで、保存後に競合を解消してから取込み結果を返します。</summary>
+    /// <returns>遅れて届いた取込み結果が、現在の候補と参加状態を巻き戻さないことを確認します。</returns>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ImportResultPreservesTheCurrentConflictAfterPeerStartupAsync(bool resolve)
+    {
+        PausedImport repository = new();
+        const string scope = "workflow:conflict-race";
+        const string key = "value";
+        ClusterOptions options = new(Guid.NewGuid().ToString("N"), "target", "target", "127.0.0.1",
+            "127.255.255.255", LargeSynchronizationTests.Port(), 1, true, Path.GetTempPath())
+        {
+            HeartbeatInterval = TimeSpan.FromMilliseconds(100),
+        };
+
+        // 初回の同名ピア確認は生存通知の一周期を使います。起動と取込みの両方に試験の期限を適用します。
+        using CancellationTokenSource timeout = new(options.HeartbeatInterval + options.RequestTimeout);
+        PeerCluster cluster = new(options, repository) { ReadinessCheck = _ => ValueTask.FromResult(true) };
+        await using ConfiguredAsyncDisposable clusterLifetime = cluster.ConfigureAwait(true);
+        await cluster.StartAsync(timeout.Token).ConfigureAwait(true);
+        Assert.Equal(EPeerStatus.Ready, Assert.Single(cluster.GetPeers()).Status);
+
+        DurableReceipt initial = await repository.ApplyBatchAsync(Guid.NewGuid(),
+            [new(scope, key, null, NodeValue.FromObject("base"))], timeout.Token).ConfigureAwait(true);
+        DurableReceipt local = await repository.ApplyBatchAsync(Guid.NewGuid(),
+            [new(scope, key, initial.Entries[0].Version, NodeValue.FromObject("local"))], timeout.Token).ConfigureAwait(true);
+        RepositorySnapshot incoming = new(
+            [new(scope, key, Guid.NewGuid().ToString("N"), NodeValue.FromObject("remote"), initial.Entries[0].Version)], []);
+        string network = NetworkInterface.GetAllNetworkInterfaces().Single(item => item.GetIPProperties().UnicastAddresses.Any(address => address.Address.Equals(IPAddress.Loopback))).Id;
+        SyncExportStore files = new(cluster, repository, options, TimeProvider.System, () => new(network, "127.0.0.1"));
+        await using ConfiguredAsyncDisposable filesLifetime = files.ConfigureAwait(true);
+        SyncDownload download = new(cluster, repository, files, options, TimeProvider.System, () => new(network, "127.0.0.1"));
+        Task<bool> importing = download.ImportSnapshotAsync(incoming, timeout.Token);
+        try
+        {
+            await repository.Imported.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
+            if (resolve)
+            {
+                string[] candidates = (await repository.GetConflictsAsync(scope, timeout.Token).ConfigureAwait(true)).Select(entry => entry.Version).ToArray();
+                DurableReceipt resolved = await repository.ApplyBatchAsync(Guid.NewGuid(),
+                    [new(scope, key, null, local.Entries[0].Value, candidates)], timeout.Token).ConfigureAwait(true);
+                Assert.Equal(EOutcome.Succeeded, resolved.Outcome);
+            }
+        }
+        finally
+        {
+            repository.Release.TrySetResult();
+            await ((Task)importing).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
+
         Assert.Equal(resolve, await importing.ConfigureAwait(true));
         Assert.Equal(resolve ? EPeerStatus.Ready
                              : EPeerStatus.Conflict, Assert.Single(cluster.GetPeers()).Status);
