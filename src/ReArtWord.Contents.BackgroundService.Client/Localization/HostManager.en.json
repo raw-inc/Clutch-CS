@@ -304,7 +304,7 @@
   "Select at most 256 changes at a time.": "Select at most 256 changes at a time.",
   "PATH entries across hosts": "PATH entries across hosts",
   "Selected PATH entries": "Selected PATH entries",
-  "Enable adds the path if missing; disable removes that path. Other preserves order, duplicates and variable references on each host.": "Enable adds the path if missing; disable removes that path. Other preserves order, duplicates and variable references on each host.",
+  "Enable adds the path if missing; disable removes that path. Other preserves order, duplicates and variable references on each host.": "Enabled adds the path on hosts where it is missing. Disabled removes it. Keep each host unchanged preserves the order, duplicates and variable references on each host.",
   "All hosts agree": "All hosts agree",
   "Environment variables": "Environment variables",
   "Choose source value": "Choose source value",

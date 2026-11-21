@@ -301,7 +301,7 @@
   "Select at most 256 changes at a time.": "一度に適用する変更は256件以内にしてください。",
   "PATH entries across hosts": "ホスト間のPATHエントリー",
   "Selected PATH entries": "選択したPATHエントリー",
-  "Enable adds the path if missing; disable removes that path. Other preserves order, duplicates and variable references on each host.": "enableは未定義ホストにパスを追加し、disableはそのパスを削除します。otherの項目は各ホストの順序・重複・変数参照を含めて保持します。",
+  "Enable adds the path if missing; disable removes that path. Other preserves order, duplicates and variable references on each host.": "「有効」は未登録のホストにパスを追加し、「無効」はパスを削除します。「変更しない」を選ぶと、パスの順序や重複、変数参照も各ホストの設定どおりに維持されます。",
   "All hosts agree": "全ホストで一致",
   "Environment variables": "環境変数",
   "Choose source value": "コピー元の値を選択",
