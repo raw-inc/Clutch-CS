@@ -117,7 +117,12 @@ export async function terminalView(root, ctx)
             sessionName.append(connected);
             description.textContent += ' ' + ctx.t('This screen will also disconnect.', 'この画面の接続も切断されます。');
         }
-        body.append(hostName, sessionName, impact);
+        const details = document.createElement('details'), titleId = document.createElement('summary'), identifier = document.createElement('code');
+        details.className = 'secondary-details';
+        titleId.textContent = ctx.t('Session ID', 'セッションID');
+        identifier.textContent = value.sessionId;
+        details.append(titleId, identifier);
+        body.append(hostName, sessionName, impact, details);
         scroll.append(body);
         footer.className = 'toolbar';
         footer.method = 'dialog';

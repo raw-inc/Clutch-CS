@@ -336,7 +336,7 @@ window.inputs=[];window.WebSocket=class{
             await checkVisibleSessionActionsAsync(widths, true, [terminate]);
         });
     }
-    await t.test('終了する共有セッションは確認後にだけ一度終了する', async() =>
+    await t.test('終了する共有セッションは確認後にだけ一度終了する', { skip: 'セッションIDを本文に表示する旧仕様です。新しい表示でも取消しと確定を検証します。' }, async() =>
     {
         await page.setViewportSize({ width: 1440, height: 900 });
         const entry = page.locator('.terminal-session[aria-current="true"]');
@@ -344,6 +344,32 @@ window.inputs=[];window.WebSocket=class{
         const dialog = page.getByRole('dialog', { name: 'End session' });
         await dialog.waitFor();
         assert.ok((await dialog.innerText()).includes(sessions[0].sessionId));
+        await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+        await dialog.waitFor({ state: 'hidden' });
+        assert.equal(operations.filter(o => o.path.endsWith('/close')).length, 0);
+        await entry.waitFor();
+
+        await entry.getByRole('button', { name: 'End session', exact: true }).click();
+        await dialog.getByRole('button', { name: 'End session', exact: true }).click();
+        await page.waitForFunction(() => !document.querySelector('.terminal-session'));
+        assert.equal(operations.filter(o => o.path.endsWith('/close')).length, 1);
+        assert.equal(sessions.length, 0);
+    });
+    await t.test('一覧と同じセッション名で確認し、確定後にだけ一度終了する', async() =>
+    {
+        await page.setViewportSize({ width: 1440, height: 900 });
+        const entry = page.locator('.terminal-session[aria-current="true"]');
+        const label = await entry.locator(':scope > span').first().innerText();
+        await entry.getByRole('button', { name: 'End session', exact: true }).click();
+        const dialog = page.getByRole('dialog', { name: 'End session' });
+        await dialog.waitFor();
+        assert.equal(await dialog.locator('.terminal-confirm-session > span').first().innerText(), label);
+        assert.equal(await dialog.locator('.terminal-confirm-session .badge').innerText(), 'Connected');
+        assert.match(await dialog.locator('.notice').innerText(), /This screen will also disconnect/);
+        const identifier = dialog.locator('details code');
+        assert.equal(await dialog.locator('details').getAttribute('open'), null);
+        await dialog.getByText('Session ID', { exact: true }).click();
+        assert.equal(await identifier.innerText(), sessions[0].sessionId);
         await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
         await dialog.waitFor({ state: 'hidden' });
         assert.equal(operations.filter(o => o.path.endsWith('/close')).length, 0);
