@@ -291,7 +291,7 @@ window.inputs=[];window.WebSocket=class{
                     : Math.abs(leftBounds.left - rightBounds.left) <= 1 && leftBounds.bottom < rightBounds.top;
                 const titles = [left, right].map(control =>
                 {
-                    const label = control.querySelector('.control-label') ?? control;
+                    const label = control.querySelector('.control-label, .badge') ?? control;
                     const range = document.createRange();
                     range.selectNodeContents(label);
                     return range.getClientRects().length === 1 && control.scrollWidth <= control.clientWidth;
