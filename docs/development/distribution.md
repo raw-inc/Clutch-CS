@@ -4,7 +4,7 @@
 
 配布物には Installer、CoreService、ClientHost、Updater、CLI、通信キャプチャ用プログラム、ライセンス表記を含めます。
 ビルド用の環境は[開発環境とビルド](build.md)に従って用意してください。
-発行ツールの実行には、SDKに加えて .NET Runtime 10.0.13 以降の10.0系が必要です。`dotnet --list-runtimes` の `Microsoft.NETCore.App` を確認し、不足している場合は[.NET Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)をインストールしてください。
+発行ツールの実行には、SDKに加えて .NET Runtime 10.0.15 以降の10.0系が必要です。`dotnet --list-runtimes` の `Microsoft.NETCore.App` を確認し、不足している場合は[.NET Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)をインストールしてください。
 
 ## Windows の配布物を生成する
 

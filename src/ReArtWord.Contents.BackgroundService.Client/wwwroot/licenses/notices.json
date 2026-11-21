@@ -395,7 +395,7 @@
   },
   {
     "name": "Microsoft.AspNetCore.App.Runtime.win-x64",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://asp.net/",
@@ -403,11 +403,11 @@
     "notices": [
       {
         "label": "License",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-third-party.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-third-party.txt"
       }
     ]
   },
@@ -421,11 +421,11 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-third-party.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-third-party.txt"
       }
     ]
   },
@@ -439,7 +439,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -457,7 +457,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -475,7 +475,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -493,7 +493,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -511,7 +511,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -529,11 +529,11 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-third-party.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-third-party.txt"
       }
     ]
   },
@@ -547,7 +547,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -565,7 +565,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -583,7 +583,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       }
     ]
   },
@@ -597,7 +597,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -615,7 +615,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -633,7 +633,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -651,7 +651,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -669,7 +669,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -687,7 +687,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -705,7 +705,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -723,7 +723,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -741,7 +741,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -759,7 +759,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -777,7 +777,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -795,7 +795,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -813,7 +813,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -831,7 +831,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -849,7 +849,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -867,7 +867,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -885,7 +885,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -903,7 +903,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -921,7 +921,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -939,7 +939,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -957,7 +957,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -975,7 +975,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -993,7 +993,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1011,7 +1011,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1029,7 +1029,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1047,7 +1047,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1065,7 +1065,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1083,7 +1083,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1101,7 +1101,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1119,7 +1119,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1137,7 +1137,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1155,7 +1155,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1173,7 +1173,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1191,7 +1191,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1209,7 +1209,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1227,7 +1227,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1245,7 +1245,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1263,7 +1263,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1281,7 +1281,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1299,7 +1299,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1317,7 +1317,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1335,7 +1335,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1353,7 +1353,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1371,7 +1371,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1389,7 +1389,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1407,7 +1407,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1425,11 +1425,11 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-third-party.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-third-party.txt"
       }
     ]
   },
@@ -1443,11 +1443,11 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-third-party.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-third-party.txt"
       }
     ]
   },
@@ -1461,7 +1461,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1471,7 +1471,7 @@
   },
   {
     "name": "Microsoft.NETCore.App.Runtime.Mono.browser-wasm",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -1479,7 +1479,7 @@
     "notices": [
       {
         "label": "License",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1489,7 +1489,7 @@
   },
   {
     "name": "Microsoft.NETCore.App.Runtime.win-x64",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -1497,7 +1497,7 @@
     "notices": [
       {
         "label": "License",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1515,7 +1515,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "License",
@@ -1525,7 +1525,7 @@
   },
   {
     "name": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
-    "version": "10.0.13",
+    "version": "10.0.15",
     "license": "MIT",
     "authors": "Microsoft",
     "project": "https://dot.net/",
@@ -1533,7 +1533,7 @@
     "notices": [
       {
         "label": "License",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       }
     ]
   },
@@ -1881,7 +1881,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1899,7 +1899,7 @@
     "notices": [
       {
         "label": "License",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1917,7 +1917,7 @@
     "notices": [
       {
         "label": "License",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",
@@ -1935,7 +1935,7 @@
     "notices": [
       {
         "label": "dotnet",
-        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.13-license.txt"
+        "href": "/licenses/Microsoft.AspNetCore.App.Runtime.win-x64-10.0.15-license.txt"
       },
       {
         "label": "Third-party notices",

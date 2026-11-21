@@ -7,7 +7,7 @@ param(
     [string] $RuntimeIdentifier = 'win-x64',
     [string[]] $CompatibleReleaseIds = @(),
     [string] $Version,
-    [string] $RuntimeVersion = '10.0.13',
+    [string] $RuntimeVersion = '10.0.15',
     [string] $NativeSkiaDirectory
 )
 $ErrorActionPreference = 'Stop'

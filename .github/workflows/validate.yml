@@ -299,7 +299,7 @@ jobs:
       RELEASE_TAG: ${{ inputs.tag }}
       RELEASE_VERSION: ${{ inputs.version }}
       RELEASE_SHA: ${{ inputs.sha || github.sha }}
-      PACKAGE_RUNTIME_VERSION: '10.0.13'
+      PACKAGE_RUNTIME_VERSION: '10.0.15'
     defaults:
       run:
         shell: pwsh

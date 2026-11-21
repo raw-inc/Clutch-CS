@@ -4,7 +4,7 @@ param(
     [Parameter(Mandatory)][string] $PackageRoot,
     [Parameter(Mandatory)][string] $CatalogPath,
     [Parameter(Mandatory)][string] $NoticesPath,
-    [string] $RuntimeVersion = '10.0.13'
+    [string] $RuntimeVersion = '10.0.15'
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'ThirdParty/Read-Notice.ps1')

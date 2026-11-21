@@ -2,7 +2,7 @@
 param(
     [string]$NugetRoot = (Join-Path $env:USERPROFILE '.nuget/packages'),
     [string]$RuntimeIdentifier = 'win-x64',
-    [string]$RuntimeVersion = '10.0.13'
+    [string]$RuntimeVersion = '10.0.15'
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'ThirdParty/Read-Notice.ps1')
