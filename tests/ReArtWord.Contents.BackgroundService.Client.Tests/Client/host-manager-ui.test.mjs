@@ -468,6 +468,19 @@ test('hosts UI and text editing share one draft and apply only after explicit co
     assert.equal(f.saved[0].operationId, f.batches[0].request.operationId);
     assert.equal(f.batches[0].request.changes[0].request.change.content, value);
 });
+test('removing a hosts entry only edits the draft and can restore its original line', async t =>
+{
+    const f = await fixtureAsync(t);
+    await f.pick('host-a');
+    await f.click('Hosts');
+    await f.click('Delete · 127.0.0.1');
+    assert.equal(f.dialogs().length, 0);
+    assert.equal(f.batches.length, 0);
+    await f.click('Undo removal');
+    await f.click('Text editor');
+    assert.equal(f.find('textarea', 'Replace hosts content').value, '# keep\r\n127.0.0.1  localhost\r\n');
+    assert.equal(f.batches.length, 0);
+});
 test('DNS bulk editing preserves pinned NICs and sends no unrelated settings', async t =>
 {
     const f = await fixtureAsync(t);

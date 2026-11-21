@@ -133,7 +133,7 @@ export function previewValues(item, translate = key => key)
  */
 function deletesResource(item)
 {
-    return ['virtualNicDelete', 'firewallRuleRemove'].includes(item.action) || item.change.delete;
+    return ['virtualNicDelete', 'virtualSwitchDelete', 'firewallRuleRemove'].includes(item.action) || item.change.delete;
 }
 
 /** 表示モードの変更前後を説明します。
@@ -343,7 +343,9 @@ export async function showPreview(ctx, proposed, refreshHistory, current = () =>
         throw new Error(ctx.t('Select at most 256 changes at a time.'));
     }
     ctx.say('');
-    const dialog = ctx.dialog('Confirm changes');
+    const hasDeletion = previews.some(deletesResource);
+    const deletionOnly = hasDeletion && previews.every(deletesResource);
+    const dialog = ctx.dialog(deletionOnly ? 'Confirm deletions' : 'Confirm changes');
     dialog.element?.classList.add('hm-preview-dialog');
     const summary = node('div', '', 'hm-summary');
     summary.append(badge(`${ctx.t('Affected hosts')}: ${new Set(previews.map(item => item.host.target.hostId)).size}`), badge(`${ctx.t('Changes')}: ${previews.length}`));
@@ -400,6 +402,12 @@ export async function showPreview(ctx, proposed, refreshHistory, current = () =>
         targets.append(button);
     }
     show(previews[0], targets.firstElementChild);
+    appendPreviewActions(ctx, dialog, previews, { needsAcknowledgement, hasDeletion, deletionOnly }, refreshHistory, submitted);
+}
+
+/** 変更内容に応じた確認と確定操作をプレビューの下部に表示します。 */
+function appendPreviewActions(ctx, dialog, previews, { needsAcknowledgement, hasDeletion, deletionOnly }, refreshHistory, submitted)
+{
     const risk = previews.some(item => ['network', 'firewall', 'display', 'power', 'windowsUpdate', 'login'].includes(item.query.area));
     const acknowledgement = checkbox(ctx.t(impactMessage(previews)));
     const footer = dialog.footer ?? dialog.root;
@@ -414,7 +422,12 @@ export async function showPreview(ctx, proposed, refreshHistory, current = () =>
         footer.append(previous.root);
     }
     const actions = node('div', '', 'hm-actions');
-    const confirm = ctx.button('Apply confirmed changes', async () =>
+    const label = deletionOnly ? 'Delete selected items' : hasDeletion ? 'Apply changes including deletions' : 'Apply confirmed changes';
+
+    /** 確認した対象と変更内容だけを送信します。
+     * @returns 操作の送信と履歴の再取得が完了するまでのPromiseです。
+     */
+    async function applyAsync()
     {
         if ((risk && !acknowledgement.control.checked) || (needsAcknowledgement && !previous.control.checked))
         {
@@ -437,7 +450,10 @@ export async function showPreview(ctx, proposed, refreshHistory, current = () =>
         {
             await refreshHistory();
         }
-    }, 'primary');
+    }
+
+    const confirm = hasDeletion ? action(ctx, label, 'trash', applyAsync) : ctx.button(label, applyAsync, 'primary');
+    confirm.classList.toggle('confirm-action', hasDeletion);
     confirm.disabled = risk || needsAcknowledgement;
 
     /** 適用に必要な条件と入力を確認します。 */

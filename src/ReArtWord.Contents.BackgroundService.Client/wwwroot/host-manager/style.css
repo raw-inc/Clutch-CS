@@ -1982,8 +1982,6 @@
 
 .hm-schedule-bulk > button:last-child {
     margin-inline-start: 12px;
-    border-color: var(--danger);
-    color: var(--danger);
 }
 
 @media (max-width: 1150px) {

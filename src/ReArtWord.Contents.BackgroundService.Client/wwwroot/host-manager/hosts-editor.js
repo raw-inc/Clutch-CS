@@ -6,7 +6,7 @@ import { parseHosts, hostsText, setHostsEntry, removeHostsEntry } from './hosts-
  */
 export function hostsEditor(ctx, changed)
 {
-    let document = parseHosts(''), mode = 'entries', disabled = true;
+    let document = parseHosts(''), mode = 'entries', disabled = true, removed;
     const root = node('div', '', 'hm-hosts-editor'), tools = node('div', '', 'hm-toolbar'), body = node('div');
     const text = textarea('', 16);
     text.className = 'hm-code-editor';
@@ -41,6 +41,22 @@ export function hostsEditor(ctx, changed)
             body.append(text);
             return;
         }
+        if (removed)
+        {
+            const notice = node('div', '', 'hm-toolbar hm-deletion-undo');
+            const undo = action(ctx, 'Undo removal', 'undo', () =>
+            {
+                document.lines.splice(removed.index, 0, removed.line);
+                removed = null;
+                notify();
+                render();
+            });
+            undo.disabled = disabled;
+            const status = node('span', ctx.t('Entry removed from the draft'), 'hm-muted');
+            status.setAttribute('role', 'status');
+            notice.append(status, undo);
+            body.append(notice);
+        }
         const entries = document.lines.map((line, index) => ({ ...line, index })).filter(line => line.entry);
         if (!entries.length)
         {
@@ -64,10 +80,7 @@ export function hostsEditor(ctx, changed)
             }
             const editButton = action(ctx, 'Edit', 'settings', () => edit(index)), remove = action(ctx, 'Delete', 'trash', () =>
             {
-                if (!window.confirm(ctx.t('Delete') + ' · ' + entry.address + ' ' + entry.names))
-                {
-                    return;
-                }
+                removed = { index, line: document.lines[index] };
                 removeHostsEntry(document, index);
                 notify();
                 render();
@@ -100,6 +113,10 @@ export function hostsEditor(ctx, changed)
         dialog.footer.append(ctx.button('Cancel', dialog.close), action(ctx, 'Use entry', 'check', () =>
         {
             setHostsEntry(document, index ?? document.lines.length, { address: address.value.trim(), names: names.value, comment: comment.value, enabled: enabled.control.checked });
+            if (index == null)
+            {
+                removed = null;
+            }
             notify();
             render();
             dialog.close();
@@ -109,6 +126,7 @@ export function hostsEditor(ctx, changed)
     text.oninput = () =>
     {
         document = parseHosts(text.value);
+        removed = null;
         changed();
     };
     render();
@@ -123,6 +141,7 @@ export function hostsEditor(ctx, changed)
         setValue(value, inform = false)
         {
             document = parseHosts(value);
+            removed = null;
             render();
             if (inform)
             {
