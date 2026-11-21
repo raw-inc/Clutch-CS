@@ -58,6 +58,7 @@ public sealed partial class NodeGraph
     }
 
     private static double CardGap => 24;
+    private static int ButtonHeightWithReason => 88;
     private readonly Dictionary<string, NodePosition> displayPositions = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> buttonHeights = new(StringComparer.Ordinal);
     private (WorkflowDefinition? Document, GraphTypeInference? Inference, bool Details, bool PortTypes) displayLayout;
@@ -82,7 +83,7 @@ public sealed partial class NodeGraph
             {
                 string? reason = ButtonNodeControl.UnavailableReason(Model, node, ButtonPressed.HasDelegate, ToggleStates.GetValueOrDefault(node.Id));
                 int height = reason is null ? 52
-                                            : 88;
+                                            : ButtonHeightWithReason;
                 geometryChanged |= buttonHeights.GetValueOrDefault(node.Id) != height;
                 buttonHeights[node.Id] = height;
             }
@@ -129,7 +130,7 @@ public sealed partial class NodeGraph
             NodePosition at = StoredPosition(node);
             NodeDescriptor? descriptor = inference.EditorDescriptor(node.Id);
             double width = CardWidth(node);
-            double height = NodeHeight(node, descriptor, Ports(descriptor, false, node.Id).Count, Ports(descriptor, true, node.Id).Count);
+            double height = NodeHeight(node, descriptor, Ports(descriptor, false, node.Id).Count, Ports(descriptor, true, node.Id).Count, preserveLocks);
             double top = at.Y;
             if (!Locked(node) && occupied.Any(Intersects))
             {
@@ -167,8 +168,16 @@ public sealed partial class NodeGraph
 
     /// <summary>ノードの表示設定とポート数からカードの高さを求めます。</summary>
     /// <returns>キャンバス座標におけるカードの高さです。</returns>
-    private double CardHeight(NodeDefinition node, NodeDescriptor? descriptor, int inputs, int outputs)
-        => GraphPresentation.CardHeight(descriptor, inputs, outputs, ShowDetails, View, buttonHeights.GetValueOrDefault(node.Id));
+    private double CardHeight(NodeDefinition node, NodeDescriptor? descriptor, int inputs, int outputs, bool applyingPlacement = false)
+    {
+        int buttonHeight = buttonHeights.GetValueOrDefault(node.Id);
+        // 配置を草稿に反映すると未保存になり、実行できない理由がボタンの下に表示される。
+        if (applyingPlacement && buttonHeight > 0)
+        {
+            buttonHeight = ButtonHeightWithReason;
+        }
+        return GraphPresentation.CardHeight(descriptor, inputs, outputs, ShowDetails, View, buttonHeight);
+    }
 
     /// <summary>コードブロックだけ利用者指定のサイズを持ち、壊れた保存値は既定へ戻します。</summary>
     /// <returns>描画に使用できる有限の寸法です。</returns>
@@ -194,17 +203,17 @@ public sealed partial class NodeGraph
 
     /// <summary>コード欄をノードの拡縮に追従させます。</summary>
     /// <returns>ポートを含むノードの高さです。</returns>
-    private double NodeHeight(NodeDefinition node, NodeDescriptor? descriptor, int inputs, int outputs)
+    private double NodeHeight(NodeDefinition node, NodeDescriptor? descriptor, int inputs, int outputs, bool applyingPlacement = false)
     {
         if (ShowDetails && ConcurrencyNodeTypes.IsStart(node.Type))
         {
-            return CardHeight(node, descriptor, inputs, outputs) + 220;
+            return CardHeight(node, descriptor, inputs, outputs, applyingPlacement) + 220;
         }
         if (ShowDetails && (string.Equals(node.Type, CodeBlockType, StringComparison.Ordinal) || string.Equals(node.Type, ProgressType, StringComparison.Ordinal) || string.Equals(node.Type, PreviewType, StringComparison.Ordinal)))
         {
             return CodeSize(node).Height;
         }
-        return CardHeight(node, descriptor, inputs, outputs);
+        return CardHeight(node, descriptor, inputs, outputs, applyingPlacement);
     }
 
     /// <summary>表示幅に合わせて長い文字列を省略します。</summary>
