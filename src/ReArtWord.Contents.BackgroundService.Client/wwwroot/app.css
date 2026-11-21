@@ -336,7 +336,7 @@ p {
     margin: auto;
 }
 
-.page-title button,
+.page-title button:where(:not(.dialog button)),
 .filter > button,
 .action-list button {
     min-height: 44px;
@@ -1127,6 +1127,10 @@ input[type="checkbox"] {
     background: var(--backdrop);
 }
 
+.dialog-stacked::backdrop {
+    backdrop-filter: blur(5px);
+}
+
 .dialog > h2 {
     font-size: 19px;
     margin-bottom: 20px;
@@ -1188,10 +1192,22 @@ input[type="checkbox"] {
     overflow-wrap: anywhere;
     min-height: 0;
     scrollbar-width: thin;
-    padding: 16px clamp(16px, 3vw, 28px);
+    padding: 24px clamp(16px, 3vw, 28px);
     overflow: auto;
     overscroll-behavior: contain;
     scroll-padding-block: 12px;
+}
+
+.dialog-content > :first-child {
+    margin-block-start: 0;
+}
+
+.dialog-content > :last-child {
+    margin-block-end: 0;
+}
+
+.dialog > .toolbar button {
+    min-height: 37px;
 }
 
 .dialog > .toolbar:last-child {
@@ -1215,12 +1231,17 @@ input[type="checkbox"] {
         max-height: calc(100dvh - 96px);
     }
 
-    .dialog > .toolbar > button {
+    .dialog.dialog-stacked {
+        width: min(var(--stacked-dialog-width, 800px), calc(100% - 56px));
+        max-height: calc(100dvh - 72px);
+    }
+
+    .dialog > .toolbar button {
         min-height: 44px;
     }
 }
 
-.dialog :where(p, small) {
+:lang(ja) .dialog :where(p, small, .notice > span) {
     word-break: auto-phrase;
 }
 

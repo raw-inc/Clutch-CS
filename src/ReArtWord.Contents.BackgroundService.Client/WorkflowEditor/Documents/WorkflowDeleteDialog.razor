@@ -1,6 +1,6 @@
 @using ReArtWord.Contents.BackgroundService.Client.Components
 @using ReArtWord.Contents.BackgroundService.Contracts.Execution
-<Modal Open="Open" Title="@Ui["Delete workflow"]" Close="()=>CloseAsync(UiCancellation)">
+<Modal Open="Open" Compact="true" Title="@Ui["Delete workflow"]" Close="()=>CloseAsync(UiCancellation)">
     <ChildContent>
     <p><strong>@name</strong> · <code>@id</code></p>
     <p class="notice warning"><UiIcon Name="warning" /><span>@Ui[revision is null ? "Delete this unsaved draft from this browser?" : "Delete the saved workflow from this cluster? A snapshot is required before deletion. New inputs will stop as each peer applies the deletion; already running executions are not cancelled."]</span></p>

@@ -27,7 +27,7 @@
     }
     @if(message is not null){<p class="notice">@(message?.Invoke())</p>}
 </section>
-<Modal Open="discardOpen" Title="@Ui["Discard the local internal-state candidate"]" Close="()=>discardOpen=false">
+<Modal Open="discardOpen" Compact="true" Title="@Ui["Discard the local internal-state candidate"]" Close="()=>discardOpen=false">
     <p>@Ui["Read the connected peer’s confirmed saved value and discard this local candidate. This does not cancel a write with an unknown result."]</p>
     <button disabled="@busy" @onclick="DiscardAsync">@Ui["Discard and reread the saved value"]</button>
 </Modal>

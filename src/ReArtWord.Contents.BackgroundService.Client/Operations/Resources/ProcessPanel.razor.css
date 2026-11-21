@@ -142,5 +142,13 @@
 
 .process-stop-fields {
     display: grid;
-    gap: 12px;
+    gap: 16px;
+}
+
+fieldset.process-stop-fields > label {
+    margin-block: 0;
+}
+
+.process-stop-fields :is(input, select) {
+    margin-block: 4px 0;
 }

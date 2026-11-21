@@ -64,7 +64,7 @@
         <button class="@(command==EProcessGroupCommand.Stop?"danger confirm-action":"restore-action confirm-action")" disabled="@(busy||!Available)" @onclick="()=>CommandAsync(confirming!,command,UiCancellation)"><UiIcon Name="@(command==EProcessGroupCommand.Stop?"stop":"refresh")" /><span class="control-label">@Ui[command==EProcessGroupCommand.Stop?"Stop group":"Restart group"]</span></button>
     </Actions>
 </Modal>
-<Modal Open="@(removing is not null)" Title='@Ui["Remove group"]' Close="CloseRemoval">
+<Modal Open="@(removing is not null)" Compact="true" Title='@Ui["Remove group"]' Close="CloseRemoval">
     <ChildContent>
         <p>@Owner · <strong>@removing?.Definition.Name</strong></p>
         <p class="notice warning"><UiIcon Name="warning" /><span>@Ui["Remove the group only. Applications keep running and return to their individual monitoring settings."]</span></p>

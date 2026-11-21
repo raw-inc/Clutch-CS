@@ -104,7 +104,7 @@
         @if(selected is { } displayed){<button disabled="@busy" @onclick="()=>Edit(displayed)">@Ui["Edit registration"]</button>}
     </Actions>
 </Modal>
-<Modal Open="@(removing is not null)" Title='@Ui["Remove registration"]' Close="CloseRemoval">
+<Modal Open="@(removing is not null)" Compact="true" Title='@Ui["Remove registration"]' Close="CloseRemoval">
     <ChildContent>
         <p>@Owner · <strong>@removing?.Definition.DisplayName</strong></p>
         <p class="notice warning"><UiIcon Name="warning" /><span>@Ui["Removing this registration disables automatic monitoring, recovery and scheduled starts. A running application will not be stopped."]</span></p>

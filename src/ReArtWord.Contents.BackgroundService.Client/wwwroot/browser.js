@@ -245,6 +245,7 @@ window.contentsBrowser.openDialog = (element, id) =>
     }
     if (element instanceof HTMLDialogElement && !element.open)
     {
+        element.classList.toggle('dialog-stacked', !!document.querySelector('dialog.dialog:modal'));
         element.showModal();
     }
 
