@@ -224,10 +224,19 @@ test('Pythonの標準メンバーでも、モジュールへ呼出し括弧を�
     assert.equal(await page.locator('textarea').inputValue(), 'os.path');
 });
 
+/** 入力間隔をテストが進める時間だけで決め、実行環境の負荷による待ち時間を除きます。
+ * @returns 時刻を固定すると完了します。
+ */
+async function freezeAnalysisClockAsync(page)
+{
+    await page.clock.install({ time: new Date(0) });
+    await page.clock.pauseAt(new Date(60000));
+}
+
 test('フォーカスを維持したまま連続入力をまとめ、最後のコードだけを自動解析へ通知する', async context =>
 {
     const page = await openEditorAsync(context, 'csharp', '');
-    await page.clock.install();
+    await freezeAnalysisClockAsync(page);
     await page.keyboard.insertText('public static int Run()');
     await page.clock.fastForward(400);
     assert.deepEqual(await page.evaluate(() => window.analyses), []);
@@ -244,7 +253,7 @@ for (const operation of ['blur', 'lock', 'replace', 'dispose'])
     test(`${operation}で古いコードの自動解析予約を取り消す`, async context =>
     {
         const page = await openEditorAsync(context, 'javascript', '');
-        await page.clock.install();
+        await freezeAnalysisClockAsync(page);
         await page.keyboard.insertText('export function run() {return 1;}');
         await page.evaluate(operation =>
         {
@@ -270,7 +279,7 @@ for (const operation of ['blur', 'lock', 'replace', 'dispose'])
 test('IME変換中には解析せず、確定した文字列を解析へ渡す', async context =>
 {
     const page = await openEditorAsync(context, 'python', '');
-    await page.clock.install();
+    await freezeAnalysisClockAsync(page);
     const session = await page.context().newCDPSession(page);
     await session.send('Input.imeSetComposition', { text: 'にほん', selectionStart: 3, selectionEnd: 3 });
     await page.clock.fastForward(1000);
