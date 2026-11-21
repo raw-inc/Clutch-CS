@@ -391,6 +391,14 @@
 }
 
 @media (max-width: 680px) {
+    .signal-scope.all-columns .scope-packets {
+        min-width: 50rem;
+    }
+
+    .signal-scope.all-columns .scope-packets th:is(:nth-child(4), :nth-child(5)) {
+        width: 9rem;
+    }
+
     .signal-scope:not(.all-columns) .scope-packets {
         min-width: 0;
     }

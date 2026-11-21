@@ -103,11 +103,21 @@ export async function terminalView(root, ctx)
         impact.className = 'notice warning';
         description.textContent = ctx.t('This closes the shared session and interrupts commands still running in it.', '共有セッションを終了します。実行中のコマンドも中断されます。');
         impact.append(ctx.icon('warning'), description);
-        const details = document.createElement('p'), identifier = document.createElement('code');
-        details.textContent = target.hostId + ' / ' + target.peerId;
-        identifier.textContent = value.sessionId;
-        details.append(document.createElement('br'), identifier);
-        body.append(details, impact);
+        const hostName = document.createElement('p'), sessionName = document.createElement('p');
+        hostName.textContent = `${target.clusterId} / ${target.hostId} / ${target.peerId}`;
+        sessionName.className = 'terminal-confirm-session';
+        const label = document.createElement('span');
+        label.textContent = summary(value);
+        sessionName.append(label);
+        if (samePeer(peer, target) && session?.sessionId === value.sessionId)
+        {
+            const connected = document.createElement('span');
+            connected.className = 'badge good';
+            connected.textContent = ctx.t('Connected', '接続中');
+            sessionName.append(connected);
+            description.textContent += ' ' + ctx.t('This screen will also disconnect.', 'この画面の接続も切断されます。');
+        }
+        body.append(hostName, sessionName, impact);
         scroll.append(body);
         footer.className = 'toolbar';
         footer.method = 'dialog';

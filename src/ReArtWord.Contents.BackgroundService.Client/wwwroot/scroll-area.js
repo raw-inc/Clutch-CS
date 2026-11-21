@@ -65,7 +65,8 @@ class ScrollArea extends HTMLElement
         this.#frame = requestAnimationFrame(() =>
         {
             this.#frame = 0;
-            const port = this.firstElementChild;
+            const selector = this.dataset.scrollPort;
+            const port = selector ? this.querySelector(selector) : this.firstElementChild;
             if (!port)
             {
                 return;

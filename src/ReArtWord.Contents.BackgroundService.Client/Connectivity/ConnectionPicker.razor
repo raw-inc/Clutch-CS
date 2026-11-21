@@ -11,7 +11,7 @@
 </button>
 <Modal Open="open" ShowCloseAction="true" Title="@Ui["Clusters visible from this PC"]" Close="()=>open=false">
     <p class="connection-help">@Ui["ClientHost observes the configured networks together. It does not join any cluster as a Core peer."]</p>
-    @if(!string.IsNullOrEmpty(message)){<p class="notice @(Connection.Connected && message == "The selected cluster and peer responded." ? "success" : null)" role="status">@Ui[message]</p>}
+    @if(!string.IsNullOrEmpty(message)){<p class="notice @(Connection.Connected && message == "The selected cluster and peer responded." ? "success" : null)" role="status">@if(Connection.Connected && message == "The selected cluster and peer responded."){<UiIcon Name="check" />}<span>@Ui[message]</span></p>}
     <button @onclick="RefreshAsync" disabled="@busy">@Ui["Refresh observations"]</button>
     @if(clusters.Count==0)
     {

@@ -1201,5 +1201,18 @@
     .desktop-deck .desktop-keybar .desktop-key {
         min-width: 44px;
         height: 44px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .desktop-deck .desktop-keybar .desktop-key:enabled:not([aria-pressed="true"]) {
+        background: var(--button-face);
+        color: var(--ink);
+    }
+
+    .desktop-deck .desktop-keybar .desktop-key:enabled[aria-pressed="true"] {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+        color: var(--accent);
     }
 }

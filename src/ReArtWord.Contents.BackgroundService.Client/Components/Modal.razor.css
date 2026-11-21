@@ -2,10 +2,6 @@
     min-height: 180px;
 }
 
-.dialog ::deep .toolbar {
-    margin-top: 16px;
-}
-
 .dialog ::deep .card {
     background: var(--card);
 }
@@ -24,6 +20,7 @@
 
 .dialog-content ::deep .toolbar {
     gap: 10px;
+    margin-block-start: 16px;
 }
 
 .dialog-content ::deep .field-actions {

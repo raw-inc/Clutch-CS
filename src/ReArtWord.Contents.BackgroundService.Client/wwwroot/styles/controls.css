@@ -50,7 +50,7 @@ clutch-scroll-area:not([data-scroll-controls])[data-scroll-after]::after {
     background: linear-gradient(transparent, var(--scroll-edge));
 }
 
-clutch-scroll-area[data-scroll-axis="inline"] > :first-child {
+clutch-scroll-area[data-scroll-axis="inline"]:not([data-scroll-port]) > :first-child {
     min-width: 0;
     overflow: auto hidden;
 }
@@ -505,7 +505,7 @@ clutch-card-rows:not([data-measuring]) > :first-child > * > [data-card-inset] {
         transform: translateY(1px);
     }
 
-    :is(.dialog, .hm-dialog, .file-action-dialog)[open] {
+    .dialog[open] {
         animation: show-dialog var(--motion-base) var(--ease-panel);
     }
 

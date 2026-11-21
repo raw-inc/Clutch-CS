@@ -1209,6 +1209,17 @@ input[type="checkbox"] {
     max-width: 32rem;
 }
 
+@media (max-width: 680px) {
+    .dialog.dialog-compact {
+        width: min(calc(100% - 36px), 32rem);
+        max-height: calc(100dvh - 96px);
+    }
+
+    .dialog > .toolbar > button {
+        min-height: 44px;
+    }
+}
+
 .dialog :where(p, small) {
     word-break: auto-phrase;
 }
@@ -1354,7 +1365,7 @@ input[type="checkbox"] {
     padding-inline-start: 0;
 }
 
-.dialog-content > .notice.warning {
+.dialog-content > .notice {
     width: 100%;
     max-width: none;
 }
@@ -1383,7 +1394,14 @@ input[type="checkbox"] {
     min-inline-size: 0;
 }
 
+.json-details > clutch-scroll-area {
+    margin-block: 12px;
+    border-radius: var(--radius-control);
+    overflow: clip;
+}
+
 .json-details > clutch-scroll-area > .detail {
+    margin: 0;
     overflow-x: auto;
     white-space: pre;
     scrollbar-color: var(--control) var(--paper);

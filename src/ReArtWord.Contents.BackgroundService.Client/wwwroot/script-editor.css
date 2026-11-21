@@ -4,7 +4,8 @@
     min-height: 0;
 }
 
-.script-editor-surface .cm-editor {
+.script-editor-surface > .cm-editor {
+    overflow: clip;
     color: var(--ink);
     background: var(--paper);
     font: 12px/1.6 Consolas, monospace;

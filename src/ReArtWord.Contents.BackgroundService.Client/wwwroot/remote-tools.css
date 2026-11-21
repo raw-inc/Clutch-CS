@@ -2,7 +2,7 @@
     margin-bottom: 18px;
 }
 
-.remote-tools h2 {
+.remote-tools h2:not(.dialog-heading > h2) {
     font-size: 14px;
 }
 
@@ -385,13 +385,11 @@
     min-height: 44px;
     padding: 4px;
     touch-action: manipulation;
-    background: var(--button-face);
-    color: var(--ink);
     font-size: 13px;
     font-weight: 700;
 }
 
-.terminal-keys button[aria-pressed="true"] {
+.terminal-keys button:enabled[aria-pressed="true"] {
     background: var(--accent-soft);
     border-color: var(--accent);
     color: var(--accent);
@@ -481,32 +479,10 @@
     min-height: 36px;
 }
 
-.file-action-dialog {
-    width: min(480px, calc(100vw - 48px));
-    max-height: calc(100vh - 48px);
-    box-sizing: border-box;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-panel);
-    background: var(--paper);
-    overflow: auto;
-    padding: 0;
-    background-color: var(--panel);
-    color: var(--ink);
-}
-
-.file-action-dialog::backdrop {
-    background: rgb(0 0 0 / 55%);
-}
-
 .file-name-error {
     margin-block: 4px 12px;
     color: var(--danger);
     overflow-wrap: anywhere;
-}
-
-.file-action-dialog h2 {
-    margin: 0;
-    font-size: 19px;
 }
 
 .file-action-location {
@@ -518,11 +494,6 @@
     max-height: 25vh;
     overflow: auto;
     overflow-wrap: anywhere;
-}
-
-.file-action-dialog .toolbar {
-    justify-content: flex-end;
-    margin-top: 20px;
 }
 
 .file-location {
@@ -900,28 +871,6 @@
 
 .license-filter label > select {
     min-height: 42px;
-}
-
-.file-action-dialog form > :not(header, .toolbar) {
-    margin-inline: clamp(16px, 3vw, 28px);
-}
-
-.file-action-dialog header,
-.file-action-dialog .toolbar {
-    display: flex;
-    align-items: center;
-    padding: 12px 20px;
-    background: var(--card);
-}
-
-.file-action-dialog header {
-    justify-content: space-between;
-    gap: 12px;
-}
-
-.file-name-error,
-.file-action-location {
-    font-size: 14px;
 }
 
 .file-name-error:not([hidden]) {
@@ -1742,4 +1691,11 @@
         grid-row: auto;
         justify-self: start;
     }
+}
+
+.terminal-confirm-session {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
 }

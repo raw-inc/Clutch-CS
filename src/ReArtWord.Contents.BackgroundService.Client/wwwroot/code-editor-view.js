@@ -29,8 +29,10 @@ function languageSupport(language)
  */
 export function attachEditor(input, preview, language)
 {
-    const host = document.createElement('div');
+    const host = document.createElement('clutch-scroll-area');
     host.className = 'script-editor-surface';
+    host.dataset.scrollAxis = 'inline';
+    host.dataset.scrollPort = '.cm-scroller';
     const container = input.parentElement;
     container.append(host);
     const mode = new Compartment(), indentation = new Compartment(), permission = new Compartment();

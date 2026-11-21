@@ -96,22 +96,26 @@ export function fileActionControls(root, ctx, actions)
         return new Promise(resolve =>
         {
             dialog = document.createElement('dialog');
-            dialog.className = 'file-action-dialog';
+            dialog.className = 'dialog dialog-compact file-action-dialog';
+            const scroll = document.createElement('clutch-scroll-area');
             const form = document.createElement('form'), title = document.createElement('h2'), location = document.createElement('p');
+            form.className = 'dialog-content';
             title.textContent = creating ? ctx.t('New folder', 'フォルダー作成') : ctx.t('Delete selected items', '選択項目を削除');
             title.id = 'file-action-' + crypto.randomUUID();
+            form.id = title.id + '-form';
             dialog.setAttribute('aria-labelledby', title.id);
             location.className = 'file-action-location';
             location.textContent = snapshot.label + ' · ' + (snapshot.directory || '/');
             form.noValidate = true;
             const heading = document.createElement('header');
+            heading.className = 'dialog-heading';
             const close = ctx.button(ctx.t('Close dialog', '閉じる'), () => dialog.close());
             close.type = 'button';
             close.className = 'quiet icon-button';
             close.setAttribute('aria-label', close.textContent);
             close.replaceChildren(ctx.icon('close'));
             heading.append(title, close);
-            form.append(heading, location);
+            form.append(location);
             const name = document.createElement('input');
             if (creating)
             {
@@ -144,8 +148,10 @@ export function fileActionControls(root, ctx, actions)
             }
             else
             {
-                const warning = document.createElement('p'), list = document.createElement('ul');
-                warning.textContent = ctx.t('Permanently delete these files and folders, including folder contents? They will not be moved to the recycle bin.', '選択したファイル・フォルダーを完全に削除しますか？ フォルダーの内容も削除され、ゴミ箱には移動しません。');
+                const warning = document.createElement('p'), description = document.createElement('span'), list = document.createElement('ul');
+                warning.className = 'notice warning';
+                description.textContent = ctx.t('Permanently delete these files and folders, including folder contents? They will not be moved to the recycle bin.', '選択した項目は完全に削除されます。フォルダー内のファイルも削除され、ゴミ箱から復元することはできません。');
+                warning.append(ctx.icon('warning'), description);
                 list.className = 'file-action-items';
                 for (const entry of snapshot.entries)
                 {
@@ -153,15 +159,16 @@ export function fileActionControls(root, ctx, actions)
                     item.textContent = entry.name + (entry.isDirectory ? '/' : '');
                     list.append(item);
                 }
-                form.append(warning, list);
+                form.append(list, warning);
             }
-            const footer = document.createElement('div'), cancel = document.createElement('button'), submit = document.createElement('button');
+            const footer = document.createElement('footer'), cancel = document.createElement('button'), submit = document.createElement('button');
             footer.className = 'toolbar';
             cancel.type = 'button';
             cancel.autofocus = !creating;
             cancel.textContent = ctx.t('Cancel', 'キャンセル');
             cancel.onclick = () => dialog.close();
             submit.type = 'submit';
+            submit.setAttribute('form', form.id);
             submit.className = creating ? 'primary' : 'danger confirm-action';
             submit.textContent = creating ? ctx.t('Create folder', '作成') : ctx.t('Delete permanently', '完全に削除');
             if (!creating)
@@ -181,8 +188,8 @@ export function fileActionControls(root, ctx, actions)
                 dialog.close('apply');
             };
             footer.append(cancel, submit);
-            form.append(footer);
-            dialog.append(form);
+            scroll.append(form);
+            dialog.append(heading, scroll, footer);
             dialog.onclose = () =>
             {
                 const apply = 'apply', accepted = dialog.returnValue === apply;
