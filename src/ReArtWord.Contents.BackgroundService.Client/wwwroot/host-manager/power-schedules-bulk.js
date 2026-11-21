@@ -111,6 +111,7 @@ function openBulk(ctx, panels, signal, mode)
         }
     }, mode !== disable);
     apply.classList.toggle('danger', mode === disable);
+    apply.classList.toggle('confirm-action', mode === disable);
     dialog.footer.append(cancel, apply);
     signal.addEventListener('abort', dialog.close, { once: true });
     dialog.element.addEventListener('close', () => signal.removeEventListener('abort', dialog.close), { once: true });
