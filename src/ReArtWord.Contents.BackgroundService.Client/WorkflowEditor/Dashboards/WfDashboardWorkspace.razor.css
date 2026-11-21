@@ -29,9 +29,10 @@
 }
 
 .dashboard-library {
+    display: flex;
+    min-block-size: 0;
     background: var(--panel);
     border-right: 1px solid var(--line);
-    overflow: auto;
 }
 
 .dashboard-board {
@@ -184,22 +185,6 @@
     gap: 8px;
 }
 
-@media (max-width: 680px) {
-    .dashboard-library {
-        max-height: 68dvh;
-        overflow: auto;
-    }
-
-    .dashboard-library ::deep .dashboard-catalog-items {
-        min-height: 12rem;
-    }
-
-    .dashboard-library ::deep .dashboard-catalog-item {
-        text-align: left;
-        justify-items: start;
-    }
-}
-
 .save-state {
     display: inline-flex;
     gap: 5px;
@@ -212,8 +197,10 @@
     justify-content: stretch;
 }
 
-.dashboard-edit-tools [aria-pressed="true"] {
+.dashboard-edit-tools button[aria-expanded="true"] {
     border-color: var(--accent);
+    background: var(--accent-soft);
+    box-shadow: inset 0 -2px var(--accent);
 }
 
 .dashboard-heading .toolbar > button[aria-label] {
@@ -244,15 +231,10 @@
 
     .dashboard-workspace.with-catalog .dashboard-library {
         flex: none;
-        max-block-size: min(35dvh, 17rem);
-        overflow: auto;
+        block-size: min(44dvh, 19rem);
     }
 
     .dashboard-workspace.with-catalog .dashboard-board-scroll {
         flex: 1;
-    }
-
-    .dashboard-workspace.with-catalog .dashboard-library ::deep .dashboard-catalog-items {
-        min-height: 0;
     }
 }

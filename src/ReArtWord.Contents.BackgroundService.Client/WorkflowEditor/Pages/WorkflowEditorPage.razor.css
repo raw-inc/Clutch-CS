@@ -202,16 +202,15 @@
 }
 
 .inspector-heading {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     flex: none;
     margin-bottom: 6px;
     background: var(--panel);
     z-index: 2;
     border-bottom: 1px solid var(--line);
-    flex-wrap: wrap;
     gap: 8px 12px;
-    justify-content: space-between;
     padding: 10px 12px;
 }
 
@@ -265,7 +264,6 @@
     width: fit-content;
     max-inline-size: 100%;
     white-space: normal;
-    background: transparent;
 }
 
 .editor-statusbar {
@@ -600,11 +598,6 @@
     background: var(--panel);
 }
 
-.studio .inspector-heading .toolbar {
-    gap: 3px;
-    margin: 0;
-}
-
 .studio .inspector-heading .icon-button {
     min-width: 24px;
     padding: 3px;
@@ -819,23 +812,9 @@
     }
 }
 
-.inspector-heading > .toolbar {
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 0;
-}
-
-@media (max-width: 1100px) {
-    .studio aside.inspector .inspector-heading.with-selection {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        gap: 8px;
-    }
-
-    .studio aside.inspector .inspector-heading > .toolbar {
-        justify-content: flex-start;
-        margin: 0;
-    }
+.inspector-heading .inspector-settings {
+    grid-column: 1 / -1;
+    justify-self: start;
 }
 
 .graph-legend > summary,
@@ -970,11 +949,6 @@
 .editor-view-options .live-policy p {
     margin-block: 4px;
     border: 0;
-}
-
-.inspector-heading .toolbar {
-    flex: 1 1 auto;
-    justify-content: end;
 }
 
 .studio .arrange-nodes.warn {

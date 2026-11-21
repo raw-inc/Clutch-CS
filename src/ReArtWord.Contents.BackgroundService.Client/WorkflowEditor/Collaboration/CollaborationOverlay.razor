@@ -16,8 +16,10 @@
             {
                 <rect class="collaborator-selection" x="@(box.Position.X-3)" y="@(box.Position.Y-3)" width="@(box.Size.Width+6)" height="@(box.Size.Height+6)" fill="none" stroke="@Color(item.Index)" stroke-width="2" stroke-dasharray="6 4"><title>@Label(item.Presence) · @group.Key</title></rect>
             }
-            var identifiers = string.Join(", ", group.Take(4).Select(item=>ShortIdentifier(item.Presence)));
-            <g><text class="collaborator-selection-name" x="@(box.Position.X+box.Size.Width-3)" y="@(box.Position.Y-8)" text-anchor="end">@Ui.Format("Selected by {0}", identifiers+(group.Count()>4 ? "…" : ""))</text></g>
+            @foreach(var (item,slot) in group.Take(4).Select((item,slot)=>(item,slot)))
+            {
+                <circle cx="@(box.Position.X+6+slot*12)" cy="@(box.Position.Y-11)" r="4" fill="@Color(item.Index)"><title>@Ui.Format("Selected by {0}",Label(item.Presence))</title></circle>
+            }
         }
     }
     @foreach(var (peer,index) in editors.Select((peer,index)=>(peer,index)))

@@ -1,7 +1,8 @@
 @using ReArtWord.Contents.BackgroundService.Client.Components
 @using ReArtWord.Contents.BackgroundService.Contracts.Execution
 <Modal Open="Open" Title="@Ui["Force save current draft"]" Close="()=>CloseAsync(UiCancellation)">
-    <p>@Ui["Save this draft without waiting for collaborative reconciliation. The latest saved version will be replaced, then the confirmed conflict choices will be synchronized."]</p>
+    <ChildContent>
+    <p class="notice warning"><UiIcon Name="warning" /><span>@Ui["Save this draft without waiting for collaborative reconciliation. The latest saved version will be replaced, then the confirmed conflict choices will be synchronized."]</span></p>
     @if(force?.Review is {} review)
     {
         <p><strong>@review.Draft.Document.Name</strong> · <code>@review.Draft.Document.Id</code><br />@review.Cluster / @review.Peer</p>
@@ -19,6 +20,9 @@
     @if(force?.Result?.BeforeSnapshot is {} before){<p>@Ui.Format("Before-change snapshot: {0}",Ui[before.Outcome.ToString()]) · @force.Result.BeforeSnapshotId</p>}
     <div class="toolbar">
         <button disabled="@working" @onclick="()=>PrepareAsync(UiCancellation)">@Ui["Review latest version"]</button>
-        <button class="danger confirm-action" disabled="@(working||force?.Review is null||force.OperationId is not null)" @onclick="()=>SubmitAsync(false,UiCancellation)">@Ui["Confirm overwrite and save"]</button>
     </div>
+    </ChildContent>
+    <Actions>
+        <button class="danger confirm-action" disabled="@(working||force?.Review is null||force.OperationId is not null)" @onclick="()=>SubmitAsync(false,UiCancellation)"><UiIcon Name="warning" /><span class="control-label">@Ui["Confirm overwrite and save"]</span></button>
+    </Actions>
 </Modal>
