@@ -292,15 +292,33 @@ test('IME変換中には解析せず、確定した文字列を解析へ渡す',
 
 test('the code editor indicates clipped text at the correct horizontal edge', async context =>
 {
-    const source = 'const longLine = "' + 'z'.repeat(240) + '";';
+    const longLine = 'const longLine = "' + 'z'.repeat(240) + '";';
+    const source = [longLine, ...Array.from({ length: 100 }, (_, index) => '// line ' + index)].join('\n');
     const page = await openEditorAsync(context, 'javascript', source);
     const surface = page.locator('clutch-scroll-area.script-editor-surface');
     const port = surface.locator('.cm-scroller');
     await port.evaluate(element =>
     {
+        element.style.maxHeight = '140px';
         element.scrollLeft = 0;
     });
     await page.waitForSelector('.script-editor-surface[data-scroll-after]:not([data-scroll-before])');
+    await port.evaluate(element =>
+    {
+        element.scrollLeft = (element.scrollWidth - element.clientWidth) / 2;
+    });
+    await page.waitForSelector('.script-editor-surface[data-scroll-before][data-scroll-after]');
+    const geometry = await surface.evaluate(element =>
+    {
+        const scroller = element.querySelector('.cm-scroller'), gutters = element.querySelector('.cm-gutters');
+        const before = getComputedStyle(element, '::before'), after = getComputedStyle(element, '::after');
+        return { gutter: gutters.offsetWidth, scrollbar: scroller.offsetWidth - scroller.clientWidth,
+            verticalOverflow: scroller.scrollHeight - scroller.clientHeight,
+            left: Number.parseFloat(before.insetInlineStart), right: Number.parseFloat(after.insetInlineEnd) };
+    });
+    assert.ok(0 < geometry.verticalOverflow && 0 < geometry.gutter);
+    assert.equal(geometry.left, geometry.gutter);
+    assert.equal(geometry.right, geometry.scrollbar);
     await port.evaluate(element =>
     {
         element.scrollLeft = element.scrollWidth;

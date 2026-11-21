@@ -1208,6 +1208,9 @@
     .desktop-deck .desktop-keybar .desktop-key:enabled:not([aria-pressed="true"]) {
         background: var(--button-face);
         color: var(--ink);
+        border-color: var(--button-line);
+        border-bottom-color: var(--button-line-bottom);
+        box-shadow: var(--button-shadow);
     }
 
     .desktop-deck .desktop-keybar .desktop-key:enabled[aria-pressed="true"] {

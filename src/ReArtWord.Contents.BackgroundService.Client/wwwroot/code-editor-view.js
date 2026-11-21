@@ -109,6 +109,18 @@ export function attachEditor(input, preview, language)
     ] });
 
     const view = new EditorView({ state: state(input.value, input.selectionStart ?? 0), parent: host });
+    const port = view.scrollDOM, gutters = view.dom.querySelector('.cm-gutters');
+    const cueInsets = new ResizeObserver(() =>
+    {
+        host.style.setProperty('--scroll-edge-inline-start', (gutters?.offsetWidth ?? 0) + 'px');
+        host.style.setProperty('--scroll-edge-inline-end', (port.offsetWidth - port.clientWidth) + 'px');
+        host.style.setProperty('--scroll-edge-block-end', (port.offsetHeight - port.clientHeight) + 'px');
+    });
+    cueInsets.observe(port);
+    if (gutters)
+    {
+        cueInsets.observe(gutters);
+    }
     input.hidden = true;
     preview.hidden = true;
     container.dataset.editorReady = 'true';
@@ -174,6 +186,7 @@ export function attachEditor(input, preview, language)
             disposed = true;
             cancelAnalysis();
             observer.disconnect();
+            cueInsets.disconnect();
             view.destroy();
             host.remove();
             input.hidden = false;

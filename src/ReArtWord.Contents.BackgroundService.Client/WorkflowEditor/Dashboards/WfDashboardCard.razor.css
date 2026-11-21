@@ -117,11 +117,6 @@
     opacity: 0.55;
 }
 
-.dashboard-control:disabled {
-    opacity: 0.6;
-    box-shadow: none;
-}
-
 .dashboard-card-content input,
 .dashboard-card-content textarea {
     width: 100%;

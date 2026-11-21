@@ -57,18 +57,18 @@ clutch-scroll-area[data-scroll-axis="inline"]:not([data-scroll-port]) > :first-c
 
 clutch-scroll-area[data-scroll-axis="inline"]::before,
 clutch-scroll-area[data-scroll-axis="inline"]::after {
-    inset: 0 auto;
+    inset: 0 auto var(--scroll-edge-block-end, 0);
     width: 16px;
     height: auto;
 }
 
 clutch-scroll-area[data-scroll-axis="inline"]:not([data-scroll-controls])[data-scroll-before]::before {
-    inset-inline-start: 0;
+    inset-inline-start: var(--scroll-edge-inline-start, 0);
     background: linear-gradient(to right, var(--scroll-edge), transparent);
 }
 
 clutch-scroll-area[data-scroll-axis="inline"]:not([data-scroll-controls])[data-scroll-after]::after {
-    inset-inline-end: 0;
+    inset-inline-end: var(--scroll-edge-inline-end, 0);
     background: linear-gradient(to left, var(--scroll-edge), transparent);
 }
 
