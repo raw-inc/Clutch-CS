@@ -26,6 +26,7 @@ class Element
             }
             this.className = [...values].join(' ');
         } };
+        this.classList.add = name => this.classList.toggle(name, true);
     }
 
     /** 受け取った項目を保持する順序へ追加します。 */
@@ -523,10 +524,13 @@ test('shell catalog is cached by Core instance and the chosen shell is pinned on
     const f = await fixtureAsync(t);
     await f.mounting;
     await f.button('host-a / peer-a').onclick();
-    const choice = all(f.root).find(item => item.tag === 'select');
+    const choice = all(f.root).find(item => item.tag === 'select'), path = all(f.root).find(item => item.className === 'terminal-shell-path');
     assert.equal(choice.value, 'C:/pwsh.exe');
+    assert.equal(choice.children[0].textContent, 'pwsh (default)');
+    assert.equal(path.textContent, 'C:/pwsh.exe');
     choice.value = 'C:/cmd.exe';
     choice.onchange();
+    assert.equal(path.textContent, 'C:/cmd.exe');
     await f.tick();
     await f.tick();
     await f.button('host-b / peer-b').onclick();
