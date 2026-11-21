@@ -198,6 +198,7 @@ export async function terminalView(root, ctx)
                     const status = document.createElement('span'), indicator = document.createElement('span');
                     status.className = 'terminal-connected';
                     indicator.className = 'badge good';
+                    indicator.setAttribute('data-status-label', '');
                     indicator.textContent = ctx.t('Connected', '接続中');
                     status.append(indicator);
                     row.append(status);

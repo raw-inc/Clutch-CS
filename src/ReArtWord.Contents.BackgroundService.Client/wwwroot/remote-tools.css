@@ -1687,7 +1687,7 @@
 }
 
 .terminal-sidebar .terminal-session > :is(.terminal-claim, .terminal-connected) {
-    inline-size: 4.75rem;
+    inline-size: 5.75rem;
     flex: none;
 }
 
