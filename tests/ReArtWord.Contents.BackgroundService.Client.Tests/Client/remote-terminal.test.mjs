@@ -32,7 +32,11 @@ class Element
     /** 受け取った項目を保持する順序へ追加します。 */
     append(...items)
     {
-        this.children.push(...items);
+        for (const item of items)
+        {
+            this.children.push(item);
+            item.parentElement = this;
+        }
     }
 
     /** 子要素を表示順の先頭へ追加します。 */
@@ -94,8 +98,34 @@ class Element
     }
 
     /** 試験で呼び出せるイベントハンドラーを登録します。 */
-    addEventListener()
-    {}
+    addEventListener(name, listener)
+    {
+        if (name === 'close')
+        {
+            this.onclose = listener;
+        }
+    }
+
+    /** 確認画面を表示します。 */
+    showModal()
+    {
+        this.open = true;
+    }
+
+    /** 確定または取消の値を設定して確認画面を閉じます。 */
+    close(value)
+    {
+        this.returnValue = value;
+        this.open = false;
+        this.onclose?.();
+    }
+
+    /** 閉じた確認画面を親から取り除きます。 */
+    remove()
+    {
+        const parent = this.parentElement;
+        parent.children = parent.children.filter(item => item !== this);
+    }
 
     /** 指定した要素が自分または子孫かを判定します。
      * @returns 呼出し元が使用する値です。
@@ -122,6 +152,21 @@ const b = { clusterId: 'cluster-b', hostId: 'host-b', peerId: 'peer-b', instance
  * @returns sessionId・shell・elevated・exited・sequence・ownerを含む結果です。
  */
 const shell = id => ({ sessionId: id, shell: 'pwsh.exe', elevated: false, exited: false, sequence: 0, owner: 'owner' });
+
+/** 指定した共有セッションの終了を確定または取り消します。
+ * @returns 確認後の処理の完了です。
+ */
+async function endSessionAsync(fixture, target, confirm)
+{
+    const row = fixture.row(target);
+    const pending = row.children.find(item => item.getAttribute('aria-label') === 'End session').onclick();
+    const dialog = all(fixture.root).find(item => item.tag === 'dialog' && item.open);
+    assert.ok(dialog);
+    const action = all(dialog).find(item => item.tag === 'button' && item.textContent === (confirm ? 'End session' : 'Cancel'));
+    assert.ok(action);
+    dialog.close(action.value);
+    await pending;
+}
 
 /** 完了済みのPromiseの継続を、次のイベント処理まで待ちます。
  * @returns 模擬応答を処理した後に完了します。
@@ -622,7 +667,7 @@ test('takeover and termination route to the row owner even when another peer is 
     assert.equal(f.calls.find(call => call.path.endsWith('/claim')).target.peerId, 'peer-a');
     assert.equal(f.terms.length, 1);
     assert.equal(f.terms[0].disposed, false);
-    await f.row(b).children.find(item => item.textContent === 'End session').onclick();
+    await endSessionAsync(f, b, true);
     assert.equal(f.calls.find(call => call.path.endsWith('/close')).target.peerId, 'peer-b');
     assert.equal(f.terms[0].disposed, false, 'a duplicate session ID on another peer must not disconnect this terminal');
     await f.tick();
@@ -703,7 +748,7 @@ test('explicit termination closes the local stream before the server can report 
     const f = await fixtureAsync(t);
     await f.mounting;
     await f.row(a).children.find(item => item.textContent === 'Take over').onclick();
-    await f.row(a).children.find(item => item.textContent === 'End session').onclick();
+    await endSessionAsync(f, a, true);
     assert.equal(f.calls.find(item => item.path.endsWith('/close')).terminalDisposed, true);
     assert.equal(f.terms[0].disposed, true);
 });
@@ -740,8 +785,7 @@ test('declining session termination keeps the stream and sends no close request'
     await f.mounting;
     const row = f.row(a);
     await row.children.find(item => item.textContent === 'Take over').onclick();
-    window.confirm = () => false;
-    await row.children.find(item => item.textContent === 'End session').onclick();
+    await endSessionAsync(f, a, false);
     assert.equal(f.calls.some(item => item.path.endsWith('/close')), false);
     assert.equal(f.terms[0].disposed, false);
 });

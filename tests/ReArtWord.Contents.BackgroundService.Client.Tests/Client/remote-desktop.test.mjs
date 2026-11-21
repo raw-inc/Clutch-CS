@@ -14,6 +14,10 @@ class Element
         this.value = '';
         this.dataset = {};
         this.style = {};
+        this.classList = { add: name =>
+        {
+            this.className = [...new Set([...(this.className ?? '').split(' ').filter(Boolean), name])].join(' ');
+        } };
     }
 
     /** 受け取った項目を保持する順序へ追加します。 */
@@ -3943,7 +3947,7 @@ test.skip('the transmission preset sits immediately left of the host and shows C
     assert.equal(preset.value, 'fixed-balanced');
 });
 
-test('the labeled transmission preset precedes the host selector and shows Custom only for unmatched values', async t =>
+test('the labeled transmission preset precedes the host selector and shows Custom only for unmatched values', { skip: 'クラスタと接続先の次に伝送プリセットを表示するため、旧配置の検証を終了します。' }, async t =>
 {
     const f = await fixtureAsync(t, null, { defaultAudio: true });
     await f.click('Disconnect');
@@ -3975,6 +3979,25 @@ test('the labeled transmission preset precedes the host selector and shows Custo
     assert.equal(preset.value, 'custom');
     await f.click('Variable bitrate (VBR)');
     assert.equal(preset.value, 'fixed-balanced');
+});
+
+test('host selection precedes the labeled transmission preset and custom values remain visible', async t =>
+{
+    const f = await fixtureAsync(t, null, { defaultAudio: true });
+    await f.click('Disconnect');
+    const host = descendants(f.root).find(item => item.getAttribute('aria-label') === 'Host');
+    const preset = f.presetSelector, custom = preset.options.find(item => item.value === 'custom');
+    const fields = preset.parentElement.parentElement;
+    assert.equal(fields, host.parentElement.parentElement);
+    assert.equal(fields.children.indexOf(host.parentElement) + 1, fields.children.indexOf(preset.parentElement));
+    assert.equal(custom.hidden, true);
+    assert.equal(custom.disabled, true);
+    await f.click('Variable bitrate (VBR)');
+    assert.equal(preset.value, 'custom');
+    assert.equal(custom.hidden, false);
+    await f.click('Variable bitrate (VBR)');
+    assert.equal(preset.value, 'fixed-balanced');
+    assert.equal(custom.hidden, true);
 });
 
 test('advanced codec edits become Custom and choosing a preset restores all transmission values', async t =>

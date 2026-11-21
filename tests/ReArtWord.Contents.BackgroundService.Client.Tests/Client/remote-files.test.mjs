@@ -59,8 +59,19 @@ class Element
     }
 
     /** 属性の値を試験用DOMへ記録します。 */
-    setAttribute()
-    {}
+    setAttribute(name, value)
+    {
+        (this.attributes ??= {})[name] = value;
+    }
+
+    /** 閲覧先が選ばれたときに案内の関連付けを解除します。 */
+    removeAttribute(name)
+    {
+        if (this.attributes)
+        {
+            delete this.attributes[name];
+        }
+    }
 
     /** 親との関係を解除して試験用DOMから取り除きます。 */
     remove()
