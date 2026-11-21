@@ -31,7 +31,7 @@ public sealed partial class SafetyPanel
     private ManualSafetyChange? pending;
     private JsonElement? result;
     private Guid? lastOperation;
-    private readonly List<(string Workflow, string Scope)> targets = [];
+    private readonly List<(string Workflow, string Scope, string Kind)> targets = [];
     private int selected;
     private string? targetWorkflow;
     private bool targetsLoaded;
@@ -94,13 +94,17 @@ public sealed partial class SafetyPanel
             }
 
             targets.Clear();
-            foreach (NodeDefinition? node in workflow.Effective.Nodes)
+            HashSet<string> nodes = workflow.Effective.Nodes.Select(node => node.Id).ToHashSet(StringComparer.Ordinal);
+            HashSet<string> groups = workflow.Effective.Nodes.Select(node => node.Safety?.Group).OfType<string>().ToHashSet(StringComparer.Ordinal);
+            foreach (NodeDefinition node in workflow.Effective.Nodes)
             {
-                targets.Add((workflow.Effective.Id, node.Id));
-                if (node.Safety?.Group is string group && !targets.Contains((workflow.Effective.Id, group)))
-                {
-                    targets.Add((workflow.Effective.Id, group));
-                }
+                string kind = groups.Contains(node.Id) ? "Node and safety group"
+                                                       : "Node";
+                targets.Add((workflow.Effective.Id, node.Id, kind));
+            }
+            foreach (string group in groups.Where(group => !nodes.Contains(group)))
+            {
+                targets.Add((workflow.Effective.Id, group, "Safety group"));
             }
 
             selected = 0;
@@ -132,7 +136,7 @@ public sealed partial class SafetyPanel
         pending = null;
         try
         {
-            (string Workflow, string Scope) target = targets[selected];
+            (string Workflow, string Scope, string Kind) target = targets[selected];
             ManualSafetyChange? request = new ManualSafetyChange(Guid.NewGuid(), target.Workflow, target.Scope, stopped, Current?.Version, continued);
             preview = await Api.PostAsync<ManualSafetyPreview>("/api/safety/preview", request, cancellationToken: UiCancellation).ConfigureAwait(true);
             if (preview is null || !string.Equals(preview.WorkflowId, request.WorkflowId, StringComparison.Ordinal) || !string.Equals(preview.Scope, request.Scope, StringComparison.Ordinal))

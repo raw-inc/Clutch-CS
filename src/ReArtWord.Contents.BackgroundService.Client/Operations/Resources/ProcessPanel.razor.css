@@ -139,3 +139,8 @@
 .application-actions .registration-remove {
     margin-inline-start: auto;
 }
+
+.process-stop-fields {
+    display: grid;
+    gap: 12px;
+}

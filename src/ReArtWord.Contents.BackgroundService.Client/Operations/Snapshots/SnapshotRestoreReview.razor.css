@@ -1,0 +1,12 @@
+.restore-scope td {
+    overflow-wrap: anywhere;
+}
+
+.restore-scope code {
+    display: block;
+    margin-block-start: 4px;
+}
+
+.restoration-check {
+    margin-block: 16px;
+}

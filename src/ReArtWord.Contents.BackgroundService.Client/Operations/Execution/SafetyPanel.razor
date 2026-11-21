@@ -5,10 +5,12 @@
 <h2>@Ui["Safety"]</h2>
 <p class="small muted">@Ui["Pause or resume new inputs for a node or safety group."]</p>
 <div class="lookup-status">
-<span class="badge @(Current is { Stopped: true } or { Continued: true } ? "warn" : targets.Count > 0 && status?.Loaded == true ? "good" : targetsLoaded ? "muted" : "pending")">@Ui[OverrideState]</span>
+<span class="badge @(Current is { Stopped: true } or { Continued: true } ? "warn" : targets.Count > 0 && status?.Loaded == true ? "good" : targetsLoaded ? "safety-no-target" : "pending")">@Ui[OverrideState]</span>
 @if(targetsLoaded && targetWorkflow is not null)
 {
-    <span class="small safety-target">@targetWorkflow @(targets.Count > 0 ? " / " + targets[selected].Scope : null)</span>
+    <span class="small safety-target">@targetWorkflow
+        @if(targets.Count > 0){<span> · @Ui.Format("{0} {1}",Ui[targets[selected].Kind],targets[selected].Scope)</span>}
+    </span>
 }
 @if(targetsLoaded && targets.Count == 0)
 {
@@ -21,10 +23,10 @@
 </section>
 <Modal Open="open" Title="@Ui["Temporary safety targets"]" Close="()=>open=false">
 <WorkflowPagePicker Selected="LoadTargetsAsync" />
-<label>@Ui["Effective nodes and safety groups"]<select @bind="selected" disabled="@busy">@for(var i=0;i<targets.Count;i++){<option value="@i">@targets[i].Workflow / @targets[i].Scope</option>}</select></label>
+<label>@Ui["Effective nodes and safety groups"]<select @bind="selected" disabled="@busy">@for(var i=0;i<targets.Count;i++){<option value="@i">@targets[i].Workflow · @Ui.Format("{0} {1}",Ui[targets[i].Kind],targets[i].Scope)</option>}</select></label>
 <p>@Ui["Current override"]: @Ui[OverrideState] · @Ui["Reference revision"] @(Current?.Version??Ui["Not specified"]) @(Current?.LocalOnly==true?Ui["Local only"]:"")</p>
 <p>@Ui["Continuation requested"] @(Current?.RequestedContinued==true?Ui["Requested"]:Ui["None"]) / @Ui["Current effective decision"] @(Current?.Continued==true?Ui["Continue"]:Ui["Normal decision"]) · @Current?.ContinuationReason</p>
-<button @onclick="()=>ChangeAsync(true,false)" disabled="@(busy||targets.Count==0)">@Ui["Pause new inputs"]</button>
+<button class="danger" @onclick="()=>ChangeAsync(true,false)" disabled="@(busy||targets.Count==0)"><UiIcon Name="stop" /><span class="control-label">@Ui["Pause new inputs"]</span></button>
 <button @onclick="()=>ChangeAsync(false,true)" disabled="@(busy||targets.Count==0)">@Ui["Temporarily continue this target"]</button>
 <button @onclick="()=>ChangeAsync(false,false)" disabled="@(busy||targets.Count==0)">@Ui["Clear the override and return to normal decisions"]</button>
 <p>@Ui["Temporary continuation also clears the manual stop on the same target. It does not clear manual stops on other nodes or groups. Clearing the override restores the current normal safety decision."]</p>
@@ -53,8 +55,15 @@
 <JsonDetails Value="result" Title="@Ui["Result of this operation"]" />
 </Modal>
 <Modal Open="confirmOpen" Title="@Ui["Review targets and impact"]" Close="CancelConfirmation">
-<p>@preview?.Impact</p>
-<p>@Ui["Target"] @pending?.WorkflowId / @pending?.Scope · @(pending?.Stopped==true?Ui["Temporary pause"]:pending?.Continued==true?Ui["Temporary continuation"]:Ui["Return to normal decisions"])</p>
-<JsonDetails Value="preview" Title="@Ui["Reviewed targets, effective stops and definition revision"]" />
-<button @onclick="ConfirmAsync" disabled="@busy">@Ui["Confirm these targets and impact, then apply"]</button><button @onclick="CancelConfirmation" disabled="@busy">@Ui["Cancel"]</button>
+    <ChildContent>
+        <p class="notice warning"><UiIcon Name="warning" /><span>@preview?.Impact</span></p>
+        <p>@Ui["Target"] @pending?.WorkflowId / @pending?.Scope · @(pending?.Stopped==true?Ui["Temporary pause"]:pending?.Continued==true?Ui["Temporary continuation"]:Ui["Return to normal decisions"])</p>
+        <JsonDetails Value="preview" Title="@Ui["Reviewed targets, effective stops and definition revision"]" />
+    </ChildContent>
+    <Actions>
+        @if(pending is {} change)
+        {
+            <button class="@(change.Stopped?"danger confirm-action":"restore-action confirm-action")" @onclick="ConfirmAsync" disabled="@busy"><UiIcon Name="@(change.Stopped?"stop":"warning")" /><span class="control-label">@Ui[change.Stopped?"Pause new inputs":change.Continued?"Allow new inputs temporarily":"Restore normal safety behavior"]</span></button>
+        }
+    </Actions>
 </Modal>

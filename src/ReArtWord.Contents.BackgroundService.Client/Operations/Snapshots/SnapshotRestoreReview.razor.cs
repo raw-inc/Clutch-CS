@@ -66,10 +66,19 @@ public sealed partial class SnapshotRestoreReview
         set;
     }
 
+    /// <summary>対象選択で表示したスナップショットの取得日時を確認画面に引き継ぎます。</summary>
+    [Parameter]
+    public IReadOnlyList<SnapshotListSummary> KnownSnapshots
+    {
+        get;
+        init;
+    } = [];
+
     private Guid? initialized;
     private SnapshotRestorePreparation? preparation;
-    private bool busy;
-    private Func<string>? message = () => string.Empty;
+    private SnapshotEditorState? discarding;
+    private bool busy, readyMessage;
+    private Func<string>? message;
 
     /// <summary>親から渡された対象に合わせて関連する状態を再確認します。</summary>
     /// <returns>要求処理と現時点の画面反映の完了です。</returns>
@@ -81,6 +90,8 @@ public sealed partial class SnapshotRestoreReview
         {
             initialized = Request.OperationId;
             preparation = null;
+            discarding = null;
+            message = null;
             await RefreshAsync().ConfigureAwait(true);
         }
     }
@@ -100,6 +111,7 @@ public sealed partial class SnapshotRestoreReview
             return;
         }
 
+        readyMessage = false;
         try
         {
             await Model.InitializeAsync(cancellationToken: UiCancellation).ConfigureAwait(true);
@@ -115,7 +127,8 @@ public sealed partial class SnapshotRestoreReview
             }
 
             string unsavedEdits = "Snapshot.UnsavedEdits";
-            if (preparation.Ready)
+            readyMessage = preparation.Ready;
+            if (readyMessage)
             {
                 message = Ui.Deferred("Restore is ready. The state is checked again immediately before restoring.");
             }
@@ -142,6 +155,7 @@ public sealed partial class SnapshotRestoreReview
     private async Task SaveAsync(SnapshotEditorState editor)
     {
         busy = true;
+        readyMessage = false;
         try
         {
             if (Model.HasInvalidInputs || Model.Draft.Conflicts.Count != 0)
@@ -194,6 +208,7 @@ public sealed partial class SnapshotRestoreReview
         }
 
         busy = true;
+        readyMessage = false;
         try
         {
             SnapshotDraftResolution? resolution = new SnapshotDraftResolution(Request, editor.PeerId, editor.WorkflowId, Collaboration.UiInstanceId, editor.SessionVersion, action);
@@ -242,6 +257,7 @@ public sealed partial class SnapshotRestoreReview
         }
 
         busy = true;
+        readyMessage = false;
         try
         {
             await Journal.StartAsync(Request.OperationId, "Restore snapshot", "/api/v2/snapshots/restore", "/api/snapshots/restores/" + Request.OperationId, Request, "/api/v2/snapshots/recover", cancellationToken: UiCancellation).ConfigureAwait(true);

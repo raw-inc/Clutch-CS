@@ -79,8 +79,8 @@
         {
             <fieldset disabled="@(busy||target is null)"><legend>@Ui["Process controls"]</legend><div class="toolbar">
                 <button class="primary" disabled="@(item.Observed.Status?.Running is true)" @onclick='()=>CommandAsync("process.start",new{processId=item.Definition.Id},UiCancellation)'><UiIcon Name="play" /><span class="control-label">@Ui["Start"]</span></button>
-                <button class="danger" disabled="@(item.Observed.Status?.Running is false)" @onclick="()=>{restarting=false;stopOpen=true;}"><UiIcon Name="stop" /><span class="control-label">@Ui["Stop"]</span></button>
-                <button disabled="@(item.Observed.Status?.Running is false)" @onclick="()=>{restarting=true;stopOpen=true;}">@Ui["Restart"]</button>
+                <button class="danger" disabled="@(item.Observed.Status?.Running is false)" @onclick="()=>OpenStop(false)"><UiIcon Name="stop" /><span class="control-label">@Ui["Stop"]</span></button>
+                <button class="restore-action" disabled="@(item.Observed.Status?.Running is false)" @onclick="()=>OpenStop(true)"><UiIcon Name="refresh" /><span class="control-label">@Ui["Restart"]</span></button>
             </div>@if(item.Observed.Status?.Running is false){<p class="small muted">@Ui["The application is stopped. Use Start to run it."]</p>}<details class="secondary-details recovery-controls"><summary>@Ui["Recovery controls"]</summary><div class="action-list">
                 <button class="quiet" @onclick='()=>CommandAsync("process.recoverySuppression",new{processId=item.Definition.Id,suppressed=!(item.Observed.Status?.RecoverySuppressed??false)},UiCancellation)'>@Ui[item.Observed.Status?.RecoverySuppressed is true?"Resume automatic recovery":"Suppress automatic recovery"]</button>
                 <button class="quiet" @onclick='()=>CommandAsync("process.confirmRecovery",new{processId=item.Definition.Id},UiCancellation)'>@Ui["Confirm recovery manually"]</button>
@@ -105,18 +105,34 @@
     </Actions>
 </Modal>
 <Modal Open="@(removing is not null)" Title='@Ui["Remove registration"]' Close="CloseRemoval">
-    <p>@Owner · <strong>@removing?.Definition.DisplayName</strong></p>
-    <p>@Ui["Removing this registration disables automatic monitoring, recovery and scheduled starts. A running application will not be stopped."]</p>
-    <p>@Ui["Workflows that use this registration will no longer be able to operate it."]</p>
-    @if(message is not null){<p class="notice" role="status">@message()</p>}
-    <div class="toolbar"><button class="danger confirm-action" disabled="@(RemovalUnavailable is not null)" @onclick="()=>RemoveAsync(UiCancellation)"><UiIcon Name="trash" /><span class="control-label">@Ui["Remove registration"]</span></button><button class="quiet" disabled="@busy" @onclick="CloseRemoval">@Ui["Cancel"]</button></div>
+    <ChildContent>
+        <p>@Owner · <strong>@removing?.Definition.DisplayName</strong></p>
+        <p class="notice warning"><UiIcon Name="warning" /><span>@Ui["Removing this registration disables automatic monitoring, recovery and scheduled starts. A running application will not be stopped."]</span></p>
+        <p>@Ui["Workflows that use this registration will no longer be able to operate it."]</p>
+        @if(message is not null){<p class="notice" role="status">@message()</p>}
+    </ChildContent>
+    <Actions>
+        <button class="danger confirm-action" disabled="@(RemovalUnavailable is not null)" @onclick="()=>RemoveAsync(UiCancellation)"><UiIcon Name="trash" /><span class="control-label">@Ui["Remove registration"]</span></button>
+    </Actions>
 </Modal>
 <Modal Open="stopOpen" Title='@Ui[restarting?"Restart application":"Stop application"]' Close="()=>stopOpen=false">
-    <p>@Owner · <strong>@selected?.Definition.DisplayName</strong></p>
-    @if(message is not null){<p class="notice">@message()</p>}
-    <fieldset disabled="@(busy||target is null)"><label>@Ui["Graceful stop timeout (seconds)"]<input type="number" min="1" max="3600" @bind="gracefulSeconds" @bind:event="oninput" /></label>
-    <p class="small muted">@Ui["A restart only starts a new process after the old process has been confirmed stopped."]</p>
-    <div class="toolbar"><button @onclick='()=>StopAsync("waitForManual",UiCancellation)'>@Ui["Wait for manual action if it does not exit"]</button><button @onclick='()=>StopAsync("force",UiCancellation)'>@Ui["Force termination if it does not exit"]</button></div></fieldset>
+    <ChildContent>
+        <p>@Owner · <strong>@selected?.Definition.DisplayName</strong></p>
+        <p class="notice warning"><UiIcon Name="warning" /><span>@Ui[restarting?"A restart only starts a new process after the old process has been confirmed stopped.":"The application will be asked to exit."]</span></p>
+        @if(message is not null){<p class="notice" role="status">@message()</p>}
+        <fieldset class="process-stop-fields" disabled="@(busy||target is null)">
+            <label>@Ui["Graceful stop timeout (seconds)"]<input type="number" min="1" max="3600" @bind="gracefulSeconds" @bind:event="oninput" /></label>
+            <label>@Ui["If the application does not exit"]
+                <select @bind="stopPolicy">
+                    <option value="waitForManual">@Ui["Wait for manual action if it does not exit"]</option>
+                    <option value="force">@Ui["Force termination if it does not exit"]</option>
+                </select>
+            </label>
+        </fieldset>
+    </ChildContent>
+    <Actions>
+        <button class="@(restarting?"restore-action confirm-action":"danger confirm-action")" disabled="@(busy||target is null||selected is null)" @onclick="()=>StopAsync(stopPolicy,UiCancellation)"><UiIcon Name="@(restarting?"refresh":"stop")" /><span class="control-label">@Ui[restarting?"Restart application":"Stop application"]</span></button>
+    </Actions>
 </Modal>
 <Modal Open="resolveOpen" Title='@Ui["Confirm the actual launch result"]' Close="()=>resolveOpen=false">
     <p>@Owner · @selected?.Definition.DisplayName</p>

@@ -44,6 +44,7 @@ public sealed partial class ProcessPanel
     private Func<string>? message;
     private JsonElement? result;
     private bool busy, refreshing, stopOpen, resolveOpen, registrationOpen, restarting;
+    private string stopPolicy = "waitForManual";
     private string gracefulSeconds = "30", pid = string.Empty, startedAt = string.Empty, resolveMode = string.Empty;
 
     private string? RemovalUnavailable => (refreshing, busy, target) switch
@@ -172,7 +173,15 @@ public sealed partial class ProcessPanel
         await LoadAsync(token).ConfigureAwait(true);
     }, cancellationToken);
 
-    /// <summary>停止方針を明示した操作だけを受付けます。</summary>
+    /// <summary>操作を開き直したときは、強制終了の選択を引き継ぎません。</summary>
+    private void OpenStop(bool restart)
+    {
+        restarting = restart;
+        stopPolicy = "waitForManual";
+        stopOpen = true;
+    }
+
+    /// <summary>確認した停止方針と待機時間で操作を要求します。</summary>
     /// <returns>停止または終了確認後の再起動です。</returns>
     private Task StopAsync(string policy, CancellationToken cancellationToken = default)
     {

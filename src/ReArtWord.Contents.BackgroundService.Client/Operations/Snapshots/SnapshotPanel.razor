@@ -65,4 +65,4 @@
         <button class="restore-action" disabled="@(SelectedRestoreCount == 0)" @onclick="RestoreAsync"><UiIcon Name="undo" /><span class="control-label">@Ui.Format("Review restore targets ({0})", SelectedRestoreCount)</span></button>
     </Actions>
 </Modal>
-<SnapshotRestoreReview Request="pendingRestore" Closed="()=>pendingRestore=null" />
+<SnapshotRestoreReview Request="pendingRestore" KnownSnapshots="snapshots" Closed="()=>pendingRestore=null" />

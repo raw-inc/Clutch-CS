@@ -14,8 +14,8 @@
                 @if(item.Status.Phase==EProcessGroupPhase.Paused){<p class="small">@Ui["Check the applications, resolve any unknown launch, then choose Start or Restart to continue."]</p>}
             </div></td>
             <td class="group-actions" data-field="@Ui["Actions"]"><div><div class="toolbar group-run-actions"><button disabled="@(busy||!Available||Active(item))" @onclick="()=>CommandAsync(item,EProcessGroupCommand.Start,UiCancellation)">@Ui["Start"]</button>
-                <button disabled="@(busy||!Available||Active(item))" @onclick="()=>Confirm(item,EProcessGroupCommand.Restart)">@Ui["Restart"]</button>
-                <button disabled="@(busy||!Available)" @onclick="()=>Confirm(item,EProcessGroupCommand.Stop)">@Ui["Stop"]</button></div>
+                <button class="restore-action" disabled="@(busy||!Available||Active(item))" @onclick="()=>Confirm(item,EProcessGroupCommand.Restart)"><UiIcon Name="refresh" /><span class="control-label">@Ui["Restart"]</span></button>
+                <button class="danger" disabled="@(busy||!Available)" @onclick="()=>Confirm(item,EProcessGroupCommand.Stop)"><UiIcon Name="stop" /><span class="control-label">@Ui["Stop"]</span></button></div>
                 <div class="toolbar group-edit-actions"><button disabled="@(busy||!Available||item.Status.Phase!=EProcessGroupPhase.Idle)" @onclick="()=>Edit(item)">@Ui["Edit"]</button><button class="danger" disabled="@(busy||!Available||Active(item))" @onclick="()=>removing=item"><UiIcon Name="trash" /><span class="control-label">@Ui["Remove group"]</span></button></div></div></td>
         </tr>
     }
@@ -55,14 +55,22 @@
     </Actions>
 </Modal>
 <Modal Open="@(confirming is not null)" Title='@Ui[command==EProcessGroupCommand.Stop?"Stop group":"Restart group"]' Close="CloseConfirmation">
-    <p>@Owner · <strong>@confirming?.Definition.Name</strong></p>
-    <p>@Ui[command==EProcessGroupCommand.Stop?"Stop all applications in this group and suspend group recovery.":"Stop all applications in this group, then restart them in the configured order."]</p>
-    @if(confirming?.Definition.StopPolicy==EProcessStopPolicy.Force){<p>@Ui["Applications that do not exit within the configured timeout will be forcibly terminated."]</p>}
-    <button disabled="@(busy||!Available)" @onclick="()=>CommandAsync(confirming!,command,UiCancellation)">@Ui["Run"]</button>
+    <ChildContent>
+        <p>@Owner · <strong>@confirming?.Definition.Name</strong></p>
+        <p class="notice warning"><UiIcon Name="warning" /><span>@Ui[command==EProcessGroupCommand.Stop?"Stop all applications in this group and suspend group recovery.":"Stop all applications in this group, then restart them in the configured order."]</span></p>
+        @if(confirming?.Definition.StopPolicy==EProcessStopPolicy.Force){<p>@Ui["Applications that do not exit within the configured timeout will be forcibly terminated."]</p>}
+    </ChildContent>
+    <Actions>
+        <button class="@(command==EProcessGroupCommand.Stop?"danger confirm-action":"restore-action confirm-action")" disabled="@(busy||!Available)" @onclick="()=>CommandAsync(confirming!,command,UiCancellation)"><UiIcon Name="@(command==EProcessGroupCommand.Stop?"stop":"refresh")" /><span class="control-label">@Ui[command==EProcessGroupCommand.Stop?"Stop group":"Restart group"]</span></button>
+    </Actions>
 </Modal>
 <Modal Open="@(removing is not null)" Title='@Ui["Remove group"]' Close="CloseRemoval">
-    <p>@Owner · <strong>@removing?.Definition.Name</strong></p>
-    <p>@Ui["Remove the group only. Applications keep running and return to their individual monitoring settings."]</p>
-    @if(message is not null){<p class="notice" role="status">@message()</p>}
-    <button class="danger confirm-action" disabled="@(busy||!Available)" @onclick="()=>RemoveAsync(UiCancellation)">@Ui["Remove group"]</button>
+    <ChildContent>
+        <p>@Owner · <strong>@removing?.Definition.Name</strong></p>
+        <p class="notice warning"><UiIcon Name="warning" /><span>@Ui["Remove the group only. Applications keep running and return to their individual monitoring settings."]</span></p>
+        @if(message is not null){<p class="notice" role="status">@message()</p>}
+    </ChildContent>
+    <Actions>
+        <button class="danger confirm-action" disabled="@(busy||!Available)" @onclick="()=>RemoveAsync(UiCancellation)"><UiIcon Name="trash" /><span class="control-label">@Ui["Remove group"]</span></button>
+    </Actions>
 </Modal>
