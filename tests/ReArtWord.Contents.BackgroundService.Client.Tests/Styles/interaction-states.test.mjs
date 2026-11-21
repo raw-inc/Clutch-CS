@@ -476,3 +476,42 @@ test('Terminal の補助キーを上下二段に保ち、狭い幅ではキー�
     await toolbar.getByRole('button', { name: 'PgDn' }).focus();
     assert.ok(0 < await toolbar.evaluate(element => element.scrollLeft));
 });
+
+test('複数の変更対象がある確認画面では、本文が長くても選択欄の2行を表示する', async context =>
+{
+    const page = await browser.newPage({ viewport: { width: 390, height: 700 } });
+    context.after(() => page.close());
+    const value = Array.from({ length: 22 }, (_, index) => `変更前の値 ${index + 1}`).join('\n');
+    await page.setContent(`
+        <div class="host-manager">
+            <dialog class="dialog hm-dialog hm-preview-dialog" open>
+                <header class="dialog-heading"><h2>変更内容を確認</h2></header>
+                <clutch-scroll-area><div class="dialog-content hm-dialog-body">
+                    <p>2台のホスト</p>
+                    <p>変更前と変更後の値を確認してください。</p>
+                    <div class="hm-preview-layout">
+                        <div class="hm-preview-targets">
+                            <button aria-pressed="true"><strong>Control-01</strong><small>仮想スイッチを削除</small></button>
+                            <button aria-pressed="false"><strong>Render-02</strong><small>仮想スイッチを削除</small></button>
+                        </div>
+                        <section class="hm-preview">
+                            <h3>仮想スイッチを削除</h3>
+                            <div class="hm-comparison"><div><h4>変更前</h4><pre>${value}</pre></div><div><h4>変更後</h4><pre>削除</pre></div></div>
+                        </section>
+                    </div>
+                </div></clutch-scroll-area>
+                <footer class="toolbar hm-dialog-actions hm-confirm-footer">
+                    <label><input type="checkbox">対象の通信経路を確認しました。</label>
+                    <div class="hm-actions"><button>キャンセル</button><button>削除</button></div>
+                </footer>
+            </dialog>
+        </div>`);
+    await page.addStyleTag({ content: styles.css });
+    const bounds = await page.locator('.hm-preview-targets').evaluate(targets =>
+    {
+        const rect = targets.getBoundingClientRect(), body = targets.closest('.hm-dialog-body');
+        const button = targets.querySelector('button'), label = button.querySelector('small').getBoundingClientRect();
+        return { targetBottom: rect.top + targets.clientHeight, labelBottom: label.bottom, scrollable: body.clientHeight < body.scrollHeight };
+    });
+    assert.ok(bounds.scrollable && bounds.labelBottom <= bounds.targetBottom, JSON.stringify(bounds));
+});
