@@ -291,6 +291,10 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
                 assert.ok(await toolbar.evaluate(element => element.scrollWidth <= element.clientWidth + 1));
                 const canvas = page.locator('.desktop-monitor canvas');
                 const whileOpen = await canvas.boundingBox();
+                await tools.locator('summary').click();
+                assert.equal(await toolbar.isVisible(), false);
+                assert.deepEqual(await canvas.boundingBox(), whileOpen);
+                await tools.locator('summary').click();
                 await page.keyboard.press('Escape');
                 assert.equal(await toolbar.isVisible(), false);
                 assert.deepEqual(await canvas.boundingBox(), whileOpen);
