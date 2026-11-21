@@ -45,7 +45,7 @@
     flex: none;
 }
 
-.host-manager button {
+.host-manager button:where(:not(.dialog button)) {
     font-size: 12px;
     min-height: 30px;
     line-height: 1.35;
@@ -869,7 +869,13 @@
 }
 
 .hm-entry-dialog {
+    --stacked-dialog-width: 640px;
+
     width: min(640px, calc(100vw - 40px));
+}
+
+.dialog.hm-dialog.hm-preview-dialog.dialog-stacked {
+    width: min(840px, calc(100% - 56px));
 }
 
 .hm-text-diff > span {
@@ -896,6 +902,11 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+}
+
+.hm-dialog-body > .hm-muted {
+    font-size: inherit;
+    line-height: inherit;
 }
 
 .hm-dialog-body > h3 {
@@ -1102,15 +1113,12 @@
 }
 
 .hm-comparison .hm-removal-effect {
-    border-color: var(--danger);
+    margin: 0;
+    padding: 10px 14px;
+    border: 1px solid var(--danger);
+    border-radius: var(--radius-control);
     color: var(--danger);
     background: var(--danger-soft);
-}
-
-@media (max-width: 680px) {
-    .hm-confirm-footer > .hm-actions > button {
-        min-height: 44px;
-    }
 }
 
 .hm-summary {
@@ -1159,9 +1167,12 @@
 .hm-preview-layout {
     display: grid;
     flex: none;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.hm-preview-layout:has(> .hm-preview-targets) {
     grid-template-columns: 190px minmax(0, 1fr);
     gap: 18px;
-    min-height: 220px;
 }
 
 .hm-preview-targets {
@@ -1184,12 +1195,13 @@
     white-space: normal;
     background: transparent;
     padding: 10px;
-    border-color: transparent;
-    font-size: 11px;
+    border-color: var(--line);
+    box-shadow: none;
+    font-size: 12px;
 }
 
 .hm-preview-targets button[aria-pressed="true"] {
-    border-color: var(--line);
+    border-color: var(--accent);
     background: var(--panel);
     color: var(--accent);
 }
@@ -1405,19 +1417,12 @@
 
     .hm-grid,
     .hm-comparison,
-    .hm-preview-layout {
-        grid-template-columns: 1fr;
+    .hm-preview-layout:has(> .hm-preview-targets) {
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .hm-preview-targets {
-        flex-direction: row;
-        max-height: none;
-        overflow: auto;
-    }
-
-    .hm-preview-targets button {
-        width: min(12rem, 56vw);
-        flex: none;
+        max-height: 12rem;
     }
 
     .hm-selection-bar {
@@ -2372,12 +2377,6 @@
 .hm-selection-bar details .record-table,
 .hm-view-actions .record-table {
     font-size: 13px;
-}
-
-.hm-dialog-title > button.quiet {
-    border-color: transparent;
-    background: transparent;
-    box-shadow: none;
 }
 
 .hm-view select:disabled {

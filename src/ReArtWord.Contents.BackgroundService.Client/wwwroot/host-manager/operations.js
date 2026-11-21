@@ -1,4 +1,5 @@
 import { node, checkbox, table, details, action, badge, empty, recordCount } from './dom.js';
+import { uiIcon } from '../ui-icons.js';
 import { validateNetwork } from './network-model.js';
 import { vlanLabel, vlanTone } from './vlan.js';
 import { validateVirtualSwitch } from './virtual-switches.js';
@@ -11,6 +12,7 @@ import { loginPreview } from './login.js';
 import { wakePreview } from './wake-on-lan.js';
 
 const firewallRuleRemoval = 'firewallRuleRemove';
+const environmentArea = 'environment';
 
 /** 現在の値を確認用の説明に変換します。
  * @returns 呼出し元が使用する値です。
@@ -40,7 +42,8 @@ export function describe(value, translate = key => key)
     const names = { name: 'Name', value: 'Value', expandable: 'Expand variable references', enabled: 'Status', family: 'Address family', dhcp: 'DHCP',
         automaticMetric: 'Automatic metric', metric: 'Metric', addresses: 'Addresses', automaticDns: 'Automatic DNS', dns: 'DNS servers (in priority order)',
         gateways: 'Default gateways', routerDiscovery: 'Router discovery (IPv6)', direction: 'Direction', action: 'Action', protocol: 'Protocol', profile: 'Profile',
-        localPorts: 'Local ports', remotePorts: 'Remote ports', localAddresses: 'Local addresses', remoteAddresses: 'Remote addresses', program: 'Program', switchName: 'Virtual switch', vlanMode: 'VLAN mode' };
+        localPorts: 'Local ports', remotePorts: 'Remote ports', localAddresses: 'Local addresses', remoteAddresses: 'Remote addresses', program: 'Program', switchName: 'Virtual switch',
+        vlanMode: 'VLAN mode', vlanId: 'VLAN ID', macAddress: 'MAC address' };
     return Object.entries(value).filter(([key, item]) => item !== null && !['revision', 'detailsHash', 'id', 'editable'].includes(key))
         .map(([key, item]) => `${translate(names[key] ?? key)}: ${Array.isArray(item) ? item.map(value => describe(value, translate)).join(', ') : describe(item, translate)}`).join('\n');
 }
@@ -64,7 +67,7 @@ function virtualNicValues(item, translate)
 export function previewValues(item, translate = key => key)
 {
     const custom = { power: powerPreview, display: displayPreview, windowsUpdate: windowsUpdatePreview, login: loginPreview, wakeOnLan: wakePreview,
-        [firewallRuleRemoval]: firewallRemovalValues };
+        [firewallRuleRemoval]: firewallRemovalValues, virtualNicDelete: virtualNicRemovalValues };
     if (custom[item.action])
     {
         return custom[item.action](item, translate);
@@ -73,7 +76,6 @@ export function previewValues(item, translate = key => key)
     const expectedVirtualswitchcreate = 'virtualSwitchCreate';
     const expectedVirtualswitchdelete = 'virtualSwitchDelete';
     const expectedNetwork = 'network';
-    const expectedEnvironment = 'environment';
     const expectedFirewallruleadd = 'firewallRuleAdd';
 
     let before = item.before.data, after = item.change;
@@ -97,7 +99,7 @@ export function previewValues(item, translate = key => key)
     if (item.action === expectedVirtualswitchdelete)
     {
         const ports = before.ports.map(port => `${port.managementOS ? translate('Management OS') : port.virtualMachine} · ${port.name}`).join('\n') || '—';
-        return [`${translate('Name')}: ${before.switch.name}\n${translate('Switch type')}: ${translate(before.switch.kind)}\n${translate('Physical interface')}: ${before.switch.physicalInterface || '—'}\n${translate('Connected adapters')}:\n${ports}`, translate('Delete switch and its management OS adapters. The physical NIC is retained; connectivity may be interrupted.')];
+        return [`${translate('Name')}: ${before.switch.name}\n${translate('Switch type')}: ${translate(before.switch.kind)}\n${translate('Physical interface')}: ${before.switch.physicalInterface || '—'}\n${translate('Connected adapters')}:\n${ports}`, translate('Delete')];
     }
     if (item.action === expectedNetwork)
     {
@@ -115,7 +117,7 @@ export function previewValues(item, translate = key => key)
     {
         after = translate('Delete');
     }
-    if (item.action === expectedEnvironment && !item.change.delete)
+    if (item.action === environmentArea && !item.change.delete)
     {
         before = before == null ? null : { value: before.value, expandable: before.expandable };
         after = { value: item.change.value, expandable: item.change.expandable };
@@ -137,6 +139,15 @@ export function previewValues(item, translate = key => key)
 function deletesResource(item)
 {
     return ['virtualNicDelete', 'virtualSwitchDelete', firewallRuleRemoval].includes(item.action) || item.change.delete;
+}
+
+/** 削除する仮想NICを、スイッチ名・VLAN・MACアドレスで確認できるようにします。
+ * @returns 適用前の仮想NICと削除後の状態です。
+ */
+function virtualNicRemovalValues(item, translate)
+{
+    const { name, switchName, vlanMode, vlanId, macAddress } = item.before.data;
+    return [describe({ name, switchName, vlanMode: translate(vlanMode), vlanId, macAddress }, translate), translate('Delete')];
 }
 
 /** 削除する規則の条件だけを確認できるようにします。
@@ -167,6 +178,10 @@ function impactMessage(previews)
     if (previews.every(item => item.action === firewallRuleRemoval))
     {
         return 'I checked the affected traffic. Removing these rules can block permitted connections or allow traffic that was blocked.';
+    }
+    if (previews.every(item => item.action === 'virtualSwitchDelete'))
+    {
+        return 'Removing these switches also removes their management OS adapters and may interrupt the connection. I have checked the impact.';
     }
     if (previews.every(item => item.query.area === 'firewall'))
     {
@@ -373,7 +388,12 @@ export async function showPreview(ctx, proposed, refreshHistory, current = () =>
     summary.append(badge(`${ctx.t('Affected hosts')}: ${new Set(previews.map(item => item.host.target.hostId)).size}`), badge(`${ctx.t('Changes')}: ${previews.length}`));
     dialog.root.append(summary, node('p', ctx.t('Review the before and after values for each target.'), 'hm-muted'));
     const layout = node('div', '', 'hm-preview-layout'), targets = node('div', '', 'hm-preview-targets'), detail = node('div');
-    layout.append(targets, detail);
+    const multiple = 1 < previews.length;
+    if (multiple)
+    {
+        layout.append(targets);
+    }
+    layout.append(detail);
     dialog.root.append(layout);
 
     /** 対象を表示し、現在の操作位置へ配置します。 */
@@ -394,26 +414,19 @@ export async function showPreview(ctx, proposed, refreshHistory, current = () =>
         }
         const columns = node('div', '', 'hm-comparison');
         const [beforeText, afterText] = previewValues(item, ctx.t);
-        const contents = item.action === expectedHosts ? hostsDiff(item.before.data.content, item.change.content, ctx) : [node('pre', beforeText), node('pre', afterText)];
-        if (deletesResource(item))
+        const removal = deletesResource(item);
+        if (removal && item.action === environmentArea)
         {
-            contents[1].classList.add('hm-removal-effect');
+            const impact = node('p', '', 'notice warning');
+            impact.append(uiIcon('warning'), node('span', ctx.t('Apps that use this value may behave differently the next time they start.')));
+            card.append(impact);
         }
+        const result = removal ? node('p', afterText, 'hm-removal-effect') : node('pre', afterText);
+        const contents = item.action === expectedHosts ? hostsDiff(item.before.data.content, item.change.content, ctx) : [node('pre', beforeText), result];
         for (const [index, label] of ['Before', 'After'].entries())
         {
             const column = node('div');
             column.append(node('h4', ctx.t(label)));
-            if (['virtualNicCreate', 'virtualNicVlan', 'virtualNicDelete'].includes(item.action))
-            {
-                const expectedVirtualniccreate = 'virtualNicCreate';
-                const expectedVirtualnicdelete = 'virtualNicDelete';
-
-                const current = index === 0 && item.action !== expectedVirtualniccreate ? item.before.data : index === 1 && item.action !== expectedVirtualnicdelete ? { vlanId: item.change.vlanId, vlanMode: item.change.vlanId == null ? 'Untagged' : 'Access' } : null;
-                if (current)
-                {
-                    column.append(badge(vlanLabel(current.vlanMode, current.vlanId, ctx.t), vlanTone(current.vlanMode)));
-                }
-            }
             column.append(contents[index]);
             columns.append(column);
         }
@@ -421,11 +434,14 @@ export async function showPreview(ctx, proposed, refreshHistory, current = () =>
         detail.append(card);
     }
 
-    for (const item of previews)
+    if (multiple)
     {
-        const button = ctx.button(item.host.target.hostId, () => show(item, button));
-        button.replaceChildren(node('strong', item.host.target.hostId), node('small', item.label ?? ctx.t(item.query.area)));
-        targets.append(button);
+        for (const item of previews)
+        {
+            const button = ctx.button(item.host.target.hostId, () => show(item, button));
+            button.replaceChildren(node('strong', item.host.target.hostId), node('small', item.label ?? ctx.t(item.query.area)));
+            targets.append(button);
+        }
     }
     show(previews[0], targets.firstElementChild);
     appendPreviewActions(ctx, dialog, previews, { needsAcknowledgement, hasDeletion, deletionOnly, returnToEditor }, refreshHistory, submitted);
@@ -451,7 +467,10 @@ function appendPreviewActions(ctx, dialog, previews, { needsAcknowledgement, has
     let label = hasDeletion ? 'Apply changes including deletions' : 'Apply confirmed changes';
     if (deletionOnly)
     {
-        label = previews.length === 1 && previews[0].action === firewallRuleRemoval ? 'Remove rule' : 'Delete selected items';
+        const removalLabels = { environment: 'Delete variable', virtualNicDelete: 'Delete management OS vNIC',
+            virtualSwitchDelete: 'Delete virtual switch', [firewallRuleRemoval]: 'Remove rule' };
+        label = previews.length === 1 ? removalLabels[previews[0].action] ?? 'Delete' :
+            ctx.t(previews.every(item => item.action === environmentArea) ? 'Delete {0} variables' : 'Delete {0} items').replace('{0}', String(previews.length));
     }
 
     /** 確認した対象と変更内容だけを送信します。

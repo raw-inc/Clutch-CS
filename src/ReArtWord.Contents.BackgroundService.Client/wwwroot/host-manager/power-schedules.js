@@ -9,7 +9,7 @@ export const powerScheduleKeys = ['powerSchedule.title', 'powerSchedule.help', '
     'powerSchedule.wakeAvailable', 'powerSchedule.wakeMissing', 'powerSchedule.saved', 'powerSchedule.invalid', 'powerSchedule.readUnavailable',
     'powerSchedule.clusterUnavailable', 'powerSchedule.hostUnknown', 'powerSchedule.saveUnconfirmed', 'powerSchedule.activationUnconfirmed',
     'powerSchedule.unconfirmed', 'powerSchedule.resultUnconfirmed', 'powerSchedule.noTarget', 'powerSchedule.missed',
-    'powerSchedule.bulk', 'powerSchedule.bulkHelp', 'powerSchedule.bulkEnable', 'powerSchedule.bulkDisable', 'powerSchedule.bulkToggleHelp',
+    'powerSchedule.bulk', 'powerSchedule.bulkHelp', 'powerSchedule.bulkEnable', 'powerSchedule.bulkDisable', 'powerSchedule.bulkEnableHelp', 'powerSchedule.bulkDisableHelp',
     'powerSchedule.bulkSource', 'powerSchedule.bulkCopy', 'powerSchedule.bulkApply', 'powerSchedule.bulkUnavailable', 'powerSchedule.bulkDrafts',
     'powerSchedule.confirmEnable', 'powerSchedule.confirmDisable', 'powerSchedule.changing', 'powerSchedule.bulkChanged', 'powerSchedule.bulkComplete', 'powerSchedule.pending', 'powerSchedule.saving', 'powerSchedule.succeeded',
     'powerSchedule.notExecuted', 'powerSchedule.failed', 'powerSchedule.unchanged', 'powerSchedule.enabledCount', 'powerSchedule.targets',

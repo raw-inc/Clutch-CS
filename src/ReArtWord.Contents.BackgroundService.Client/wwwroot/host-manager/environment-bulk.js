@@ -113,7 +113,14 @@ export function environmentBulk(ctx, hosts, query, actionArea)
         const value = textarea(group.common ? group.values[0].value : '', 5), expand = checkbox(ctx.t('Expand variable references'), group.common ? group.values[0].expandable : true);
         value.disabled = expand.control.disabled = true;
         const from = select([['', ctx.t('Choose source value')], ...hosts.filter((host, index) => group.values[index]).map(host => [host.target.hostId, host.target.hostId])]);
-        const preview = action(ctx, 'Preview changes', 'check', () => ctx.preview(hosts.map(host => ({ host, query: query(host, group.name), action: 'environment', patch: { kind: 'variable', delete: mode.value === 'delete', value: value.value, expandable: expand.control.checked }, label: group.name }))), true);
+        const preview = action(ctx, 'Preview changes', 'check', () =>
+        {
+            const deleteMode = 'delete';
+            const deleting = mode.value === deleteMode;
+            const label = deleting ? `${ctx.t('Delete variable')} · ${group.name}` : group.name;
+            return ctx.preview(hosts.map(host => ({ host, query: query(host, group.name), action: 'environment',
+                patch: { kind: 'variable', delete: deleting, value: value.value, expandable: expand.control.checked }, label })));
+        }, true);
         preview.disabled = true;
         mode.onchange = () =>
         {

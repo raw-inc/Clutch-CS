@@ -24,7 +24,8 @@ export function triState(ctx, label, value, changed)
     const root = node('div', '', 'hm-tristate');
     root.setAttribute('role', 'radiogroup');
     root.setAttribute('aria-label', label);
-    const keys = ['disable', 'other', 'enable'];
+    const unchanged = 'other';
+    const keys = ['disable', unchanged, 'enable'];
 
     /** 対象と選択状態を照合して切り替えます。 */
     function select(next)
@@ -40,7 +41,7 @@ export function triState(ctx, label, value, changed)
 
     for (const key of keys)
     {
-        const button = ctx.button(key, () =>
+        const button = ctx.button(key === unchanged ? 'Keep each host unchanged' : key, () =>
         {
             select(key);
             changed(key);

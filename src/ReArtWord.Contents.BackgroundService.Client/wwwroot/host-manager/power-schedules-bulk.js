@@ -1,5 +1,6 @@
 import { node, select, field, action, table, same, hostCount } from './dom.js';
 import { powerScheduleForm } from './power-schedule-form.js';
+import { uiIcon } from '../ui-icons.js';
 
 /** 保存応答を、成功・未実行・失敗・結果不明に分けて表示します。
  * @returns Hostごとの結果表示キーです。
@@ -36,8 +37,17 @@ function openBulk(ctx, panels, signal, mode)
     const disable = 'disable';
     const applyKey = mode === replace ? 'powerSchedule.bulkApply' : mode === enable ? 'powerSchedule.confirmEnable' : 'powerSchedule.confirmDisable';
     let submitted = false;
-    dialog.root.append(node('p', ctx.t(mode === replace ? 'powerSchedule.bulkHelp' : 'powerSchedule.bulkToggleHelp'), 'hm-muted'), editor,
-        node('h3', `${ctx.t('powerSchedule.targets')}: ${hostCount(ctx, snapshots.length)}`), targets.root);
+    if (mode === replace)
+    {
+        dialog.root.append(node('p', ctx.t('powerSchedule.bulkHelp'), 'hm-muted'), editor);
+    }
+    dialog.root.append(node('h3', `${ctx.t('powerSchedule.targets')}: ${hostCount(ctx, snapshots.length)}`), targets.root);
+    if (mode !== replace)
+    {
+        const impact = node('p', '', 'notice warning');
+        impact.append(uiIcon('warning'), node('span', ctx.t(mode === enable ? 'powerSchedule.bulkEnableHelp' : 'powerSchedule.bulkDisableHelp')));
+        dialog.root.append(impact);
+    }
     const form = mode === replace ? editTemplate(editor, ctx, snapshots) : null;
     for (const snapshot of snapshots)
     {

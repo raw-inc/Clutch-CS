@@ -234,6 +234,7 @@ export async function mount(element, labels)
 
             const dismiss = action(ctx, 'Close', 'close', close);
             dismiss.classList.add('icon-button', 'quiet');
+            dismiss.querySelector('.control-label')?.remove();
             dismiss.setAttribute('aria-label', ctx.t('Close'));
             dismiss.title = ctx.t('Close');
             const heading = node('h2', ctx.t(label));
@@ -254,6 +255,7 @@ export async function mount(element, labels)
                 event.preventDefault();
                 close();
             });
+            dialog.classList.toggle('dialog-stacked', !!document.querySelector('dialog.dialog:modal'));
             dialog.showModal();
             if (window.scrollX !== left || window.scrollY !== top)
             {
