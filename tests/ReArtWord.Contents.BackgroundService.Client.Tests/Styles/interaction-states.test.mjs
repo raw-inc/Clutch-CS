@@ -360,8 +360,6 @@ test('両方向に送れる一覧は固定見出しの下に上下・左右の�
                 <thead style="position: sticky; top: 0"><tr><th>項目</th></tr></thead>
                 <tbody><tr><td style="height: 280px">データ</td></tr></tbody>
             </table></div>
-            <span class="scroll-inline-edge scroll-inline-before"></span>
-            <span class="scroll-inline-edge scroll-inline-after"></span>
         </clutch-scroll-area>
     `);
     await page.addStyleTag({ content: styles.css });
@@ -383,6 +381,30 @@ test('両方向に送れる一覧は固定見出しの下に上下・左右の�
     await port.evaluate(e => e.scrollTo(e.scrollWidth, e.scrollHeight));
     await area.locator('.scroll-inline-after').waitFor({ state: 'hidden' });
     await page.locator('clutch-scroll-area[data-scroll-before]:not([data-scroll-after])').waitFor();
+});
+
+test('長いJSON本文では左右のスクロールの手がかりが切り替わる', async context =>
+{
+    const page = await browser.newPage();
+    context.after(() => page.close());
+    await page.setContent('<clutch-scroll-area data-scroll-axis="both" style="width: 180px"><pre></pre></clutch-scroll-area>');
+    await page.addStyleTag({ content: styles.css });
+    const script = new URL('../../../src/ReArtWord.Contents.BackgroundService.Client/wwwroot/scroll-area.js', import.meta.url);
+    await page.addScriptTag({ content: await readFile(script, 'utf8') });
+    const port = page.locator('pre');
+    await port.evaluate(element =>
+    {
+        element.textContent = JSON.stringify({ message: 'example-'.repeat(60) });
+    });
+    const before = page.locator('.scroll-inline-before'), after = page.locator('.scroll-inline-after');
+    await after.waitFor();
+    assert.equal(await before.isVisible(), false);
+    await port.evaluate(element =>
+    {
+        element.scrollLeft = element.scrollWidth;
+    });
+    await before.waitFor();
+    await after.waitFor({ state: 'hidden' });
 });
 
 test('ワークフローのタブ列が狭くなっても選択中のタブを表示する', async context =>

@@ -1,7 +1,15 @@
-/* UIフォントの字面は行ボックスの中央より上に見えるため、図柄と並ぶ文字の位置を補正します。 */
+/* ボタンの文字位置を揃え、図柄を字面の中心に合わせます。 */
 .control-label {
     position: relative;
     inset-block-start: var(--control-label-offset);
+}
+
+:where(button) > .control-label {
+    inset-block-start: 0;
+}
+
+:where(button) > .ui-icon:has(+ .control-label) {
+    translate: 0 calc(-1 * var(--control-label-offset));
 }
 
 clutch-scroll-area {
@@ -807,7 +815,7 @@ summary {
 
     input:is([type="checkbox"]:not([role="switch"]), [type="radio"]):disabled {
         background-color: var(--disabled-face);
-        border-color: var(--control);
+        border-color: var(--disabled-line);
         color: var(--disabled-ink);
         cursor: not-allowed;
     }

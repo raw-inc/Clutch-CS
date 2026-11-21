@@ -89,9 +89,26 @@ class ScrollArea extends HTMLElement
         this.#setEdges(port, inline, 'data-scroll-');
         if (axis === combinedAxis)
         {
+            this.#ensureInlineEdges();
             const header = port.querySelector('thead');
             this.style.setProperty('--scroll-edge-block-start', (header?.offsetHeight ?? 0) + 'px');
             this.#setEdges(port, true, 'data-scroll-inline-');
+        }
+    }
+
+    /** 縦横に送れる領域では、上下の影に加えて左右の続きも表示する。 */
+    #ensureInlineEdges()
+    {
+        if (this.querySelector(':scope > .scroll-inline-edge'))
+        {
+            return;
+        }
+        for (const edge of ['before', 'after'])
+        {
+            const indicator = document.createElement('span');
+            indicator.className = 'scroll-inline-edge scroll-inline-' + edge;
+            indicator.setAttribute('aria-hidden', 'true');
+            this.append(indicator);
         }
     }
 
