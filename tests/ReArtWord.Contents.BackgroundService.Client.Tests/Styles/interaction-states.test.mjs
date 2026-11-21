@@ -148,7 +148,7 @@ test.skip('通常の操作ボタンは面と見分けられ、操作中と無効
     }
 });
 
-test('副ボタンと無効な操作を面と影で区別し、選択や危険操作を示す', async context =>
+test('副ボタンと無効な操作を面と影で区別し、選択や危険操作を示す', { skip: '確認ボタンはクラスで指定する仕様へ変更したため、フッターの位置で判定していた検証を終了します。' }, async context =>
 {
     const page = await browser.newPage();
     context.after(() => page.close());
@@ -197,6 +197,80 @@ test('副ボタンと無効な操作を面と影で区別し、選択や危険�
         assert.notEqual((await style(page.getByRole('button', { name: '概要' }))).face, 'rgba(0, 0, 0, 0)');
         assert.notEqual((await style(page.getByRole('button', { name: '停止する' }))).face,
             (await style(page.getByRole('button', { name: 'キャンセル' }))).face);
+
+        await action.hover();
+        assert.notEqual((await style(action)).face, enabled.face);
+        await page.mouse.down();
+        assert.equal((await style(action)).shadow, 'none');
+        await page.mouse.up();
+        await page.mouse.move(0, 0);
+        await page.keyboard.press('Tab');
+        await action.focus();
+        assert.ok((await style(action)).shadow.includes('inset'));
+    }
+});
+
+test('副ボタンと無効状態を区別し、危険操作は入口と確定で面を切り替える', async context =>
+{
+    const page = await browser.newPage();
+    context.after(() => page.close());
+    await page.setContent(`
+        <section class="card">
+            <button>操作</button><button disabled>準備中</button>
+            <button aria-disabled="true">電源操作</button><button class="primary">保存</button>
+            <div class="desktop-workspace">
+                <div class="desktop-quick-controls"><button class="desktop-action quiet" aria-label="全画面"></button></div>
+                <div class="desktop-targets"><button class="desktop-action desktop-labeled quiet">接続を解除</button></div>
+            </div>
+            <span class="file-picker-control"><span>ファイルを選ぶ</span><input aria-label="ファイル" type="file"></span>
+        </section>
+        <div class="pc-display-toggle"><button class="active" aria-pressed="true">概要</button><button aria-pressed="false">詳細</button></div>
+        <section class="dialog">
+            <button class="danger">停止の確認</button><button class="restore-action">復元の確認</button>
+            <footer><button>キャンセル</button><button class="danger confirm-action">停止する</button><button class="restore-action confirm-action">復元を開始</button></footer>
+        </section>
+    `);
+    await page.addStyleTag({ content: styles.css });
+    const action = page.getByRole('button', { name: '操作', exact: true });
+
+    /** 面・文字色・影をブラウザーの算出結果で読む。
+     * @returns 表示中のスタイルです。
+     */
+    const style = element => element.evaluate(e =>
+    {
+        const current = getComputedStyle(e);
+        return { face: current.backgroundColor, ink: current.color, shadow: current.boxShadow };
+    });
+
+    for (const colorScheme of ['light', 'dark'])
+    {
+        await page.emulateMedia({ colorScheme });
+        await action.blur();
+        await page.mouse.move(0, 0);
+        const enabled = await style(action);
+        const disabled = await style(page.getByRole('button', { name: '準備中' }));
+        assert.notEqual(enabled.face, disabled.face);
+        assert.notEqual(enabled.face, (await style(page.locator('.card'))).face);
+        assert.notEqual(enabled.shadow, 'none');
+        assert.equal(disabled.shadow, 'none');
+        assert.deepEqual(disabled, await style(page.getByRole('button', { name: '電源操作' })));
+        assert.equal(enabled.face, (await style(page.getByRole('button', { name: '接続を解除' }))).face);
+        assert.deepEqual(enabled, await style(page.locator('.file-picker-control > span')));
+        assert.notEqual(enabled.face, (await style(page.getByRole('button', { name: '保存' }))).face);
+        assert.equal((await style(page.getByRole('button', { name: '全画面' }))).shadow, 'none');
+        assert.equal((await style(page.getByRole('button', { name: '詳細' }))).face, 'rgba(0, 0, 0, 0)');
+        assert.notEqual((await style(page.getByRole('button', { name: '概要' }))).face, 'rgba(0, 0, 0, 0)');
+        for (const [entryName, confirmName] of [['停止の確認', '停止する'], ['復元の確認', '復元を開始']])
+        {
+            const entry = await style(page.getByRole('button', { name: entryName, exact: true }));
+            const confirm = await style(page.getByRole('button', { name: confirmName, exact: true }));
+            assert.equal(entry.face, enabled.face);
+            assert.equal(entry.shadow, enabled.shadow);
+            assert.notEqual(entry.ink, enabled.ink);
+            assert.notEqual(confirm.face, entry.face);
+            assert.notEqual(confirm.ink, entry.ink);
+            assert.equal(confirm.shadow, 'none');
+        }
 
         await action.hover();
         assert.notEqual((await style(action)).face, enabled.face);
