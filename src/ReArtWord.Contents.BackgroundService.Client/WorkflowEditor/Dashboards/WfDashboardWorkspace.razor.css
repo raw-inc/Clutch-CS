@@ -231,7 +231,7 @@
 
     .dashboard-workspace.with-catalog .dashboard-library {
         flex: none;
-        block-size: min(44dvh, 19rem);
+        block-size: min(49dvh, 21rem);
     }
 
     .dashboard-workspace.with-catalog .dashboard-board-scroll {

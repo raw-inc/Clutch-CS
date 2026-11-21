@@ -536,7 +536,7 @@
     min-width: 0;
     height: 30px;
     padding: 5px 8px;
-    font: 14px var(--font-mono);
+    font: 14px Consolas, monospace;
     background: var(--paper);
 }
 
@@ -1449,7 +1449,7 @@
 
 .terminal-shell-path {
     order: 1;
-    font-family: var(--font-mono);
+    font-family: Consolas, monospace;
     font-size: 12px;
 }
 

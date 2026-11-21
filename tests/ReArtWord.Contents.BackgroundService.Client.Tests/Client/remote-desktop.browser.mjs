@@ -289,6 +289,15 @@ for (const [name, engine, options] of [['Chrome', chromium, { channel: 'chrome' 
                 await tools.locator('summary').click();
                 assert.ok(await toolbar.isVisible());
                 assert.ok(await toolbar.evaluate(element => element.scrollWidth <= element.clientWidth + 1));
+                if (width === 390)
+                {
+                    const sizes = await toolbar.locator('button:visible').evaluateAll(buttons => buttons.map(button =>
+                    {
+                        const { width, height } = button.getBoundingClientRect();
+                        return { width, height };
+                    }));
+                    assert.ok(8 <= sizes.length && sizes.every(size => 44 <= size.width && 44 <= size.height), JSON.stringify(sizes));
+                }
                 const canvas = page.locator('.desktop-monitor canvas');
                 const whileOpen = await canvas.boundingBox();
                 await tools.locator('summary').click();

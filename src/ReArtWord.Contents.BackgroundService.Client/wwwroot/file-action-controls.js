@@ -1,4 +1,5 @@
 import { validFolderName } from './file-mutations.js';
+import { setControlLabel } from './ui-icons.js';
 
 /** 二種類のファイル画面で、対象の確認・実行中のロック・一覧更新を揃えます。
  * @returns ボタンと操作状態、画面終了時の解放処理です。
@@ -163,6 +164,10 @@ export function fileActionControls(root, ctx, actions)
             submit.type = 'submit';
             submit.className = creating ? 'primary' : 'danger confirm-action';
             submit.textContent = creating ? ctx.t('Create folder', '作成') : ctx.t('Delete permanently', '完全に削除');
+            if (!creating)
+            {
+                setControlLabel(submit, ctx.icon('trash'));
+            }
             form.onsubmit = event =>
             {
                 event.preventDefault();
