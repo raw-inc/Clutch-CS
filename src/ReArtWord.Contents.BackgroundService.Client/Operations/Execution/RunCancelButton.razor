@@ -1,10 +1,10 @@
 <button class="danger" disabled="@(busy||submitted||OwnerInstanceId==Guid.Empty||PeerId is null||ClusterId is null)" @onclick="()=>confirming=true"><UiIcon Name="stop" /><span class="control-label">@Ui[submitted?"Cancellation requested":"Cancel this execution"]</span></button>
 @if(message is not null){<p class="small notice">@message()</p>}
 
-<Modal Open="confirming" Title='@Ui["Cancel this execution"]' Close="()=>confirming=false">
+<Modal Open="confirming" Compact="true" Title='@Ui["Cancel this execution"]' Close="()=>confirming=false">
     <ChildContent>
         <p><strong>@(WorkflowId ?? Ui["Workflow"])</strong><br />@ClusterId / @PeerId</p>
-        <p>@Ui["Completed effects cannot be undone."]</p>
+        <p class="notice warning"><UiIcon Name="warning" /><span>@Ui["Completed effects cannot be undone."]</span></p>
         <p class="small muted">@Ui["Operation ID"] · <code>@RunId</code></p>
     </ChildContent>
     <Actions><button class="danger confirm-action" disabled="@(busy||submitted)" @onclick="()=>{confirming=false;return CancelAsync(UiCancellation);}"><UiIcon Name="stop" /><span class="control-label">@Ui["Cancel this execution"]</span></button></Actions>

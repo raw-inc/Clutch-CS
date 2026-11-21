@@ -38,6 +38,13 @@ public sealed partial class SafetyPanel
     private ManualSafetyStatus? Current => targets.Count == 0 ? null
                                                               : status?.States.FirstOrDefault(item => string.Equals(item.WorkflowId, targets[selected].Workflow, StringComparison.Ordinal) && string.Equals(item.Scope, targets[selected].Scope, StringComparison.Ordinal));
 
+    private string ConfirmationAction => pending switch
+    {
+        { Stopped: true } => "Pause new inputs",
+        { Continued: true } => "Allow new inputs temporarily",
+        _ => "Restore normal safety behavior"
+    };
+
     private string OverrideState => (status?.Loaded == true, targets.Count, Current) switch
     {
         (false, _, _) => "Not checked",

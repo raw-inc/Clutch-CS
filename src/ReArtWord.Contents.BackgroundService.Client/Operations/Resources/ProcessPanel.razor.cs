@@ -173,6 +173,25 @@ public sealed partial class ProcessPanel
         await LoadAsync(token).ConfigureAwait(true);
     }, cancellationToken);
 
+    private string StopImpact
+    {
+        get
+        {
+            string forcePolicy = "force";
+            if (!string.Equals(stopPolicy, forcePolicy, StringComparison.Ordinal))
+            {
+                return Ui["If the application does not exit in time, stop it manually."];
+            }
+
+            if (int.TryParse(gracefulSeconds, out int seconds) && seconds is >= 1 and <= 3600)
+            {
+                return Ui.Format("If the application does not exit within {0} seconds, it will be terminated. Unsaved data may be lost.", seconds);
+            }
+
+            return Ui["Enter the time to wait before forcing the application to stop. Unsaved data may be lost."];
+        }
+    }
+
     /// <summary>操作を開き直したときは、強制終了の選択を引き継ぎません。</summary>
     private void OpenStop(bool restart)
     {

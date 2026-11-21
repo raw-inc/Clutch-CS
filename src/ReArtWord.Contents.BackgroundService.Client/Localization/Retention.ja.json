@@ -1,6 +1,11 @@
 {
   "Storage used": "保存容量",
   "Set a separate period for {0}": "{0}の保持期間を個別に指定",
+  "Apply retention to existing logs and history": "保存済みのログと履歴にも保持期間を適用",
+  "Total retention periods for existing records": "保存済みの記録に適用する総保持期間",
+  "Existing records beyond these periods are eligible for deletion during retention cleanup. Deleted records cannot be recovered.": "保持期間を過ぎた記録は、ログと履歴の整理時に削除されます。削除された記録は元に戻せません。",
+  "Update and apply to existing records": "保存済みの記録にも適用して更新",
+  "{0} days": "{0} 日",
   "Retention by category": "種類別の保持期間",
   "Rolling time (HH:mm)": "日付切替時刻（HH:mm）",
   "Rolling time zone": "日付切替のタイムゾーン",

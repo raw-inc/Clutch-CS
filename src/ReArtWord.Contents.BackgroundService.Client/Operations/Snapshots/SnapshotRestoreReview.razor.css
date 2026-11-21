@@ -10,3 +10,9 @@
 .restoration-check {
     margin-block: 16px;
 }
+
+@media (max-width: 680px) {
+    .restore-scope tbody td[data-field] {
+        align-items: start;
+    }
+}

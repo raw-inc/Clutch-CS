@@ -46,7 +46,7 @@
             <div class="destructive-action">
                 @if(state.Targets.Count>0){<p class="small trace-stop-targets">@Ui["Affected peers"] · @string.Join(", ",state.Targets.Select(target=>target.PeerId))</p>}
                 <p class="small muted">@Ui["Stopping CoreService also clears temporary tracing. To keep it running, restore normal tracing."]</p>
-                <button class="danger" @onclick="()=>pendingStop=state" disabled="@(!state.Loaded||state.Targets.Count==0)"><UiIcon Name="stop-filled" /><span class="control-label">@Ui["Request CoreService stop"]</span></button>
+                <button class="danger" @onclick="()=>pendingStop=state" disabled="@(!state.Loaded||state.Targets.Count==0)"><UiIcon Name="stop" /><span class="control-label">@Ui["Request CoreService stop"]</span></button>
             </div>
         }
         <JsonDetails Value="state" Title="@Ui["Trace scope and fixed targets"]" />
@@ -61,15 +61,15 @@
     }
 </Actions>
 </Modal>
-<Modal Open="@(pendingStop is not null)" Title="@Ui["Request CoreService stop"]" Close="()=>pendingStop=null">
+<Modal Open="@(pendingStop is not null)" Compact="true" Title="@Ui["Request CoreService stop"]" Close="()=>pendingStop=null">
     <ChildContent>
-        <p class="notice warning trace-stop-message"><UiIcon Name="warning" /><span>@Ui["Request stop for the displayed peer instances. Acceptance does not confirm every process has exited."]</span></p>
         @if(pendingStop is {} confirmation)
         {
             <ul aria-label="@Ui["Affected peers"]">
                 @foreach(var target in confirmation.Targets){<li><strong>@target.PeerId</strong> · <code>@target.InstanceId</code></li>}
             </ul>
         }
+        <p class="notice warning trace-stop-message"><UiIcon Name="warning" /><span>@Ui["Request stop for the displayed peer instances. Acceptance does not confirm every process has exited."]</span></p>
     </ChildContent>
-    <Actions><button class="danger confirm-action" @onclick="StopAsync"><UiIcon Name="stop-filled" /><span class="control-label">@Ui.Format("Request stop for {0} peers",pendingStop?.Targets.Count??0)</span></button></Actions>
+    <Actions><button class="danger confirm-action" @onclick="StopAsync"><UiIcon Name="stop" /><span class="control-label">@Ui.Format("Request stop for {0} peers",pendingStop?.Targets.Count??0)</span></button></Actions>
 </Modal>

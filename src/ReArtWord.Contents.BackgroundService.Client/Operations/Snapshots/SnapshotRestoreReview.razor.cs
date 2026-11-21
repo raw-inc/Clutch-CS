@@ -96,8 +96,13 @@ public sealed partial class SnapshotRestoreReview
         }
     }
 
-    /// <summary>保留した草稿を現在の状態で解消できるか判定します。</summary>
-    /// <returns>指定した条件を満たすかどうかです。</returns>
+    /// <summary>共同編集画面と同じ表記で、未保存の変更を報告した編集画面を示します。</summary>
+    /// <returns>対象の編集画面名です。</returns>
+    private static string DirtyEditorLabels(SnapshotEditorState editor) => string.Join(", ", editor.Presence.Where(item => item.Presence.Dirty)
+        .Select(item => ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Collaboration.CollaborationOverlay.Label(item.Presence)));
+
+    /// <summary>当事者の編集画面から、または編集画面に未保存の変更がない状態で解消できるか判定します。</summary>
+    /// <returns>この画面で草稿の状態を確認できる場合はtrueです。</returns>
     private bool CanResolve(SnapshotEditorState editor) => editor.Presence.Any(item => item.Presence.UiInstanceId == Collaboration.UiInstanceId) || editor.Presence.All(item => !item.Presence.Dirty);
 
     /// <summary>表示対象の最新状態を取得して画面へ反映します。</summary>

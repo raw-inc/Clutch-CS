@@ -1,5 +1,6 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Observability
 @using ReArtWord.Contents.BackgroundService.Contracts.Management
+@using ReArtWord.Contents.BackgroundService.Contracts.Retention
 <button @onclick="OpenAsync" disabled="@Disabled"><UiIcon Name="drive" /><span class="control-label">@Ui["Retention settings"]</span></button>
 <span>@(message?.Invoke())</span>
 <Modal Open="open" Title="@Ui["Log and history retention"]" Close="()=>open=false">
@@ -70,6 +71,31 @@ else
 <p class="notice">@(message?.Invoke())</p>
     </ChildContent>
     <Actions>
-        <button class="primary" @onclick="SaveAsync">@Ui["Update retention settings"]</button>
+        <button class="primary" @onclick="SaveAsync" disabled="@busy">@Ui["Update retention settings"]</button>
+    </Actions>
+</Modal>
+
+<Modal Open="@(pending is not null)" Compact="true" Title="@Ui["Apply retention to existing logs and history"]" Close="()=>pending=null">
+    <ChildContent>
+        @if(pending?.DataRetention is {} policy)
+        {
+            <p>@Ui["Total retention periods for existing records"]</p>
+            <ul class="retention-deadlines">
+                @foreach(var row in rows)
+                {
+                    @if(policy.Window(row.Category).TotalDays is int days)
+                    {
+                        <li><span>@Ui[row.Level]</span><strong>@Ui.Format("{0} days",days)</strong></li>
+                    }
+                }
+            </ul>
+            <p class="notice warning"><UiIcon Name="warning" /><span>@Ui["Existing records beyond these periods are eligible for deletion during retention cleanup. Deleted records cannot be recovered."]</span></p>
+        }
+    </ChildContent>
+    <Actions>
+        @if(pending is {} request)
+        {
+            <button class="danger confirm-action" @onclick="()=>SaveRequestAsync(request,UiCancellation)"><UiIcon Name="warning" /><span class="control-label">@Ui["Update and apply to existing records"]</span></button>
+        }
     </Actions>
 </Modal>

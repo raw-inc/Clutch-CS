@@ -33,7 +33,7 @@
 <p class="notice">@(message?.Invoke())</p>
 @if(preview is not null)
 {
-    <p>@preview.Impact</p>
+    <p>@Ui["Changes apply to new and queued inputs. Check running work and external equipment separately."]</p>
     <div class="table-wrap">
         <table class="record-table">
             <thead><tr><th>@Ui["Node"]</th><th>@Ui["Effective stop"]</th><th>@Ui["Automatic stop"]</th><th>@Ui["Manual stop"]</th><th>@Ui["Temporary continuation"]</th></tr></thead>
@@ -54,16 +54,19 @@
 }
 <JsonDetails Value="result" Title="@Ui["Result of this operation"]" />
 </Modal>
-<Modal Open="confirmOpen" Title="@Ui["Review targets and impact"]" Close="CancelConfirmation">
+<Modal Open="confirmOpen" Compact="true" Title="@Ui[ConfirmationAction]" Close="CancelConfirmation">
     <ChildContent>
-        <p class="notice warning"><UiIcon Name="warning" /><span>@preview?.Impact</span></p>
-        <p>@Ui["Target"] @pending?.WorkflowId / @pending?.Scope · @(pending?.Stopped==true?Ui["Temporary pause"]:pending?.Continued==true?Ui["Temporary continuation"]:Ui["Return to normal decisions"])</p>
+        @if(pending is {} target)
+        {
+            <p><strong>@(targetWorkflow??target.WorkflowId)</strong> · @Ui.Format("{0} {1}",Ui[targets.FirstOrDefault(item=>item.Scope==target.Scope).Kind??"Target"],target.Scope) · @Ui[ConfirmationAction]</p>
+        }
+        <p class="notice warning"><UiIcon Name="warning" /><span>@Ui["Changes apply to new and queued inputs. Check running work and external equipment separately."] @if(pending?.Continued==true){<text>@Ui["Manual pauses on other nodes and safety groups stay in effect."]</text>}</span></p>
         <JsonDetails Value="preview" Title="@Ui["Reviewed targets, effective stops and definition revision"]" />
     </ChildContent>
     <Actions>
         @if(pending is {} change)
         {
-            <button class="@(change.Stopped?"danger confirm-action":"restore-action confirm-action")" @onclick="ConfirmAsync" disabled="@busy"><UiIcon Name="@(change.Stopped?"stop":"warning")" /><span class="control-label">@Ui[change.Stopped?"Pause new inputs":change.Continued?"Allow new inputs temporarily":"Restore normal safety behavior"]</span></button>
+            <button class="@(change.Stopped?"danger confirm-action":"restore-action confirm-action")" @onclick="ConfirmAsync" disabled="@busy"><UiIcon Name="@(change.Stopped?"stop":"warning")" /><span class="control-label">@Ui[ConfirmationAction]</span></button>
         }
     </Actions>
 </Modal>

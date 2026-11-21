@@ -115,17 +115,18 @@
         <button class="danger confirm-action" disabled="@(RemovalUnavailable is not null)" @onclick="()=>RemoveAsync(UiCancellation)"><UiIcon Name="trash" /><span class="control-label">@Ui["Remove registration"]</span></button>
     </Actions>
 </Modal>
-<Modal Open="stopOpen" Title='@Ui[restarting?"Restart application":"Stop application"]' Close="()=>stopOpen=false">
+<Modal Open="stopOpen" Compact="true" Title='@Ui[restarting?"Restart application":"Stop application"]' Close="()=>stopOpen=false">
     <ChildContent>
         <p>@Owner · <strong>@selected?.Definition.DisplayName</strong></p>
-        <p class="notice warning"><UiIcon Name="warning" /><span>@Ui[restarting?"A restart only starts a new process after the old process has been confirmed stopped.":"The application will be asked to exit."]</span></p>
+        <p class="notice warning"><UiIcon Name="warning" /><span>@StopImpact</span></p>
+        @if(restarting){<p>@Ui["A restart only starts a new process after the old process has been confirmed stopped."]</p>}
         @if(message is not null){<p class="notice" role="status">@message()</p>}
         <fieldset class="process-stop-fields" disabled="@(busy||target is null)">
             <label>@Ui["Graceful stop timeout (seconds)"]<input type="number" min="1" max="3600" @bind="gracefulSeconds" @bind:event="oninput" /></label>
             <label>@Ui["If the application does not exit"]
                 <select @bind="stopPolicy">
                     <option value="waitForManual">@Ui["Wait for manual action if it does not exit"]</option>
-                    <option value="force">@Ui["Force termination if it does not exit"]</option>
+                    <option value="force">@Ui["Force termination"]</option>
                 </select>
             </label>
         </fieldset>

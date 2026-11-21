@@ -52,13 +52,17 @@
                 <section class="card section">
                     <p>@editor.PeerId / @editor.WorkflowId · @(editor.NodeIds is null?Ui["Whole scope"]:string.Join(", ",editor.NodeIds))</p>
                     <p>@Ui["Draft revision"] @editor.SessionVersion</p>
-                    <p><span class="badge @(editor.Dirty?"warn":"")">@Ui[editor.Dirty?"Unsaved":"No unsaved changes"]</span></p>
-                    @foreach(var presence in editor.Presence)
-                    {
-                        <p>@presence.Presence.DisplayName · @presence.Presence.UiInstanceId <span class="badge @(presence.Presence.Dirty?"warn":"")">@Ui[presence.Presence.Dirty?"Unsaved":"No unsaved changes"]</span></p>
-                    }
+                    <p>@Ui[editor.Dirty || editor.Presence.Any(item=>item.Presence.Dirty)?"Unsaved changes block restore":"No unsaved changes"]</p>
                     @if(editor.Dirty || editor.Presence.Any(item=>item.Presence.Dirty))
                     {
+                        @if(editor.Presence.Any(item=>item.Presence.Dirty))
+                        {
+                            <p class="small muted">@Ui.Format("Editors with unsaved changes: {0}",DirtyEditorLabels(editor))</p>
+                        }
+                        else
+                        {
+                            <p class="small muted">@Ui["The shared draft has unsaved changes. The editor that made them is unconfirmed."]</p>
+                        }
                         @if(CanResolve(editor))
                         {
                             <div class="toolbar">
@@ -91,12 +95,16 @@
     </Actions>
 </Modal>
 
-<Modal Open="@(discarding is not null)" Title="@Ui["Discard unsaved changes"]" Close="()=>discarding=null">
+<Modal Open="@(discarding is not null)" Compact="true" Title="@Ui["Discard unsaved changes"]" Close="()=>discarding=null">
     <ChildContent>
         @if(discarding is {} draft)
         {
             <p><strong>@draft.PeerId / @draft.WorkflowId</strong> · @(draft.NodeIds is null?Ui["Whole scope"]:string.Join(", ",draft.NodeIds))</p>
-            <p class="notice warning"><UiIcon Name="warning" /><span>@Ui["The unsaved changes in this scope will be discarded."]</span></p>
+            @if(draft.Presence.Any(item=>item.Presence.Dirty))
+            {
+                <p class="small muted">@Ui.Format("Editors with unsaved changes: {0}",DirtyEditorLabels(draft))</p>
+            }
+            <p class="notice warning"><UiIcon Name="warning" /><span>@Ui["The unsaved changes in this scope will be discarded and cannot be recovered."]</span></p>
         }
     </ChildContent>
     <Actions>

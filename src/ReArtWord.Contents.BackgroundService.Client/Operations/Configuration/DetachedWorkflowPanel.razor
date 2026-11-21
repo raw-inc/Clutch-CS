@@ -61,7 +61,7 @@
         @if(message is not null){<p class="notice">@(message?.Invoke())</p>}
     }
 </Modal>
-<Modal Open="discardOpen" Title="@Ui["Discard local changes without sharing"]" Close="()=>discardOpen=false">
+<Modal Open="discardOpen" Compact="true" Title="@Ui["Discard local changes without sharing"]" Close="()=>discardOpen=false">
     <ChildContent>
         <p class="notice warning"><UiIcon Name="warning" /><span>@Ui.Format("Discard only the reviewed local revision of {0}. This does not undo file changes, process actions or external outputs that already occurred.", state?.WorkflowId)</span></p>
     </ChildContent>

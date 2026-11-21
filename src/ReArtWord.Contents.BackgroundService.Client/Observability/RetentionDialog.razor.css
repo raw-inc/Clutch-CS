@@ -41,3 +41,18 @@
         opacity: 0;
     }
 }
+
+.retention-deadlines {
+    display: grid;
+    gap: 4px;
+    padding: 0;
+    list-style: none;
+}
+
+.retention-deadlines li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    border-block-end: 1px solid var(--line);
+}

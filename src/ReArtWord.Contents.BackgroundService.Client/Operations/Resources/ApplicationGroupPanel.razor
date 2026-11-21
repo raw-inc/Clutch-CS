@@ -45,7 +45,7 @@
             }
             <label>@Ui["Add a registered application"]<select value="" @onchange="Add"><option value="">@Ui["Select an application"]</option>@foreach(var application in Candidates()){<option value="@application.Id">@application.DisplayName</option>}</select></label>
             <label>@Ui["Group graceful stop timeout (ms)"]<input type="number" min="1" max="3600000" @bind="form.StopTimeout" @bind:event="oninput" /><small>@Seconds(form.StopTimeout)</small></label>
-            <label>@Ui["If an application does not exit"]<select @bind="form.StopPolicy"><option value="@EProcessStopPolicy.WaitForManual">@Ui["Wait for manual action if it does not exit"]</option><option value="@EProcessStopPolicy.Force">@Ui["Force termination if it does not exit"]</option></select></label>
+            <label>@Ui["If an application does not exit"]<select @bind="form.StopPolicy"><option value="@EProcessStopPolicy.WaitForManual">@Ui["Wait for manual action if it does not exit"]</option><option value="@EProcessStopPolicy.Force">@Ui["Force termination"]</option></select></label>
 
         </fieldset>
     }
@@ -54,7 +54,7 @@
         <button class="primary" disabled="@(busy||!Available||draft is null)" @onclick="()=>SaveAsync(UiCancellation)">@Ui["Save"]</button>
     </Actions>
 </Modal>
-<Modal Open="@(confirming is not null)" Title='@Ui[command==EProcessGroupCommand.Stop?"Stop group":"Restart group"]' Close="CloseConfirmation">
+<Modal Open="@(confirming is not null)" Compact="true" Title='@Ui[command==EProcessGroupCommand.Stop?"Stop group":"Restart group"]' Close="CloseConfirmation">
     <ChildContent>
         <p>@Owner · <strong>@confirming?.Definition.Name</strong></p>
         <p class="notice warning"><UiIcon Name="warning" /><span>@Ui[command==EProcessGroupCommand.Stop?"Stop all applications in this group and suspend group recovery.":"Stop all applications in this group, then restart them in the configured order."]</span></p>
