@@ -25,21 +25,22 @@ public sealed class ReplicationPreparationCompatibilityTests(ITestOutputHelper o
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable currentLifetime = current.ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable otherLifetime = other.ConfigureAwait(true);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(90));
-        await current.StartAsync(timeout.Token).ConfigureAwait(true);
-        await other.StartAsync(timeout.Token).ConfigureAwait(true);
+        JsonElement senderHealth = await current.StartAsync(timeout.Token).ConfigureAwait(true);
+        JsonElement receiverHealth = await other.StartAsync(timeout.Token).ConfigureAwait(true);
         CorePeer sender = current, receiver = other;
         if (otherSends)
         {
             sender = other;
             receiver = current;
+            (senderHealth, receiverHealth) = (receiverHealth, senderHealth);
         }
         await CorePeer.WaitAsync(async token => (await sender.GetAsync<JsonElement>("status", token).ConfigureAwait(true)).GetProperty("peers").EnumerateArray()
             .Count(peer => peer.GetProperty("status").GetString() is "ready") == 2, timeout.Token).ConfigureAwait(true);
         output.WriteLine(JsonSerializer.Serialize(new
         {
             compatibilityExecutableSupplied = compatibleCore is not null,
-            sender = (await sender.GetAsync<JsonElement>("health", timeout.Token).ConfigureAwait(true)).GetProperty("buildVersion").GetString(),
-            receiver = (await receiver.GetAsync<JsonElement>("health", timeout.Token).ConfigureAwait(true)).GetProperty("buildVersion").GetString(),
+            sender = senderHealth.GetProperty("buildVersion").GetString(),
+            receiver = receiverHealth.GetProperty("buildVersion").GetString(),
         }));
         string? revision = null;
         WorkflowSaveRequest? last = null;

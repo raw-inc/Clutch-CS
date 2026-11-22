@@ -42,12 +42,12 @@ public sealed class FileReservationRollingTests(ITestOutputHelper output)
         using ClusterFileGate gate = new(controller, repository);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable controllerLifetime = controller.ConfigureAwait(true);
         using CancellationTokenSource timeout = new(TimeSpan.FromMinutes(4));
-        await initial.StartAsync(timeout.Token).ConfigureAwait(true);
+        JsonElement initialHealth = await initial.StartAsync(timeout.Token).ConfigureAwait(true);
         await current.StartAsync(timeout.Token).ConfigureAwait(true);
         await controller.StartAsync(timeout.Token).ConfigureAwait(true);
         await ReadyAsync(initial, current, controller, timeout.Token).ConfigureAwait(true);
         output.WriteLine(JsonSerializer.Serialize(new { previousExecutableSupplied = previous is not null,
-            previous = (await initial.GetAsync<JsonElement>("health", timeout.Token).ConfigureAwait(true)).GetProperty("buildVersion").GetString() }));
+            previous = initialHealth.GetProperty("buildVersion").GetString() }));
         PeerInfo target = controller.GetPeers().Single(peer => peer.PeerId is "b");
         FileFootprint footprint = new(target.PeerId, target.InstanceId, target.HostId, Path.Combine(current.DirectoryPath, "content", "held.bin"), true);
         FileLeaseResult held = await gate.AcquireAsync(Guid.CreateVersion7(), [footprint], EFileConflictPolicy.Fail, timeout.Token).ConfigureAwait(true);

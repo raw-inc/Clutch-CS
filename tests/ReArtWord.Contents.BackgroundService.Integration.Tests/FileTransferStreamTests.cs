@@ -27,15 +27,13 @@ public sealed class FileTransferStreamTests(Xunit.Abstractions.ITestOutputHelper
         CorePeer destination = new(cluster, "destination", port, false, "destination-host");
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable sourceLifetime = source.ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable destinationLifetime = destination.ConfigureAwait(true);
-        await source.StartAsync().ConfigureAwait(true);
-        await destination.StartAsync().ConfigureAwait(true);
+        JsonElement sourceHealth = await source.StartAsync().ConfigureAwait(true);
+        JsonElement destinationHealth = await destination.StartAsync().ConfigureAwait(true);
         UdpObserver observer = new(new ObserverOptions("stream-test", new ClientNetworkBinding(source.InterfaceId, "127.0.0.1", "127.255.255.255", port)));
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable observerLifetime = ((IAsyncDisposable)observer).ConfigureAwait(true);
         await observer.StartAsync().ConfigureAwait(true);
         using CancellationTokenSource timeout = new(TimeSpan.FromMinutes(3));
         await CorePeer.WaitAsync(_ => Task.FromResult(observer.GetClusters().SelectMany(item => item.Peers).Count() == 2), timeout.Token).ConfigureAwait(true);
-        JsonElement sourceHealth = await source.GetAsync<JsonElement>("health", timeout.Token).ConfigureAwait(true);
-        JsonElement destinationHealth = await destination.GetAsync<JsonElement>("health", timeout.Token).ConfigureAwait(true);
         FileTransferPeer from = new(cluster, "source", sourceHealth.GetProperty("instanceId").GetGuid(), port);
         FileTransferPeer to = new(cluster, "destination", destinationHealth.GetProperty("instanceId").GetGuid(), port);
         PeerManagementClient remote = new((_, _) => observer);
