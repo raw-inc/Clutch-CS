@@ -76,9 +76,9 @@ internal sealed class RestartCluster : IAsyncDisposable
     internal async Task StartAsync(int index, CancellationToken cancellationToken = default)
     {
         events.Add(new { action = "start", peer = index, milliseconds = elapsed.Elapsed.TotalMilliseconds });
-        await Peers[index].StartAsync(cancellationToken).ConfigureAwait(false);
+        JsonElement health = await Peers[index].StartAsync(cancellationToken).ConfigureAwait(false);
+        processes[index] = health.GetProperty("processId").GetInt32();
         Volatile.Write(ref Online[index], 1);
-        processes[index] = (await Peers[index].GetAsync<JsonElement>("health", cancellationToken).ConfigureAwait(false)).GetProperty("processId").GetInt32();
     }
 
     /// <summary>自然なGCとCPU・論理I/Oを、再起動で変わるPIDに紐付けて残します。</summary>

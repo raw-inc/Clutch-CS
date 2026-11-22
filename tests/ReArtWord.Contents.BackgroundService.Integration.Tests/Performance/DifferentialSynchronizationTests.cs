@@ -49,13 +49,13 @@ public sealed class DifferentialSynchronizationTests(ITestOutputHelper output)
             await File.WriteAllTextAsync(configuration, text.Replace("[cluster]", "[cluster]\nmaximumSyncSnapshotBytes = 524288\nsyncSessionLifetimeSeconds = 30", StringComparison.Ordinal)).ConfigureAwait(true);
         }
         Stopwatch elapsed = Stopwatch.StartNew();
-        await first.StartAsync().ConfigureAwait(true);
+        JsonElement firstHealth = await first.StartAsync().ConfigureAwait(true);
 
         // 同期元の復旧後に、差分を持つ相手を再参加させます。
         await CorePeer.WaitAsync(async token => (await first.GetAsync<JsonElement>("health", token).ConfigureAwait(true)).GetProperty("ready").GetBoolean()).ConfigureAwait(true);
-        await second.StartAsync().ConfigureAwait(true);
-        int firstPid = (await first.GetAsync<JsonElement>("health").ConfigureAwait(true)).GetProperty("processId").GetInt32();
-        int secondPid = (await second.GetAsync<JsonElement>("health").ConfigureAwait(true)).GetProperty("processId").GetInt32();
+        JsonElement secondHealth = await second.StartAsync().ConfigureAwait(true);
+        int firstPid = firstHealth.GetProperty("processId").GetInt32();
+        int secondPid = secondHealth.GetProperty("processId").GetInt32();
         ProcessResourceSample[] before = [ProcessResourceSample.Capture(firstPid), ProcessResourceSample.Capture(secondPid)];
         await ReadyAsync(first, second).ConfigureAwait(true);
         await CorePeer.WaitAsync(async token => (await left.ReadAsync("workflow:sync-cost", "right", token).ConfigureAwait(true))?.Value?.Json.GetInt32() == 42

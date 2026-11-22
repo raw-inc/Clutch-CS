@@ -19,8 +19,8 @@ public sealed class SharedFileTransferTests
         CorePeer destination = new(cluster, "destination", port, false, "destination-host");
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable sourceLifetime = ((IAsyncDisposable)source).ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable destinationLifetime = ((IAsyncDisposable)destination).ConfigureAwait(true);
-        await source.StartAsync().ConfigureAwait(true);
-        await destination.StartAsync().ConfigureAwait(true);
+        JsonElement sourceHealth = await source.StartAsync().ConfigureAwait(true);
+        JsonElement destinationHealth = await destination.StartAsync().ConfigureAwait(true);
         await CorePeer.WaitAsync(async token =>
         {
             JsonElement status = await destination.GetAsync<JsonElement>("status", token).ConfigureAwait(true);
@@ -32,7 +32,6 @@ public sealed class SharedFileTransferTests
         Directory.CreateDirectory(to);
         byte[] bytes = Enumerable.Range(0, 80000).Select(index => (byte)(index % 251)).ToArray();
         await File.WriteAllBytesAsync(Path.Combine(from, "file.bin"), bytes).ConfigureAwait(true);
-        JsonElement sourceHealth = await source.GetAsync<JsonElement>("health").ConfigureAwait(true), destinationHealth = await destination.GetAsync<JsonElement>("health").ConfigureAwait(true);
         FileTransferRequest request = new(Guid.NewGuid(), new(cluster, "source", sourceHealth.GetProperty("instanceId").GetGuid(), port),
             new(cluster, "destination", destinationHealth.GetProperty("instanceId").GetGuid(), port), from, to);
         _ = await destination.PostAsync<FileTransferJob>("transfer.queue.enqueue", request).ConfigureAwait(true);

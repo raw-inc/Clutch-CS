@@ -23,18 +23,15 @@ public sealed class WorkflowLatencyTests(ITestOutputHelper output)
         PeerSet peers = new(peerCount, cluster, CorePeer.AvailablePort(), Environment.GetEnvironmentVariable("CONTENTS_CORE_PROBE_EXECUTABLE"));
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable peerLifetime = peers.ConfigureAwait(true);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(150));
+        List<string> builds = [];
         foreach (CorePeer peer in peers.Items)
         {
-            await peer.StartAsync(timeout.Token).ConfigureAwait(true);
+            JsonElement health = await peer.StartAsync(timeout.Token).ConfigureAwait(true);
+            builds.Add(health.GetProperty("buildVersion").GetString()!);
         }
         CorePeer first = peers.Items[0], last = peers.Items[^1];
         await CorePeer.WaitAsync(async token => (await first.GetAsync<JsonElement>("status", token).ConfigureAwait(true)).GetProperty("peers").EnumerateArray()
             .Count(peer => peer.GetProperty("status").GetString() is "ready") == peerCount, timeout.Token).ConfigureAwait(true);
-        List<string> builds = [];
-        foreach (CorePeer peer in peers.Items)
-        {
-            builds.Add((await peer.GetAsync<JsonElement>("health", timeout.Token).ConfigureAwait(true)).GetProperty("buildVersion").GetString()!);
-        }
         string build = Assert.Single(builds.Distinct(StringComparer.Ordinal));
         string input = Path.Combine(first.DirectoryPath, "content", "input.txt"), destination = Path.Combine(last.DirectoryPath, "content", "output.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(input)!);

@@ -37,7 +37,7 @@ public sealed class ClusterArchiveProcessTests
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable destinationALifetime = destinationA.ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable destinationBLifetime = destinationB.ConfigureAwait(true);
         using CancellationTokenSource timeout = new(TimeSpan.FromMinutes(5));
-        await sourceA.StartAsync(timeout.Token).ConfigureAwait(true);
+        JsonElement sourceHealth = await sourceA.StartAsync(timeout.Token).ConfigureAwait(true);
         await sourceB.StartAsync(timeout.Token).ConfigureAwait(true);
         await destinationA.StartAsync(timeout.Token).ConfigureAwait(true);
         await destinationB.StartAsync(timeout.Token).ConfigureAwait(true);
@@ -79,9 +79,8 @@ public sealed class ClusterArchiveProcessTests
             logs.AddRange(page.Where(entry => entry.Message is "archive source event"));
         }
         Assert.Equal(expectedPeers, logs.Select(entry => entry.PeerId).Order(StringComparer.Ordinal));
-        JsonElement health = await sourceA.GetAsync<JsonElement>("health", timeout.Token).ConfigureAwait(true);
         using (HttpResponseMessage download = await client.SendAsync(HttpMethod.Get, "client/archives/" + exportId.ToString("D") + "/download?cluster=" + sourceId
-            + "&peer=a&instance=" + health.GetProperty("instanceId").GetGuid().ToString("D"), cancellationToken: timeout.Token).ConfigureAwait(true))
+            + "&peer=a&instance=" + sourceHealth.GetProperty("instanceId").GetGuid().ToString("D"), cancellationToken: timeout.Token).ConfigureAwait(true))
         {
             download.EnsureSuccessStatusCode();
             byte[] bytes = await download.Content.ReadAsByteArrayAsync(timeout.Token).ConfigureAwait(true);

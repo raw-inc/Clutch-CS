@@ -32,7 +32,7 @@ public sealed class PeerRequestCompatibilityTests(ITestOutputHelper output)
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable ownerLifetime = owner.ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable targetLifetime = target.ConfigureAwait(true);
         using CancellationTokenSource timeout = new(TimeSpan.FromMinutes(3));
-        await owner.StartAsync(timeout.Token).ConfigureAwait(true);
+        JsonElement ownerHealth = await owner.StartAsync(timeout.Token).ConfigureAwait(true);
         await target.StartAsync(timeout.Token).ConfigureAwait(true);
         await CorePeer.WaitAsync(async token =>
         {
@@ -66,9 +66,8 @@ public sealed class PeerRequestCompatibilityTests(ITestOutputHelper output)
         }
         SqliteRepository repository = new(Path.Combine(owner.DirectoryPath, "state", "state.db"));
         Assert.DoesNotContain(await repository.ListAsync("file:reservations:slots", timeout.Token).ConfigureAwait(true), entry => entry.Value is not null);
-        JsonElement health = await owner.GetAsync<JsonElement>("health", timeout.Token).ConfigureAwait(true);
         output.WriteLine(JsonSerializer.Serialize(new { previousCoordinator, previousExecutableSupplied = previous is not null,
-            coordinatorVersion = health.GetProperty("buildVersion").GetString(), files = items.Length, owner.DirectoryPath }));
+            coordinatorVersion = ownerHealth.GetProperty("buildVersion").GetString(), files = items.Length, owner.DirectoryPath }));
     }
 
     /// <summary>各反復に固有の出力先と内容です。</summary>

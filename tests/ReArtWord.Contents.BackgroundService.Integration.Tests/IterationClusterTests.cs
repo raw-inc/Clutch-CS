@@ -183,11 +183,9 @@ public sealed class IterationClusterTests
         CorePeer second = new(cluster, "b", port, false);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable firstLifetime = ((IAsyncDisposable)first).ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable secondLifetime = ((IAsyncDisposable)second).ConfigureAwait(true);
-        await first.StartAsync().ConfigureAwait(true);
-        await second.StartAsync().ConfigureAwait(true);
+        JsonElement firstHealth = await first.StartAsync().ConfigureAwait(true);
+        JsonElement secondHealth = await second.StartAsync().ConfigureAwait(true);
         await ReadyAsync(first, second).ConfigureAwait(true);
-        JsonElement firstHealth = await first.GetAsync<JsonElement>("health").ConfigureAwait(true);
-        JsonElement secondHealth = await second.GetAsync<JsonElement>("health").ConfigureAwait(true);
         Assert.NotEqual(firstHealth.GetProperty("processId").GetInt32(), secondHealth.GetProperty("processId").GetInt32());
         int[] inputs = [4, 1, 3, 2];
         int[] expected = [40, 10, 30, 20];
