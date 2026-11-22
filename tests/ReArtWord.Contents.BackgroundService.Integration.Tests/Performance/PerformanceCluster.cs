@@ -35,8 +35,7 @@ internal sealed class PerformanceCluster : IAsyncDisposable
         foreach (CorePeer peer in Peers)
         {
             Directory.CreateDirectory(Path.Combine(peer.DirectoryPath, "content"));
-            await peer.StartAsync(cancellationToken).ConfigureAwait(false);
-            JsonElement health = await peer.GetAsync<JsonElement>("health", cancellationToken).ConfigureAwait(false);
+            JsonElement health = await peer.StartAsync(cancellationToken).ConfigureAwait(false);
             processes.Add(health.GetProperty("processId").GetInt32());
         }
         await CorePeer.WaitAsync(async token => (await Peers[0].GetAsync<JsonElement>("status", token).ConfigureAwait(false)).GetProperty("peers").EnumerateArray()
