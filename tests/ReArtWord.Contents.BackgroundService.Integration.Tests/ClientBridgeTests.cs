@@ -24,7 +24,8 @@ public sealed class ClientBridgeTests
         ClientHostProcess client = new(Path.Combine(core.DirectoryPath, "client"));
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable coreLifetime = ((IAsyncDisposable)core).ConfigureAwait(true);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable clientLifetime = ((IAsyncDisposable)client).ConfigureAwait(true);
-        await core.StartAsync().ConfigureAwait(true);
+        JsonElement startup = await core.StartAsync().ConfigureAwait(true);
+        Guid originalInstance = startup.GetProperty("instanceId").GetGuid();
         await CorePeer.WaitAsync(async token => (await core.GetAsync<JsonElement>("health", token).ConfigureAwait(true)).GetProperty("ready").GetBoolean()).ConfigureAwait(true);
         await client.StartAsync().ConfigureAwait(true);
         using (HttpResponseMessage missingTarget = await client.SendAsync(HttpMethod.Get, "api/status").ConfigureAwait(true))
@@ -36,8 +37,6 @@ public sealed class ClientBridgeTests
             binding.EnsureSuccessStatusCode();
         }
         await DiscoveredAsync(client, clusterId).ConfigureAwait(true);
-        JsonElement health = await core.GetAsync<JsonElement>("health").ConfigureAwait(true);
-        Guid originalInstance = health.GetProperty("instanceId").GetGuid();
         using (HttpResponseMessage statusResponse = await client.SendAsync(HttpMethod.Get, "api/status", clusterId: clusterId, peerId: "a").ConfigureAwait(true))
         {
             statusResponse.EnsureSuccessStatusCode();
@@ -65,8 +64,8 @@ public sealed class ClientBridgeTests
         await client.StopAsync().ConfigureAwait(true);
         Assert.Equal(originalInstance, (await core.GetAsync<JsonElement>("health").ConfigureAwait(true)).GetProperty("instanceId").GetGuid());
         await core.StopAsync().ConfigureAwait(true);
-        await core.StartAsync().ConfigureAwait(true);
-        Guid newInstance = (await core.GetAsync<JsonElement>("health").ConfigureAwait(true)).GetProperty("instanceId").GetGuid();
+        JsonElement restarted = await core.StartAsync().ConfigureAwait(true);
+        Guid newInstance = restarted.GetProperty("instanceId").GetGuid();
         Assert.NotEqual(originalInstance, newInstance);
         await client.StartAsync().ConfigureAwait(true);
         await DiscoveredAsync(client, clusterId).ConfigureAwait(true);

@@ -54,9 +54,14 @@ public sealed class PeriodicHeartbeatProbeTests(ITestOutputHelper output)
         PeerLifetime lifetime = new(peers);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable peerLifetime = lifetime.ConfigureAwait(true);
         CorePeer first = peers[0], second = peers[1];
-        foreach (CorePeer peer in peers)
+
+        // 全ピアがReadyでも、各UDP監視が保持する発見情報は個別に期限切れになります。
+        // 計測対象のPIDには、起動時にプロセスと照合した応答を使います。
+        int[] processIds = new int[peers.Length];
+        for (int index = 0; index < peers.Length; index++)
         {
-            await peer.StartAsync(cancellationToken).ConfigureAwait(true);
+            JsonElement health = await peers[index].StartAsync(cancellationToken).ConfigureAwait(true);
+            processIds[index] = health.GetProperty("processId").GetInt32();
         }
         await CorePeer.WaitAsync(async token => (await first.GetAsync<JsonElement>("status", token).ConfigureAwait(true)).GetProperty("peers").EnumerateArray()
             .Count(peer => peer.GetProperty("status").GetString() is "ready") == peerCount, cancellationToken).ConfigureAwait(true);
@@ -73,8 +78,9 @@ public sealed class PeriodicHeartbeatProbeTests(ITestOutputHelper output)
             {
                 await peer.StopAsync(cancellationToken).ConfigureAwait(true);
             }
-            foreach (CorePeer peer in peers)
+            for (int index = 0; index < peers.Length; index++)
             {
+                CorePeer peer = peers[index];
                 if (0 < historyRows)
                 {
                     await SeedDeadlinesAsync(peer, historyRows).ConfigureAwait(true);
@@ -86,15 +92,11 @@ public sealed class PeriodicHeartbeatProbeTests(ITestOutputHelper output)
                     Assert.True(await repository.ImportAsync(snapshot with { Entries = [.. snapshot.Entries,
                         new("benchmark:shared", "payload", "fixed", NodeValue.FromObject(new string('x', sharedBytes)))] }, cancellationToken).ConfigureAwait(true));
                 }
-                await peer.StartAsync(cancellationToken).ConfigureAwait(true);
+                JsonElement health = await peer.StartAsync(cancellationToken).ConfigureAwait(true);
+                processIds[index] = health.GetProperty("processId").GetInt32();
             }
             await CorePeer.WaitAsync(async token => (await first.GetAsync<JsonElement>("status", token).ConfigureAwait(true)).GetProperty("peers").EnumerateArray()
                 .Count(peer => peer.GetProperty("status").GetString() is "ready") == peerCount, cancellationToken).ConfigureAwait(true);
-        }
-        List<int> processIds = [];
-        foreach (CorePeer peer in peers)
-        {
-            processIds.Add((await peer.GetAsync<JsonElement>("health", cancellationToken).ConfigureAwait(true)).GetProperty("processId").GetInt32());
         }
         List<ProcessResourceSample[]> samples = [processIds.Select(ProcessResourceSample.Capture).ToArray()];
         using UdpClient receiver = new(new IPEndPoint(IPAddress.Loopback, 0));

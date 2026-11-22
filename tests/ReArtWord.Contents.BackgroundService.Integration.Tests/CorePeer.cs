@@ -87,11 +87,11 @@ internal sealed class CorePeer : IAsyncDisposable
     } = [];
 
     /// <summary>管理APIが実際に応答するまで待ちます。</summary>
-    /// <returns>Hostの起動確認です。</returns>
+    /// <returns>起動したプロセスのPIDと照合済みのhealth応答です。</returns>
     // 抑制理由: 起動した子プロセスの標準error読み出しをフィールドで所有し、停止時に必ずawaitして保存します。
     [SuppressMessage("SourceQuality", "RAW511", Justification = "子processのstderrは起動確認またはStopAsyncでawaitし、所有processと同じ寿命で管理します。")]
     [SuppressMessage("SourceQuality", "RAW330", Justification = "期限切れの診断を保存した後、元の中断理由とスタックを失わず試験へ返します。")]
-    internal async Task StartAsync(CancellationToken cancellationToken = default)
+    internal async Task<JsonElement> StartAsync(CancellationToken cancellationToken = default)
     {
         Guid? previousInstance = FindLatestPeer()?.InstanceId;
         await observer.StartAsync(cancellationToken).ConfigureAwait(false);
@@ -144,6 +144,7 @@ internal sealed class CorePeer : IAsyncDisposable
             }, ContractJson.Options), CancellationToken.None).ConfigureAwait(false);
             throw;
         }
+        return lastHealth!.Value;
     }
 
     /// <summary>所有している実プロセスだけを終了して障害を再現します。</summary>
@@ -202,7 +203,7 @@ internal sealed class CorePeer : IAsyncDisposable
     /// <returns>実際に応答した管理結果です。</returns>
     private async Task<T> SendAsync<T>(string operation, object? body, bool readOnly, bool transient, CancellationToken cancellationToken = default)
     {
-        PeerInfo target = FindLatestPeer() ?? throw new InvalidOperationException("試験Peerを未発見です。");
+        PeerInfo target = FindLatestPeer() ?? throw new InvalidOperationException($"試験Peerを未発見です。 operation={operation}; peer={peerId}; evidence={DirectoryPath}");
         NodeValue? payload = null;
         if (body is not null)
         {

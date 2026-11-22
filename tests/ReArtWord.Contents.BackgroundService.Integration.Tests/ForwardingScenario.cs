@@ -43,10 +43,10 @@ internal sealed class ForwardingScenario(ITestOutputHelper output)
             }
         }
         await File.WriteAllTextAsync(root + "/process-probe-directory.txt", first.DirectoryPath, cancellationToken).ConfigureAwait(false);
-        await first.StartAsync(cancellationToken).ConfigureAwait(false);
-        await second.StartAsync(cancellationToken).ConfigureAwait(false);
-        await third.StartAsync(cancellationToken).ConfigureAwait(false);
-        await fourth.StartAsync(cancellationToken).ConfigureAwait(false);
+        JsonElement firstHealth = await first.StartAsync(cancellationToken).ConfigureAwait(false);
+        JsonElement secondHealth = await second.StartAsync(cancellationToken).ConfigureAwait(false);
+        JsonElement thirdHealth = await third.StartAsync(cancellationToken).ConfigureAwait(false);
+        JsonElement fourthHealth = await fourth.StartAsync(cancellationToken).ConfigureAwait(false);
         await CorePeer.WaitAsync(async token => (await first.GetAsync<JsonElement>("status", token).ConfigureAwait(true)).GetProperty("peers").EnumerateArray()
             .Count(peer => peer.GetProperty("status").GetString() is "ready") == 4, cancellationToken).ConfigureAwait(false);
         using UdpClient receiver = new(new IPEndPoint(IPAddress.Any, 0));
@@ -106,10 +106,6 @@ internal sealed class ForwardingScenario(ITestOutputHelper output)
         Assert.True(saved.Activation.Outcome == EOutcome.Succeeded, JsonSerializer.Serialize(saved, ContractJson.Options));
         await CorePeer.WaitAsync(async token => (await first.GetAsync<JsonElement>("status", token).ConfigureAwait(true)).GetProperty("sources").EnumerateArray()
             .Any(source => source.GetProperty("status").GetProperty("state").GetString() is "listening"), cancellationToken).ConfigureAwait(false);
-        JsonElement firstHealth = await first.GetAsync<JsonElement>("health", cancellationToken).ConfigureAwait(false);
-        JsonElement secondHealth = await second.GetAsync<JsonElement>("health", cancellationToken).ConfigureAwait(false);
-        JsonElement thirdHealth = await third.GetAsync<JsonElement>("health", cancellationToken).ConfigureAwait(false);
-        JsonElement fourthHealth = await fourth.GetAsync<JsonElement>("health", cancellationToken).ConfigureAwait(false);
         int[] processIds = [firstHealth.GetProperty("processId").GetInt32(), secondHealth.GetProperty("processId").GetInt32(),
             thirdHealth.GetProperty("processId").GetInt32(), fourthHealth.GetProperty("processId").GetInt32()];
         List<ResourceSample> resources = [CaptureResources("before", processIds)];
