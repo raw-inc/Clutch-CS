@@ -14,6 +14,10 @@ class Element
         this.value = '';
         this.dataset = {};
         this.style = {};
+        this.classList = { add: name =>
+        {
+            this.className = [...new Set([...(this.className ?? '').split(' ').filter(Boolean), name])].join(' ');
+        } };
     }
 
     /** 受け取った項目を保持する順序へ追加します。 */
@@ -804,7 +808,7 @@ test('viewers publish annotations without input and ordinary remote desktops rec
     });
 });
 
-test('view-only mode is generally available and sits immediately left of the software keyboard', async t =>
+test('view-only mode is generally available and sits immediately left of the software keyboard', { skip: 'Display and connection mode controls now share a toolbar group.' }, async t =>
 {
     for (const query of ['', '?experimental=false', '?experimental=true'])
     {
@@ -821,7 +825,7 @@ test('view-only mode is generally available and sits immediately left of the sof
     }
 });
 
-test('automatic reconnect starts enabled after the display separator and can be disabled', async t =>
+test('automatic reconnect starts enabled after the display separator and can be disabled', { skip: 'Display and connection mode controls now share a toolbar group.' }, async t =>
 {
     for (const experimental of [false, true])
     {
@@ -836,6 +840,37 @@ test('automatic reconnect starts enabled after the display separator and can be 
             assert.equal(all.some(item => item.getAttribute('aria-label') === 'Reconnect delays (ms)'), experimental);
             await f.click('Automatic reconnect');
             assert.equal(toolbar.children[displays + 2].getAttribute('aria-pressed'), 'false');
+            f.socket.onclose({ code: 1006, reason: '' });
+            assert.equal(f.sockets.length, 1);
+            assert.match(f.notices.at(-1), /without a close notification/u);
+            assert.doesNotMatch(f.notices.at(-1), /interactive user/u);
+        });
+    }
+});
+
+test('display modes and automatic reconnect work in the grouped toolbar', async t =>
+{
+    for (const query of ['', '?experimental=false', '?experimental=true'])
+    {
+        await t.test(query || 'normal', async t =>
+        {
+            const f = await fixtureAsync(t, null, { query }), all = descendants(f.root);
+            const toolbar = all.find(item => item.className === 'desktop-toolbar');
+            const modes = toolbar.children.find(item => item.className === 'desktop-display-controls');
+            const reconnect = modes.children.find(item => item.getAttribute('aria-label') === 'Automatic reconnect');
+            const viewOnly = modes.children.find(item => item.getAttribute('aria-label') === 'View-only mode');
+            const keyboard = toolbar.children.find(item => item.getAttribute('aria-label') === 'Show software keyboard');
+            assert.ok(reconnect && viewOnly && keyboard);
+            assert.equal(viewOnly.getAttribute('aria-pressed'), 'false');
+            assert.equal(reconnect.getAttribute('aria-pressed'), 'true');
+            assert.equal(all.some(item => item.getAttribute('aria-label') === 'Reconnect delays (ms)'), query === '?experimental=true');
+
+            await f.click('View-only mode');
+            assert.equal(viewOnly.getAttribute('aria-pressed'), 'true');
+            assert.equal(keyboard.disabled, true);
+
+            await f.click('Automatic reconnect');
+            assert.equal(reconnect.getAttribute('aria-pressed'), 'false');
             f.socket.onclose({ code: 1006, reason: '' });
             assert.equal(f.sockets.length, 1);
             assert.match(f.notices.at(-1), /without a close notification/u);
@@ -1157,14 +1192,32 @@ test('malformed cursor states close the session and release held keys', async t 
     assert.equal(ctrl.getAttribute('aria-pressed'), 'false');
 });
 
-test('all eight toolbar keys independently hold and release before the refresh separator', async t =>
+test('all eight toolbar keys independently hold and release before the refresh separator',
+    { skip: 'Host discovery now refreshes in the connection targets.' }, t => verifyToolbarKeysAsync(t, true));
+
+test('all eight toolbar keys hold and release independently of host discovery', t => verifyToolbarKeysAsync(t, false));
+
+/** 特殊キーの送信と、キーボードから独立した再取得の配置を確認します。
+ * @returns キーの送信と切断時に解放した結果の確認です。
+ */
+async function verifyToolbarKeysAsync(t, legacyPlacement)
 {
     const f = await fixtureAsync(t), toolbar = descendants(f.root).find(item => item.className === 'desktop-toolbar');
     const bar = descendants(f.root).find(item => item.className === 'desktop-keybar');
     assert.equal(bar.parentElement, toolbar);
-    assert.equal(toolbar.children.at(-3), bar);
-    assert.equal(toolbar.children.at(-2).className, 'desktop-key-separator');
-    assert.equal(toolbar.children.at(-1).getAttribute('aria-label'), 'Refresh hosts');
+    if (legacyPlacement)
+    {
+        assert.equal(toolbar.children.at(-3), bar);
+        assert.equal(toolbar.children.at(-2).className, 'desktop-key-separator');
+        assert.equal(toolbar.children.at(-1).getAttribute('aria-label'), 'Refresh hosts');
+    }
+    else
+    {
+        const targets = descendants(f.root).find(item => item.className === 'desktop-targets');
+        const reload = targets.children.find(item => item.getAttribute('aria-label') === 'Refresh hosts');
+        assert.ok(reload.disabled);
+        assert.equal(toolbar.children.at(-1), bar);
+    }
     for (const [name, key] of [['Win', 0x5b], ['Ctrl', 0xa2], ['Alt', 0xa4], ['Del', 46], ['Esc', 27], ['PrSc', 44], ['Shift', 0xa0], ['Tab', 9]])
     {
         const button = bar.children.find(item => item.textContent === name);
@@ -1186,7 +1239,7 @@ test('all eight toolbar keys independently hold and release before the refresh s
     assert.ok(bar.children.every(b => b.getAttribute('aria-pressed') === 'false'));
     await f.click('Disconnect');
     assert.ok(bar.children.every(b => b.disabled));
-});
+}
 
 test('physical and virtual key holds do not release each other and focus stays within keyboard controls', async t =>
 {
@@ -1789,7 +1842,7 @@ test('screen switching preserves the audio context and disconnect closes it', as
     assert.equal(f.contexts[0].state, 'closed');
 });
 
-test('toolbar labels disconnect and audio state while keeping both fullscreen actions accessible', async t =>
+test.skip('toolbar labels disconnect and audio state while keeping both fullscreen actions accessible', async t =>
 {
     const f = await fixtureAsync(t), toolbar = descendants(f.root).find(item => item.className === 'desktop-toolbar');
 
@@ -1820,6 +1873,55 @@ test('toolbar labels disconnect and audio state while keeping both fullscreen ac
     assert.equal(f.socket.readyState, 1);
 });
 
+test('connection actions stay with the host while display controls reflect the current audio state',
+    { skip: 'Mute and fullscreen now appear in the connected command bar.' }, t => verifyAudioActionsAsync(t, true));
+
+test('connected quick controls reflect mute state and keep the host action separate',
+    { skip: 'The wide toolbar now shows labels next to the audio icon.' }, t => verifyAudioActionsAsync(t, false, false));
+
+test('the audio button changes its wide-toolbar label with mute state', t => verifyAudioActionsAsync(t, false, true));
+
+/** ミュート操作が表示と音声出力に反映されることを確認します。
+ * @returns ミュート切替と接続状態の検証です。
+ */
+async function verifyAudioActionsAsync(t, legacyPlacement, showCaption = false)
+{
+    const f = await fixtureAsync(t), toolbar = descendants(f.root).find(item => item.className === 'desktop-toolbar');
+
+    /** 操作の実行と処理中表示を持つボタンを構成します。
+     * @returns 呼出し元が使用する値です。
+     */
+    const button = name => descendants(f.root).find(item => item.tag === 'button' && item.getAttribute('aria-label') === name);
+
+    assert.equal(button('Disconnect').parentElement.className, 'desktop-targets');
+    const container = legacyPlacement ? toolbar : descendants(f.root).find(item => item.className === 'desktop-quick-controls');
+    if (!legacyPlacement)
+    {
+        assert.equal(container.parentElement.className, 'desktop-rail');
+    }
+    for (const name of ['Mute audio', 'Fullscreen'])
+    {
+        assert.equal(button(name).parentElement, container);
+    }
+    assert.equal(button('Video fullscreen').parentElement, toolbar);
+    assert.equal(button('Disconnect').textContent, 'Disconnect');
+    assert.match(button('Disconnect').className, /desktop-labeled/);
+    const sound = button('Mute audio');
+    assert.equal(sound.textContent, showCaption ? 'Mute' : '');
+    assert.equal(sound.getAttribute('aria-pressed'), 'false');
+    await f.click('Mute audio');
+    assert.equal(sound.textContent, showCaption ? 'Unmute' : '');
+    assert.equal(sound.getAttribute('aria-pressed'), 'true');
+    assert.equal(sound.dataset.muted, 'true');
+    assert.equal(f.contexts[0].gains.at(-1), 0);
+    await f.click('Unmute audio');
+    assert.equal(sound.textContent, showCaption ? 'Mute' : '');
+    assert.equal(sound.getAttribute('aria-pressed'), 'false');
+    assert.equal(sound.dataset.muted, 'false');
+    assert.equal(f.contexts[0].gains.at(-1), 1);
+    assert.equal(f.socket.readyState, 1);
+}
+
 test('remote viewers preserve every held-key repeat and are not automatically muted', async t =>
 {
     const f = await fixtureAsync(t), viewport = descendants(f.root).find(item => item.className === 'desktop-viewport');
@@ -1847,14 +1949,22 @@ test('remote viewers preserve every held-key repeat and are not automatically mu
     assert.equal(f.socket.sent.at(-1)[0], 5);
 });
 
-test('local connections mute playback before PCM can feed back into loopback capture', async t =>
+test('local connections mute playback before PCM can feed back into loopback capture',
+    { skip: 'The wide toolbar now labels the action for a muted connection.' }, t => verifyLocalAudioMuteAsync(t, ''));
+
+test('local connections mute loopback playback and show the action to unmute', t => verifyLocalAudioMuteAsync(t, 'Unmute'));
+
+/** 同一PCへの接続で音声を消し、再生を再開できることを確認します。
+ * @returns ミュート状態と入力の検証です。
+ */
+async function verifyLocalAudioMuteAsync(t, caption)
 {
     const f = await fixtureAsync(t);
     f.socket.onmessage(frame(7, 0, { clusterId: 'cluster', hostId: 'host', localAudioMuted: true }));
     f.socket.onmessage(frame(4, 0, { sampleRate: 48000, channels: 2, format: 'f32le' }));
     assert.equal(f.contexts[0].gains.at(-1), 0);
     const sound = descendants(f.root).find(item => item.tag === 'button' && item.getAttribute('aria-label') === 'Unmute audio');
-    assert.equal(sound.textContent, '');
+    assert.equal(sound.textContent, caption);
     assert.equal(sound.dataset.muted, 'true');
     assert.match(sound.title, /feedback/);
     const viewport = descendants(f.root).find(item => item.className === 'desktop-viewport');
@@ -1883,10 +1993,10 @@ test('local connections mute playback before PCM can feed back into loopback cap
     assert.ok(descendants(f.root).some(item => item.textContent?.includes('initially muted to prevent feedback')));
     await f.click('Unmute audio');
     assert.equal(f.contexts[0].gains.at(-1), 1);
-    assert.equal(sound.textContent, '');
+    assert.equal(sound.textContent, caption ? 'Mute' : '');
     assert.equal(sound.dataset.muted, 'false');
     assert.equal(descendants(f.root).some(item => item.textContent?.includes('initially muted to prevent feedback')), false);
-});
+}
 
 test('a Core fault reports its stage and releases the media resources', async t =>
 {
@@ -2675,10 +2785,49 @@ test('desktop starts at 30 fps and 4096 kbps without changing the supported limi
     assert.equal(f.initialCodec, 'vp9');
 });
 
-test('statistics overlay reports displayed frames and can be hidden without reconnecting', async t =>
+test('statistics overlay reports displayed frames and can be hidden without reconnecting', { skip: 'The statistics overlay is now closed by default.' }, async t =>
 {
     const f = await fixtureAsync(t), overlay = descendants(f.root).find(item => item.className === 'desktop-stats');
     const button = descendants(f.root).find(item => item.tag === 'button' && item.getAttribute('aria-label') === 'Statistics overlay');
+    assert.equal(overlay.hidden, false);
+    assert.equal(button.getAttribute('aria-pressed'), 'true');
+    for (const timestamp of [1000, 2000])
+    {
+        f.socket.onmessage(frame(2, 0, keyPicture, true, timestamp));
+        f.decoders[0].callbacks.output({ timestamp,
+
+            /** 対象を閉じ、関連する状態を整理します。 */
+            close()
+            {} });
+        f.callbacks.shift()();
+    }
+    f.advance(1000);
+    assert.equal(overlay.children[1].children[1].textContent, '2');
+    assert.equal(overlay.children[2].children[0].textContent, 'Send → receive');
+    assert.equal(overlay.children[2].children[1].textContent, '—');
+    assert.equal(overlay.children[3].children[0].textContent, 'Receive → display');
+    assert.equal(f.socket.sent.some(input => input[0] === 14), false);
+    assert.equal(overlay.children[4].children[1].textContent, '4096 kbps');
+    assert.equal(overlay.children[5].children[1].textContent, 'VP9');
+    assert.ok((0) < (parseFloat(overlay.children[0].children[1].textContent)));
+    assert.equal(overlay.parentElement.className, 'desktop-viewport');
+    await f.click('Statistics overlay');
+    assert.equal(overlay.hidden, true);
+    assert.equal(button.getAttribute('aria-pressed'), 'false');
+    assert.equal(f.decoders.length, 1);
+    await f.click('Statistics overlay');
+    assert.equal(overlay.hidden, false);
+    assert.equal(button.getAttribute('aria-pressed'), 'true');
+    assert.equal(f.decoders.length, 1);
+});
+
+test('statistics overlay starts closed, reports frames when opened and can be hidden without reconnecting', async t =>
+{
+    const f = await fixtureAsync(t), overlay = descendants(f.root).find(item => item.className === 'desktop-stats');
+    const button = descendants(f.root).find(item => item.tag === 'button' && item.getAttribute('aria-label') === 'Statistics overlay');
+    assert.equal(overlay.hidden, true);
+    assert.equal(button.getAttribute('aria-pressed'), 'false');
+    await f.click('Statistics overlay');
     assert.equal(overlay.hidden, false);
     assert.equal(button.getAttribute('aria-pressed'), 'true');
     for (const timestamp of [1000, 2000])
@@ -3139,7 +3288,7 @@ test('automatic reconnect preserves an explicit off choice on a host with a mous
     assert.equal(f.cursorSync.getAttribute('aria-pressed'), 'false');
 });
 
-test('icon controls and display tabs replace the old sidebar screen menu', async t =>
+test('icon controls and display tabs replace the old sidebar screen menu', { skip: 'Display and connection mode controls now share a toolbar group.' }, async t =>
 {
     const f = await fixtureAsync(t), all = descendants(f.root), toolbar = all.find(e => e.className === 'desktop-toolbar'), rail = all.find(e => e.className === 'desktop-rail');
     for (const name of ['Cursor synchronization', 'Dot by dot (1:1)', 'Follow pointer', 'Mute audio'])
@@ -3160,6 +3309,44 @@ test('icon controls and display tabs replace the old sidebar screen menu', async
     assert.equal(toolbar.children[toolbar.children.indexOf(keyboard) - 2].getAttribute('aria-label'), 'Automatic reconnect');
     assert.equal(toolbar.children[toolbar.children.indexOf(keyboard) - 3].className, 'desktop-key-separator');
     assert.equal(toolbar.children[toolbar.children.indexOf(keyboard) - 4], tabs);
+    await verifyScreenTabsAsync(f, tabs);
+});
+
+test('display tabs stay with the connection modes and switch screens',
+    { skip: 'Audio moved to the connected command bar.' }, t => verifyDisplayToolsAsync(t, true));
+
+test('display tools and display tabs stay with connection modes while audio stays available',
+    { skip: 'The wide toolbar now labels the audio action.' }, t => verifyDisplayToolsAsync(t, false));
+
+test('display tabs stay in display controls and mute stays in the labelled connection toolbar', t => verifyDisplayToolsAsync(t, false, 'Mute'));
+
+/** 表示方法・ミュートの配置とディスプレイ切替を確認します。
+ * @returns 操作の配置とディスプレイ切替の検証です。
+ */
+async function verifyDisplayToolsAsync(t, legacyPlacement, muteCaption = '')
+{
+    const f = await fixtureAsync(t), all = descendants(f.root);
+    const toolbar = all.find(e => e.className === 'desktop-toolbar'), rail = all.find(e => e.className === 'desktop-rail');
+    for (const [name, parent] of [['Cursor synchronization', toolbar], ['Dot by dot (1:1)', toolbar], ['Follow pointer', toolbar], ['Mute audio', legacyPlacement ? toolbar : rail]])
+    {
+        const button = descendants(parent).find(e => e.getAttribute('aria-label') === name);
+        assert.equal(button.tag, 'button');
+        const mute = 'Mute audio';
+        assert.equal(button.textContent, name === mute ? muteCaption : '');
+        assert.ok(button.title);
+    }
+    assert.equal(descendants(rail).some(e => e.getAttribute('aria-label') === 'Displays & scale'), false);
+    const tabs = all.find(e => e.className === 'desktop-screen-tabs');
+    assert.equal(tabs.parentElement.className, 'desktop-display-controls');
+    assert.equal(tabs.parentElement.parentElement, toolbar);
+    await verifyScreenTabsAsync(f, tabs);
+}
+
+/** 表示先の切替と切断後の項目消去を確認します。
+ * @returns 一連の操作と表示の検証です。
+ */
+async function verifyScreenTabsAsync(f, tabs)
+{
     const first = tabs.children.find(e => e.getAttribute('aria-label') === 'Display 1: Screen A');
     assert.equal(first.getAttribute('aria-pressed'), 'true');
     assert.equal(first.children[0].className, 'desktop-screen-symbol');
@@ -3168,7 +3355,7 @@ test('icon controls and display tabs replace the old sidebar screen menu', async
     assert.equal(tabs.children.find(e => e.getAttribute('aria-label') === 'Display 2: Screen B').getAttribute('aria-pressed'), 'true');
     await f.click('Disconnect');
     assert.equal(tabs.children.length, 0);
-});
+}
 
 test('software keyboard focuses synchronously, commits IME once and sends Unicode scalars', async t =>
 {
@@ -3392,7 +3579,7 @@ test('codec details apply draft values, keep P automatic and B disabled by defau
     const element = name => descendants(f.root).find(e => e.getAttribute('aria-label') === name);
 
     const p = element('Maximum P frames per keyframe interval'), b = element('Maximum consecutive B frames'), q = element('Quality value (lower is better)');
-    assert.equal(element('Custom codec settings').getAttribute('aria-pressed'), 'true');
+    assert.equal(element('Custom codec settings').getAttribute('aria-checked'), 'true');
     assert.equal(p.disabled, true);
     assert.equal(b.disabled, true);
     assert.equal(q.disabled, true);
@@ -3727,7 +3914,7 @@ for (const [id, fps, bitrate, audioCodec, audioBitrate, samples, interval] of [
     }
 }
 
-test('the transmission preset sits immediately left of the host and shows Custom only for unmatched values', async t =>
+test.skip('the transmission preset sits immediately left of the host and shows Custom only for unmatched values', async t =>
 {
     const f = await fixtureAsync(t, null, { defaultAudio: true });
     await f.click('Disconnect');
@@ -3760,6 +3947,59 @@ test('the transmission preset sits immediately left of the host and shows Custom
     assert.equal(preset.value, 'fixed-balanced');
 });
 
+test('the labeled transmission preset precedes the host selector and shows Custom only for unmatched values', { skip: 'クラスタと接続先の次に伝送プリセットを表示するため、旧配置の検証を終了します。' }, async t =>
+{
+    const f = await fixtureAsync(t, null, { defaultAudio: true });
+    await f.click('Disconnect');
+    const all = descendants(f.root), host = all.find(item => item.getAttribute('aria-label') === 'Host');
+    const preset = f.presetSelector, custom = preset.options.find(item => item.value === 'custom');
+    const fields = preset.parentElement.parentElement;
+    assert.equal(fields, host.parentElement.parentElement);
+    assert.equal(fields.children.indexOf(preset.parentElement) + 1, fields.children.indexOf(host.parentElement));
+    assert.equal(custom.hidden, true);
+    assert.equal(custom.disabled, true);
+    for (const [name, changed, original] of [
+        ['Target fps', '31', '30.0'],
+        ['Maximum video kbps', '5000', '4096'],
+        ['Audio buffer samples/ch', '18000', '12000'],
+        ['Audio bitrate', '192', '128']
+    ])
+    {
+        const field = all.find(item => item.getAttribute('aria-label') === name);
+        field.value = changed;
+        field.oninput();
+        assert.equal(preset.value, 'custom');
+        assert.equal(custom.hidden, false);
+        field.value = original;
+        field.onchange();
+        assert.equal(preset.value, 'fixed-balanced');
+        assert.equal(custom.hidden, true);
+    }
+    await f.click('Variable bitrate (VBR)');
+    assert.equal(preset.value, 'custom');
+    await f.click('Variable bitrate (VBR)');
+    assert.equal(preset.value, 'fixed-balanced');
+});
+
+test('host selection precedes the labeled transmission preset and custom values remain visible', async t =>
+{
+    const f = await fixtureAsync(t, null, { defaultAudio: true });
+    await f.click('Disconnect');
+    const host = descendants(f.root).find(item => item.getAttribute('aria-label') === 'Host');
+    const preset = f.presetSelector, custom = preset.options.find(item => item.value === 'custom');
+    const fields = preset.parentElement.parentElement;
+    assert.equal(fields, host.parentElement.parentElement);
+    assert.equal(fields.children.indexOf(host.parentElement) + 1, fields.children.indexOf(preset.parentElement));
+    assert.equal(custom.hidden, true);
+    assert.equal(custom.disabled, true);
+    await f.click('Variable bitrate (VBR)');
+    assert.equal(preset.value, 'custom');
+    assert.equal(custom.hidden, false);
+    await f.click('Variable bitrate (VBR)');
+    assert.equal(preset.value, 'fixed-balanced');
+    assert.equal(custom.hidden, true);
+});
+
 test('advanced codec edits become Custom and choosing a preset restores all transmission values', async t =>
 {
     const f = await fixtureAsync(t, null, { defaultAudio: true, experimental: true });
@@ -3784,9 +4024,9 @@ test('advanced codec edits become Custom and choosing a preset restores all tran
     assert.equal(codec.value, 'vp9');
     assert.equal(all.find(item => item.getAttribute('aria-label') === 'Enable B frames').disabled, true);
     assert.equal(interval.value, '30');
-    assert.equal(all.find(item => item.getAttribute('aria-label') === 'Automatic P frames').getAttribute('aria-pressed'), 'true');
-    assert.equal(all.find(item => item.getAttribute('aria-label') === 'Enable B frames').getAttribute('aria-pressed'), 'false');
-    assert.equal(all.find(item => item.getAttribute('aria-label') === 'Quality target mode').getAttribute('aria-pressed'), 'false');
+    assert.equal(all.find(item => item.getAttribute('aria-label') === 'Automatic P frames').getAttribute('aria-checked'), 'true');
+    assert.equal(all.find(item => item.getAttribute('aria-label') === 'Enable B frames').getAttribute('aria-checked'), 'false');
+    assert.equal(all.find(item => item.getAttribute('aria-label') === 'Quality target mode').getAttribute('aria-checked'), 'false');
     assert.equal(all.find(item => item.getAttribute('aria-label') === 'Variable bitrate (VBR)').getAttribute('aria-pressed'), 'true');
     const audioRate = all.find(item => item.getAttribute('aria-label') === 'Audio bitrate');
     assert.equal(audioRate.disabled, true);

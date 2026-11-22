@@ -7,7 +7,7 @@
 .node-identifier {
     display: block;
     font: 10px/1.6 Consolas, monospace;
-    color: #a0a6b0;
+    color: var(--muted);
     overflow-wrap: anywhere;
 }
 
@@ -21,135 +21,135 @@
 }
 
 [data-category] {
-    --category-color: #8f9aa8;
+    --category-color: light-dark(#494f56, #8f9aa8);
 }
 
 [data-category="communication"] {
-    --category-color: #78b8dc;
+    --category-color: light-dark(#3d5e70, #78b8dc);
 }
 
 [data-category="control"] {
-    --category-color: #d5b570;
+    --category-color: light-dark(#6d5c39, #d5b570);
 }
 
 [data-category="data"] {
-    --category-color: #aa9add;
+    --category-color: light-dark(#574f71, #aa9add);
 }
 
 [data-category="values"] {
-    --category-color: #8db5cf;
+    --category-color: light-dark(#485c6a, #8db5cf);
 }
 
 [data-category="state"] {
-    --category-color: #69b9b3;
+    --category-color: light-dark(#365e5b, #69b9b3);
 }
 
 [data-category="files"] {
-    --category-color: #b4bf86;
+    --category-color: light-dark(#5c6144, #b4bf86);
 }
 
 [data-category="processes"] {
-    --category-color: #d5947e;
+    --category-color: light-dark(#6d4b40, #d5947e);
 }
 
 [data-category="scheduling"] {
-    --category-color: #c88faa;
+    --category-color: light-dark(#664957, #c88faa);
 }
 
 [data-category="resources"] {
-    --category-color: #89b68d;
+    --category-color: light-dark(#465d48, #89b68d);
 }
 
 [data-category="media"] {
-    --category-color: #93a4dd;
+    --category-color: light-dark(#4b5471, #93a4dd);
 }
 
 [data-category="ai"] {
-    --category-color: #bb9acc;
+    --category-color: light-dark(#5f4f68, #bb9acc);
 }
 
 [data-category="audio-generation"] {
-    --category-color: #99bdd7;
+    --category-color: light-dark(#4e606e, #99bdd7);
 }
 
 .kind-any {
-    --port-color: #9eafb9;
+    --port-color: light-dark(#51595e, #9eafb9);
 }
 
 .kind-json {
-    --port-color: #dfbd76;
+    --port-color: light-dark(#72603c, #dfbd76);
 }
 
 .kind-binary {
-    --port-color: #b69add;
+    --port-color: light-dark(#5d4f71, #b69add);
 }
 
 .kind-trigger {
-    --port-color: #d2d8de;
+    --port-color: light-dark(#6b6e71, #d2d8de);
 }
 
 .kind-result {
-    --port-color: #80b999;
+    --port-color: light-dark(#415e4e, #80b999);
 }
 
 .kind-source {
-    --port-color: #79b4d8;
+    --port-color: light-dark(#3e5c6e, #79b4d8);
 }
 
 .kind-transaction {
-    --port-color: #d69e77;
+    --port-color: light-dark(#6d513d, #d69e77);
 }
 
 .kind-loop {
-    --port-color: #74bdb8;
+    --port-color: light-dark(#3b605e, #74bdb8);
 }
 
 .kind-extracted,
 .kind-unknown {
-    --port-color: #9b9fa9;
+    --port-color: light-dark(#4f5156, #9b9fa9);
 }
 
 [data-category="math"] {
-    --category-color: #6fc8bb;
+    --category-color: light-dark(#39665f, #6fc8bb);
 }
 
 [data-category="execution"] {
-    --category-color: #8ac9a7;
+    --category-color: light-dark(#466755, #8ac9a7);
 }
 
 .kind-pc-selection {
-    --port-color: #8ac9a7;
+    --port-color: light-dark(#466755, #8ac9a7);
 }
 
 .kind-string,
 .kind-path {
-    --port-color: #dfbd76;
+    --port-color: light-dark(#72603c, #dfbd76);
 }
 
 .kind-boolean {
-    --port-color: #91ce9b;
+    --port-color: light-dark(#4a694f, #91ce9b);
 }
 
 .kind-integer {
-    --port-color: #8fb6ed;
+    --port-color: light-dark(#495d79, #8fb6ed);
 }
 
 .kind-number {
-    --port-color: #7ec9e0;
+    --port-color: light-dark(#406772, #7ec9e0);
 }
 
 .kind-array {
-    --port-color: #d99fae;
+    --port-color: light-dark(#6f5159, #d99fae);
 }
 
 .kind-object {
-    --port-color: #bca1d8;
+    --port-color: light-dark(#60526e, #bca1d8);
 }
 
 .kind-type-definition {
-    --port-color: #c9ac85;
+    --port-color: light-dark(#675844, #c9ac85);
 }
 
 .kind-unused {
-    --port-color: #848e9b;
+    --port-color: light-dark(#43484f, #848e9b);
 }

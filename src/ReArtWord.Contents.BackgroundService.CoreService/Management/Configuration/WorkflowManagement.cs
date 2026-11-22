@@ -113,6 +113,10 @@ internal static class WorkflowManagement
             }
             return ExecutionHistory.Page(service.Engine.RecentViews().Concat(service.ExecutionJournal.Recent()).DistinctBy(WorkflowExecutionJournal.Identity), query);
         });
+        registry.ReadValue("executions.observations", value => ObservedExecutionHistory.Page(
+            service.Engine.RecentViews().Concat(service.ExecutionJournal.Recent()).DistinctBy(WorkflowExecutionJournal.Identity),
+            value is null ? new ExecutionHistoryQuery()
+                          : ManagementRegistry.Body<ExecutionHistoryQuery>(value), service.Cluster.LocalInstanceId));
         registry.ReadValue("executions.activity", value => ExecutionHistory.ActivityPage(
             service.Engine.RecentViews().Concat(service.ExecutionJournal.Recent()).DistinctBy(WorkflowExecutionJournal.Identity),
             value is null ? new ExecutionHistoryQuery()

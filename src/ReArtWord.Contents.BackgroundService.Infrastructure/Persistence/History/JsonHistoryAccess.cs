@@ -43,7 +43,7 @@ internal static class JsonHistoryAccess
         {
             return null;
         }
-        return RepositoryHistoryGuard.Expired(operationId, RepositoryHistoryGuard.Read(document), document.History?.RetiredOperations.GetValueOrDefault(operationId));
+        return RepositoryHistoryGuard.FindExpired(document, operationId);
     }
 
     /// <summary>指定した用途に限って圧縮済み本文を列挙します。</summary>

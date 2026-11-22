@@ -33,11 +33,11 @@ internal sealed class SyncDownload
 
     /// <summary>切断・期限・不完全な断片ではImportへ進みません。</summary>
     /// <returns>全体検証後の既存競合判定結果です。</returns>
-    internal async Task<bool> ImportAsync(SyncManifest manifest, string sourcePeerId, Guid sourceInstanceId, bool allowConflict = false, CancellationToken cancellationToken = default)
+    internal async Task<bool> ImportAsync(SyncManifest manifest, string sourcePeerId, Guid sourceInstanceId, bool allowConflict = false, SyncLifetime? deadline = null, CancellationToken cancellationToken = default)
     {
-        Validate(manifest, sourcePeerId, sourceInstanceId, allowConflict);
+        SyncLifetime lifetime = Validate(manifest, sourcePeerId, sourceInstanceId, allowConflict, deadline);
         string path = files.TemporaryPath();
-        using CancellationTokenSource timeout = new(manifest.ExpiresAt - clock.GetUtcNow(), clock);
+        using CancellationTokenSource timeout = new(lifetime.Remaining, clock);
         using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, cancellationToken);
         try
         {
@@ -55,8 +55,8 @@ internal sealed class SyncDownload
             int maximumChunk = Math.Clamp((options.MaximumMessageBytes - 1024) / 2, 1, 8192);
             while (offset < manifest.Length)
             {
-                Validate(manifest, sourcePeerId, sourceInstanceId, allowConflict);
-                SyncChunk[] chunks = await ReadWindowAsync(manifest, sourcePeerId, sourceInstanceId, offset, maximumChunk, allowConflict, linked.Token).ConfigureAwait(false);
+                Validate(manifest, sourcePeerId, sourceInstanceId, allowConflict, lifetime);
+                SyncChunk[] chunks = await ReadWindowAsync(manifest, sourcePeerId, sourceInstanceId, offset, maximumChunk, allowConflict, lifetime, linked.Token).ConfigureAwait(false);
                 foreach (SyncChunk chunk in chunks)
                 {
                     await stream.WriteAsync(chunk.Data, linked.Token).ConfigureAwait(false);
@@ -76,7 +76,7 @@ internal sealed class SyncDownload
             {
                 RepositorySnapshot snapshot = await JsonSerializer.DeserializeAsync<RepositorySnapshot>(stream, cancellationToken: linked.Token).ConfigureAwait(false)
                     ?? throw new SyncFailureException("Sync.InvalidSnapshot");
-                Validate(manifest, sourcePeerId, sourceInstanceId, allowConflict);
+                Validate(manifest, sourcePeerId, sourceInstanceId, allowConflict, lifetime);
                 linked.Token.ThrowIfCancellationRequested();
                 if (string.Equals(manifest.Phase, SyncManifest.HistoryPhase, StringComparison.Ordinal))
                 {
@@ -113,13 +113,13 @@ internal sealed class SyncDownload
 
     /// <summary>最大4断片の往復待ちを重ね、全応答を観測・検証して元の順序で渡します。</summary>
     /// <returns>最大32KiBに限定した、同じ固定スナップショットの連続した断片です。</returns>
-    private async Task<SyncChunk[]> ReadWindowAsync(SyncManifest manifest, string peerId, Guid instanceId, long offset, int maximumChunk, bool allowConflict, CancellationToken cancellationToken = default)
+    private async Task<SyncChunk[]> ReadWindowAsync(SyncManifest manifest, string peerId, Guid instanceId, long offset, int maximumChunk, bool allowConflict, SyncLifetime lifetime, CancellationToken cancellationToken = default)
     {
         List<Task<SyncResponse>> reads = [];
         for (long next = offset; next < manifest.Length && reads.Count < 4; next += maximumChunk)
         {
             int length = checked((int)Math.Min(maximumChunk, manifest.Length - next));
-            reads.Add(ReadChunkAsync(manifest, peerId, instanceId, next, length, allowConflict, cancellationToken));
+            reads.Add(ReadChunkAsync(manifest, peerId, instanceId, next, length, allowConflict, lifetime, cancellationToken));
         }
         SyncResponse[] responses = await Task.WhenAll(reads).ConfigureAwait(false);
         SyncChunk[] chunks = new SyncChunk[responses.Length];
@@ -144,13 +144,13 @@ internal sealed class SyncDownload
 
     /// <summary>応答未確認だけ同じ固定断片をもう一度照会し、全書出しの作り直しを避けます。</summary>
     /// <returns>元のセッション期限内で確認した一断片の応答です。</returns>
-    private async Task<SyncResponse> ReadChunkAsync(SyncManifest manifest, string peerId, Guid instanceId, long offset, int length, bool allowConflict, CancellationToken cancellationToken = default)
+    private async Task<SyncResponse> ReadChunkAsync(SyncManifest manifest, string peerId, Guid instanceId, long offset, int length, bool allowConflict, SyncLifetime lifetime, CancellationToken cancellationToken = default)
     {
         JsonElement request = JsonSerializer.SerializeToElement(new SyncReadRequest(manifest.Id, offset, length));
         for (int attempt = 0; attempt < 2; attempt++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            Validate(manifest, peerId, instanceId, allowConflict);
+            Validate(manifest, peerId, instanceId, allowConflict, lifetime);
             WireMessage? reply = await cluster.ExchangeAsync("sync.read", peerId, instanceId, request, cancellationToken).ConfigureAwait(false);
             if (reply is not null)
             {
@@ -189,7 +189,8 @@ internal sealed class SyncDownload
     private static string ConflictVersions(IReadOnlyList<DurableEntry> entries) => ContractJson.Hash(entries.OrderBy(entry => entry.Scope, StringComparer.Ordinal).ThenBy(entry => entry.Key, StringComparer.Ordinal).ThenBy(entry => entry.Version, StringComparer.Ordinal).Select(entry => new { entry.Scope, entry.Key, entry.Version }).ToArray());
 
     /// <summary>マニフェストを別Peerや再起動後の実体に使い回しません。</summary>
-    internal void Validate(SyncManifest manifest, string sourcePeerId, Guid sourceInstanceId, bool allowConflict = false)
+    /// <returns>同じ受入で使い続けるローカルの期限です。</returns>
+    internal SyncLifetime Validate(SyncManifest manifest, string sourcePeerId, Guid sourceInstanceId, bool allowConflict = false, SyncLifetime? lifetime = null)
     {
         if (manifest.Phase is not null && !string.Equals(manifest.Phase, SyncManifest.CurrentPhase, StringComparison.Ordinal)
             && !string.Equals(manifest.Phase, SyncManifest.HistoryPhase, StringComparison.Ordinal)
@@ -211,7 +212,8 @@ internal sealed class SyncDownload
         {
             throw new SyncFailureException("Sync.SnapshotCapacity");
         }
-        if (manifest.ExpiresAt <= clock.GetUtcNow() || clock.GetUtcNow() + TimeSpan.FromHours(1) < manifest.ExpiresAt)
+        lifetime ??= files.Clocks.Accept(manifest.Timing, manifest.ExpiresAt, sourceInstanceId, TimeSpan.FromHours(1));
+        if (lifetime.Expired)
         {
             throw new SyncFailureException("Sync.SessionExpired");
         }
@@ -219,9 +221,10 @@ internal sealed class SyncDownload
         // 同期前の準備不足でもUnavailableになるため、読取同期はReadyを要求せずローカル観測の生存と元の実体を確認します。
         if (!cluster.GetPeers().Any(peer => string.Equals(peer.PeerId, sourcePeerId, StringComparison.Ordinal) && peer.InstanceId == sourceInstanceId
             && peer.Status != EPeerStatus.Detached && (allowConflict || peer.Status != EPeerStatus.Conflict)
-            && clock.GetUtcNow() - peer.LastSeen <= options.PeerTimeout))
+            && peer.AgeAt(clock.GetUtcNow()) <= options.PeerTimeout))
         {
             throw new SyncFailureException("Sync.SourceInstanceUnavailable");
         }
+        return lifetime;
     }
 }

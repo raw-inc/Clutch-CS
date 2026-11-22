@@ -22,6 +22,34 @@ internal sealed class FleetUpdateStore
         Directory.CreateDirectory(directory);
     }
 
+    /// <summary>通知前に番号をまとめて確保し、ClientHostが中断しても発行済み番号を再利用しません。</summary>
+    /// <returns>同じ保存先を使う発行元のIDと、今回使用できる通知番号の範囲です。</returns>
+    internal async Task<(Guid PublisherId, long First, long Last)> ReservePublicationAsync(CancellationToken cancellationToken = default)
+    {
+        // ClientHostは起動中、状態ディレクトリを排他所有します。進捗保存と独立したファイルに上限を先に確定します。
+        string path = Path.Combine(stateDirectory, "fleet-publication.json");
+        Publication saved;
+        try
+        {
+            saved = await UpdateProgressFile.ReadAsync<Publication>(path, cancellationToken).ConfigureAwait(false)
+                ?? throw new InvalidDataException("The fleet publication sequence is missing.");
+        }
+        catch (FileNotFoundException)
+        {
+            saved = new(Guid.NewGuid(), 0);
+        }
+        if (saved.PublisherId == Guid.Empty || saved.Last < 0 || long.MaxValue - 65536 < saved.Last)
+        {
+            throw new InvalidDataException("Invalid fleet publication sequence.");
+        }
+        Publication next = saved with { Last = saved.Last + 65536 };
+        await UpdateProgressFile.WriteAsync(path, next, cancellationToken).ConfigureAwait(false);
+        return (next.PublisherId, saved.Last + 1, next.Last);
+    }
+
+    /// <summary>表示通知に予約済みの番号です。更新操作の実行状態には使いません。</summary>
+    private sealed record Publication(Guid PublisherId, long Last);
+
     /// <summary>起動時に未完了操作を未確認とし、停止・入替を暗黙再送しません。</summary>
     /// <returns>中断の記録です。</returns>
     internal async Task RecoverAsync(CancellationToken cancellationToken = default)

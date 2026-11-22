@@ -85,7 +85,7 @@ internal sealed class PeerFileTransfer : IPeerFileTransfer
         {
             throw new IOException("指定したPeerを確認できません。");
         }
-        ClusterRequest request = new(Guid.NewGuid(), kind, peer.PeerId, peer.InstanceId, DateTimeOffset.UtcNow.AddMinutes(5), NodeValue.FromObject(payload));
+        ClusterRequest request = ClusterRequest.Start(Guid.NewGuid(), kind, peer.PeerId, peer.InstanceId, TimeSpan.FromMinutes(5), NodeValue.FromObject(payload));
         ClusterResponse response = await cluster.RequestAsync(request, cancellationToken).ConfigureAwait(false);
         if (response.Outcome != EOutcome.Succeeded || response.Value is null)
         {

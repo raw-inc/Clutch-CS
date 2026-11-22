@@ -56,7 +56,9 @@ test('closed map and empty search do not inspect the node geometry during graph 
 
         querySelector: () => map };
     globalThis.document = { ...events, documentElement: { clientWidth: 1000 } };
-    globalThis.window = events;
+    globalThis.window = { ...events,
+
+        matchMedia: () => ({ ...events, matches: false }) };
     globalThis.MutationObserver = class
     {
         /** DOM変更を試験から通知します。 */

@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -56,7 +57,30 @@ public sealed partial class Dashboard : IAsyncDisposable
     private string message = string.Empty, secretName = string.Empty, secretValue = string.Empty;
     private JsonElement? result;
     private WorkflowListSummary? activation;
-    private bool secretOpen, membershipOpen;
+    private bool secretOpen, membershipOpen, confirmDetach;
+    private int conflictCount;
+    private Guid? conflictTarget;
+
+    private EPeerStatus? MembershipStatus => Connection.Connected ? Connection.Current?.Status
+                                                                  : null;
+    private static readonly (string Name, string Icon)[] views =
+    [
+        ("All clusters", "dashboard"), ("Peer list", "peer-list"), ("Selected cluster", "network"),
+        ("Execution & processes", "play"), ("Applications", "windows"), ("Script packages", "code"),
+        ("Snapshots", "save"), ("Resolve conflicts", "copy"), ("Safety", "shield"),
+        ("Settings & maintenance", "settings"), ("Operations", "history")
+    ];
+
+    /// <summary>接続先が未選択でもクラスタの探索とブラウザー設定は利用できます。</summary>
+    /// <returns>選択したピアが必要な画面で接続先が未選択ならtrueです。</returns>
+    private bool ViewUnavailable(string name) => !HasSelection && name is not ("All clusters" or "Peer list" or "Settings & maintenance");
+
+    private static string BrowserTopic => "Browser preferences";
+    private static string ClusterTopic => "Cluster configuration";
+    private static string UpdateTopic => "Software updates";
+    private static string ServiceTopic => "Diagnostics and credentials";
+    private static readonly string[] settingsTopics = [BrowserTopic, ClusterTopic, UpdateTopic, ServiceTopic];
+    private string settingsTopic = BrowserTopic;
     private string view = "All clusters";
     private bool HasSelection => Api.SelectedClusterId is not null && Api.SelectedPeerId is not null;
 
@@ -183,7 +207,7 @@ public sealed partial class Dashboard : IAsyncDisposable
         }
 
         WorkflowListPage? workflowPage = await Api.PostForPeerAsync<WorkflowListPage>("/api/workflows/query", new WorkflowListQuery(Cursor: workflowPageCursor), peer, cluster, cancellationToken: lifetime.Token).ConfigureAwait(true);
-        ExecutionHistoryPage? executionPage = await Api.PostForPeerAsync<ExecutionHistoryPage>("/api/executions/query", new ExecutionHistoryQuery(Cursor: executionPageCursor), peer, cluster, cancellationToken: lifetime.Token).ConfigureAwait(true);
+        ExecutionHistoryPage? executionPage = await Api.PostForPeerAsync<ExecutionHistoryPage>("/api/v2/executions/query", new ExecutionHistoryQuery(Cursor: executionPageCursor), peer, cluster, cancellationToken: lifetime.Token).ConfigureAwait(true);
         if (!SameTarget(cluster, peer) || Connection.Current?.InstanceId != instance)
         {
             return;
@@ -242,7 +266,7 @@ public sealed partial class Dashboard : IAsyncDisposable
 
         string? cluster = listCluster, peer = listPeer;
         executionPageCursor = executionCursor;
-        ExecutionHistoryPage? page = await Api.PostForPeerAsync<ExecutionHistoryPage>("/api/executions/query", new ExecutionHistoryQuery(Cursor: executionPageCursor), peer, cluster, cancellationToken: lifetime.Token).ConfigureAwait(true);
+        ExecutionHistoryPage? page = await Api.PostForPeerAsync<ExecutionHistoryPage>("/api/v2/executions/query", new ExecutionHistoryQuery(Cursor: executionPageCursor), peer, cluster, cancellationToken: lifetime.Token).ConfigureAwait(true);
         if (!SameTarget(cluster, peer))
         {
             return;

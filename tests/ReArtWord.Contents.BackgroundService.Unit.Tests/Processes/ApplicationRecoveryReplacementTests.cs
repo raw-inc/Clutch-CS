@@ -12,6 +12,54 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Processes;
 /// <summary>終了確定から自動復旧までに現れた後継を実プロセスで確認します。</summary>
 public sealed class ApplicationRecoveryReplacementTests
 {
+    /// <summary>別のOS起動回では、実際に待ったと証明できる時間だけを差し引きます。</summary>
+    [Fact]
+    public void RestartDoesNotTreatAnUnknownWaitAsExpired()
+    {
+        ManagementTransport.AdmissionTestClock clock = new();
+        ProcessWaitClock previous = new(clock, () => new("first-boot", TimeSpan.FromHours(4)));
+        ProcessWaitOrigin origin = previous.Capture();
+        DateTimeOffset due = origin.Wall.AddSeconds(15);
+        clock.Adjust(TimeSpan.FromDays(1));
+        ProcessWaitClock afterBoot = new(clock, () => new("second-boot", TimeSpan.FromSeconds(7)));
+        Assert.Equal(TimeSpan.FromSeconds(8), afterBoot.Remaining(origin, due));
+        Assert.Null(afterBoot.Remaining(null, due));
+        clock.Advance(TimeSpan.FromSeconds(8));
+        Assert.Equal(TimeSpan.Zero, afterBoot.Remaining(origin, due));
+    }
+
+    /// <summary>実際のアプリ終了後、時計を補正しても同じOSの復旧待ちは引き継がれます。</summary>
+    /// <returns>15秒経過するまで二回目の起動がないことを確認します。</returns>
+    [Theory]
+    [InlineData(-3600)]
+    [InlineData(3600)]
+    public async Task RecoveryAfterClockCorrectionWaitsForElapsedTimeAcrossCoreRestart(int correction)
+    {
+        using ApplicationProcessFixture app = new(exitCode: 23);
+        using ProcessTestScope scope = new();
+        ManagementTransport.AdmissionTestClock clock = new();
+        ProcessDefinition definition = app.Definition with { RestartDetection = new(0), Recovery = new(DelayMilliseconds: 15000) };
+        using (ProcessService service = new(scope.Repository, "peer", scope.Options, clock, bootSession: Boot))
+        {
+            await service.RegisterAsync(definition);
+            scope.Track(await service.StartAsync(definition.Id));
+            await ApplicationRecoveryTests.WaitForExitAsync(service, definition.Id);
+            clock.Advance(TimeSpan.FromSeconds(6));
+            clock.Adjust(TimeSpan.FromSeconds(correction));
+            Assert.Equal("process.recoveryDelay", (await service.RecoverAsync(definition.Id)).Reason);
+        }
+        using ProcessService restarted = new(scope.Repository, "peer", scope.Options, clock, bootSession: Boot);
+        clock.Advance(TimeSpan.FromSeconds(8));
+        Assert.Equal("process.recoveryDelay", (await restarted.RecoverAsync(definition.Id)).Reason);
+        Assert.Single(app.Starts());
+        clock.Advance(TimeSpan.FromSeconds(1));
+        ProcessOperationResult result = await restarted.RecoverAsync(definition.Id);
+        scope.Track(result);
+        Assert.Equal(EOutcome.Succeeded, result.Outcome);
+
+        SystemBootSession? Boot() => new("same-os", clock.GetElapsedTime(0));
+    }
+
     /// <summary>Core再起動後の復旧でも、以前から併存していた別の実体を後継へ取り込みません。</summary>
     /// <returns>最終生存確認より前のプロセスを除外し続ける確認です。</returns>
     [Fact]

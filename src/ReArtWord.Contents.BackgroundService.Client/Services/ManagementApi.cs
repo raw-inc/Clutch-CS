@@ -3,17 +3,61 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using ReArtWord.Contents.BackgroundService.Client.Localization;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
+using ReArtWord.Contents.BackgroundService.Contracts.Execution;
+using ReArtWord.Contents.BackgroundService.Contracts.Management;
 
 namespace ReArtWord.Contents.BackgroundService.Client.Services;
 
 /// <summary>型付き管理要求を一度だけ送信します。</summary>
-internal sealed class ManagementApi(HttpClient client, ServerClock? clock = null)
+internal sealed class ManagementApi
 {
-    private readonly ServerClock serverClock = clock ?? new();
+    private readonly HttpClient client;
+    private readonly ServerClock serverClock;
+    private readonly Lock reading = new();
+    private readonly JsonSerializerOptions observationOptions;
+    private long responseStarted;
+
+    /// <summary>最終受信からの経過時間の復元に使う時計と、再利用するJSON設定を接続します。</summary>
+    public ManagementApi(HttpClient client, ServerClock? clock = null)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+        this.client = client;
+        serverClock = clock ?? new();
+        observationOptions = new(responseOptions);
+        observationOptions.Converters.Add(new PeerObservationJsonConverter(age => serverClock.ObserveAge(age, responseStarted)));
+    }
 
     /// <summary>観測元と同じ時刻軸で鮮度を判断します。</summary>
     internal DateTimeOffset UtcNow => serverClock.UtcNow;
+
+    /// <summary>ブラウザー内の更新間隔を、日時補正に影響されず測ります。</summary>
+    internal long Timestamp => serverClock.Timestamp;
+
+    /// <summary>同じブラウザー内で開始した計測の経過時間を返します。</summary>
+    /// <returns>ポーリング間隔の判定に使う経過時間です。</returns>
+    internal TimeSpan ElapsedSince(long started) => serverClock.ElapsedSince(started);
     private static readonly JsonSerializerOptions responseOptions = new(ContractJson.Options) { UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip };
+
+    /// <summary>手動ノード要求を初回送信前に作成し、準備中の待ち時間も5分の受付期間から差し引きます。</summary>
+    /// <returns>ClientHostの時計へ固定した期限と元の要求です。同じ操作を再送するときは、この戻り値をそのまま使用します。</returns>
+    internal async Task<ClockedNodeCommand> PrepareNodeCommandAsync(Func<DateTimeOffset, RemoteExecutionRequest> create, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(create);
+        long started = serverClock.Timestamp;
+        ClientRequestClockSnapshot sample = await GetAsync<ClientRequestClockSnapshot>("/api/request-clock", cancellationToken).ConfigureAwait(false)
+            ?? throw new InvalidDataException("The operation admission clock could not be confirmed.");
+        TimeSpan remaining = TimeSpan.FromMinutes(5) - serverClock.ElapsedSince(started);
+        if (sample.InstanceId == Guid.Empty || sample.ElapsedTicks < 0 || remaining <= TimeSpan.Zero)
+        {
+            throw new InvalidDataException("The operation admission clock could not be confirmed.");
+        }
+
+        // 応答の日時は本文の表記にだけ使います。期限はClientHostの経過時間に固定するため、
+        // ブラウザーやClientHostのUTCが補正されても、POST時に「今から5分」へ作り直しません。
+        RemoteExecutionRequest request = create(sample.ObservedAt + remaining);
+        RequestClockStamp stamp = new(sample.InstanceId, checked(sample.ElapsedTicks + remaining.Ticks), sample.ObservedAt);
+        return new(request, stamp);
+    }
 
     /// <summary>キャッシュ内の応答もHTTP応答と同じ部分DTOの読み取り規則を使用します。</summary>
     /// <returns>既知の項目を読み取った応答です。</returns>
@@ -133,8 +177,11 @@ internal sealed class ManagementApi(HttpClient client, ServerClock? clock = null
             request.Content = JsonContent.Create(body, options: ContractJson.Options);
         }
         long started = serverClock.Timestamp;
+        Guid observation = Guid.NewGuid();
+        long observationOrder = serverClock.NextRequestOrder();
+        request.Headers.Add(ObservationHeaders.Request, observation.ToString("D"));
         using HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        serverClock.Observe(response.Headers, started);
+        serverClock.Observe(response.Headers, started, observation, observationOrder);
         if (!response.IsSuccessStatusCode)
         {
             string template = "The management API could not confirm the operation ({0}). Query side-effect requests using the same operation ID.";
@@ -146,6 +193,16 @@ internal sealed class ManagementApi(HttpClient client, ServerClock? clock = null
         {
             return default;
         }
-        return JsonSerializer.Deserialize<T>(content, responseOptions);
+
+        T? result;
+
+        // JSONの復元は同期処理です。この間だけ要求開始位置を固定することで、型情報のキャッシュを
+        // 再利用しつつ、同時に届いた別応答の通信時間を混ぜないようにします。
+        using (reading.EnterScope())
+        {
+            responseStarted = started;
+            result = JsonSerializer.Deserialize<T>(content, observationOptions);
+        }
+        return ObservationResponses.Receive(result, age => serverClock.ObserveAge(age, started));
     }
 }

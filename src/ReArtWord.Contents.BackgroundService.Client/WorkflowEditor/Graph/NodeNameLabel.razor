@@ -7,7 +7,7 @@
         }
         else
         {
-            <span @ref="label" class="node-title" role="button" tabindex="0" aria-disabled="@ReadOnly" aria-label="@Ui.Format("Edit logical name: {0}",Ui.NodeName(Node,Descriptor))" title="@(Ui.NodeName(Node,Descriptor)+" · "+Ui.NodeName(Descriptor)+"\n"+Node.Id+"\n"+Ui["Double-click to edit the logical name."])" @ondblclick="Begin" @onkeydown="LabelKey">@Ui.NodeName(Node,Descriptor)</span>
+            <span @ref="label" class="node-title" role="button" tabindex="0" aria-disabled="@(ReadOnly?"true":"false")" aria-label="@Ui.Format("Edit logical name: {0}",Ui.NodeName(Node,Descriptor))" title="@(Ui.NodeName(Node,Descriptor)+" · "+Ui.NodeName(Descriptor)+"\n"+Node.Id+"\n"+Ui["Double-click to edit the logical name."])" @ondblclick="Begin" @onkeydown="LabelKey">@Ui.NodeName(Node,Descriptor)</span>
         }
     </div>
 </foreignObject>

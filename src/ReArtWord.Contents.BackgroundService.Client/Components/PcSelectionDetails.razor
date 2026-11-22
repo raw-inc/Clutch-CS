@@ -17,17 +17,17 @@
             }
             @if(selection.Observations.Count != 0)
             {
-                <div class="table-wrap"><table>
-                    <thead><tr><th>PC / Peer</th><th>@Ui["Resource"]</th><th>@Ui["Observed value"]</th><th>@Ui["Observation time"]</th><th>@Ui["Reason"]</th></tr></thead>
+                <div class="table-wrap"><table class="record-table">
+                    <thead><tr><th>@Ui["PC / Peer"]</th><th>@Ui["Resource"]</th><th>@Ui["Observed value"]</th><th>@Ui["Observation time"]</th><th>@Ui["Reason"]</th></tr></thead>
                     <tbody>
                     @foreach(var observation in selection.Observations)
                     {
                         <tr>
-                            <td>@observation.HostId / @observation.PeerId<div class="small mono">@observation.InstanceId</div></td>
-                            <td>@observation.Resource @observation.GpuId</td>
-                            <td>@(observation.Value?.ToString("G6", CultureInfo.CurrentCulture) ?? Ui["Unavailable"]) @observation.Unit</td>
-                            <td>@(FormatTime(observation.ObservedAt) ?? Ui["Unavailable"])</td>
-                            <td>@(observation.Reason is null ? string.Empty : Ui[observation.Reason])</td>
+                            <td data-field="@Ui["PC / Peer"]"><div>@observation.HostId / @observation.PeerId<div class="small mono">@observation.InstanceId</div></div></td>
+                            <td data-field="@Ui["Resource"]">@observation.Resource @observation.GpuId</td>
+                            <td data-field="@Ui["Observed value"]">@(observation.Value?.ToString("G6", CultureInfo.CurrentCulture) ?? Ui["Unavailable"]) @observation.Unit</td>
+                            <td data-field="@Ui["Observation time"]">@(FormatTime(observation.ObservedAt) ?? Ui["Unavailable"])</td>
+                            <td data-field="@Ui["Reason"]">@(observation.Reason is null ? string.Empty : Ui[observation.Reason])</td>
                         </tr>
                     }
                     </tbody>

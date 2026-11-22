@@ -1,0 +1,58 @@
+.retention-by-category {
+    display: grid;
+    gap: 0;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+}
+
+.retention-category + .retention-category {
+    border-block-start: 1px solid var(--line);
+}
+
+.retention-category > label:first-child {
+    margin: 0;
+}
+
+.zone-entry {
+    width: min(100%, 21rem);
+}
+
+.retention-zone-help {
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.retention-time {
+    width: min(100%, 9rem);
+    min-height: 38px;
+}
+
+@media (forced-colors: none) {
+    .zone-entry {
+        padding-inline-end: 32px;
+        background-image: var(--select-arrow);
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 12px 8px;
+    }
+
+    .zone-entry::-webkit-calendar-picker-indicator {
+        opacity: 0;
+    }
+}
+
+.retention-deadlines {
+    display: grid;
+    gap: 4px;
+    padding: 0;
+    list-style: none;
+}
+
+.retention-deadlines li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    border-block-end: 1px solid var(--line);
+}

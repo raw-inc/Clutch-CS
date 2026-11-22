@@ -70,7 +70,7 @@ internal sealed class HostPowerScheduleRemote(ObserverConnection connection, Cli
         {
             return new(EOutcome.NotExecuted, "powerSchedule.invalid");
         }
-        Guid id = ClientCommandLedger.Identity(request.OperationId, SaveOperation);
+        Guid id = ClientCommandLedger.Identity(request.OperationId, SaveOperation, request.IdentityFormat);
         bool sent = false;
         try
         {
@@ -95,7 +95,7 @@ internal sealed class HostPowerScheduleRemote(ObserverConnection connection, Cli
                 string.Equals(profile.HostId, request.HostId, StringComparison.Ordinal) && profile.Clusters.Contains(request.ClusterId, StringComparer.Ordinal)) };
             NodeValue payload = ContractJson.ToValue(request);
             (UdpObserver selected, PeerInfo peer) = Resolve(request.ClusterId);
-            ManagementCommand command = await ledger.PrepareAsync(id, request.ClusterId, peer.PeerId, SaveOperation, payload, peer, cancellationToken).ConfigureAwait(false);
+            ManagementCommand command = await ledger.PrepareDerivedTimedAsync(request.OperationId, request.IdentityFormat, request.ClusterId, peer.PeerId, SaveOperation, payload, peer, selected.PrepareClockAsync, cancellationToken: cancellationToken).ConfigureAwait(false);
             sent = true;
             return Result(await selected.ExecuteAsync(command, cancellationToken).ConfigureAwait(false));
         }
@@ -118,7 +118,7 @@ internal sealed class HostPowerScheduleRemote(ObserverConnection connection, Cli
             throw new InvalidOperationException("powerSchedule.clusterUnavailable");
         }
         PeerInfo? peer = cluster.Peers.FirstOrDefault(item => string.Equals(item.PeerId, coordinators[0], StringComparison.Ordinal)
-            && PeerStatusRules.CanParticipate(item.Status) && DateTimeOffset.UtcNow - item.LastSeen <= TimeSpan.FromSeconds(15));
+            && PeerStatusRules.CanParticipate(item.Status) && item.AgeAt(DateTimeOffset.UtcNow) <= TimeSpan.FromSeconds(15));
         if (peer is null || connection.FindObserver(clusterId, peer.PeerId) is not { } observer)
         {
             throw new InvalidOperationException("powerSchedule.clusterUnavailable");

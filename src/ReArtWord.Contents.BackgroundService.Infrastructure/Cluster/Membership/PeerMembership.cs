@@ -51,7 +51,8 @@ internal sealed class PeerMembership
         this.options = options;
         this.instance = instance;
         this.clock = clock;
-        peers.Add(options.PeerId, new PeerInfo(options.PeerId, instance, options.HostId, options.BindAddress, options.Port, EPeerStatus.Joining, options.Priority, null, clock.GetUtcNow(), options.LogPort));
+        peers.Add(options.PeerId, new PeerInfo(options.PeerId, instance, options.HostId, options.BindAddress, options.Port, EPeerStatus.Joining, options.Priority, null, clock.GetUtcNow(), options.LogPort)
+        { ObservationAge = default(Contracts.Observability.ObservationAge) });
     }
 
     /// <summary>現在のCoordinatorを取得します。</summary>
@@ -171,6 +172,10 @@ internal sealed class PeerMembership
             {
                 return;
             }
+            if (IdentityConflict && status is not (EPeerStatus.Unavailable or EPeerStatus.Detached))
+            {
+                status = EPeerStatus.Conflict;
+            }
             DateTimeOffset? ready = null;
             if (PeerStatusRules.CanParticipate(status))
             {
@@ -215,7 +220,7 @@ internal sealed class PeerMembership
         {
             if (peers.TryGetValue(peerId, out PeerInfo? peer) && peer.InstanceId == instanceId && instanceId != instance)
             {
-                peers[peerId] = peer with { LastSeen = clock.GetUtcNow() };
+                peers[peerId] = peer with { LastSeen = clock.GetUtcNow(), ObservationAge = new(clock) };
             }
         }
     }
@@ -234,14 +239,16 @@ internal sealed class PeerMembership
         {
             if (peers.TryGetValue(incoming.PeerId, out PeerInfo? known) && known.InstanceId != incoming.InstanceId && known.Status is not (EPeerStatus.Unavailable or EPeerStatus.Detached))
             {
-                // 既存通常参加者が特定できる場合は後発実体を採用しません。
-                if (!PeerStatusRules.CanParticipate(known.Status) || (string.Equals(incoming.PeerId, options.PeerId, StringComparison.Ordinal) && PeerStatusRules.CanParticipate(incoming.Status) && incoming.ReadySince < known.ReadySince))
+                // 参加前に既存の同名実体を観測した側は譲ります。既に双方が参加中なら、
+                // ReadySinceは別々のPCの日時なので先後を判定できず、自分の通常実行を止めます。
+                if (!PeerStatusRules.CanParticipate(known.Status) || (string.Equals(incoming.PeerId, options.PeerId, StringComparison.Ordinal) && PeerStatusRules.CanParticipate(incoming.Status)))
                 {
                     peers[incoming.PeerId] = known with { Status = EPeerStatus.Conflict, ReadySince = null };
                     if (string.Equals(incoming.PeerId, options.PeerId, StringComparison.Ordinal))
                     {
                         IdentityConflict = true;
                     }
+                    Elect();
                 }
                 return false;
             }
@@ -257,7 +264,7 @@ internal sealed class PeerMembership
             {
                 knownRevision++;
             }
-            peers[incoming.PeerId] = incoming with { LastSeen = clock.GetUtcNow() };
+            peers[incoming.PeerId] = incoming with { LastSeen = clock.GetUtcNow(), ObservationAge = new(clock) };
             Elect();
             return true;
         }
@@ -270,7 +277,10 @@ internal sealed class PeerMembership
         {
             foreach (PeerInfo peer in peers.Values.ToArray())
             {
-                if (peer.InstanceId != instance && peer.Status is not (EPeerStatus.Unavailable or EPeerStatus.Detached) && peer.LastSeen + options.PeerTimeout < clock.GetUtcNow())
+                // LastSeenは表示用の受信日時です。生存期間は受理した通信からの経過時間で測り、
+                // OSの時刻補正や、拒否した重複通知で短縮・延長しません。
+                if (peer.InstanceId != instance && peer.Status is not (EPeerStatus.Unavailable or EPeerStatus.Detached)
+                    && peer.ObservationAge is { } received && options.PeerTimeout < received.Elapsed)
                 {
                     previousCoordinator ??= coordinator;
                     peers[peer.PeerId] = peer with { Status = EPeerStatus.Unavailable, ReadySince = null };
@@ -332,6 +342,6 @@ internal sealed class PeerMembership
         {
             status = EPeerStatus.Detached;
         }
-        return peer with { Status = status, ReadySince = null, LastSeen = DateTimeOffset.MinValue, LogPort = null, PersistenceStatus = null };
+        return peer with { Status = status, ReadySince = null, LastSeen = DateTimeOffset.MinValue, LogPort = null, PersistenceStatus = null, ObservationAge = null };
     }
 }

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Execution;
@@ -67,8 +68,8 @@ internal static class InstallerClientUpdates
         {
             return accepted;
         }
-        DateTimeOffset deadline = DateTimeOffset.UtcNow.Add(InstallationDefaults.RemoteTimeout);
-        while (DateTimeOffset.UtcNow < deadline)
+        long started = Stopwatch.GetTimestamp();
+        while (Stopwatch.GetElapsedTime(started) < InstallationDefaults.RemoteTimeout)
         {
             ManagementReply reply = await observer.SendAsync(peer.PeerId, peer.InstanceId, "setup.client.result", UpdateObserver.Payload(operation), true, cancellationToken).ConfigureAwait(false);
             SetupResult? result = reply.Value?.Json.Deserialize<SetupResult>(ContractJson.Options);

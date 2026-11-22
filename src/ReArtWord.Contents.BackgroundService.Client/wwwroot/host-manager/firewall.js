@@ -1,4 +1,4 @@
-import { node, field, input, select, table, details, heading, action, badge, empty } from './dom.js';
+import { node, field, input, select, table, details, heading, action, badge, empty, hostCount, recordCount } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 import { firewallForm } from './firewall-form.js';
 import { firewallBulkView } from './firewall-bulk.js';
@@ -6,7 +6,7 @@ import { firewallBulkView } from './firewall-bulk.js';
 /** ファイアウォール設定の照会と編集を構成します。
  * @returns reload・disposeを含む結果です。
  */
-export function firewallView(root, ctx)
+export function firewallView(root, ctx, actionArea)
 {
     const hosts = structuredClone(ctx.hosts());
     if (!hosts.length)
@@ -15,24 +15,27 @@ export function firewallView(root, ctx)
     }
     if ((1) < (hosts.length))
     {
-        return firewallBulkView(root, ctx, hosts);
+        return firewallBulkView(root, ctx, hosts, actionArea);
     }
     let disposed = false;
     const pages = new Map(), requests = new Map();
-    const title = heading(ctx.t('Firewall'), `${ctx.t('Selected hosts')}: ${hosts.length}`), status = node('div'), profiles = node('div', '', 'hm-profile-grid');
+    const title = heading(ctx.t('Firewall rules'), `${ctx.t('Selected hosts')}: ${hostCount(ctx, hosts.length)}`), status = node('div'), profiles = node('div', '', 'hm-profile-grid');
     const hostPick = select(hosts.map(host => [host.target.hostId, host.target.hostId]), hosts[0].target.hostId), filter = input('', 'search');
     filter.className = 'hm-search';
-    filter.placeholder = ctx.t('Search rules');
-    filter.setAttribute('aria-label', ctx.t('Search rules'));
-    const tools = node('div', '', 'hm-toolbar'), listing = node('div'), pager = node('div', '', 'hm-pagination'), range = node('span');
+    filter.setAttribute('aria-label', ctx.t('Rule name or ID'));
+    const tools = node('div', '', 'hm-toolbar hm-firewall-filter'), listing = node('div'), pager = node('div', '', 'hm-pagination'), range = node('span');
     const previous = ctx.button('Previous', () => loadPageAsync(Math.max(0, (pages.get(hostPick.value)?.offset ?? 0) - 10))), next = ctx.button('Next', () => loadPageAsync(current()?.nextOffset));
-    const search = ctx.button('Search rules', () => loadPageAsync(0));
+    const search = ctx.button('Search', () => loadPageAsync(0));
     const actions = node('div', '', 'hm-actions');
     actions.append(action(ctx, 'Refresh settings', 'refresh', reload), action(ctx, 'Add rule', 'plus', () => firewallForm(ctx, hosts), true));
     title.append(actions);
-    tools.append(field(ctx.t('Rules on host'), hostPick), filter, search);
+    tools.append(field(ctx.t('Rules on host'), hostPick), field(ctx.t('Rule name or ID'), filter), search);
     pager.append(range, previous, next);
-    root.append(title, status, profiles, node('h3', ctx.t('Rules')), tools, listing, pager);
+    const profileRows = document.createElement('clutch-card-rows');
+    profileRows.append(profiles);
+    const profileLabels = document.createElement('clutch-status-labels');
+    profileLabels.append(profileRows);
+    root.append(title, status, profileLabels, node('h3', ctx.t('Rules'), 'hm-list-heading'), tools, pager, listing);
 
     /** 現在選択されている値を取得します。
      * @returns 呼出し元が使用する値です。
@@ -52,7 +55,9 @@ export function firewallView(root, ctx)
             const known = states.filter(state => state.snapshot?.data.profiles.some(profile => profile.name === name));
             const enabled = known.filter(state => state.snapshot.data.profiles.find(profile => profile.name === name).enabled).length;
             const card = node('section', '', 'hm-profile'), heading = node('div');
-            heading.append(node('strong', ctx.t(name)), badge(ctx.t(known.length < hosts.length ? states.some(state => state.loading) ? 'Loading…' : 'Unavailable' : enabled === hosts.length ? 'Enabled' : enabled ? 'Mixed' : 'Disabled'), enabled === hosts.length ? 'good' : enabled ? 'warn' : ''));
+            const label = badge(ctx.t(known.length < hosts.length ? states.some(state => state.loading) ? 'Loading…' : 'Unavailable' : enabled === hosts.length ? 'Enabled' : enabled ? 'Mixed' : 'Disabled'), enabled === hosts.length ? 'good' : enabled ? 'warn' : '');
+            label.setAttribute('data-status-label', '');
+            heading.append(node('strong', ctx.t(name)), label);
             const change = ctx.button('Change profile', () =>
             {
                 const dialog = ctx.dialog('Change profile'), state = select([['', ctx.t('Choose setting')], ['true', ctx.t('Enabled')], ['false', ctx.t('Disabled')]]);
@@ -66,7 +71,7 @@ export function firewallView(root, ctx)
                 dialog.footer.append(ctx.button('Cancel', dialog.close), preview);
             });
             change.disabled = !allLoaded || known.length !== hosts.length;
-            card.append(heading, node('span', `${enabled} / ${hosts.length} · ${ctx.t('Enabled')}`, 'hm-muted'), change);
+            card.append(heading, node('span', `${enabled} / ${hostCount(ctx, hosts.length)} · ${ctx.t('Enabled')}`, 'hm-muted'), change);
             profiles.append(card);
         }
     }
@@ -104,30 +109,36 @@ export function firewallView(root, ctx)
             listing.append(empty(ctx.t('No matching rules'), ctx.t('Try another rule name or add a rule.'), 'shield'));
             return;
         }
-        const rows = table(['Name', 'Direction / action', 'Profile', 'Status', 'Edit'].map(ctx.t));
+        const rows = table(['Name', 'Direction / action', 'Profile', 'Status', 'Actions'].map(ctx.t));
         for (const rule of data.rules)
         {
             const expectedAllow = 'Allow';
 
-            const name = node('div');
-            name.append(ctx.button(rule.name, () => ruleDetails(host, rule), 'hm-link'), node('small', `${rule.protocol} · ${rule.localPorts.join(', ')}`));
+            const name = ctx.button(rule.name, () => ruleDetails(host, rule), 'hm-record-link');
+            name.replaceChildren(node('span', rule.name), node('small', `${rule.protocol} · ${rule.localPorts.join(', ')}`));
             const behavior = node('div', '', 'hm-stacked');
             behavior.append(node('span', ctx.t(rule.direction)), badge(ctx.t(rule.action), rule.action === expectedAllow ? '' : 'warn'));
             const actions = node('div', '', 'hm-actions');
             if (rule.editable)
             {
                 actions.append(ctx.button(rule.enabled ? 'Disable rule' : 'Enable rule', () => ctx.preview([{ host, query: { area: 'firewall', resourceId: 'rule/' + rule.id }, action: 'firewallRuleEnabled', change: { enabled: !rule.enabled }, label: rule.name }])),
-                    ctx.button('Remove rule', () => ctx.preview([{ host, query: { area: 'firewall', resourceId: 'rule/' + rule.id }, action: 'firewallRuleRemove', change: {}, label: rule.name }]), 'danger'));
+                    ctx.button('Remove rule', () => ctx.preview([{ host, query: { area: 'firewall', resourceId: 'rule/' + rule.id }, action: 'firewallRuleRemove', change: {}, label: `${ctx.t('Remove rule')} · ${rule.name}` }]), 'danger'));
             }
             else
             {
                 actions.append(badge(ctx.t('Read only')));
             }
-            rows.add([name, behavior, rule.profile, badge(ctx.t(rule.enabled ? 'Enabled' : 'Disabled'), rule.enabled ? 'good' : ''), actions]);
+            const statusLabel = badge(ctx.t(rule.enabled ? 'Enabled' : 'Disabled'), rule.enabled ? 'good' : '');
+            statusLabel.setAttribute('data-status-label', '');
+            rows.add([name, behavior, rule.profile, statusLabel, actions]);
         }
-        listing.append(rows.root);
+        const ruleLabels = document.createElement('clutch-status-labels');
+        ruleLabels.append(rows.root);
+        listing.append(ruleLabels);
         const start = page?.offset ?? 0;
-        range.textContent = `${start + 1}–${start + data.rules.length} · ${ctx.t('Rules')}` + (page?.filter ? ` · ${page.filter}` : '');
+        const end = start + data.rules.length;
+        const position = start || data.nextOffset != null ? ` · ${start + 1}–${end}` : '';
+        range.textContent = recordCount(ctx, 'count.rules', data.rules.length) + position;
     }
 
     /** 指定位置にある一覧のページを取得します。

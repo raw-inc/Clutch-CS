@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using ReArtWord.Contents.BackgroundService.Contracts.Persistence;
 using ReArtWord.Contents.BackgroundService.Contracts.Persistence.History;
@@ -42,6 +43,18 @@ public sealed class HistoryArchiveService : IDisposable
         await working.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            foreach (IDurableRepository store in new IDurableRepository?[] { json, sqlite }.OfType<IDurableRepository>())
+            {
+                DurableEntry? entry = await store.ReadAsync(RepositoryHistoryGuard.Scope, "boundary", cancellationToken).ConfigureAwait(false);
+                HistoryRetentionBoundary? boundary = entry?.Value?.Json.Deserialize<HistoryRetentionBoundary>();
+                if (boundary is not null && now < boundary.OperationBefore)
+                {
+                    // 既存境界は再実行防止に必要なので戻しません。現在の基準より先の境界を
+                    // 引き継いでいる間は、追加の削除や索引の回収だけを保留します。
+                    Hold("History.RetentionClockUnconfirmed");
+                    return 0;
+                }
+            }
             int jsonRemoved = 0;
             if (json is not null)
             {

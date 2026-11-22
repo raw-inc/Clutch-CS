@@ -49,7 +49,7 @@ public sealed class DesktopAnnotationRelayTests
         await CorePeer.WaitAsync(async token =>
         {
             using HttpResponseMessage response = await client.SendAsync(HttpMethod.Get, "client/clusters", cancellationToken: token).ConfigureAwait(true);
-            DiscoveredCluster[] clusters = (await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ContractJson.Options, token).ConfigureAwait(true))!;
+            DiscoveredCluster[] clusters = (await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ClientObservationJson.Options, token).ConfigureAwait(true))!;
             return clusters.Length == 2 && clusters.All(item => item.Peers.Any(peer => peer.Status == Contracts.Cluster.EPeerStatus.Ready));
         }, timeout.Token).ConfigureAwait(true);
         using ClientWebSocket viewer = new(), controller = new();

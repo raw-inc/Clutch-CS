@@ -21,7 +21,7 @@ public sealed class UpdateEventPump(IDurableRepository repository, IWorkflowEven
     {
         ArgumentNullException.ThrowIfNull(notification);
         string[] names = ["update.started", "update.peerChanged", "update.completed", "update.failed", "update.interrupted"];
-        Contracts.Updates.UpdateNotification expected = Contracts.Updates.UpdateNotification.Create(notification.Name, notification.Data, notification.ObservedAt);
+        Contracts.Updates.UpdateNotification expected = Contracts.Updates.UpdateNotification.Create(notification.Name, notification.Data, notification.ObservedAt, notification.IdentityFormat);
         if (!names.Contains(notification.Name, StringComparer.Ordinal) || notification.Data.OperationId == Guid.Empty || expected.Id != notification.Id)
         {
             return EOutcome.NotExecuted;
@@ -32,8 +32,8 @@ public sealed class UpdateEventPump(IDurableRepository repository, IWorkflowEven
         {
             return EOutcome.Succeeded;
         }
-        WorkflowEvent observed = new(notification.Id, notification.Name, notification.ObservedAt, peerId, ContractJson.ToValue(notification.Data), CausationId: notification.Data.OperationId);
-        DurableReceipt receipt = await repository.ApplyBatchAsync(Guid.CreateVersion7(), [new(scope, key, null, ContractJson.ToValue(observed))], cancellationToken).ConfigureAwait(false);
+        WorkflowEvent observed = new(notification.Id, notification.Name, notification.ObservedAt, peerId, ContractJson.ToValue(notification.Data), CausationId: notification.Data.OperationId) { IdentityFormat = notification.IdentityFormat };
+        DurableReceipt receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new(scope, key, null, ContractJson.ToValue(observed))], cancellationToken).ConfigureAwait(false);
         return receipt.Outcome;
     }
 
@@ -65,6 +65,7 @@ public sealed class UpdateEventPump(IDurableRepository repository, IWorkflowEven
             {
                 DurableEntry entry = item.Entry;
                 WorkflowEvent notification = item.Event;
+                using DerivedIdentityScope identities = new(notification.IdentityFormat);
                 DurableReceipt receipt = await repository.ApplyBatchAsync(WorkflowStore.PhaseId(notification.Id, "hook-delivery"),
                     [new(scope, entry.Key, entry.Version, null)], cancellationToken).ConfigureAwait(false);
                 if (receipt.Outcome != EOutcome.Succeeded)
@@ -105,7 +106,7 @@ public sealed class UpdateEventPump(IDurableRepository repository, IWorkflowEven
             IReadOnlyList<DurableMutation> notifications = await UpdateEventJournal.CreateAsync(repository, peerId, null, status, cancellationToken).ConfigureAwait(false);
             if (notifications.Count != 0)
             {
-                DurableReceipt receipt = await repository.ApplyBatchAsync(Guid.CreateVersion7(), notifications, cancellationToken).ConfigureAwait(false);
+                DurableReceipt receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(notifications.All(mutation => DurableRepository.IsShared(mutation.Scope))), notifications, cancellationToken).ConfigureAwait(false);
                 if (receipt.Outcome != EOutcome.Succeeded)
                 {
                     continue;

@@ -78,8 +78,7 @@ public sealed class JsonFileRepository : DurableRepository, IRequestReceiptStore
             string address = GetAddress(scope, key);
             DurableEntry? previous = document.Entries.GetValueOrDefault(address) ?? JsonHistoryAccess.Read<DurableEntry>(document, "entry", address);
             if (!string.Equals(previous?.Version, expectedVersion, StringComparison.Ordinal) || IsReserved(document, new(scope, key, expectedVersion, value))
-                || previous is null && (document.History?.RetiredKeys.Contains(address) == true || Guid.TryParse(key, out Guid id)
-                    && RepositoryHistoryGuard.Expired(id, RepositoryHistoryGuard.Read(document)) is not null))
+                || previous is null && RepositoryHistoryGuard.IsRetiredKey(document, scope, key))
             {
                 return null;
             }

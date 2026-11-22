@@ -1,7 +1,20 @@
 .dashboard-catalog {
     display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    flex: 1;
+    min-block-size: 0;
     gap: 10px;
     padding: 12px;
+}
+
+.dashboard-catalog-content {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+}
+
+.dashboard-catalog .section-heading {
+    margin: 0;
 }
 
 .dashboard-catalog-items {
@@ -15,9 +28,27 @@
     width: 100%;
     text-align: left;
     padding: 10px;
+    border-color: var(--line);
+    background: var(--panel);
+    box-shadow: none;
 }
 
 .dashboard-catalog-item small,
 .dashboard-catalog-item strong {
     overflow-wrap: anywhere;
+}
+
+.dashboard-catalog-items > .dashboard-catalog-item {
+    justify-content: stretch;
+    justify-items: start;
+    text-align: start;
+}
+
+.dashboard-catalog .section-heading h2 {
+    font-size: 16px;
+}
+
+.dashboard-catalog-item:enabled:hover {
+    border-color: var(--accent);
+    background: var(--button-hover);
 }

@@ -6,7 +6,7 @@ export function scopeSources(container, ctx, send, changed)
     const hosts = new Map();
     const panel = document.createElement('section'), summary = document.createElement('h2'), body = document.createElement('div');
     panel.className = 'scope-sources';
-    summary.textContent = ctx.t('Hosts & network interfaces', 'Host・ネットワークインターフェース');
+    summary.textContent = ctx.t('Hosts & network interfaces', 'ホストと取得元');
     body.className = 'scope-hosts';
     panel.append(summary, body);
     container.append(panel);
@@ -63,7 +63,7 @@ export function scopeSources(container, ctx, send, changed)
             check.setAttribute('aria-label', peer.hostId);
             label.append(check, document.createTextNode(peer.hostId));
             interfaces.className = 'scope-interfaces';
-            interfaces.textContent = ctx.t('Select this host to load capture interfaces.', 'Hostを選択すると取得元を確認できます。');
+            interfaces.textContent = ctx.t('Select this host to load capture interfaces.', 'ホストを選択すると取得元が表示されます。');
             group.className = 'scope-host';
             group.dataset.host = peer.hostId;
             heading.className = 'scope-host-heading';
@@ -99,7 +99,7 @@ export function scopeSources(container, ctx, send, changed)
                     send({ type: 'disconnect', host: peer.hostId });
                     host.inputs = [];
                     host.ready = false;
-                    interfaces.textContent = ctx.t('Select this host to load capture interfaces.', 'Hostを選択すると取得元を確認できます。');
+                    interfaces.textContent = ctx.t('Select this host to load capture interfaces.', 'ホストを選択すると取得元が表示されます。');
                     status.textContent = '';
                 }
                 update();
@@ -131,6 +131,7 @@ export function scopeSources(container, ctx, send, changed)
                     check.checked = false;
                     ctx.say(ctx.t('Select up to 16 capture sources per host.', 'hostごとに選択できる取得元は最大16件です。'));
                 }
+                host.status.textContent = host.inputs.some(item => item.check.checked) ? ctx.t('Ready', '取得準備完了') : ctx.t('Ready to select', '取得元を選択してください');
                 update();
             };
             label.title = adapter.details + '\n' + (adapter.addresses ?? []).join(', ');
@@ -145,7 +146,7 @@ export function scopeSources(container, ctx, send, changed)
             note.textContent = error.backend + ': ' + error.message;
             host.interfaces.append(note);
         }
-        host.status.textContent = ctx.t('Ready to select', '取得元を選択してください');
+        host.status.textContent = host.inputs.some(item => item.check.checked) ? ctx.t('Ready', '取得準備完了') : ctx.t('Ready to select', '取得元を選択してください');
         update();
     }
 
@@ -162,7 +163,7 @@ export function scopeSources(container, ctx, send, changed)
                 host.ready = false;
                 if (!host.inputs.length)
                 {
-                    host.interfaces.textContent = ctx.t('Capture interfaces unavailable. Reselect this host to reconnect.', '取得元を確認できません。再接続するにはこのHostを再選択してください。');
+                    host.interfaces.textContent = ctx.t('Capture interfaces unavailable. Reselect this host to reconnect.', '取得元を確認できません。再接続するにはこのホストを選び直してください。');
                 }
             }
             host.status.textContent = message.closed ? ctx.t('Disconnected · reselect to connect', '切断・再選択で接続') : message.running ? ctx.t('Capturing', '取得中') : ctx.t('Stopped', '停止');

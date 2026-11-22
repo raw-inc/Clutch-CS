@@ -140,8 +140,8 @@ internal sealed class InternalDataBridge : IDisposable
             AvailabilityWriteResult result = await session.Availability.ReconcileAsync(EStoragePurpose.Runtime, dataset, async (expected, value, id, token) =>
             {
                 InternalDataObservation observed = session.Observations.GetValueOrDefault(dataset) ?? new(null);
-                session.Observations[dataset] = observed with { PendingCommandId = ClientCommandLedger.Identity(id, "internal-data.compare-exchange"), OperationId = id };
-                InternalDataWriteResult written = await remote.WriteAsync(cluster, peer, new(id, target.Target, expected, value), true, token).ConfigureAwait(false);
+                session.Observations[dataset] = observed with { PendingCommandId = ClientCommandLedger.Identity(id, "internal-data.compare-exchange", EDerivedIdFormat.Uuid8), OperationId = id };
+                InternalDataWriteResult written = await remote.WriteAsync(cluster, peer, new(id, target.Target, expected, value) { IdentityFormat = EDerivedIdFormat.Uuid8 }, true, token).ConfigureAwait(false);
                 comparison = written.Result.Current;
                 return written.Result;
             }, cancellationToken).ConfigureAwait(false);

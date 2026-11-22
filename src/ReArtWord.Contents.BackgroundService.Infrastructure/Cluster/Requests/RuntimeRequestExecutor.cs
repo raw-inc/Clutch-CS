@@ -3,6 +3,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
+using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Receipts;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Cluster.Requests;
@@ -11,14 +12,19 @@ namespace ReArtWord.Contents.BackgroundService.Infrastructure.Cluster.Requests;
 internal sealed class RuntimeRequestExecutor(IDurableRepository repository, string scope, TimeProvider clock)
 {
     private readonly Lock gate = new();
+    private readonly long replayStartedAt = clock.GetTimestamp();
+    private readonly DateTimeOffset replayEpoch = clock.GetUtcNow();
     private readonly Dictionary<Guid, Operation> running = [];
     private readonly Dictionary<Guid, RequestReceipt> completed = [];
     private readonly Dictionary<Guid, string> durableAdmissions = [];
     private readonly RuntimeRequestWindow seen = new();
-    private readonly Lazy<RuntimeReceiptWriter> writer = new(() => new(repository, scope));
+    private readonly Lazy<RuntimeReceiptWriter> writer = new(() => new(repository));
     private int reserved;
     private long bytes;
     private bool stopping;
+
+    /// <summary>重複実行を防ぐ記録の保持判定に使う日時です。起動時の日時に単調経過時間を加え、OSの時刻補正で記録が早く消えるのを防ぎます。</summary>
+    private DateTimeOffset ReplayNow => replayEpoch + clock.GetElapsedTime(replayStartedAt);
 
     /// <summary>保存状態を管理APIから確認するための小さい統計です。</summary>
     internal object Statistics
@@ -42,18 +48,18 @@ internal sealed class RuntimeRequestExecutor(IDurableRepository repository, stri
     internal bool TryReserveDurable(ClusterRequest request)
     {
         DateTimeOffset now = clock.GetUtcNow();
-        if (!RuntimeRequestIdentity.TryDeadline(request with { ExpiresAt = now }, now, out DateTimeOffset deadline))
+        if (!RuntimeRequestIdentity.TryDeadline(request with { ExpiresAt = request.Admission?.SourceNow ?? now }, now, out DateTimeOffset deadline))
         {
             return true;
         }
         using (gate.EnterScope())
         {
-            seen.Expire(now);
+            seen.Expire(ReplayNow);
             if (running.ContainsKey(request.Id) || completed.ContainsKey(request.Id) || seen.Contains(request.Id) || 1048576 <= seen.Count)
             {
                 return false;
             }
-            seen.Add(request.Id, deadline);
+            seen.Add(request.Id, ReplayNow + (deadline - now));
             durableAdmissions.Add(request.Id, ContractJson.Hash(request));
             return true;
         }
@@ -78,7 +84,7 @@ internal sealed class RuntimeRequestExecutor(IDurableRepository repository, stri
         using (gate.EnterScope())
         {
             DateTimeOffset now = clock.GetUtcNow();
-            seen.Expire(now);
+            seen.Expire(ReplayNow);
             if (durableAdmissions.TryGetValue(request.Id, out string? admitting))
             {
                 if (!string.Equals(admitting, fingerprint, StringComparison.Ordinal))
@@ -98,7 +104,7 @@ internal sealed class RuntimeRequestExecutor(IDurableRepository repository, stri
             {
                 return Match(result, fingerprint);
             }
-            if (operation is null && mayStart && now < request.ExpiresAt && !seen.Contains(request.Id))
+            if (operation is null && mayStart && !(request.Admission?.IsExpired ?? request.ExpiresAt <= now) && !seen.Contains(request.Id))
             {
                 if (!RuntimeRequestIdentity.TryDeadline(request, now, out DateTimeOffset deadline))
                 {
@@ -113,14 +119,14 @@ internal sealed class RuntimeRequestExecutor(IDurableRepository repository, stri
                     return new(EOutcome.NotExecuted, Reason: "Execution.BufferedReceiptCapacity");
                 }
                 reserved++;
-                seen.Add(request.Id, deadline);
+                seen.Add(request.Id, ReplayNow + (deadline - now));
                 operation = new(fingerprint, new(() => RunAsync(request, fingerprint, handler), LazyThreadSafetyMode.ExecutionAndPublication));
                 running.Add(request.Id, operation);
             }
         }
         if (operation is null)
         {
-            DurableEntry? stored = await repository.ReadAsync(scope, request.Id.ToString("N"), cancellationToken).ConfigureAwait(false);
+            DurableEntry? stored = await BoundedRequestReceipts.ReadAsync(repository, scope, request.Id, cancellationToken).ConfigureAwait(false);
             RequestReceipt? receipt = stored?.Value?.Json.Deserialize<RequestReceipt>();
             if (receipt is not null)
             {
@@ -222,10 +228,15 @@ internal sealed class RuntimeRequestExecutor(IDurableRepository repository, stri
                 size = 0;
             }
             bytes += size;
-            RequestReceipt receipt = new(fingerprint, request.TargetInstanceId, request.ExpiresAt, recorded);
+            bool bounded = request.Kind is not "node.execute" || BoundedRequestReceipts.HasBoundedNodeReceipt(request);
+            string receiptScope = BoundedRequestReceipts.Select(scope, request, bounded);
+            string receiptKey = request.Id.ToString("N");
+            DateTimeOffset? savedAt = BoundedRequestReceipts.IsBounded(receiptScope, receiptKey) ? clock.GetUtcNow()
+                                                                                                 : null;
+            RequestReceipt receipt = new(fingerprint, request.TargetInstanceId, request.ExpiresAt, recorded, savedAt);
             completed.Add(request.Id, receipt);
             running.Remove(request.Id);
-            if (!writer.Value.TryWrite(request.Id, receipt, saved => Release(request.Id, size, saved)))
+            if (!writer.Value.TryWrite(receiptScope, request.Id, receipt, saved => Release(request.Id, size, saved)))
             {
                 Release(request.Id, size, false);
             }

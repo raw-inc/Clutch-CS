@@ -267,7 +267,7 @@ export function attachGraphConnections(svg, receiver)
             svg.setPointerCapture(pending.pointer);
             preview = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             preview.setAttribute('fill', 'none');
-            preview.setAttribute('stroke', 'var(--accent, #79b8ef)');
+            preview.setAttribute('stroke', 'var(--accent)');
             preview.setAttribute('stroke-width', '2');
             preview.setAttribute('stroke-dasharray', '6 4');
             preview.setAttribute('pointer-events', 'none');

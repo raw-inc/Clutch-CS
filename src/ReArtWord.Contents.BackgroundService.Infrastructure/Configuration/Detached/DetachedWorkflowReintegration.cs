@@ -74,6 +74,7 @@ internal sealed class DetachedWorkflowReintegration(IDurableRepository repositor
     /// <returns>競合か、通常保存の段階結果です。</returns>
     internal async Task<WorkflowMergeResult> ResolveAsync(DetachedWorkflowResolution request, CancellationToken cancellationToken = default)
     {
+        using DerivedIdentityScope identities = new(EDerivedIdFormat.Uuid8);
         ArgumentNullException.ThrowIfNull(request);
         request = ContractJson.Copy(request);
         string kind = "detached.resolve";
@@ -177,7 +178,7 @@ internal sealed class DetachedWorkflowReintegration(IDurableRepository repositor
         {
             throw new InvalidDataException("局所版が変更されています。");
         }
-        DurableReceipt completed = await repository.ApplyBatchAsync(Guid.CreateVersion7(), [new(detached.Scope, id, entry!.Version, NodeValue.FromObject(record with { Pending = false }))], cancellationToken).ConfigureAwait(false);
+        DurableReceipt completed = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new(detached.Scope, id, entry!.Version, NodeValue.FromObject(record with { Pending = false }))], cancellationToken).ConfigureAwait(false);
         if (completed.Outcome != EOutcome.Succeeded)
         {
             throw new InvalidDataException("局所変更の完了を確認できません。");

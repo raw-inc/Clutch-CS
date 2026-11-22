@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Resources;
+using ReArtWord.Contents.BackgroundService.Contracts.Observability;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Resources.Gpu;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Resources.Probes;
@@ -15,6 +16,7 @@ public sealed class ResourceService : IResourceService, IDisposable
 {
     private readonly ResourceHistory history;
     private readonly string peerId;
+    private readonly TimeProvider clock;
     private readonly ResourceOptions options;
     private readonly Guid? instanceId;
     private readonly string? selectedInterfaceId;
@@ -29,7 +31,7 @@ public sealed class ResourceService : IResourceService, IDisposable
     public ResourceSample? Latest => Volatile.Read(ref latest);
 
     /// <summary>共通保存先とPeerローカルの有限履歴方針を固定します。</summary>
-    public ResourceService(IDurableRepository repository, string peerId, ResourceOptions options, Guid? instanceId = null, string? selectedAddress = null)
+    public ResourceService(IDurableRepository repository, string peerId, ResourceOptions options, Guid? instanceId = null, string? selectedAddress = null, TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentException.ThrowIfNullOrWhiteSpace(peerId);
@@ -39,6 +41,7 @@ public sealed class ResourceService : IResourceService, IDisposable
             throw new ArgumentException("観測間隔と有限履歴の件数・期間を指定してください。", nameof(options));
         }
         this.peerId = peerId;
+        clock = timeProvider ?? TimeProvider.System;
         this.options = options;
         this.instanceId = instanceId;
         selectedInterfaceId = FindInterface(selectedAddress);
@@ -60,7 +63,8 @@ public sealed class ResourceService : IResourceService, IDisposable
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            DateTimeOffset observedAt = DateTimeOffset.UtcNow;
+            ObservationAge age = new(clock);
+            DateTimeOffset observedAt = clock.GetUtcNow();
             List<ResourceMetric> metrics = [];
             if (cpuInformation.Count == 0)
             {
@@ -92,7 +96,7 @@ public sealed class ResourceService : IResourceService, IDisposable
             {
                 metrics.AddRange(nvidia);
             }
-            ResourceSample sample = new(Guid.NewGuid(), peerId, observedAt, metrics, InstanceId: instanceId, SelectedInterfaceId: selectedInterfaceId);
+            ResourceSample sample = new(Guid.NewGuid(), peerId, observedAt, metrics, InstanceId: instanceId, SelectedInterfaceId: selectedInterfaceId) { Age = age };
             Volatile.Write(ref latest, sample);
             try
             {

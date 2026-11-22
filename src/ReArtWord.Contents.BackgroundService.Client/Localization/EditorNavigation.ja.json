@@ -10,6 +10,6 @@
   "editor.navigation.nodeMissing": "現在のワークフローに対象ノードがありません。",
   "editor.navigation.noErrors": "移動先のエラーノードはありません。",
   "editor.navigation.errorShortcut": "エラーノードへ移動（Ctrl+B／WFタブをダブルクリック）",
-  "editor.navigation.logHint": "ダブルクリックでWFと記録されたノードを開きます",
+  "editor.navigation.logHint": "ダブルクリックでワークフローと記録されたノードを開きます",
   "editor.navigation.openLog": "WF・ノードを開く"
 }

@@ -32,7 +32,7 @@ internal sealed class TerminalSettingsStore(IDurableRepository repository, strin
     {
         ArgumentNullException.ThrowIfNull(settings);
         DurableMutation mutation = new(Scope, "user-token", settings.Version, NodeValue.FromObject(settings with { Version = null }));
-        DurableReceipt receipt = await repository.ApplyBatchAsync(Guid.CreateVersion7(), [mutation], cancellationToken).ConfigureAwait(false);
+        DurableReceipt receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [mutation], cancellationToken).ConfigureAwait(false);
         if (receipt.Outcome != EOutcome.Succeeded)
         {
             throw new InvalidOperationException("Terminal settings were not confirmed. Refresh before changing them again.");

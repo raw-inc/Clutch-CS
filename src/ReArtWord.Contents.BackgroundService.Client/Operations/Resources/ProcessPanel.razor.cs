@@ -44,7 +44,16 @@ public sealed partial class ProcessPanel
     private Func<string>? message;
     private JsonElement? result;
     private bool busy, refreshing, stopOpen, resolveOpen, registrationOpen, restarting;
+    private string stopPolicy = "waitForManual";
     private string gracefulSeconds = "30", pid = string.Empty, startedAt = string.Empty, resolveMode = string.Empty;
+
+    private string? RemovalUnavailable => (refreshing, busy, target) switch
+    {
+        (true, _, _) => "Wait for the application list to finish refreshing.",
+        (_, true, _) => "Wait for the current application operation to finish.",
+        (_, _, null) => "Confirm the application host before removing a registration.",
+        _ => null
+    };
 
     private string Owner => (Connection.Current?.Peers.FirstOrDefault(item => string.Equals(item.PeerId, peer, StringComparison.Ordinal))?.HostId ?? peer)
         + " / " + cluster + " / " + peer;
@@ -154,16 +163,44 @@ public sealed partial class ProcessPanel
     {
         ServiceStatus owner = target ?? throw UiError.InvalidOperation("The application owner could not be confirmed.");
         Guid id = Guid.NewGuid();
-        RemoteExecutionRequest request = new(id, id, "manual", "manual", new NodeDefinition(type, type, JsonSerializer.SerializeToElement(settings, ContractJson.Options),
-            Target: new(EExecutionScope.One, Peers: [owner.PeerId])), new Dictionary<string, NodeValue>(), owner.PeerId, owner.InstanceId, DateTimeOffset.UtcNow.AddMinutes(5));
-        NodeResult? response = await Api.PostForPeerAsync<NodeResult>("/api/nodes/execute", request, owner.PeerId, cluster, cancellationToken: token).ConfigureAwait(true);
+        Contracts.Management.ClockedNodeCommand command = await Api.PrepareNodeCommandAsync(expires =>
+            new RemoteExecutionRequest(id, id, "manual", "manual", new NodeDefinition(type, type, JsonSerializer.SerializeToElement(settings, ContractJson.Options),
+                Target: new(EExecutionScope.One, Peers: [owner.PeerId])), new Dictionary<string, NodeValue>(), owner.PeerId, owner.InstanceId, expires), token).ConfigureAwait(true);
+        NodeResult? response = await Api.PostForPeerAsync<NodeResult>("/api/v2/nodes/execute-clocked", command, owner.PeerId, cluster, requestId: id, cancellationToken: token).ConfigureAwait(true);
         message = Ui.Deferred("Operation {0}: {1} {2}", id, response?.Outcome, response?.ReasonCode);
         result = JsonSerializer.SerializeToElement(response, ContractJson.Options);
         stopOpen = false;
         await LoadAsync(token).ConfigureAwait(true);
     }, cancellationToken);
 
-    /// <summary>停止方針を明示した操作だけを受付けます。</summary>
+    private string StopImpact
+    {
+        get
+        {
+            string forcePolicy = "force";
+            if (!string.Equals(stopPolicy, forcePolicy, StringComparison.Ordinal))
+            {
+                return Ui["If the application does not exit in time, stop it manually."];
+            }
+
+            if (int.TryParse(gracefulSeconds, out int seconds) && seconds is >= 1 and <= 3600)
+            {
+                return Ui.Format("If the application does not exit within {0} seconds, it will be terminated. Unsaved data may be lost.", seconds);
+            }
+
+            return Ui["Enter the time to wait before forcing the application to stop. Unsaved data may be lost."];
+        }
+    }
+
+    /// <summary>操作を開き直したときは、強制終了の選択を引き継ぎません。</summary>
+    private void OpenStop(bool restart)
+    {
+        restarting = restart;
+        stopPolicy = "waitForManual";
+        stopOpen = true;
+    }
+
+    /// <summary>確認した停止方針と待機時間で操作を要求します。</summary>
     /// <returns>停止または終了確認後の再起動です。</returns>
     private Task StopAsync(string policy, CancellationToken cancellationToken = default)
     {
@@ -193,7 +230,7 @@ public sealed partial class ProcessPanel
     /// <returns>登録の比較保存結果です。</returns>
     private Task RegisterAsync(ProcessDefinition definition, CancellationToken cancellationToken = default) => GuardAsync(async token =>
     {
-        RegistrationResult response = await Api.PostForPeerAsync<RegistrationResult>("/api/processes/register", new ProcessRegistrationRequest(definition, editVersion), peer, cluster, cancellationToken: token).ConfigureAwait(true);
+        RegistrationResult response = await Api.PostForPeerAsync<RegistrationResult>("/api/v2/processes/register", new ProcessRegistrationRequest(definition, editVersion), peer, cluster, cancellationToken: token).ConfigureAwait(true);
         if (response.Outcome == EOutcome.Succeeded)
         {
             registrationOpen = false;
@@ -230,7 +267,7 @@ public sealed partial class ProcessPanel
         {
             return;
         }
-        RegistrationResult response = await Api.PostForPeerAsync<RegistrationResult>("/api/processes/remove", new ProcessRemovalRequest(item.Definition.Id, item.Version), peer, cluster, cancellationToken: token).ConfigureAwait(true);
+        RegistrationResult response = await Api.PostForPeerAsync<RegistrationResult>("/api/v2/processes/remove", new ProcessRemovalRequest(item.Definition.Id, item.Version), peer, cluster, cancellationToken: token).ConfigureAwait(true);
         if (response.Outcome != EOutcome.Succeeded)
         {
             message = Ui.Deferred("Registration was not removed. Refresh the list and check the current registration.");
@@ -266,7 +303,7 @@ public sealed partial class ProcessPanel
             }
             identity = new(FormInput.Integer(pid, "PID", 1), at);
         }
-        ProcessOperationResult? response = await Api.PostForPeerAsync<ProcessOperationResult>("/api/processes/resolve-launch", new ResolveProcessLaunchRequest(selected!.Definition.Id, identity), peer, cluster, cancellationToken: token).ConfigureAwait(true);
+        ProcessOperationResult? response = await Api.PostForPeerAsync<ProcessOperationResult>("/api/v2/processes/resolve-launch", new ResolveProcessLaunchRequest(selected!.Definition.Id, identity), peer, cluster, cancellationToken: token).ConfigureAwait(true);
         message = Ui.Deferred("Observed result: {0}", response?.Outcome);
         if (response?.Outcome == EOutcome.Succeeded)
         {
@@ -287,7 +324,7 @@ public sealed partial class ProcessPanel
         {
             return "Unknown";
         }
-        return item.Observed.Status?.Running switch { true => "Running", false => "Stopped", _ => "Unknown" };
+        return item.Observed.Status?.Running switch { true => "Running", false => "Process stopped", _ => "Unknown" };
     }
 
     /// <summary>登録操作の公開応答です。</summary>

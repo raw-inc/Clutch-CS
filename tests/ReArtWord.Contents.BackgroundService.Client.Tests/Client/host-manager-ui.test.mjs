@@ -201,7 +201,7 @@ async function fixtureAsync(t)
         dialogs: () => descendants(root).filter(element => element.tag === 'dialog' && element.open) };
 }
 
-test('multi-host Hosts defaults to other and applies only explicitly changed entries to fresh files', async t =>
+test('multi-host Hosts keeps each host unchanged by default and applies only explicitly changed entries to fresh files', async t =>
 {
     const f = await fixtureAsync(t);
     f.content['host-a'] = '# A\n192.0.2.1 app\n192.0.2.2 keep\n';
@@ -210,7 +210,7 @@ test('multi-host Hosts defaults to other and applies only explicitly changed ent
     await f.pick('host-b');
     await f.click('Hosts');
     const toggle = f.find('div', '192.0.2.1 · app');
-    assert.equal(f.button('other', toggle).getAttribute('aria-checked'), 'true');
+    assert.equal(f.button('Keep each host unchanged', toggle).getAttribute('aria-checked'), 'true');
     assert.equal(f.button('Preview changes').disabled, true);
     await f.click('enable', toggle);
     f.content['host-b'] += '192.0.2.9 external\n';
@@ -222,7 +222,7 @@ test('multi-host Hosts defaults to other and applies only explicitly changed ent
     assert.equal(changes[0].request.change.content, '# B\n192.0.2.1\tapp\n192.0.2.9 external\n');
     assert.match(f.content['host-a'], /192.0.2.2 keep/);
 });
-test('other cancels a staged Hosts change and missing definitions remain absent', async t =>
+test('Keep each host unchanged cancels a staged Hosts change and missing definitions remain absent', async t =>
 {
     const f = await fixtureAsync(t);
     f.content['host-a'] = '192.0.2.1 app\n';
@@ -233,7 +233,7 @@ test('other cancels a staged Hosts change and missing definitions remain absent'
     const toggle = f.find('div', '192.0.2.1 · app');
     await f.click('disable', toggle);
     assert.equal(f.button('Preview changes').disabled, false);
-    await f.click('other', toggle);
+    await f.click('Keep each host unchanged', toggle);
     assert.equal(f.button('Preview changes').disabled, true);
     assert.equal(f.batches.length, 0);
 });
@@ -274,7 +274,9 @@ test('NetworkIF direct IPv4 switch changes only that protocol and DNS-none allow
     const f = await fixtureAsync(t);
     f.network.interfaces[0].ipv4 = { ...f.network.interfaces[0].ipv4, dhcp: false, dns: [] };
     await f.pick('host-a');
+    assert.equal(f.button('IPv4 · Ethernet 0 · host-a').textContent, 'IPv4 · Enabled');
     await f.button('IPv4 · Ethernet 0 · host-a').click();
+    assert.equal(f.button('IPv4 · Ethernet 0 · host-a').textContent, 'IPv4 · Disabled');
     await tick();
     assert.equal(f.dialogs().length, 0);
     assert.equal(f.button('Apply').disabled, false);
@@ -318,13 +320,22 @@ test('NetworkIF stages both families on multiple hosts and sends one operation p
     assert.equal(changes[0].request.action, 'networkProtocols');
     assert.deepEqual(changes[1].request.change, { ipv6Enabled: false });
 });
-test('NetworkIF restores staged toggles, retains them across tabs, and discards explicitly on host changes', async t =>
+test('NetworkIF restores staged toggles, retains them across tabs, and discards explicitly on host changes',
+    { skip: 'The apply bar is now hidden when there are no pending changes.' }, t => verifyNetworkDraftAsync(t, f => assert.equal(f.button('Apply').disabled, true)));
+
+test('NetworkIF keeps staged changes across tabs and hides Apply when they are cleared', t =>
+    verifyNetworkDraftAsync(t, f => assert.equal(f.find('button', 'Apply'), undefined)));
+
+/** 変更予定を保持する条件と、変更がなくなったときの表示を確認します。
+ * @returns 表示と変更予定の確認です。
+ */
+async function verifyNetworkDraftAsync(t, verifyEmpty)
 {
     const f = await fixtureAsync(t);
     await f.pick('host-a');
     await f.click('IPv4 · Ethernet 0 · host-a');
     await f.click('IPv4 · Ethernet 0 · host-a');
-    assert.equal(f.button('Apply').disabled, true);
+    verifyEmpty(f);
     await f.click('IPv4 · Ethernet 0 · host-a');
     await f.click('Hosts');
     await f.click('NetworkIF');
@@ -333,10 +344,11 @@ test('NetworkIF restores staged toggles, retains them across tabs, and discards 
     assert.equal(f.dialogs().length, 1);
     await f.click('Keep editing');
     await f.click('Clear all pending changes');
-    assert.equal(f.button('Apply').disabled, true);
+    verifyEmpty(f);
     assert.equal(f.button('IPv4 · Ethernet 0 · host-a').dataset.pending, 'false');
     assert.equal(f.button('IPv4 · Ethernet 0 · host-a').getAttribute('aria-checked'), 'true');
-});
+}
+
 test('NetworkIF rejects stale staged settings before dispatch', async t =>
 {
     const f = await fixtureAsync(t);
@@ -364,7 +376,7 @@ test('Firewall three-state selection copies a supported rule to a missing host a
     await tick();
     const toggle = f.find('div', 'Fixture app · TCP · 1234');
     assert.ok(toggle);
-    assert.equal(f.button('other', toggle).getAttribute('aria-checked'), 'true');
+    assert.equal(f.button('Keep each host unchanged', toggle).getAttribute('aria-checked'), 'true');
     await f.click('enable', toggle);
     await f.click('Preview changes');
     assert.equal(f.button('Apply confirmed changes').disabled, true);
@@ -456,6 +468,36 @@ test('hosts UI and text editing share one draft and apply only after explicit co
     assert.equal(f.saved[0].operationId, f.batches[0].request.operationId);
     assert.equal(f.batches[0].request.changes[0].request.change.content, value);
 });
+test('removing a hosts entry only edits the draft and can restore its original line', async t =>
+{
+    const f = await fixtureAsync(t);
+    await f.pick('host-a');
+    await f.click('Hosts');
+    await f.click('Delete · 127.0.0.1');
+    assert.equal(f.dialogs().length, 0);
+    assert.equal(f.batches.length, 0);
+    await f.click('Undo last removal');
+    await f.click('Text editor');
+    assert.equal(f.find('textarea', 'Replace hosts content').value, '# keep\r\n127.0.0.1  localhost\r\n');
+    assert.equal(f.batches.length, 0);
+});
+test('hosts draft can undo consecutive deletions without changing the original comments and line order', async t =>
+{
+    const f = await fixtureAsync(t);
+    await f.pick('host-a');
+    await f.click('Hosts');
+    await f.click('Text editor');
+    const original = '# keep\r\n127.0.0.1  localhost\r\n\r\n192.0.2.10 stage.local  # monitor';
+    await f.set('textarea', 'Replace hosts content', original);
+    await f.click('Entry editor');
+    await f.click('Delete · 127.0.0.1');
+    await f.click('Delete · 192.0.2.10');
+    await f.click('Undo last removal');
+    await f.click('Undo last removal');
+    await f.click('Text editor');
+    assert.equal(f.find('textarea', 'Replace hosts content').value, original);
+    assert.equal(f.batches.length, 0);
+});
 test('DNS bulk editing preserves pinned NICs and sends no unrelated settings', async t =>
 {
     const f = await fixtureAsync(t);
@@ -483,7 +525,7 @@ test('PATH entry reordering keeps variable references and the selected Machine s
     const f = await fixtureAsync(t);
     await f.pick('host-a');
     await f.click('PATH');
-    await f.click('Path');
+    await f.click('Edit');
     assert.equal(f.find('input', 'Variable name').readOnly, true);
     await f.click('Move up 2');
     await f.click('Preview changes');
@@ -599,7 +641,7 @@ test('switching to Private clears External-only fields and deletion previews aff
     await f.click('Delete');
     assert.match(f.dialogs().at(-1).textContent, /Host adapter/);
     assert.match(f.dialogs().at(-1).textContent, /physical NIC is retained/);
-    await f.click('Back to editing');
+    await f.click('Cancel');
     assert.equal(f.batches.length, 0);
 });
 test('new guest connections between listing and preview prevent switch deletion', async t =>

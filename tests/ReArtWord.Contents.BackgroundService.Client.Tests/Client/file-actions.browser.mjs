@@ -19,12 +19,12 @@ before(async() =>
             if (pathname === '/')
             {
                 response.setHeader('Content-Type', 'text/html; charset=utf-8');
-                response.end('<!doctype html><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-tools.css"><main id="tool"></main>');
+                response.end('<!doctype html><link rel="stylesheet" href="/styles/fonts.css"><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-tools.css"><link rel="stylesheet" href="/styles/focus.css"><main id="tool"></main>');
                 return;
             }
             const file = pathname === '/local-fixture.mjs' ? fixture : path.resolve(root, '.' + decodeURIComponent(pathname));
             assert.ok(file === fixture || file.startsWith(root));
-            response.setHeader('Content-Type', file.endsWith('.css') ? 'text/css' : 'text/javascript');
+            response.setHeader('Content-Type', file.endsWith('.css') ? 'text/css' : file.endsWith('.svg') ? 'image/svg+xml' : file.endsWith('.woff2') ? 'font/woff2' : 'text/javascript');
             response.end(await readFile(file));
         }
         catch
@@ -68,14 +68,24 @@ async function openFilesAsync(context, engine, mode)
         await route.fulfill({ json: clusters ? [{ clusterId: 'cluster', peers: [state.peer] }]
             : { jobs: [], totalJobs: 0, offset: 0, unconfirmedPeers: 0 } });
     });
+    const clockId = crypto.randomUUID();
     await page.route('**/api/**', async route =>
     {
-        const request = route.request(), body = request.postDataJSON();
-        if (request.url().endsWith('/browse'))
+        const request = route.request();
+        if (request.url().endsWith('/request-clock'))
         {
-            await route.fulfill({ json: { path: body.path, parent: null, entries: body.path ? [...state.entries.values()] : [], nextOffset: null } });
+            await route.fulfill({ json: { instanceId: clockId, elapsedTicks: 10000, observedAt: new Date().toISOString() } });
             return;
         }
+        if (request.url().endsWith('/browse'))
+        {
+            const { path } = request.postDataJSON();
+            await route.fulfill({ json: { path, parent: null, entries: path ? [...state.entries.values()] : [], nextOffset: null } });
+            return;
+        }
+        assert.equal(new URL(request.url()).pathname, '/api/v2/nodes/execute-clocked');
+        const { request: body, timing } = request.postDataJSON();
+        assert.equal(timing.instanceId, clockId);
         state.calls.push(body);
         assert.equal(request.headers()['x-contents-instance'], peer.instanceId);
         assert.equal(body.targetInstanceId, peer.instanceId);
@@ -119,6 +129,40 @@ async function openDirectoryAsync(pane)
 
 for (const [name, engine] of [['Chrome', chromium], ['Firefox', firefox]])
 {
+    test(`${name}: folder fields use the dialog focus treatment and keyboard focus returns to the opener`, async context =>
+    {
+        const { page } = await openFilesAsync(context, engine, 'files');
+        const pane = page.locator('.file-pane').first();
+        await pane.locator('select').selectOption('test-host');
+        await openDirectoryAsync(pane);
+        const opener = pane.getByRole('button', { name: 'New folder', exact: true });
+        await opener.click();
+
+        // 閉じた直後は呼び出し元がまだ無効なため、ダイアログ要素が取り除かれてからフォーカスを確認する。
+        const dialog = page.locator('dialog'), field = dialog.getByLabel('Folder name');
+        await field.waitFor();
+        const style = await field.evaluate(e =>
+        {
+            const s = getComputedStyle(e);
+            return [e === document.activeElement, s.outlineStyle, s.boxShadow, s.borderTopLeftRadius, getComputedStyle(e.closest('dialog')).borderTopLeftRadius];
+        });
+        assert.deepEqual([style[0], style[1], style[3], style[4]], [true, 'none', '6px', '12px']);
+        assert.ok(style[2].includes('inset'));
+        await field.fill('../invalid');
+        await dialog.getByRole('button', { name: 'Create folder', exact: true }).click();
+        const problem = dialog.locator('.file-name-error');
+        await problem.waitFor();
+        assert.ok(await dialog.locator('form').evaluate(form => form.noValidate));
+        assert.equal(await field.getAttribute('aria-invalid'), 'true');
+        assert.equal(await field.getAttribute('aria-describedby'), await problem.getAttribute('id'));
+        await field.fill('valid');
+        assert.equal(await problem.isHidden(), true);
+        assert.equal(await field.getAttribute('aria-invalid'), null);
+        await page.keyboard.press('Escape');
+        await dialog.waitFor({ state: 'detached' });
+        assert.ok(await opener.evaluate(e => e === document.activeElement));
+    });
+
     test(`${name}: Cluster panes confirm creation and recursive multi-delete, then refresh both copies of the folder`, async context =>
     {
         const { page, state } = await openFilesAsync(context, engine, 'files');
@@ -130,7 +174,7 @@ for (const [name, engine] of [['Chrome', chromium], ['Firefox', firefox]])
         await openDirectoryAsync(right);
         assert.equal(await left.getByRole('button', { name: 'Delete selected', exact: true }).isDisabled(), true);
         await left.getByRole('button', { name: 'New folder', exact: true }).click();
-        const dialog = page.getByRole('dialog');
+        const dialog = page.locator('dialog');
         assert.match(await dialog.textContent(), /test-host · C:\/files/);
         await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
         await dialog.waitFor({ state: 'detached' });

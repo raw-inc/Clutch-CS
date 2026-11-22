@@ -58,7 +58,7 @@ public sealed class PeerManagementEndpoint
         {
             return new(EOutcome.NotExecuted, Reason: "Management.OperationModeMismatch");
         }
-        ManagementReply reply = await handler(command, cancellationToken).ConfigureAwait(false);
+        ManagementReply reply = await handler(command with { Admission = request.Admission }, cancellationToken).ConfigureAwait(false);
         return new(reply.Outcome, NodeValue.FromObject(reply), reply.Reason);
     }
 }

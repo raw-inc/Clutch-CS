@@ -6,7 +6,7 @@ import { aggregatePaths, aggregateVariables } from './environment-bulk-model.js'
 /** 複数ホストの環境変数を変更する画面を構成します。
  * @returns render・reset・hasChangesを含む結果です。
  */
-export function environmentBulk(ctx, hosts, query)
+export function environmentBulk(ctx, hosts, query, actionArea)
 {
     const choices = new Map(), added = new Set();
     let states = [], paths = [];
@@ -29,6 +29,7 @@ export function environmentBulk(ctx, hosts, query)
     /** 現在の値を表示内容へ反映します。 */
     function render(target, currentStates, search)
     {
+        actionArea.replaceChildren();
         states = hosts.map(host => currentStates.get(host.target.hostId));
         if (states.some(state => !state?.snapshot))
         {
@@ -90,7 +91,8 @@ export function environmentBulk(ctx, hosts, query)
             target.replaceChildren();
             render(target, currentStates, search);
         }), preview);
-        target.append(list.root, bar);
+        target.append(list.root);
+        actionArea.append(bar);
         update();
         const grid = table(['Name', 'Value', 'Edit'].map(ctx.t));
         for (const group of groups.filter(group => group.key !== 'PATH' && `${group.name} ${group.values.map(value => value?.value ?? '').join(' ')}`.toLocaleLowerCase().includes(search)).sort((a, b) => a.name.localeCompare(b.name)))
@@ -111,7 +113,14 @@ export function environmentBulk(ctx, hosts, query)
         const value = textarea(group.common ? group.values[0].value : '', 5), expand = checkbox(ctx.t('Expand variable references'), group.common ? group.values[0].expandable : true);
         value.disabled = expand.control.disabled = true;
         const from = select([['', ctx.t('Choose source value')], ...hosts.filter((host, index) => group.values[index]).map(host => [host.target.hostId, host.target.hostId])]);
-        const preview = action(ctx, 'Preview changes', 'check', () => ctx.preview(hosts.map(host => ({ host, query: query(host, group.name), action: 'environment', patch: { kind: 'variable', delete: mode.value === 'delete', value: value.value, expandable: expand.control.checked }, label: group.name }))), true);
+        const preview = action(ctx, 'Preview changes', 'check', () =>
+        {
+            const deleteMode = 'delete';
+            const deleting = mode.value === deleteMode;
+            const label = deleting ? `${ctx.t('Delete variable')} · ${group.name}` : group.name;
+            return ctx.preview(hosts.map(host => ({ host, query: query(host, group.name), action: 'environment',
+                patch: { kind: 'variable', delete: deleting, value: value.value, expandable: expand.control.checked }, label })));
+        }, true);
         preview.disabled = true;
         mode.onchange = () =>
         {

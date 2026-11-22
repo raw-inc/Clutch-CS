@@ -15,6 +15,7 @@ internal sealed class PeerRecovery : IDisposable
     private readonly PeerKnownMembers known;
     private readonly SemaphoreSlim transitions = new(1, 1);
     private Func<CancellationToken, ValueTask<bool>>? readiness;
+    private readonly Func<CancellationToken, Task>? discoverIdentity;
     private bool trustedRecovery;
     private bool initialCreationAuthorized;
 
@@ -25,11 +26,12 @@ internal sealed class PeerRecovery : IDisposable
     }
 
     /// <summary>参加状態と永続マーカーを接続します。</summary>
-    public PeerRecovery(ClusterOptions options, IDurableRepository repository, PeerMembership membership)
+    public PeerRecovery(ClusterOptions options, IDurableRepository repository, PeerMembership membership, Func<CancellationToken, Task>? discoverIdentity = null)
     {
         this.options = options;
         this.repository = repository;
         this.membership = membership;
+        this.discoverIdentity = discoverIdentity;
         known = new PeerKnownMembers(options, repository, membership);
     }
 
@@ -71,6 +73,10 @@ internal sealed class PeerRecovery : IDisposable
         initialCreationAuthorized = options.NewCluster && marker is null;
         if (initialCreationAuthorized)
         {
+            if (discoverIdentity is not null)
+            {
+                await discoverIdentity(cancellationToken).ConfigureAwait(false);
+            }
             await BecomeReadyCoreAsync(cancellationToken).ConfigureAwait(false);
         }
     }
@@ -192,7 +198,7 @@ internal sealed class PeerRecovery : IDisposable
         {
             return;
         }
-        DurableReceipt receipt = await repository.ApplyBatchAsync(Guid.CreateVersion7(), [new DurableMutation(scope, options.PeerId, current?.Version, NodeValue.FromObject(value))], cancellationToken).ConfigureAwait(false);
+        DurableReceipt receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new DurableMutation(scope, options.PeerId, current?.Version, NodeValue.FromObject(value))], cancellationToken).ConfigureAwait(false);
         if (receipt.Outcome != EOutcome.Succeeded)
         {
             throw new InvalidDataException("参加状態を保存できません。");

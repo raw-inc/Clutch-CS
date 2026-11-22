@@ -4,19 +4,23 @@
 
 .file-picker-owner {
     padding: 10px 12px;
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     background: var(--panel);
     overflow-wrap: anywhere;
 }
 
 .file-picker-location {
     display: flex;
+    align-items: end;
     gap: 6px;
     margin: 10px 0;
 }
 
-.file-picker-location input {
+.file-picker-location > label {
     flex: 1;
+}
+
+.file-picker-location input {
     min-width: 0;
     font-family: Consolas, monospace;
 }
@@ -27,7 +31,7 @@
     overflow: auto;
     scrollbar-gutter: stable;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     background: var(--paper);
 }
 

@@ -7,4 +7,10 @@ namespace ReArtWord.Contents.BackgroundService.Contracts.Management.Discovery;
 /// <param name="Peers">受信したPeer実体と実状態。</param>
 /// <param name="CoordinatorCandidates">各announcementが示した候補。複数時は一致を推定しません。</param>
 /// <param name="LastSeen">最後に実受信した時刻。</param>
-public sealed record DiscoveredCluster(string ClusterId, IReadOnlyList<PeerInfo> Peers, IReadOnlyList<string> CoordinatorCandidates, DateTimeOffset LastSeen);
+public sealed record DiscoveredCluster(string ClusterId, IReadOnlyList<PeerInfo> Peers, IReadOnlyList<string> CoordinatorCandidates, DateTimeOffset LastSeen)
+{
+    /// <summary>クラスタ内で最も最近受理した通信からの時間を返します。</summary>
+    /// <returns>Peerごとの観測年齢です。Peerがない旧形式では表示日時との差を使用します。</returns>
+    public TimeSpan AgeAt(DateTimeOffset observerNow) => Peers.Count == 0 ? observerNow - LastSeen
+                                                                          : Peers.Min(peer => peer.AgeAt(observerNow));
+}

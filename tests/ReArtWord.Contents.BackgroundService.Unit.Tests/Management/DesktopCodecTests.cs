@@ -5,6 +5,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Desktop;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Video;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
@@ -31,7 +32,7 @@ public sealed class DesktopCodecTests(Xunit.Abstractions.ITestOutputHelper outpu
 
     /// <summary>品質指定は旧kbpsに左右されず、品質値自体は実際の符号化結果へ反映されます。</summary>
     /// <returns>ビットレート欄だけを変えたpayloadの一致と品質値を変えた送信量の差です。</returns>
-    [Theory, MemberData(nameof(QualityEncoders))]
+    [MediaTheory, MemberData(nameof(QualityEncoders))]
     public async Task QualityIsIndependentOfBitrateAndChangesEncodedOutputAsync(string encoder)
     {
         using MediaTestFiles files = new();
@@ -130,7 +131,7 @@ public sealed class DesktopCodecTests(Xunit.Abstractions.ITestOutputHelper outpu
 
     /// <summary>B無効は実出力にもBを作らず、有効時は連続数・P数・I間隔を守ります。</summary>
     /// <returns>製品encoder引数を使った実FFmpeg/ffprobeの確認です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData("libx264", 0, null, null, false)]
     [InlineData("libx264", 2, null, 23, false)]
     [InlineData("libx264", 2, 4, null, false)]
@@ -210,7 +211,7 @@ public sealed class DesktopCodecTests(Xunit.Abstractions.ITestOutputHelper outpu
 
     /// <summary>VBRの製品引数で実符号化し、全フレームを復号可能なことを確認します。</summary>
     /// <returns>CPU各codecと、有効化したNVENCの実出力です。</returns>
-    [Theory, MemberData(nameof(QualityEncoders))]
+    [MediaTheory, MemberData(nameof(QualityEncoders))]
     public async Task VariableBitrateProducesDecodableVideoAsync(string encoder)
     {
         using MediaTestFiles files = new();
@@ -239,7 +240,7 @@ public sealed class DesktopCodecTests(Xunit.Abstractions.ITestOutputHelper outpu
 
     /// <summary>伝送プリセットのfpsとGOPを実H.264へ適用し、復号したキーフレーム位置を確認します。</summary>
     /// <returns>全フレームと指定間隔のキーフレームの確認です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData(8, 1024, 8)]
     [InlineData(30, 3072, 30)]
     [InlineData(30, 2048, 30)]

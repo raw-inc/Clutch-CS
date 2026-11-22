@@ -54,7 +54,7 @@ public sealed class ClusterArchiveProcessTests
         await CorePeer.WaitAsync(async token =>
         {
             using HttpResponseMessage response = await client.SendAsync(HttpMethod.Get, "client/clusters", cancellationToken: token).ConfigureAwait(false);
-            DiscoveredCluster[] clusters = (await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ContractJson.Options, token).ConfigureAwait(false))!;
+            DiscoveredCluster[] clusters = (await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ClientObservationJson.Options, token).ConfigureAwait(false))!;
             return clusters.Sum(cluster => cluster.Peers.Count) == 4;
         }, timeout.Token).ConfigureAwait(true);
         WorkflowSaveResult active = await sourceA.PostAsync<WorkflowSaveResult>("workflows.save", new WorkflowSaveRequest(Guid.NewGuid(), Definition("screen", 1), null), timeout.Token).ConfigureAwait(true);

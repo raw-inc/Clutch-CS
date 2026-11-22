@@ -18,6 +18,18 @@ test('selected passing tests and skipped stages do not report a failure', () => 
     assert.equal(validationReport({ unit_tests: { outcome: 'success' }, integration_tests: { outcome: 'skipped' } }).failed, false);
 });
 
+test('unavailable media tools are skipped without erasing independent test failures', () => {
+    const media_tools = { outcome: 'success', outputs: { available: 'false' } };
+    const report = validationReport({ media_tools, unit_tests: { outcome: 'success' } });
+    assert.equal(report.failed, false);
+    assert.equal(report.results.find(result => result.id === 'media_tools').outcome, 'skipped');
+    assert.equal(validationReport({ media_tools, unit_tests: { outcome: 'failure' } }).failed, true);
+    assert.equal(validationReport({ media_tools: { ...media_tools, outcome: 'failure' } }).failed, true);
+    const previous = Object.fromEntries(report.results.map(result => [result.id, result.outcome]));
+    assert.equal(validationReport({}, previous).failed, false);
+    assert.equal(validationReport({}, previous).results.find(result => result.id === 'media_tools').outcome, 'skipped');
+});
+
 test('packaged native capture failures remain visible after other stages succeed', () => {
     const report = validationReport({ native_capture_tests: { outcome: 'failure', conclusion: 'success' },
         install_tests: { outcome: 'success' } }, { unit_tests: 'success' });

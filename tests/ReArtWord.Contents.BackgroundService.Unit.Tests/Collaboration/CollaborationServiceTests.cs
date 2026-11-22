@@ -75,6 +75,34 @@ public sealed class CollaborationServiceTests : IDisposable
         Assert.Equal("second", resolved.Definition.Name);
     }
 
+    /// <summary>参加表示の照会中に日時が補正されても未保存草稿を削除せず、実際の無参照期間だけで回収します。</summary>
+    /// <returns>参加表示と草稿の独立した寿命を確認します。</returns>
+    [Theory]
+    [InlineData(-2)]
+    [InlineData(2)]
+    public async Task ClockCorrectionAndPresenceExpiryDoNotDiscardUnsavedDraftsAsync(int offsetDays)
+    {
+        SqliteRepository repository = Repository();
+        await using PeerCluster cluster = Cluster(repository);
+        await cluster.StartAsync();
+        CollaborationClock clock = new();
+        CollaborationService service = new(new WorkflowStore(repository, cluster, new WorkflowCompiler(new NodeRegistry([]))), cluster, clock,
+            new() { PresenceLifetime = TimeSpan.FromSeconds(10), DraftLifetime = TimeSpan.FromHours(1) });
+        WorkflowDefinition original = new("draft", "Original", [], []);
+        DraftView draft = await service.ApplyChangesAsync(Change(original, original with { Name = "Unsaved" }));
+        await service.UpdatePresenceAsync(new(original.Id, Guid.NewGuid(), "host", "Editor", [], Dirty: true));
+        clock.Adjust(TimeSpan.FromDays(offsetDays));
+        Assert.Single(service.GetPresence(original.Id));
+        Assert.Equal(draft.SessionVersion, service.CaptureDraft(original.Id)!.SessionVersion);
+        clock.Advance(TimeSpan.FromSeconds(11));
+        Assert.Empty(service.GetPresence(original.Id));
+        Assert.Equal(draft.SessionVersion, service.CaptureDraft(original.Id)!.SessionVersion);
+        Assert.Null(await repository.ReadAsync("workflows", original.Id).ConfigureAwait(true));
+        clock.Advance(TimeSpan.FromHours(1));
+        Assert.Empty(service.GetPresence(original.Id));
+        Assert.Null(service.CaptureDraft(original.Id));
+    }
+
     /// <summary>同じ人の複数UI実体は混ざらず、期限で表示から退場します。</summary>
     /// <returns>検証完了。</returns>
     [Fact]
@@ -191,6 +219,49 @@ public sealed class CollaborationServiceTests : IDisposable
         PresenceView remote = Assert.Single(firstService.GetPresence("new"));
         Assert.Equal("second", remote.PeerId);
         Assert.Equal(second.LocalInstanceId, remote.PeerInstanceId);
+    }
+
+    /// <summary>実UDPで別Coreへ届いた参加表示は、両者の日時が違っても受信後の経過時間で失効します。</summary>
+    /// <returns>期限後の新しい在席通知による復帰も確認します。</returns>
+    [Theory]
+    [InlineData(-3600)]
+    [InlineData(3600)]
+    public async Task PresenceLifetimeSurvivesClockSkewAcrossUdpPeersAsync(int offsetSeconds)
+    {
+        int port = Port();
+        string id = Guid.NewGuid().ToString("N");
+        SqliteRepository firstRepository = Repository(), secondRepository = Repository();
+        await using PeerCluster first = Cluster(firstRepository, id, "first", port);
+        await using PeerCluster second = Cluster(secondRepository, id, "second", port, false);
+        CollaborationClock firstClock = new(), secondClock = new();
+        firstClock.Adjust(TimeSpan.FromSeconds(offsetSeconds));
+        secondClock.Adjust(TimeSpan.FromSeconds(-offsetSeconds));
+        CollaborationService firstService = new(new(firstRepository, first, new WorkflowCompiler(new NodeRegistry([]))), first, firstClock);
+        CollaborationService secondService = new(new(secondRepository, second, new WorkflowCompiler(new NodeRegistry([]))), second, secondClock);
+        await first.StartAsync();
+        await second.StartAsync();
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
+        while (second.GetPeers().Count(peer => peer.Status == EPeerStatus.Ready) != 2)
+        {
+            await Task.Delay(20, timeout.Token).ConfigureAwait(true);
+        }
+        PresenceUpdate update = new("clocked", Guid.NewGuid(), "host", "Editor", []);
+        await firstService.UpdatePresenceAsync(update, timeout.Token).ConfigureAwait(true);
+        while (!secondService.GetPresence(update.WorkflowId).Any(item => item.Sequence is not null))
+        {
+            await Task.Delay(20, timeout.Token).ConfigureAwait(true);
+        }
+        Assert.Equal(TimeSpan.FromSeconds(45), Assert.Single(secondService.GetPresence(update.WorkflowId)).Remaining);
+        secondClock.Adjust(TimeSpan.FromDays(2));
+        Assert.Single(secondService.GetPresence(update.WorkflowId));
+        secondClock.Advance(TimeSpan.FromSeconds(46));
+        Assert.Empty(secondService.GetPresence(update.WorkflowId));
+        await firstService.UpdatePresenceAsync(update, timeout.Token).ConfigureAwait(true);
+        while (secondService.GetPresence(update.WorkflowId).Count == 0)
+        {
+            await Task.Delay(20, timeout.Token).ConfigureAwait(true);
+        }
+        Assert.Equal(TimeSpan.FromSeconds(45), Assert.Single(secondService.GetPresence(update.WorkflowId)).Remaining);
     }
 
     /// <summary>編集元の内容識別子を添えて変更を作ります。</summary>

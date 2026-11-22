@@ -10,17 +10,15 @@ internal sealed class RuntimeReceiptWriter
 {
     private readonly Channel<Entry> queue = Channel.CreateBounded<Entry>(512);
     private readonly IDurableRepository repository;
-    private readonly string scope;
     private readonly Task worker;
     private string? problem;
 
     /// <summary>起動実体の記録先と有限キューを固定します。</summary>
     // 抑制理由: workerをフィールドで所有し、PeerのDrainAsyncでキュー完了と全件の保存終了を必ずawaitします。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW511", Justification = "所有workerはDrainAsyncで完了を待ち、未所有の背景処理を作りません。")]
-    internal RuntimeReceiptWriter(IDurableRepository repository, string scope)
+    internal RuntimeReceiptWriter(IDurableRepository repository)
     {
         this.repository = repository;
-        this.scope = scope;
         worker = Task.Run(() => RunAsync());
     }
 
@@ -29,7 +27,7 @@ internal sealed class RuntimeReceiptWriter
 
     /// <summary>呼出側で予約した枠だけを使用し、送信完了をディスク待ちにしません。</summary>
     /// <returns>予約された有限枠へ投入できた場合だけtrueです。</returns>
-    internal bool TryWrite(Guid id, RequestReceipt receipt, Action<bool> completed) => queue.Writer.TryWrite(new(id, receipt, completed));
+    internal bool TryWrite(string scope, Guid id, RequestReceipt receipt, Action<bool> completed) => queue.Writer.TryWrite(new(scope, id, receipt, completed));
 
     /// <summary>新規受付停止後に残った結果を保存します。</summary>
     /// <returns>所有workerの終了です。</returns>
@@ -61,7 +59,7 @@ internal sealed class RuntimeReceiptWriter
         bool saved = false;
         try
         {
-            saved = await RequestReceiptPersistence.WriteAsync(repository, scope, entry.Id.ToString("N"), null, NodeValue.FromObject(entry.Receipt), cancellationToken).ConfigureAwait(false) is not null;
+            saved = await RequestReceiptPersistence.WriteAsync(repository, entry.Scope, entry.Id.ToString("N"), null, NodeValue.FromObject(entry.Receipt), cancellationToken).ConfigureAwait(false) is not null;
         }
         catch (Exception error) when (error is not OutOfMemoryException)
         {
@@ -75,5 +73,5 @@ internal sealed class RuntimeReceiptWriter
     }
 
     /// <summary>実行中の入力やdelegateを保持しない、完了記録だけの一項目です。</summary>
-    private sealed record Entry(Guid Id, RequestReceipt Receipt, Action<bool> Completed);
+    private sealed record Entry(string Scope, Guid Id, RequestReceipt Receipt, Action<bool> Completed);
 }

@@ -11,7 +11,7 @@ internal static class RequestReceiptPersistence
     {
         ArgumentNullException.ThrowIfNull(value);
         string prefix = "receipts:", format = "N";
-        if (!scope.StartsWith(prefix, StringComparison.Ordinal) || scope.Length == prefix.Length || !Guid.TryParseExact(key, format, out _))
+        if (!(scope.StartsWith(prefix, StringComparison.Ordinal) && prefix.Length < scope.Length || BoundedRequestReceipts.IsBounded(scope, key)) || !Guid.TryParseExact(key, format, out _))
         {
             throw new ArgumentException("要求受付の保存先が不正です。", nameof(scope));
         }
@@ -26,7 +26,7 @@ internal static class RequestReceiptPersistence
         {
             return await store.CompareExchangeReceiptAsync(scope, key, expectedVersion, value, cancellationToken).ConfigureAwait(false);
         }
-        DurableReceipt result = await repository.ApplyBatchAsync(Guid.CreateVersion7(), [new(scope, key, expectedVersion, value)], cancellationToken).ConfigureAwait(false);
+        DurableReceipt result = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new(scope, key, expectedVersion, value)], cancellationToken).ConfigureAwait(false);
         return result.Outcome == EOutcome.Succeeded ? result.Entries.Single()
                                                     : null;
     }

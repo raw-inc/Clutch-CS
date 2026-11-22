@@ -1,4 +1,4 @@
-import { node, select, input, field, heading, action, badge, table, empty, segmented } from './dom.js';
+import { node, select, input, field, heading, action, badge, table, empty, segmented, hostCount, recordCount } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 import { environmentForm } from './environment-form.js';
 import { environmentBulk } from './environment-bulk.js';
@@ -6,7 +6,7 @@ import { environmentBulk } from './environment-bulk.js';
 /** 環境変数の取得・表示・変更を構成します。
  * @returns reload・hasChanges・disposeを含む結果です。
  */
-export function environmentView(root, ctx)
+export function environmentView(root, ctx, actionArea)
 {
     const hosts = structuredClone(ctx.hosts());
     if (!hosts.length)
@@ -14,8 +14,8 @@ export function environmentView(root, ctx)
         return noSelection(root, ctx);
     }
     let scope = 'Machine', userSids = new Map(), reader = null;
-    const bulk = (1) < (hosts.length) ? environmentBulk(ctx, hosts, query) : null;
-    const title = heading(ctx.t('PATH and environment variables'), `${ctx.t('Selected hosts')}: ${hosts.length}`), status = node('div'), listing = node('div');
+    const bulk = (1) < (hosts.length) ? environmentBulk(ctx, hosts, query, actionArea) : null;
+    const title = heading(ctx.t('PATH and environment variables'), `${ctx.t('Selected hosts')}: ${hostCount(ctx, hosts.length)}`), status = node('div'), listing = node('div');
     const tools = node('div', '', 'hm-toolbar'), hostPick = select(hosts.map(host => [host.target.hostId, host.target.hostId]), hosts[0].target.hostId);
     const search = input('', 'search');
     search.className = 'hm-search';
@@ -37,7 +37,7 @@ export function environmentView(root, ctx)
     const add = action(ctx, 'Add variable', 'plus', () => edit(null), true), refresh = action(ctx, 'Refresh settings', 'refresh', () => ctx.discard(reload, bulk?.hasChanges())), actions = node('div', '', 'hm-actions');
     actions.append(refresh, add);
     title.append(actions);
-    tools.append(scopePicker, users, field(ctx.t('Variables on host'), hostPick), search);
+    tools.append(field(ctx.t('Scope'), scopePicker), users, field(ctx.t('Variables on host'), hostPick), field(ctx.t('Search variables'), search));
     hostPick.parentElement.hidden = !!bulk;
     root.append(title, node('p', ctx.t('Persistent environment variables apply to new processes. Existing processes and other user sessions may require a restart or sign-in.'), 'hm-muted'), tools, status, listing);
 
@@ -94,12 +94,17 @@ export function environmentView(root, ctx)
             listing.append(empty(ctx.t('No matching variables'), ctx.t('Try another search or add a variable.'), 'code'));
             return;
         }
-        const rows = table(['Name', 'Value', 'Edit'].map(ctx.t));
+        const rows = table(['Name', 'Value', 'Actions'].map(ctx.t));
         for (const variable of variables)
         {
             const path = variable.name.toUpperCase() === 'PATH', name = node('div'), value = node('div');
-            name.append(ctx.button(variable.name, () => edit(variable), 'hm-link'), node('small', ctx.t(variable.expandable ? 'Variable references' : 'Literal value')));
-            value.append(node('pre', path ? (variable.value ?? '').split(';').join('\n') : variable.value, 'hm-value'));
+            name.append(node('strong', variable.name), node('small', ctx.t(variable.expandable ? 'Variable references' : 'Literal value')));
+            const content = node('pre', '', 'hm-value');
+            for (const segment of (variable.value ?? '').split(/(?<=[\\;])/u))
+            {
+                content.append(document.createTextNode(segment), document.createElement('wbr'));
+            }
+            value.append(content);
             if (path)
             {
                 value.append(node('small', `${(variable.value ?? '').split(';').length} ${ctx.t('path entries')}`));
@@ -108,8 +113,8 @@ export function environmentView(root, ctx)
             actions.append(action(ctx, 'Edit', 'settings', () => edit(variable)), ctx.button('Delete', () => ctx.preview(hosts.map(target => ({ host: target, query: query(target, variable.name), action: 'environment', change: { value: null, delete: true, expandable: variable.expandable }, label: `${ctx.t('Delete variable')} · ${variable.name}` }))), 'danger'));
             rows.add([name, value, actions]);
         }
-        const summary = node('div', '', 'hm-toolbar');
-        summary.append(badge(`${variables.length} ${ctx.t('variables')}`), node('span', `${host.target.hostId} · ${ctx.t(scope)}`, 'hm-muted'));
+        const summary = node('div', '', 'hm-toolbar hm-record-summary');
+        summary.append(badge(recordCount(ctx, 'count.variables', variables.length)), node('span', `${host.target.hostId} · ${ctx.t(scope)}`, 'hm-muted'));
         listing.append(summary, rows.root);
     }
 

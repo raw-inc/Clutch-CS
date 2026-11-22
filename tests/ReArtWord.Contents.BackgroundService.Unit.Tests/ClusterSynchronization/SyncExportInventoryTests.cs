@@ -73,7 +73,7 @@ public sealed class SyncExportInventoryTests
         Assert.Equal(EOutcome.Succeeded, (await peer.Repository.ApplyBatchAsync(Guid.NewGuid(), mutations, timeout.Token).ConfigureAwait(true)).Outcome);
         RepositorySnapshot original = await peer.Repository.ExportAsync(timeout.Token).ConfigureAwait(true);
         string[] originalHashes = SyncInventory.Describe(original);
-        SyncManifest manifest = await exports.CreateAsync(local, true, timeout.Token).ConfigureAwait(true);
+        SyncManifest manifest = await exports.CreateAsync(local, true, cancellationToken: timeout.Token).ConfigureAwait(true);
         string[] hashes = Assert.IsType<string[]>(exports.Describe(manifest).Hashes);
         Assert.Equal(originalHashes, hashes);
         hashes[0] = new string('0', 64);
@@ -129,7 +129,7 @@ public sealed class SyncExportInventoryTests
             boundary = new(new Dictionary<ERetentionCategory, DateTimeOffset>(), new Dictionary<ERetentionCategory, DateTimeOffset>(), DateTimeOffset.UtcNow.AddDays(-30), DateTimeOffset.UtcNow);
         }
         SyncInventoryRequest request = new(Guid.NewGuid(), known, DateTimeOffset.UtcNow.AddSeconds(20), boundary);
-        SyncInventoryOffer offer = await exports.CreateOfferAsync(local, request, timeout.Token).ConfigureAwait(true);
+        SyncInventoryOffer offer = await exports.CreateOfferAsync(local, request, cancellationToken: timeout.Token).ConfigureAwait(true);
         RepositorySnapshot expected = full ? original
                                            : SyncInventory.Difference(original, hashes, known);
         using MemoryStream received = new();

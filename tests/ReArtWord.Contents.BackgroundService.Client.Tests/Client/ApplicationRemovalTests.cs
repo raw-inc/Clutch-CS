@@ -45,7 +45,7 @@ public sealed class ApplicationRemovalTests
             {
                 case "/api/status": value = status; break;
                 case "/api/processes": value = registrations; break;
-                case "/api/processes/remove":
+                case "/api/v2/processes/remove":
                     Assert.Equal(HttpMethod.Post, request.Method);
                     removals.Add((await request.Content!.ReadFromJsonAsync<ProcessRemovalRequest>(ContractJson.Options, token).ConfigureAwait(false))!);
                     if (outcome == EOutcome.Succeeded)
@@ -74,7 +74,7 @@ public sealed class ApplicationRemovalTests
         {
             Microsoft.AspNetCore.Components.Web.HtmlRendering.HtmlRootComponent output = await renderer.RenderComponentAsync<ProcessPanel>().ConfigureAwait(true);
             ProcessPanel panel = activator.Panel!;
-            Assert.Contains(">Remove registration</button>", output.ToHtmlString(), StringComparison.Ordinal);
+            Assert.Contains(">Remove registration</span>", output.ToHtmlString(), StringComparison.Ordinal);
             Invoke(panel, "ConfirmRemoval", original);
             await panel.SetParametersAsync(ParameterView.Empty).ConfigureAwait(true);
             Assert.Contains("A running application will not be stopped.", output.ToHtmlString(), StringComparison.Ordinal);

@@ -122,7 +122,7 @@ public sealed partial class SecretField
         busy = true;
         try
         {
-            JsonElement reply = await Api.PutForPeerAsync<JsonElement>("/api/secrets", new SecretChangeRequest(name, secret), peer, cluster, cancellationToken).ConfigureAwait(true);
+            JsonElement reply = await Api.PutForPeerAsync<JsonElement>("/api/v2/secrets", new SecretChangeRequest(name, secret), peer, cluster, cancellationToken).ConfigureAwait(true);
             string saved = "saved";
             if (reply.TryGetProperty(saved, out JsonElement confirmed) && confirmed.ValueKind == JsonValueKind.True)
             {

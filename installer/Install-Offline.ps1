@@ -112,9 +112,16 @@ if ($RegisterAndStart) {
             Invoke-InstallAction 'recovery' $service $ActionInvoker $VerifierExecutablePath $artifacts | Out-Null
         }
         $stage = 'start'
-        Invoke-InstallAction 'start' $service $ActionInvoker $VerifierExecutablePath $artifacts | Out-Null
+        $startResult = Invoke-InstallAction 'start' $service $ActionInvoker $VerifierExecutablePath $artifacts
         $stage = 'ready'
         $request = @{configurationPath=$configuration;manifestPath=(Join-Path $installation 'release-manifest.json');checkReady=$true;timeoutMilliseconds=$ReadyTimeoutMilliseconds;configurationHash=$preflight.configurationHash;manifestHash=$preflight.manifestHash;startedAfter=$preflight.startedAfter}
+        if ($preflight.PSObject.Properties['supportsProcessIdentity'] -and $preflight.supportsProcessIdentity) {
+            if ($startResult -is [System.Collections.IDictionary] -and $startResult.Contains('processId')) {
+                $request.expectedProcess = $startResult
+            } else {
+                $request.startedService = $ServiceName
+            }
+        }
         $ready = Invoke-InstallAction 'verify' $request $ActionInvoker $VerifierExecutablePath $artifacts
         if (-not $ready.success -or $ready.stage -ne 'ready' -or $ready.peerId -ne $preflight.peerId -or $ready.clusterId -ne $preflight.clusterId -or $ready.platform -ne $preflight.platform) { throw 'The installed Peer did not reach verified Ready.' }
         $ready | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $artifacts 'installation-result.json') -Encoding utf8

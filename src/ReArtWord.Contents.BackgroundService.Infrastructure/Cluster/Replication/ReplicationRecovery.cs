@@ -12,8 +12,8 @@ namespace ReArtWord.Contents.BackgroundService.Infrastructure.Cluster.Replicatio
 internal sealed class ReplicationRecovery(PeerCluster cluster, IDurableRepository repository, ReplicationJournal journal, SemaphoreSlim gate, TimeProvider clock)
 {
     private Guid cursor;
-    private DateTimeOffset? waitingSince;
-    private DateTimeOffset retryAt;
+    private long? waitingSince;
+    private long? retryStarted;
 
     /// <summary>WFや通常要求とは別に扱う保存判断の照会です。</summary>
     internal static string Kind => "replication.recovery";
@@ -28,7 +28,7 @@ internal sealed class ReplicationRecovery(PeerCluster cluster, IDurableRepositor
     /// <returns>今回の有限な保存準備確認です。</returns>
     internal async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
-        if (repository is not IPreparedOperations preparations || clock.GetUtcNow() < retryAt || !await gate.WaitAsync(0, cancellationToken).ConfigureAwait(false))
+        if (repository is not IPreparedOperations preparations || (retryStarted is { } started && clock.GetElapsedTime(started) < TimeSpan.FromSeconds(1)) || !await gate.WaitAsync(0, cancellationToken).ConfigureAwait(false))
         {
             return;
         }
@@ -104,7 +104,7 @@ internal sealed class ReplicationRecovery(PeerCluster cluster, IDurableRepositor
                     }
                     waitingSince = null;
                     Problem = null;
-                    retryAt = clock.GetUtcNow();
+                    retryStarted = null;
                     return;
                 }
             }
@@ -170,13 +170,13 @@ internal sealed class ReplicationRecovery(PeerCluster cluster, IDurableRepositor
         return new(ReplicationRecoveryProbe.ProtocolName, operation, members, stored, !ownsGate);
     }
 
-    /// <summary>未確認を長時間の無表示にせず、再照会の負荷も制限します。</summary>
+    /// <summary>未確認の継続時間と再照会の間隔を経過時間で測ります。時間が過ぎても元操作の確定・中止は推測しません。</summary>
     private void Unconfirmed(string? reason = null)
     {
-        DateTimeOffset now = clock.GetUtcNow();
+        long now = clock.GetTimestamp();
         waitingSince ??= now;
-        retryAt = now.AddSeconds(1);
-        if (TimeSpan.FromSeconds(5) <= now - waitingSince.Value)
+        retryStarted = now;
+        if (TimeSpan.FromSeconds(5) <= clock.GetElapsedTime(waitingSince.Value, now))
         {
             Problem = reason ?? "Replication.PreparedDecisionUnconfirmed";
         }

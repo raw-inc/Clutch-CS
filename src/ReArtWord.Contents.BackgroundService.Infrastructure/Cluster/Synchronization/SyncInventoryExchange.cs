@@ -21,12 +21,12 @@ internal sealed class SyncInventoryExchange(PeerCluster cluster, SyncExportStore
     internal async Task<SyncResponse> ReceiveAsync(SyncInventoryRequest request, string peerId, Guid instanceId, CancellationToken cancellationToken = default)
     {
         SyncInventory.Validate(request.Hashes);
-        if (request.Id == Guid.Empty || request.ExpiresAt <= clock.GetUtcNow() || clock.GetUtcNow().AddHours(1) < request.ExpiresAt)
+        if (request.Id == Guid.Empty)
         {
             throw new SyncFailureException("Sync.SessionExpired");
         }
         PeerInfo peer = cluster.GetPeers().FirstOrDefault(item => string.Equals(item.PeerId, peerId, StringComparison.Ordinal)
-            && item.InstanceId == instanceId && item.Status != EPeerStatus.Detached && clock.GetUtcNow() - item.LastSeen <= options.PeerTimeout)
+            && item.InstanceId == instanceId && item.Status != EPeerStatus.Detached && item.AgeAt(clock.GetUtcNow()) <= options.PeerTimeout)
             ?? throw new SyncFailureException("Sync.SourceInstanceUnavailable");
         Cleanup();
         Offer offer;
@@ -39,7 +39,8 @@ internal sealed class SyncInventoryExchange(PeerCluster cluster, SyncExportStore
                 {
                     throw new SyncFailureException("Sync.ExportCapacity");
                 }
-                offer = new(fingerprint, request.ExpiresAt, token => CreateAsync(peer, request, token));
+                SyncLifetime lifetime = exports.Clocks.Accept(request.Timing, request.ExpiresAt, instanceId, TimeSpan.FromHours(1));
+                offer = new(fingerprint, lifetime, token => CreateAsync(peer, request, lifetime, token));
                 offers[(peerId, instanceId, request.Id)] = offer;
             }
             else
@@ -50,7 +51,7 @@ internal sealed class SyncInventoryExchange(PeerCluster cluster, SyncExportStore
                     throw new SyncFailureException("Sync.InventoryMismatch");
                 }
             }
-            if (offer.Closed)
+            if (offer.Closed || offer.Deadline.Expired)
             {
                 return new(Reason: "Sync.SessionUnavailable");
             }
@@ -70,7 +71,7 @@ internal sealed class SyncInventoryExchange(PeerCluster cluster, SyncExportStore
         }
         using (admission.EnterScope())
         {
-            if (offer.Closed)
+            if (offer.Closed || offer.Deadline.Expired)
             {
                 return new(Reason: "Sync.SessionUnavailable");
             }
@@ -120,7 +121,7 @@ internal sealed class SyncInventoryExchange(PeerCluster cluster, SyncExportStore
         {
             foreach (KeyValuePair<(string Peer, Guid Instance, Guid Id), Offer> pair in offers)
             {
-                if (pair.Value.ExpiresAt <= clock.GetUtcNow() && pair.Value.Result.IsValueCreated && pair.Value.Result.Value.IsCompleted
+                if (pair.Value.Deadline.Expired && pair.Value.Result.IsValueCreated && pair.Value.Result.Value.IsCompleted
                     && pair.Value.CancellationCompleted && offers.TryRemove(pair.Key, out Offer? removed))
                 {
                     using Offer expired = removed;
@@ -131,9 +132,9 @@ internal sealed class SyncInventoryExchange(PeerCluster cluster, SyncExportStore
 
     /// <summary>応答を返す前に失敗した場合は、依頼側がまだ知らない書出しを解放します。</summary>
     /// <returns>差分の準備結果です。</returns>
-    private async Task<SyncResponse> CreateAsync(PeerInfo peer, SyncInventoryRequest request, CancellationToken cancellationToken = default)
+    private async Task<SyncResponse> CreateAsync(PeerInfo peer, SyncInventoryRequest request, SyncLifetime lifetime, CancellationToken cancellationToken = default)
     {
-        TimeSpan remaining = request.ExpiresAt - clock.GetUtcNow();
+        TimeSpan remaining = lifetime.Remaining;
         if (remaining <= TimeSpan.Zero)
         {
             throw new SyncFailureException("Sync.SessionExpired");
@@ -144,7 +145,7 @@ internal sealed class SyncInventoryExchange(PeerCluster cluster, SyncExportStore
         bool completed = false;
         try
         {
-            SyncInventoryOffer offer = await exports.CreateOfferAsync(peer, request, linked.Token).ConfigureAwait(false);
+            SyncInventoryOffer offer = await exports.CreateOfferAsync(peer, request, lifetime, linked.Token).ConfigureAwait(false);
             manifest = offer.Manifest;
             completed = true;
             return new(Inventory: offer);
@@ -190,10 +191,10 @@ internal sealed class SyncInventoryExchange(PeerCluster cluster, SyncExportStore
         private Task? cancellation;
 
         /// <summary>一回の作成と終了用取消を、同じ元要求へ結び付けます。</summary>
-        internal Offer(string fingerprint, DateTimeOffset expiresAt, Func<CancellationToken, Task<SyncResponse>> create)
+        internal Offer(string fingerprint, SyncLifetime lifetime, Func<CancellationToken, Task<SyncResponse>> create)
         {
             Fingerprint = fingerprint;
-            ExpiresAt = expiresAt;
+            Deadline = lifetime;
             ClosingToken = closing.Token;
             Result = new(() => Task.Run(() => create(ClosingToken), CancellationToken.None));
         }
@@ -203,7 +204,7 @@ internal sealed class SyncInventoryExchange(PeerCluster cluster, SyncExportStore
             get;
         }
 
-        internal DateTimeOffset ExpiresAt
+        internal SyncLifetime Deadline
         {
             get;
         }

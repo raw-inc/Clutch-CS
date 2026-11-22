@@ -1,6 +1,7 @@
 using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Management;
 using ReArtWord.Contents.BackgroundService.Contracts.Management.Discovery;
+using ReArtWord.Contents.BackgroundService.Contracts.Observability;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 
 namespace ReArtWord.Contents.BackgroundService.ManagementTransport.Observers;
@@ -37,7 +38,8 @@ internal sealed class ObserverCatalog(TimeProvider clock, TimeSpan lifetime)
                 return;
             }
             DateTimeOffset received = clock.GetUtcNow();
-            peers[key] = new(message.ClusterId, announcement with { Peer = announcement.Peer with { Address = address, LastSeen = received } }, received);
+            ObservationAge age = new(clock);
+            peers[key] = new(message.ClusterId, announcement with { Peer = announcement.Peer with { Address = address, LastSeen = received, ObservationAge = age } }, received, age);
         }
     }
 
@@ -47,23 +49,22 @@ internal sealed class ObserverCatalog(TimeProvider clock, TimeSpan lifetime)
     {
         using (gate.EnterScope())
         {
-            DateTimeOffset now = clock.GetUtcNow();
-            return peers.Values.Where(item => now < item.Received + lifetime).GroupBy(item => item.ClusterId, StringComparer.Ordinal).OrderBy(group => group.Key, StringComparer.Ordinal)
+            return peers.Values.Where(item => item.Age.Elapsed < lifetime).GroupBy(item => item.ClusterId, StringComparer.Ordinal).OrderBy(group => group.Key, StringComparer.Ordinal)
                 .Select(group => new DiscoveredCluster(group.Key, group.Select(item => item.Announcement.Peer).OrderBy(peer => peer.PeerId, StringComparer.Ordinal).ToArray(),
                     group.Select(item => item.Announcement.Coordinator).Where(id => id is not null).Select(id => id!).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray(),
-                    group.Max(item => item.Received))).ToArray();
+                    group.MinBy(item => item.Age.Elapsed)!.Received)).ToArray();
         }
     }
 
     /// <summary>表示期限後も番号を保持し、容量確保が必要な時だけ古い観測を除きます。</summary>
     private void Expire()
     {
-        foreach (string key in peers.Where(pair => pair.Value.Received + lifetime <= clock.GetUtcNow()).Select(pair => pair.Key).ToArray())
+        foreach (string key in peers.Where(pair => lifetime <= pair.Value.Age.Elapsed).Select(pair => pair.Key).ToArray())
         {
             peers.Remove(key);
         }
     }
 
-    /// <summary>実受信時刻を含む一つの観測です。</summary>
-    private sealed record Observation(string ClusterId, PeerAnnouncement Announcement, DateTimeOffset Received);
+    /// <summary>表示用の受信日時と、有効期間を測る単調時計を分けて保持します。</summary>
+    private sealed record Observation(string ClusterId, PeerAnnouncement Announcement, DateTimeOffset Received, ObservationAge Age);
 }

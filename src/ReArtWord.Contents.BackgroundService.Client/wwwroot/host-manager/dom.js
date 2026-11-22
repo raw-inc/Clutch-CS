@@ -1,4 +1,4 @@
-import { uiIcon } from '../ui-icons.js';
+import { setControlLabel, uiIcon } from '../ui-icons.js';
 
 // All OS values enter the document as text or form values, never HTML.
 /** 指定した属性を持つ画面要素を作成します。
@@ -87,6 +87,7 @@ export function checkbox(label, checked = false)
 export function table(headings)
 {
     const root = node('div', '', 'hm-table-wrap'), table = node('table'), head = node('thead'), row = node('tr'), body = node('tbody');
+    table.className = 'record-table';
     headings.forEach(heading =>
     {
         const cell = node('th', heading);
@@ -104,9 +105,10 @@ export function table(headings)
         add(values)
         {
             const row = node('tr');
-            values.forEach(value =>
+            values.forEach((value, index) =>
             {
                 const cell = node('td');
+                cell.dataset.field = headings[index] ?? '';
                 cell.append(value instanceof Node ? value : document.createTextNode(String(value ?? '—')));
                 row.append(cell);
             });
@@ -115,12 +117,37 @@ export function table(headings)
         } };
 }
 
+/** 選択したホストの台数を表示言語に合わせます。
+ * @returns 台数と単位です。
+ */
+export function hostCount(ctx, count)
+{
+    return count + ' ' + ctx.t(count === 1 ? 'hostCountOne' : 'hostCountUnit');
+}
+
+/** 下部の操作欄に、処理対象の台数と名前を示します。
+ * @returns 操作対象の表示名です。
+ */
+export function targetHosts(ctx, hosts)
+{
+    const names = hosts.map(host => host.target.hostId).join(', ');
+    return ctx.t('Target hosts') + ': ' + hostCount(ctx, hosts.length) + ' · ' + names;
+}
+
+/** 一覧の見出しに対象名と表示件数を示します。
+ * @returns 言語に合わせた件数表記です。
+ */
+export function recordCount(ctx, key, count)
+{
+    return ctx.t(key).replace('{0}', String(count));
+}
+
 /** 折り畳み可能な詳細表示を構成します。
  * @returns 呼出し元が使用する値です。
  */
 export function details(label, content)
 {
-    const root = node('details');
+    const root = node('details', '', 'secondary-details');
     root.append(node('summary', label), content);
     return root;
 }
@@ -168,7 +195,13 @@ export function icon(name)
 export function action(ctx, label, glyph, run, primary = false)
 {
     const button = ctx.button(label, run, primary ? 'hm-button primary' : 'hm-button');
-    button.prepend(icon(glyph));
+    const deleteIcon = 'trash';
+    const disableSchedules = 'powerSchedule.bulkDisable';
+    if (glyph === deleteIcon || label === disableSchedules)
+    {
+        button.classList.add('danger');
+    }
+    setControlLabel(button, icon(glyph));
     return button;
 }
 

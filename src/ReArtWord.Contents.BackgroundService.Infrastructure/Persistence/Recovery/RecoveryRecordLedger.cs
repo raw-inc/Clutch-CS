@@ -244,10 +244,11 @@ internal static class RecoveryRecordLedger
     {
         using SqliteCommand command = session.HistoryCommand();
         command.CommandText = """
-            UPDATE repository_identity SET version=CASE WHEN EXISTS(SELECT 1 FROM recovery_history) THEN 4
-                WHEN version=4 THEN 3 ELSE version END
-            WHERE (version<>4 AND EXISTS(SELECT 1 FROM recovery_history))
-                OR (version=4 AND NOT EXISTS(SELECT 1 FROM recovery_history))
+            UPDATE repository_identity SET version=CASE
+                WHEN EXISTS(SELECT 1 FROM recovery_history) THEN CASE WHEN version IN (5,6) THEN 6 ELSE 4 END
+                WHEN version=6 THEN 5 WHEN version=4 THEN 3 ELSE version END
+            WHERE (version NOT IN (4,6) AND EXISTS(SELECT 1 FROM recovery_history))
+                OR (version IN (4,6) AND NOT EXISTS(SELECT 1 FROM recovery_history))
             """;
         command.ExecuteNonQuery();
     }

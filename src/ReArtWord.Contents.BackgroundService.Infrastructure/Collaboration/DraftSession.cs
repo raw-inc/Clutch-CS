@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ReArtWord.Contents.BackgroundService.Contracts.Observability;
 using ReArtWord.Contents.BackgroundService.Contracts.Collaboration;
 using ReArtWord.Contents.BackgroundService.Contracts.Configuration;
 using ReArtWord.Contents.BackgroundService.Contracts.Configuration.Editing;
@@ -15,10 +16,14 @@ internal sealed class DraftSession
 {
     private readonly Dictionary<Guid, string> operations = [];
     private readonly DraftLineage lineage = new();
+    private readonly TimeProvider clock;
+    private ObservationAge lastUse;
 
     /// <summary>保存版または新規作成元から開始します。</summary>
-    public DraftSession(WorkflowDefinition original, string? baseRevision, DateTimeOffset now)
+    public DraftSession(WorkflowDefinition original, string? baseRevision, DateTimeOffset now, TimeProvider? timeProvider = null)
     {
+        clock = timeProvider ?? TimeProvider.System;
+        lastUse = new(clock);
         Original = ContractJson.Copy(original);
         View = new DraftView(original.Id, baseRevision, ContractJson.Hash(original), ContractJson.Copy(original), [], [], now);
     }
@@ -36,7 +41,14 @@ internal sealed class DraftSession
     }
 
     /// <summary>参照中の未保存草稿は保持し、編集の版番号は増やしません。</summary>
-    internal void Touch(DateTimeOffset now) => View = View with { UpdatedAt = now };
+    internal void Touch(DateTimeOffset now)
+    {
+        View = View with { UpdatedAt = now };
+        lastUse = new(clock);
+    }
+
+    /// <summary>参照・編集からの経過時間です。PCの日時補正で未保存草稿を回収しません。</summary>
+    internal TimeSpan IdleFor => lastUse.Elapsed;
 
     /// <summary>新しい保存版を未保存範囲と三者比較し、元版を更新します。</summary>
     public void Rebase(StoredWorkflow saved, DateTimeOffset now)
@@ -52,6 +64,7 @@ internal sealed class DraftSession
             lineage.Remember(View);
             Original = ContractJson.Copy(saved.Definition);
             View = View with { BaseRevision = saved.Revision, Definition = merge.Candidate, SessionVersion = ContractJson.Hash(merge.Candidate), Conflicts = View.Conflicts.Concat(merge.Conflicts).DistinctBy(ContractJson.Hash).ToArray(), UpdatedAt = now };
+            lastUse = new(clock);
         }
     }
 
@@ -86,12 +99,14 @@ internal sealed class DraftSession
             return Problem("draft.conflictCapacity", "未解消候補が上限に達しました。候補を解消してください。");
         }
         DraftView candidate = new(View.WorkflowId, View.BaseRevision, ContractJson.Hash(merged.Candidate), merged.Candidate, conflicts, merged.Validation, now);
+        candidate = candidate with { AutoApplyOperationId = DraftAutoApplyIdentity.Change(View, candidate.SessionVersion, request.OperationId) };
         if (maximumBytes < JsonSerializer.SerializeToUtf8Bytes(candidate, ContractJson.Options).Length)
         {
             return Problem("draft.capacity", "統合後の下書きが保持上限を超えます。");
         }
         lineage.Advance(View);
         View = candidate;
+        lastUse = new(clock);
         operations[request.OperationId] = fingerprint;
         _ = Announce(capacity, maximumBytes);
         while (capacity < operations.Count)
@@ -164,8 +179,10 @@ internal sealed class DraftSession
             {
                 lineage.Remember(before);
             }
-            View = View with { Definition = merged.Candidate, SessionVersion = ContractJson.Hash(merged.Candidate), Conflicts = conflicts, UpdatedAt = now };
+            View = View with { Definition = merged.Candidate, SessionVersion = ContractJson.Hash(merged.Candidate), Conflicts = conflicts, UpdatedAt = now,
+                AutoApplyOperationId = DraftAutoApplyIdentity.Merge(View, announcement.Draft, ContractJson.Hash(merged.Candidate)) };
         }
+        lastUse = new(clock);
         lineage.Join(announcement);
         foreach ((Guid id, string fingerprint) in announcement.Operations ?? new Dictionary<Guid, string>())
         {
@@ -182,7 +199,9 @@ internal sealed class DraftSession
     private void MergeLegacy(DraftAnnouncement announcement, DateTimeOffset now, int capacity, int maximumBytes)
     {
         DraftChangeRequest request = new(Guid.NewGuid(), View.WorkflowId, Guid.Empty, announcement.Draft.BaseRevision, null, announcement.Original, announcement.Draft.Definition, new Dictionary<string, EEditResolution>(StringComparer.Ordinal));
+        DraftView previous = View;
         Apply(request, now, capacity, maximumBytes);
+        View = View with { AutoApplyOperationId = DraftAutoApplyIdentity.Merge(previous, announcement.Draft, View.SessionVersion) };
         EditConflict[] conflicts = View.Conflicts.Concat(announcement.Draft.Conflicts).DistinctBy(ContractJson.Hash).ToArray();
         if (conflicts.Length <= capacity && JsonSerializer.SerializeToUtf8Bytes(View with { Conflicts = conflicts }, ContractJson.Options).Length <= maximumBytes)
         {

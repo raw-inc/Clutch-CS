@@ -1,11 +1,109 @@
+/* ボタンの文字位置を揃え、図柄を字面の中心に合わせます。 */
+.control-label {
+    position: relative;
+    inset-block-start: var(--control-label-offset);
+}
+
+:where(button) > .control-label {
+    inset-block-start: 0;
+}
+
+:where(button) > .ui-icon:has(+ .control-label) {
+    translate: 0 calc(-1 * var(--control-label-offset));
+}
+
+clutch-scroll-area {
+    --scroll-edge: light-dark(rgb(23 24 29 / 20%), rgb(186 195 210 / 28%));
+
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+}
+
+clutch-scroll-area > :first-child {
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-color: var(--control) transparent;
+    overscroll-behavior: contain;
+}
+
+clutch-scroll-area::before,
+clutch-scroll-area::after {
+    position: absolute;
+    z-index: 2;
+    inset-inline: 0;
+    height: 10px;
+    pointer-events: none;
+}
+
+clutch-scroll-area:not([data-scroll-controls])[data-scroll-before]::before {
+    content: "";
+    inset-block-start: var(--scroll-edge-block-start, 0);
+    background: linear-gradient(var(--scroll-edge), transparent);
+}
+
+clutch-scroll-area:not([data-scroll-controls])[data-scroll-after]::after {
+    content: "";
+    inset-block-end: 0;
+    background: linear-gradient(transparent, var(--scroll-edge));
+}
+
+clutch-scroll-area[data-scroll-axis="inline"]:not([data-scroll-port]) > :first-child {
+    min-width: 0;
+    overflow: auto hidden;
+}
+
+clutch-scroll-area[data-scroll-axis="inline"]::before,
+clutch-scroll-area[data-scroll-axis="inline"]::after {
+    inset: 0 auto var(--scroll-edge-block-end, 0);
+    width: 16px;
+    height: auto;
+}
+
+clutch-scroll-area[data-scroll-axis="inline"]:not([data-scroll-controls])[data-scroll-before]::before {
+    inset-inline-start: var(--scroll-edge-inline-start, 0);
+    background: linear-gradient(to right, var(--scroll-edge), transparent);
+}
+
+clutch-scroll-area[data-scroll-axis="inline"]:not([data-scroll-controls])[data-scroll-after]::after {
+    inset-inline-end: var(--scroll-edge-inline-end, 0);
+    background: linear-gradient(to left, var(--scroll-edge), transparent);
+}
+
+clutch-scroll-area[data-scroll-axis="both"] > .scroll-inline-edge {
+    display: none;
+    position: absolute;
+    z-index: 2;
+    inset-block: var(--scroll-edge-block-start, 0) 0;
+    width: 12px;
+    pointer-events: none;
+}
+
+clutch-scroll-area[data-scroll-inline-before] > .scroll-inline-before {
+    display: block;
+    inset-inline-start: 0;
+    background: linear-gradient(to right, var(--scroll-edge), transparent);
+}
+
+clutch-scroll-area[data-scroll-inline-after] > .scroll-inline-after {
+    display: block;
+    inset-inline-end: 0;
+    background: linear-gradient(to left, var(--scroll-edge), transparent);
+}
+
+:lang(ja) :where(p, .help, .field-note, .empty, .empty-state, .hm-dialog-body) {
+    word-break: auto-phrase;
+}
+
 .search-field {
     display: flex;
     align-items: center;
     gap: 7px;
-    background: #292b30;
-    border: 1px solid #42454e;
-    border-bottom-color: #626773;
-    border-radius: 4px;
+    background: var(--panel);
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
     padding: 0 9px;
 }
 
@@ -36,26 +134,34 @@
 }
 
 .pc-display-toggle {
-    display: flex;
-    gap: 4px;
     flex-wrap: wrap;
+    display: inline-flex;
+    align-items: stretch;
+    gap: 0;
+    overflow: hidden;
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
 }
 
 .pc-display-toggle button {
-    font-size: 12px;
-    padding: 5px 10px;
+    min-height: 36px;
+    padding: calc(6px + 0.1em) 16px calc(6px - 0.1em);
+    font-size: 13px;
+    border-radius: var(--radius-control);
+    border-color: var(--control);
 }
 
 .pc-display-toggle button.active {
-    background: var(--raised);
-    color: var(--ink);
-    box-shadow: inset 0 0 0 1px var(--line);
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 700;
 }
 
 .health-card {
-    background: color-mix(in srgb, var(--panel) 70%, transparent);
+    background: var(--card);
     border: 0;
-    border-radius: 4px;
+    border-radius: var(--radius-panel);
     padding: 18px;
     min-width: 0;
     box-shadow: none;
@@ -100,4 +206,634 @@
     box-sizing: border-box;
     overflow: hidden;
     display: block;
+}
+
+input[type="checkbox"][role="switch"] {
+    appearance: none;
+    flex: none;
+    width: 40px;
+    height: 23px;
+    padding: 3px;
+    border-radius: var(--radius-pill);
+    background: var(--panel);
+    cursor: pointer;
+}
+
+input[role="switch"]::before {
+    content: "";
+    display: block;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: var(--control);
+}
+
+input[role="switch"]:checked {
+    background: var(--accent);
+}
+
+input[role="switch"]:checked::before {
+    transform: translateX(17px);
+    background: var(--on-accent);
+}
+
+@media (forced-colors: active) {
+    input[type="checkbox"][role="switch"] {
+        appearance: auto;
+    }
+
+    input[role="switch"]::before {
+        content: none;
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    input[role="switch"]::before {
+        transition: transform 140ms ease-out;
+    }
+}
+
+meter {
+    appearance: none;
+    display: block;
+    height: 10px;
+    background: var(--panel);
+    border-radius: 0 var(--radius-chart) var(--radius-chart) 0;
+}
+
+meter::-webkit-meter-bar {
+    height: 10px;
+    border: 0;
+    border-radius: inherit;
+    background: var(--panel);
+}
+
+meter::-webkit-meter-optimum-value {
+    background: var(--accent);
+    border-radius: inherit;
+}
+
+meter::-moz-meter-bar {
+    background: var(--accent);
+    border-radius: inherit;
+}
+
+.choice-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 4px;
+    border: 0;
+}
+
+.choice-strip label {
+    position: relative;
+    display: inline-flex;
+    margin: 0;
+    cursor: pointer;
+}
+
+.choice-strip input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.choice-strip label > span {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 9px 14px 6px;
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
+    color: var(--ink);
+    font-size: 14px;
+}
+
+.choice-strip input:checked + span {
+    background: var(--accent-soft);
+    font-weight: 700;
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.choice-strip input:disabled + span {
+    background: var(--disabled-face);
+    color: var(--disabled-ink);
+    border-color: var(--disabled-line);
+    cursor: not-allowed;
+}
+
+.settings-fields,
+.revision-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    gap: 8px 20px;
+}
+
+.revision-facts > div {
+    background: var(--card);
+    border-radius: var(--radius-control);
+    padding: 12px;
+}
+
+.revision-facts dt {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.revision-facts dd {
+    margin: 4px 0 0;
+    font-family: monospace;
+    overflow-wrap: anywhere;
+}
+
+.workspace-index[role="tablist"] {
+    display: grid;
+    align-content: start;
+    gap: 2px;
+    padding: 6px;
+    margin: 0;
+    overflow: visible;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-panel);
+}
+
+.workspace-index[role="tablist"] > button {
+    justify-content: flex-start;
+    text-align: start;
+    white-space: normal;
+    min-height: 40px;
+    padding: 10px 12px 8px;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.workspace-index[role="tablist"] > button[aria-selected="true"] {
+    box-shadow: inset 3px 0 var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.workspace-index[role="tablist"] > button.active::after {
+    content: none;
+}
+
+@media (max-width: 900px) {
+    .workspace-index[role="tablist"] {
+        display: none;
+    }
+}
+
+.node-inline-field .field-caption {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--ink);
+    font-weight: 600;
+}
+
+.node-inline-field:focus-within {
+    background: var(--accent-soft);
+    border-radius: var(--radius-control);
+}
+
+.node-inline-field small {
+    max-width: 100%;
+}
+
+@media (pointer: coarse) {
+    .dialog-content .toolbar button,
+    .dialog > .toolbar button,
+    .dashboard-operations .toolbar button,
+    .pc-display-toggle button,
+    .hm-view-actions button,
+    .hm-dialog-actions button,
+    .package-choices label > span,
+    .settings-picker label > span,
+    .file-navigation button,
+    .log-pagination button {
+        min-height: 44px;
+    }
+}
+
+@media (forced-colors: active) {
+    .choice-strip input:checked + span,
+    .workspace-index[role="tablist"] > button[aria-selected="true"] {
+        outline: 2px solid Highlight;
+        outline-offset: -3px;
+    }
+
+    .choice-strip input:focus-visible + span {
+        outline: 2px dashed Highlight;
+        outline-offset: 2px;
+    }
+}
+
+.node-readout {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    margin-top: 3px;
+    border-inline-start: 2px solid var(--control);
+    background: var(--card);
+}
+
+.node-readout span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.node-readout small {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.node-inline-field:has(> .null-action) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-content: start;
+    align-items: center;
+    gap: 0 4px;
+}
+
+.node-inline-field:has(> .null-action) :is(.field-caption, small) {
+    grid-column: 1 / -1;
+}
+
+.node-inline-field > .null-action {
+    padding: 4px 6px;
+    font-size: 11px;
+}
+
+clutch-card-rows {
+    display: contents;
+}
+
+/* 測定中だけ元の高さに戻し、同じ行で余白を補うカードを選ぶ。 */
+clutch-card-rows > :first-child > * {
+    align-self: start;
+}
+
+clutch-card-rows:not([data-measuring]) > :first-child > [data-stretch] {
+    align-self: stretch;
+}
+
+clutch-card-rows:not([data-measuring]) > :first-child > * > [data-card-header] {
+    min-block-size: var(--card-header-height, 0);
+}
+
+clutch-card-rows:not([data-measuring]) > :first-child > * > [data-card-inset] {
+    margin-block-start: calc(var(--card-inset-margin, 0px) + var(--card-inset-offset, 0px));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    button {
+        transition: transform var(--motion-fast) var(--ease-action);
+    }
+
+    button:enabled:active {
+        transform: translateY(1px);
+    }
+
+    .dialog[open] {
+        animation: show-dialog var(--motion-base) var(--ease-panel);
+    }
+
+    :where(details) > summary::after {
+        transition: transform var(--motion-fast) var(--ease-action);
+    }
+
+    @supports (interpolate-size: allow-keywords) and (interactivity: inert) and selector(details::details-content) {
+        :where(.page, .dialog-content) details:not(.desktop-menu, .graph-legend)::details-content {
+            interpolate-size: allow-keywords;
+            content-visibility: visible;
+            interactivity: inert;
+            block-size: 0;
+            overflow: clip;
+            opacity: 0;
+            transition: block-size var(--motion-close) var(--ease-panel), opacity var(--motion-close) var(--ease-panel);
+        }
+
+        :where(.page, .dialog-content) details[open]:not(.desktop-menu, .graph-legend)::details-content {
+            block-size: auto;
+            interactivity: auto;
+            opacity: 1;
+            transition-duration: var(--motion-base);
+        }
+    }
+}
+
+@keyframes show-dialog {
+    from {
+        opacity: 0;
+        translate: 0 4px;
+    }
+
+    to {
+        opacity: 1;
+        translate: 0 0;
+    }
+}
+
+/* 進捗値が未確定のときは、ブラウザーの不定進捗表示を使う。 */
+progress[value] {
+    appearance: none;
+    overflow: hidden;
+    border: 0;
+    border-radius: var(--radius-chart);
+    background-color: var(--raised);
+    accent-color: var(--accent);
+}
+
+progress[value]::-webkit-progress-bar {
+    background-color: var(--raised);
+    border-radius: inherit;
+}
+
+progress[value]::-webkit-progress-value {
+    border-radius: inherit;
+    background-color: var(--accent);
+}
+
+progress[value]::-moz-progress-bar {
+    border-radius: inherit;
+    background-color: var(--accent);
+}
+
+input[type="range"] {
+    accent-color: var(--accent);
+}
+
+input[type="file"]::file-selector-button {
+    margin-inline-end: 8px;
+    padding: 5px 10px;
+    border: 1px solid var(--button-line);
+    border-bottom-color: var(--button-line-bottom);
+    border-radius: var(--radius-control);
+    background: var(--button-face);
+    color: var(--ink);
+    font: inherit;
+    font-weight: 600;
+    box-shadow: var(--button-shadow);
+}
+
+@media (forced-colors: active) {
+    progress[value] {
+        appearance: auto;
+    }
+}
+
+.field-actions {
+    align-items: end;
+    margin-block: 12px;
+}
+
+.field-actions > label,
+.field-label {
+    min-width: 0;
+    margin: 0;
+}
+
+.file-picker-control {
+    display: inline-flex;
+    position: relative;
+    align-items: center;
+    width: fit-content;
+    max-width: 100%;
+    gap: 10px;
+    min-height: 44px;
+}
+
+.file-picker-control > span:first-child {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding-inline: 12px;
+    border: 1px solid var(--button-line);
+    border-bottom-color: var(--button-line-bottom);
+    border-radius: var(--radius-control);
+    background: var(--button-face);
+    color: var(--ink);
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: var(--button-shadow);
+}
+
+.file-picker-control > span + span {
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+
+.file-picker-control input[type="file"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+input[type="file"]:enabled::file-selector-button:hover,
+.file-picker-control:has(input:enabled):hover > span:first-child {
+    background: var(--button-hover);
+}
+
+input[type="file"]:disabled::file-selector-button,
+.file-picker-control:has(input:disabled) > span:first-child {
+    border-color: var(--disabled-line);
+    background: var(--disabled-face);
+    color: var(--disabled-ink);
+    box-shadow: none;
+}
+
+.file-picker-control:focus-within > span:first-child {
+    border-color: var(--accent);
+    background: var(--focus-face);
+    box-shadow: inset 0 -2px var(--accent);
+}
+
+.count-entry {
+    width: 10ch;
+}
+
+@media (forced-colors: none) {
+    select:not([multiple], [size]) {
+        appearance: none;
+        background-image: var(--select-arrow);
+        background-position: right 10px center;
+        background-repeat: no-repeat;
+        background-size: 12px 8px;
+        padding-inline-end: 32px;
+        min-inline-size: min(10ch, 100%);
+    }
+}
+
+select:not([multiple], [size]):enabled {
+    cursor: pointer;
+}
+
+::placeholder {
+    color: color-mix(in srgb, var(--muted) 77%, var(--panel));
+    opacity: 1;
+}
+
+.pc-display-toggle button[aria-pressed] {
+    border: 0;
+    border-radius: 0;
+}
+
+.pc-display-toggle button[aria-pressed="false"] {
+    background: transparent;
+    box-shadow: none;
+}
+
+.pc-display-toggle button[aria-pressed="true"] {
+    box-shadow: inset 0 -2px var(--accent);
+}
+
+summary {
+    color: var(--ink);
+    cursor: pointer;
+}
+
+:where(details:not(.route-menu, .desktop-menu)) > summary {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 32px 8px 12px;
+    min-height: 40px;
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 600;
+    list-style: none;
+}
+
+:where(details) > summary::-webkit-details-marker {
+    display: none;
+}
+
+:where(details:not(.route-menu, .desktop-menu)) > summary::after {
+    content: "";
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: 12px;
+    translate: 0 -50%;
+    width: 12px;
+    height: 12px;
+    background: currentcolor;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='m4 2 4 4-4 4' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+    pointer-events: none;
+}
+
+:where(details:not(.route-menu, .desktop-menu))[open] > summary::after {
+    transform: rotate(90deg);
+}
+
+:where(details:not(.route-menu, .desktop-menu)) > summary:hover {
+    color: var(--accent);
+}
+
+:where(details.secondary-details)[open] > summary {
+    box-shadow: inset 0 -1px var(--line);
+}
+
+:where(details.secondary-details)[open] > summary + :not(summary) {
+    margin-block-start: 12px;
+}
+
+:where(details.secondary-details)[open] > :last-child:not(summary) {
+    margin-block-end: 12px;
+}
+
+:where(input[type="checkbox"]:not([role="switch"]), input[type="radio"]) {
+    accent-color: var(--accent);
+    flex: none;
+}
+
+@media (forced-colors: none) {
+    input:is([type="checkbox"]:not([role="switch"]), [type="radio"]) {
+        appearance: none;
+        display: inline-grid;
+        place-content: center;
+        flex: none;
+        width: 18px;
+        height: 18px;
+        padding: 0;
+        margin: 0;
+        vertical-align: middle;
+        background-color: var(--panel);
+        border: 1px solid var(--control);
+        border-radius: 3px;
+        cursor: pointer;
+    }
+
+    input[type="radio"]:not([role="switch"]) {
+        border-radius: 50%;
+    }
+
+    input:is([type="checkbox"]:not([role="switch"]), [type="radio"]):checked,
+    input[type="checkbox"]:not([role="switch"]):indeterminate {
+        background-color: var(--accent);
+        border-color: var(--accent);
+        color: var(--on-accent);
+    }
+
+    input[type="checkbox"]:not([role="switch"]):checked::before {
+        content: "";
+        width: 8px;
+        height: 5px;
+        border: solid currentcolor;
+        border-width: 0 0 2px 2px;
+        transform: translateY(-1px) rotate(-45deg);
+    }
+
+    input[type="checkbox"]:not([role="switch"]):indeterminate::before {
+        content: "";
+        width: 8px;
+        height: 2px;
+        background: currentcolor;
+    }
+
+    input[type="radio"]:checked::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentcolor;
+    }
+
+    input:is([type="checkbox"]:not([role="switch"]), [type="radio"]):disabled {
+        background-color: var(--disabled-face);
+        border-color: var(--disabled-line);
+        color: var(--disabled-ink);
+        cursor: not-allowed;
+    }
+
+}
+
+label:has(> input:is([type="checkbox"]:not([role="switch"]), [type="radio"])):not(.choice-strip label) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+@media (pointer: coarse), (max-width: 600px) {
+    label:has(> input:is([type="checkbox"]:not([role="switch"]), [type="radio"])):not(.choice-strip label) {
+        min-height: var(--check-row-height, 44px);
+    }
+}
+
+clutch-card-rows[data-balance-short-cards]:not([data-measuring]) > :first-child > * {
+    min-height: var(--comparable-card-height, 0);
 }

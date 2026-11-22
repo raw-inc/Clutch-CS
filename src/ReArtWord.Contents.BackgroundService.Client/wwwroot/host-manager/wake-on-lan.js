@@ -1,4 +1,4 @@
-import { node, heading, action, checkbox, table } from './dom.js';
+import { node, heading, action, checkbox, table, targetHosts } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 
 /** 明示選択と物理NICの既定選択から、送信対象を決めます。
@@ -24,7 +24,7 @@ export function wakePreview(item, t = key => key)
 }
 
 /** 読取り時の版へ変更案を固定し、NIC設定自体は書き換えません。 */
-function renderHost(root, ctx, state, draft)
+function renderHost(root, ctx, state, draft, actionArea)
 {
     const section = node('section', '', 'hm-section'), selected = new Set(selectedWakeInterfaces(state.snapshot.data.inventory, draft.selection).map(item => item.id));
     const automatic = checkbox(ctx.t('wake.defaults'), draft.selection.usePhysicalDefaults);
@@ -32,10 +32,13 @@ function renderHost(root, ctx, state, draft)
     const rows = [];
     const editable = state.host.capabilities.elevated === true;
     automatic.control.disabled = !editable;
-    section.append(node('h3', state.host.target.hostId), automatic.root, list.root);
+    const selection = node('div', '', 'hm-wake-selection');
+    selection.append(automatic.root, node('p', ctx.t('wake.overrideHint'), 'hm-muted'));
+    section.append(node('h3', state.host.target.hostId), selection, list.root);
     for (const adapter of state.snapshot.data.inventory.interfaces)
     {
         const check = checkbox('', selected.has(adapter.id));
+        check.root.classList.add('hm-row-check');
         check.control.setAttribute('aria-label', adapter.name);
         check.control.disabled = !editable;
         check.control.onchange = () =>
@@ -51,6 +54,7 @@ function renderHost(root, ctx, state, draft)
                 selected.delete(adapter.id);
             }
             draft.selection.interfaceIds = [...selected];
+            updateReview();
         };
         rows.push({ adapter, control: check.control });
         list.add([check.root, adapter.name, adapter.macAddress, ctx.t(adapter.physical ? 'wake.physical' : 'wake.virtual')]);
@@ -75,18 +79,32 @@ function renderHost(root, ctx, state, draft)
         {
             draft.selection.interfaceIds = [...selected];
         }
+        updateReview();
     };
     const save = action(ctx, 'wake.review', 'settings', () => ctx.preview([{ host: state.host, query: { area: 'wakeOnLan' }, action: 'wakeOnLan',
         baseRevision: draft.revision, change: structuredClone(draft.selection), label: ctx.t('wake.title') }]));
-    save.disabled = !editable;
-    section.append(save);
+
+    /** 初期選択へ戻した場合も、保存する変更があるかを判定します。 */
+    function updateReview()
+    {
+        const initial = state.snapshot.data.selection;
+        const ids = new Set(initial.interfaceIds.map(id => id.toLowerCase()));
+        const modeMatches = initial.usePhysicalDefaults === draft.selection.usePhysicalDefaults;
+        const selectionMatches = draft.selection.usePhysicalDefaults || (ids.size === selected.size && [...selected].every(id => ids.has(id.toLowerCase())));
+        save.disabled = !editable || (modeMatches && selectionMatches);
+    }
+
+    updateReview();
+    const row = node('div', '', 'hm-selection-bar');
+    row.append(node('strong', targetHosts(ctx, [state.host])), save);
+    actionArea.append(row);
     root.append(section);
 }
 
 /** PCが停止する前に対象NICを保存する、ホスト単位の設定画面を構成します。
  * @returns 読取りの寿命制御です。
  */
-export function wakeOnLanView(root, ctx)
+export function wakeOnLanView(root, ctx, actionArea)
 {
     const hosts = structuredClone(ctx.hosts());
     if (!hosts.length)
@@ -106,13 +124,16 @@ export function wakeOnLanView(root, ctx)
     };
 
     title.append(action(ctx, 'Refresh settings', 'refresh', reload));
-    root.append(title, node('p', ctx.t('wake.requirements'), 'hm-muted'), node('p', ctx.t('wake.inventoryCache'), 'hm-muted'), status, listing);
+    const help = node('details', '', 'secondary-details');
+    help.append(node('summary', ctx.t('Wake-on-LAN requirements')), node('p', ctx.t('wake.requirements')), node('p', ctx.t('wake.inventoryCache')));
+    root.append(title, help, status, listing);
 
     /** 別ホストの読み取り完了で、先に編集した選択を消しません。 */
     function render()
     {
         readStatus(status, ctx, reader.states);
         listing.replaceChildren();
+        actionArea.replaceChildren();
         for (const state of [...reader.states.values()].filter(value => value.snapshot))
         {
             const key = state.host.target.hostId;
@@ -120,7 +141,7 @@ export function wakeOnLanView(root, ctx)
             {
                 drafts.set(key, { revision: state.snapshot.revision, selection: structuredClone(state.snapshot.data.selection) });
             }
-            renderHost(listing, ctx, state, drafts.get(key));
+            renderHost(listing, ctx, state, drafts.get(key), actionArea);
         }
     }
 

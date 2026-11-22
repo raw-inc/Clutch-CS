@@ -26,12 +26,17 @@ class Element
             }
             this.className = [...values].join(' ');
         } };
+        this.classList.add = name => this.classList.toggle(name, true);
     }
 
     /** 受け取った項目を保持する順序へ追加します。 */
     append(...items)
     {
-        this.children.push(...items);
+        for (const item of items)
+        {
+            this.children.push(item);
+            item.parentElement = this;
+        }
     }
 
     /** 子要素を表示順の先頭へ追加します。 */
@@ -79,12 +84,48 @@ class Element
     }
 
     /** 属性の値を試験用DOMへ記録します。 */
-    setAttribute()
-    {}
+    setAttribute(name, value)
+    {
+        (this.attributes ??= {})[name] = value;
+    }
+
+    /** 保持した操作名や状態を試験用DOMから読み取ります。
+     * @returns 登録した属性値です。
+     */
+    getAttribute(name)
+    {
+        return this.attributes?.[name];
+    }
 
     /** 試験で呼び出せるイベントハンドラーを登録します。 */
-    addEventListener()
-    {}
+    addEventListener(name, listener)
+    {
+        if (name === 'close')
+        {
+            this.onclose = listener;
+        }
+    }
+
+    /** 確認画面を表示します。 */
+    showModal()
+    {
+        this.open = true;
+    }
+
+    /** 確定または取消の値を設定して確認画面を閉じます。 */
+    close(value)
+    {
+        this.returnValue = value;
+        this.open = false;
+        this.onclose?.();
+    }
+
+    /** 閉じた確認画面を親から取り除きます。 */
+    remove()
+    {
+        const parent = this.parentElement;
+        parent.children = parent.children.filter(item => item !== this);
+    }
 
     /** 指定した要素が自分または子孫かを判定します。
      * @returns 呼出し元が使用する値です。
@@ -111,6 +152,23 @@ const b = { clusterId: 'cluster-b', hostId: 'host-b', peerId: 'peer-b', instance
  * @returns sessionId・shell・elevated・exited・sequence・ownerを含む結果です。
  */
 const shell = id => ({ sessionId: id, shell: 'pwsh.exe', elevated: false, exited: false, sequence: 0, owner: 'owner' });
+
+/** 指定した共有セッションの終了を確定または取り消します。
+ * @returns 確認後の処理の完了です。
+ */
+async function endSessionAsync(fixture, target, confirm)
+{
+    const row = fixture.row(target);
+    const pending = row.children.find(item => item.getAttribute('aria-label') === 'End session').onclick();
+    const dialog = all(fixture.root).find(item => item.tag === 'dialog' && item.open);
+    assert.ok(dialog);
+    assert.ok(dialog.textContent.includes(row.children[0].textContent));
+    assert.equal(dialog.textContent.includes('This screen will also disconnect.'), row.getAttribute('aria-current') === 'true');
+    const action = all(dialog).find(item => item.tag === 'button' && item.textContent === (confirm ? 'End session' : 'Cancel'));
+    assert.ok(action);
+    dialog.close(action.value);
+    await pending;
+}
 
 /** 完了済みのPromiseの継続を、次のイベント処理まで待ちます。
  * @returns 模擬応答を処理した後に完了します。
@@ -141,6 +199,12 @@ async function fixtureAsync(t, custom, experimental = false, alwaysExperimental 
 
         querySelector: () => null },
     window: {
+        confirm: () => true,
+
+        matchMedia: () => new EventTarget(),
+
+        getComputedStyle: () => ({ color: 'rgb(23, 24, 29)', backgroundColor: 'rgb(245, 245, 242)', caretColor: 'rgb(63, 73, 178)' }),
+
         /** 試験で呼び出せるイベントハンドラーを登録します。 */
         addEventListener()
         {},
@@ -364,7 +428,7 @@ async function fixtureAsync(t, custom, experimental = false, alwaysExperimental 
     /** 操作の実行と処理中表示を持つボタンを構成します。
      * @returns 呼出し元が使用する値です。
      */
-    const button = text => all(root).find(item => item.tag === 'button' && item.textContent === text);
+    const button = text => all(root).find(item => item.tag === 'button' && (item.textContent === text || item.getAttribute('aria-label') === text));
 
     /** 表示の検証に使用する一覧行を作成します。
      * @returns 呼出し元が使用する値です。
@@ -463,7 +527,7 @@ test('the persistent Core policy has no editing control outside experimental mod
     f.setCapabilityRead(async() => ({ userAvailable: true, administratorAvailable: true, settings: { strictUserToken: true, version: 'two' } }));
     await f.button('host-a / peer-a').onclick();
     assert.equal(f.button('Strict unelevated: ON'), undefined);
-    await f.button('＋ User session').onclick();
+    await f.button('User session').onclick();
     assert.equal(f.calls.find(c => c.path.endsWith('/create')).body.strictUserToken, undefined);
 });
 
@@ -473,19 +537,19 @@ test('administrator mode stays disabled without a confirmed elevated user token 
     await f.mounting;
     f.setCapabilityRead(async() => ({ userAvailable: true, administratorAvailable: false, administratorReason: 'CoreAdministratorRequired' }));
     await f.button('host-a / peer-a').onclick();
-    assert.equal(f.button('＋ Administrator').disabled, true);
-    assert.equal(f.button('＋ User session').disabled, false);
-    await f.button('＋ Administrator').onclick();
+    assert.equal(f.button('Administrator').disabled, true);
+    assert.equal(f.button('User session').disabled, false);
+    await f.button('Administrator').onclick();
     assert.equal(f.calls.filter(c => c.path.endsWith('/create')).length, 0);
     f.setCapabilityRead(async() => ({ userAvailable: true, administratorAvailable: true }));
     await f.tick();
-    assert.equal(f.button('＋ Administrator').disabled, false);
+    assert.equal(f.button('Administrator').disabled, false);
     f.setCapabilityRead(async() =>
     {
         throw Error('unavailable');
     });
     await f.tick();
-    assert.equal(f.button('＋ Administrator').disabled, true);
+    assert.equal(f.button('Administrator').disabled, true);
 });
 
 test('no logged-on user makes SYSTEM explicit and disables ordinary user creation', async t =>
@@ -494,9 +558,9 @@ test('no logged-on user makes SYSTEM explicit and disables ordinary user creatio
     await f.mounting;
     f.setCapabilityRead(async() => ({ userAvailable: false, administratorAvailable: true, administratorUsesSystem: true }));
     await f.button('host-a / peer-a').onclick();
-    assert.equal(f.button('＋ User session').disabled, true);
-    assert.equal(f.button('＋ SYSTEM session').disabled, false);
-    assert.match(f.button('＋ SYSTEM session').title, /No user is logged on/);
+    assert.equal(f.button('User session').disabled, true);
+    assert.equal(f.button('SYSTEM session').disabled, false);
+    assert.match(f.button('SYSTEM session').title, /No user is logged on/);
     f.values.set('peer-a', [{ ...shell('system-session'), elevated: true, system: true }]);
     await f.tick();
     assert.match(f.row(a).textContent, /SYSTEM/);
@@ -507,17 +571,20 @@ test('shell catalog is cached by Core instance and the chosen shell is pinned on
     const f = await fixtureAsync(t);
     await f.mounting;
     await f.button('host-a / peer-a').onclick();
-    const choice = all(f.root).find(item => item.tag === 'select');
+    const choice = all(f.root).find(item => item.tag === 'select'), path = all(f.root).find(item => item.className === 'terminal-shell-path');
     assert.equal(choice.value, 'C:/pwsh.exe');
+    assert.equal(choice.children[0].textContent, 'pwsh (default)');
+    assert.equal(path.textContent, 'C:/pwsh.exe');
     choice.value = 'C:/cmd.exe';
     choice.onchange();
+    assert.equal(path.textContent, 'C:/cmd.exe');
     await f.tick();
     await f.tick();
     await f.button('host-b / peer-b').onclick();
     await f.button('host-a / peer-a').onclick();
     assert.equal(choice.value, 'C:/cmd.exe');
     assert.equal(f.calls.filter(call => call.path.endsWith('/shells') && call.target.peerId === 'peer-a').length, 1);
-    await f.button('＋ User session').onclick();
+    await f.button('User session').onclick();
     const created = f.calls.find(call => call.path.endsWith('/create'));
     assert.equal(created.body.shell, 'C:/cmd.exe');
     assert.equal(created.target.instanceId, a.instanceId);
@@ -537,7 +604,7 @@ test('late shell responses cannot replace the newly selected peer catalog', asyn
     }) : [{ name: 'other', path: 'C:/other.exe' }]);
     const first = f.button('host-a / peer-a').onclick();
     await turnsAsync();
-    assert.equal(f.button('＋ User session').disabled, true);
+    assert.equal(f.button('User session').disabled, true);
     await f.button('host-b / peer-b').onclick();
     release([{ name: 'stale', path: 'C:/stale.exe' }]);
     await first;
@@ -553,8 +620,8 @@ test('missing shell metadata disables creation without breaking session takeover
         throw new Error('unavailable');
     });
     await f.button('host-a / peer-a').onclick();
-    assert.equal(f.button('＋ User session').disabled, true);
-    assert.equal(f.button('＋ Administrator').disabled, true);
+    assert.equal(f.button('User session').disabled, true);
+    assert.equal(f.button('Administrator').disabled, true);
     await f.tick();
     assert.equal(f.calls.filter(call => call.path.endsWith('/shells')).length, 1);
     await f.row(a).children.find(item => item.textContent === 'Take over').onclick();
@@ -585,7 +652,7 @@ test('all shared sessions are visible without selecting a peer and selection doe
     await f.mounting;
     assert.ok(f.row(a));
     assert.ok(f.row(b));
-    assert.equal(f.button('＋ User session').disabled, true);
+    assert.equal(f.button('User session').disabled, true);
     assert.equal(f.button('Refresh sessions').disabled, false);
     await f.button('host-b / peer-b').onclick();
     assert.ok(f.row(a));
@@ -602,7 +669,7 @@ test('takeover and termination route to the row owner even when another peer is 
     assert.equal(f.calls.find(call => call.path.endsWith('/claim')).target.peerId, 'peer-a');
     assert.equal(f.terms.length, 1);
     assert.equal(f.terms[0].disposed, false);
-    await f.row(b).children.find(item => item.textContent === 'Terminate').onclick();
+    await endSessionAsync(f, b, true);
     assert.equal(f.calls.find(call => call.path.endsWith('/close')).target.peerId, 'peer-b');
     assert.equal(f.terms[0].disposed, false, 'a duplicate session ID on another peer must not disconnect this terminal');
     await f.tick();
@@ -683,7 +750,7 @@ test('explicit termination closes the local stream before the server can report 
     const f = await fixtureAsync(t);
     await f.mounting;
     await f.row(a).children.find(item => item.textContent === 'Take over').onclick();
-    await f.row(a).children.find(item => item.textContent === 'Terminate').onclick();
+    await endSessionAsync(f, a, true);
     assert.equal(f.calls.find(item => item.path.endsWith('/close')).terminalDisposed, true);
     assert.equal(f.terms[0].disposed, true);
 });
@@ -699,7 +766,7 @@ test('mobile modifier toggles and direct keys reach the connected stream in orde
     assert.equal(f.button('Ctrl').disabled, false);
     f.button('Ctrl').onclick();
     f.terms[0].data('c');
-    f.button('←').onclick();
+    f.button('Left').onclick();
     const pending = [...f.timers].find(([,value]) => value.delay === 8);
     pending[1].callback();
     assert.equal(atob(socket.sent.at(-1).request.data), '\x03\x1b[1;5D');
@@ -712,4 +779,15 @@ test('mobile modifier toggles and direct keys reach the connected stream in orde
     assert.equal(atob(socket.sent.at(-1).request.data), '\x1bx');
     await f.button('Disconnect').onclick();
     assert.equal(f.button('Alt').disabled, true);
+});
+
+test('declining session termination keeps the stream and sends no close request', async t =>
+{
+    const f = await fixtureAsync(t);
+    await f.mounting;
+    const row = f.row(a);
+    await row.children.find(item => item.textContent === 'Take over').onclick();
+    await endSessionAsync(f, a, false);
+    assert.equal(f.calls.some(item => item.path.endsWith('/close')), false);
+    assert.equal(f.terms[0].disposed, false);
 });

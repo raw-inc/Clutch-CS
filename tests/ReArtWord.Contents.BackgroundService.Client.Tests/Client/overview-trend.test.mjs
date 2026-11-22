@@ -67,7 +67,7 @@ async function fixtureAsync(t, reduce = false)
     } };
     const series = { setAttribute: (name, value) => attributes.set(name, value),
 
-        querySelector: () => line };
+        querySelector: selector => selector === ".trend-highlight" ? band : line };
     const chart = { isConnected: true, hidden: false, height: 104, width: 300, viewBox: { baseVal: { y: -2, height: 104, width: 300 } },
 
         querySelector: selector => ({ '[data-shadow-blur]': blur, '[data-shadow-band]': band, '[data-area-clip]': clip })[selector] ?? series,
@@ -100,6 +100,9 @@ async function fixtureAsync(t, reduce = false)
     });
     return {
         clock, chart, motion, frames, attributes, blurAttributes, bandAttributes, layers, clipAttributes, ...module,
+
+        /** ClientHostで校正した時刻を描画へ渡します。 */
+        update: (chart, path, origin, serverNow = 999_000 + clock.monotonic) => module.update(chart, path, origin, serverNow),
 
         clipWrites: () => clipWrites,
 
@@ -169,6 +172,24 @@ test('wall clock corrections cannot move already rendered samples backwards', as
     assert.equal(f.offset(), -3);
 });
 
+for (const offset of [-3_600_000, 3_600_000])
+{
+    test(`browser clock offset ${offset} does not shift the server time axis`, async t =>
+    {
+        const f = await fixtureAsync(t);
+        f.clock.wall += offset;
+        f.update(f.chart, 'M297,50 L300,40', 997_000, 1_000_000);
+        assert.equal(f.offset(), -3);
+        f.frame(1000);
+        assert.equal(f.offset(), -4);
+        f.clock.wall -= offset * 2;
+        f.update(f.chart, 'M294,50 L297,40 L300,60', 1_000_000, 1_001_000);
+        assert.equal(f.offset(), -1);
+        f.frame(1000);
+        assert.equal(f.offset(), -2);
+    });
+}
+
 test('a frame timestamp captured before a render cannot rewind its immediate offset', async t =>
 {
     const f = await fixtureAsync(t);
@@ -234,7 +255,18 @@ test('removed elements are released even when reduced motion has stopped the ani
     assert.equal(f.frames.size, 0);
 });
 
-test('shadow is clipped below each observed interval without bridging gaps or isolated samples', async t =>
+test('the line preserves missing intervals and clears when measurements are unavailable', async t =>
+{
+    const f = await fixtureAsync(t);
+    const path = 'M0,80 L10,40 M60,20 L80,60';
+    f.update(f.chart, path, f.clock.wall);
+    assert.equal(f.attributes.get('d'), path);
+    f.update(f.chart, '', null);
+    assert.equal(f.attributes.get('d'), '');
+});
+
+// 旧表示では線の下に段階的な影を描いていた。
+test.skip('shadow is clipped below each observed interval without bridging gaps or isolated samples', async t =>
 {
     const f = await fixtureAsync(t);
     f.update(f.chart, 'M-3,0 L0,20 L3,40 M30,50 M60,70 L90,80', f.clock.wall);
@@ -251,7 +283,7 @@ test('shadow is clipped below each observed interval without bridging gaps or is
     assert.equal(f.bandAttributes.get('d').trim(), '');
 });
 
-test('unchanged samples reuse the shadow clip and a rebase updates both paths together', async t =>
+test.skip('unchanged samples reuse the shadow clip and a rebase updates both paths together', async t =>
 {
     const f = await fixtureAsync(t);
     f.update(f.chart, 'M297,50 L300,40', f.clock.wall);
@@ -263,7 +295,7 @@ test('unchanged samples reuse the shadow clip and a rebase updates both paths to
     assert.equal(f.clipWrites(), 2);
 });
 
-test('shadow retains a fifteen-line-width falloff when cards resize or become visible', async t =>
+test.skip('shadow retains a fifteen-line-width falloff when cards resize or become visible', async t =>
 {
     const f = await fixtureAsync(t);
     f.chart.height = 0;
@@ -284,7 +316,7 @@ test('shadow retains a fifteen-line-width falloff when cards resize or become vi
     assert.equal(f.disconnected(), true);
 });
 
-test('sloping, flat and sharply descending segments share one constant-depth shadow band', async t =>
+test.skip('sloping, flat and sharply descending segments share one constant-depth shadow band', async t =>
 {
     const f = await fixtureAsync(t);
     f.update(f.chart, 'M0,80 L30,20 L60,20 L90,90', f.clock.wall);

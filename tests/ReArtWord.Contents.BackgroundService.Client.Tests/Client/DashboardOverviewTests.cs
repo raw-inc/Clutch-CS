@@ -148,14 +148,16 @@ public sealed class DashboardOverviewTests
     [Fact]
     public void ActivityAtTheHostRetentionLimitIsMarkedAsPartial()
     {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
-        OverviewActivityWindow window = new();
+        ObservationClock clock = new();
+        DateTimeOffset now = clock.GetUtcNow();
+        OverviewActivityWindow window = new(clock);
         ExecutionResultView[] entries = Enumerable.Range(0, 2000).Select(_ => new ExecutionResultView(null,
             new(Guid.NewGuid(), "workflow", "revision", EOutcome.Succeeded, now.AddSeconds(-1), now, [], 0, 0))).ToArray();
         window.Add(entries, now);
         Assert.True(window.CapacityLimited);
         Assert.Equal(2000, Assert.Single(window.Read(now)).Completed);
-        window.Add([], now.AddSeconds(61));
+        clock.Advance(TimeSpan.FromSeconds(61));
+        window.Add([], clock.GetUtcNow());
         Assert.False(window.CapacityLimited);
         Assert.Empty(window.Read(now.AddSeconds(61)));
     }

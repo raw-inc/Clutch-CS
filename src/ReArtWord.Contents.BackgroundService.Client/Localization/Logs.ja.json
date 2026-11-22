@@ -1,4 +1,6 @@
 {
+  "End temporary tracing and request CoreService stop": "一時追跡を解除して CoreService の停止を要求",
+  "Use this action to stop CoreService on the selected peers. Use Restore normal tracing to keep CoreService running.": "選択したピアの CoreService に停止を要求します。記録設定だけを戻す場合は「通常の記録に戻す」を選んでください。",
   "Clear related log filter": "関連ログの絞り込みを解除",
   "Logs": "ログ",
   "Operation history": "操作履歴",

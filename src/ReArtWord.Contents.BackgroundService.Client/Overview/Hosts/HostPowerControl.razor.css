@@ -1,56 +1,29 @@
 .host-power-control {
     position: relative;
     flex: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: end;
+    gap: 6px;
 }
 
-.health-indicator {
-    cursor: pointer;
+.power-menu-trigger {
+    min-height: 36px;
+    padding: 4px 9px;
 }
 
-.health-indicator:hover {
-    background: transparent;
-    color: inherit;
-}
-
-.health-indicator.good:hover {
-    color: var(--green);
-}
-
-.health-indicator.warn:hover {
-    color: var(--warn);
-}
-
-.health-indicator.offline,
-.health-indicator.offline:hover {
-    color: var(--muted);
-}
-
-.health-indicator[aria-disabled="true"] {
-    cursor: default;
+@media (pointer: coarse), (max-width: 760px) {
+    .power-menu-trigger {
+        min-height: 44px;
+    }
 }
 
 .power-symbol {
-    flex: none;
+    width: 16px;
+    height: 16px;
     overflow: visible;
     transform-origin: center;
-}
-
-.power-syncing {
-    display: inline-flex;
-    flex: none;
-}
-
-.power-syncing.confirmed {
-    color: var(--green);
-}
-
-.power-unknown {
-    display: inline-grid;
-    place-items: center;
-    width: 18px;
-    height: 18px;
-    font-size: 15px;
-    font-weight: 600;
 }
 
 .power-panel {
@@ -64,7 +37,7 @@
     padding: 6px;
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     box-shadow: 0 8px 24px #0005;
 }
 
@@ -81,11 +54,6 @@
 
 .power-panel button:hover {
     background: var(--raised);
-}
-
-.power-panel button:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
 }
 
 .power-panel p {

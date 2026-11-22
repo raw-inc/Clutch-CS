@@ -1,0 +1,30 @@
+.force-save-version {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    margin-block: 16px;
+}
+
+.force-save-version-value {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    margin-block-start: 4px;
+}
+
+.force-save-facts {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 6px 16px;
+    margin-block: 16px;
+}
+
+.force-save-facts dt {
+    color: var(--muted);
+}
+
+.force-save-facts dd {
+    margin: 0;
+}

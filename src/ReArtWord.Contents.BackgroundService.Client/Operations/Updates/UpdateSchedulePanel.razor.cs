@@ -84,7 +84,7 @@ public sealed partial class UpdateSchedulePanel
         try
         {
             UpdateScheduleCancelRequest request = new(operation, view.Schedule.Plan.Update.OperationId, view.Version);
-            await Journal.StartAsync(operation, "Cancel update reservation", "/api/updates/schedules/cancel", "/api/updates/schedules/operations/" + operation,
+            await Journal.StartAsync(operation, "Cancel update reservation", "/api/v2/updates/schedules/cancel", "/api/updates/schedules/operations/" + operation,
                 request, targetPeer: peer, targetCluster: cluster, cancellationToken: cancellationToken).ConfigureAwait(true);
             message = Ui.Deferred("Operation {0}: {1}", operation, OperationJournal.Outcome(Journal.LastResult));
             await RefreshAsync(cancellationToken).ConfigureAwait(true);

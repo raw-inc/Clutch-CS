@@ -11,11 +11,21 @@ namespace ReArtWord.Contents.BackgroundService.Client.Operations.Execution;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1515", Justification = "Razorが生成する公開宣言と同じ型を構成するため。")]
 public sealed partial class RunCancelButton
 {
+    private bool confirming;
+
     [Inject]
     private OperationJournal Journal
     {
         get; set;
     } = null!;
+
+    /// <summary>確認画面に表示する実行元ワークフローです。</summary>
+    [Parameter]
+    public string? WorkflowId
+    {
+        get;
+        set;
+    }
 
     /// <summary>元のワークフロー実行。</summary>
     [Parameter]
@@ -71,7 +81,7 @@ public sealed partial class RunCancelButton
         try
         {
             submitted = true;
-            JsonElement response = await Journal.StartAsync(request.OperationId, "Cancel execution", "/api/runs/cancel", "/api/runs/cancellations/" + request.OperationId,
+            JsonElement response = await Journal.StartAsync(request.OperationId, "Cancel execution", "/api/v2/runs/cancel", "/api/runs/cancellations/" + request.OperationId,
                 request, targetPeer: peer, targetCluster: cluster, cancellationToken: cancellationToken).ConfigureAwait(true);
             WorkflowCancelResult? receipt = response.Deserialize<WorkflowCancelResult>(ContractJson.Options);
             message = Ui.Deferred("Cancellation request: {0}. {1}", receipt?.Outcome, Ui[receipt?.Reason ?? "run.cancelUnconfirmed"]);

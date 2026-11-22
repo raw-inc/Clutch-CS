@@ -4,7 +4,6 @@ using System.Net.WebSockets;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Management;
 using ReArtWord.Contents.BackgroundService.Contracts.Management.Discovery;
-using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Desktop;
 using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
@@ -44,7 +43,7 @@ public sealed class DesktopViewerProcessTests
         await CorePeer.WaitAsync(async token =>
         {
             using HttpResponseMessage response = await client.SendAsync(HttpMethod.Get, "client/clusters", cancellationToken: token).ConfigureAwait(true);
-            DiscoveredCluster[] values = (await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ContractJson.Options, token).ConfigureAwait(true))!;
+            DiscoveredCluster[] values = (await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ClientObservationJson.Options, token).ConfigureAwait(true))!;
             return values.Any(value => string.Equals(value.ClusterId, cluster, StringComparison.Ordinal)
                 && value.Peers.Any(peer => peer.Status == Contracts.Cluster.EPeerStatus.Ready));
         }, timeout.Token).ConfigureAwait(true);

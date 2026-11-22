@@ -1,10 +1,3 @@
-:root {
-    color-scheme: dark;
-    font: 13px system-ui, sans-serif;
-    background: #111317;
-    color: #e5e8ed;
-}
-
 body {
     margin: 0;
     min-height: 100vh;
@@ -18,14 +11,17 @@ body {
 }
 
 .update-splash {
-    width: min(260px, calc(100vw - 64px));
-    text-align: center;
+    box-sizing: border-box;
+    width: min(30rem, calc(100% - 32px));
+    padding: clamp(20px, 5vw, 36px);
+    border-radius: var(--radius-panel);
+    background: var(--card);
 }
 
 .update-brand {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 14px;
     margin-bottom: 28px;
 }
@@ -35,7 +31,7 @@ body {
     place-items: center;
     width: 42px;
     height: 42px;
-    color: #a6c5ec;
+    color: var(--accent);
 }
 
 .brand-mark svg,
@@ -54,13 +50,13 @@ body {
 
 .brand-name strong {
     font-size: 20px;
-    font-weight: 550;
+    font-weight: 700;
     letter-spacing: 0.025em;
 }
 
 .brand-name small {
     font-size: 11px;
-    color: #8994a3;
+    color: var(--muted);
     letter-spacing: 0.055em;
 }
 
@@ -73,73 +69,102 @@ body {
 progress {
     display: block;
     width: 100%;
-    height: 3px;
-    border: 0;
-    border-radius: 3px;
+    height: 8px;
+    border-radius: var(--radius-chart);
     overflow: hidden;
-    background: #242a33;
-    accent-color: #9cbbdf;
+    background: var(--nested);
+    accent-color: var(--accent);
+    border: 1px solid var(--control);
 }
 
 progress::-webkit-progress-bar {
-    background: #242a33;
-    border-radius: 3px;
+    background: var(--nested);
+    border-radius: var(--radius-chart);
 }
 
 progress::-webkit-progress-value {
-    background: #9cbbdf;
-    border-radius: 3px;
-    transition: width 0.18s ease-out;
+    background: var(--accent);
+    border-radius: var(--radius-chart);
 }
 
 progress::-moz-progress-bar {
-    background: #9cbbdf;
-    border-radius: 3px;
+    background: var(--accent);
+    border-radius: var(--radius-chart);
 }
 
 .update-status {
     font-size: 11px;
-    color: #8994a3;
+    color: var(--muted);
     line-height: 1.8;
     white-space: pre-wrap;
     margin-top: 14px;
 }
 
 .manual {
-    max-width: 46rem;
-    padding: 32px;
+    box-sizing: border-box;
+    width: min(30rem, calc(100% - 32px));
+    margin: 16px;
+    padding: clamp(16px, 4vw, 32px);
+    border-radius: var(--radius-panel);
+    background: var(--card);
     line-height: 1.8;
 }
 
 .manual h1 {
     font-size: 20px;
-    font-weight: 550;
+    font-weight: 700;
 }
 
 button,
 a {
     font: inherit;
-    color: inherit;
+    color: var(--accent);
 }
 
 button {
-    background: #314761;
+    color: var(--on-accent);
+    font-weight: 600;
+    background: var(--accent);
     border: 0;
-    border-radius: 5px;
+    border-radius: var(--radius-control);
     padding: 0.7rem 1.4rem;
     cursor: pointer;
 }
 
 button:disabled {
-    opacity: 0.5;
+    background: var(--disabled-face);
+    color: var(--disabled-ink);
 }
 
 .manual .update-splash {
     margin: 36px auto;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    progress::-webkit-progress-value {
-        transition: none;
-    }
+.manual > a {
+    display: inline-block;
+    margin-block: 10px;
+}
+
+.save-reminder {
+    padding-inline-start: 10px;
+    border-inline-start: 3px solid var(--warn);
+}
+
+.update-splash .update-status {
+    font-size: 16px;
+    color: var(--ink);
+}
+
+.update-progress-count {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.save-reminder p:lang(ja) {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+
+.pwa-window {
+    white-space: nowrap;
 }

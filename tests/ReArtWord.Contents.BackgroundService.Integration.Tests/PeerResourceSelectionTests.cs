@@ -110,7 +110,7 @@ public sealed class PeerResourceSelectionTests
         await CorePeer.WaitAsync(async token =>
         {
             using HttpResponseMessage response = await client.SendAsync(HttpMethod.Get, "client/clusters", cancellationToken: token).ConfigureAwait(true);
-            DiscoveredCluster[]? clusters = await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ContractJson.Options, token).ConfigureAwait(true);
+            DiscoveredCluster[]? clusters = await response.Content.ReadFromJsonAsync<DiscoveredCluster[]>(ClientObservationJson.Options, token).ConfigureAwait(true);
             return clusters?.Any(item => string.Equals(item.ClusterId, cluster, StringComparison.Ordinal) && item.Peers.Count == 2) == true;
         }, cancellationToken).ConfigureAwait(true);
     }

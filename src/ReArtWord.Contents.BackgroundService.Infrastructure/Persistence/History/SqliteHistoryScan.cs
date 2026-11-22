@@ -25,7 +25,7 @@ internal static class SqliteHistoryScan
             INSERT INTO history_candidates(kind,key,recorded_at,eligible_after,value_scopes,hot_order,reviewed_hash)
             SELECT kind,key,0,9223372036854775807,'[]',rowid,NULL FROM records
             WHERE rowid>$after AND rowid<=$last
-              AND (kind='receipt' OR (kind='entry' AND (substr(scope,1,9)='receipts:' OR scope='peer:persistence-routing'
+              AND (kind='receipt' OR (kind='entry' AND (substr(scope,1,9)='receipts:' OR substr(scope,1,33)='cluster:bounded-request-receipts:' OR scope='peer:persistence-routing'
                 OR scope='snapshots' OR substr(scope,1,17)='workflow.history:' OR scope='cluster.operational.history'
                 OR scope IN ('cluster:operations','cluster:replication-members','peer:receipt-reconciliation','manual-runs','updates') OR scope LIKE '%:manual-runs'
                 OR substr(scope,1,33)='cluster:configuration-operations:' OR scope LIKE '%:workflow-results' OR scope LIKE '%:workflow-result-details' OR scope LIKE '%:detached-snapshots'

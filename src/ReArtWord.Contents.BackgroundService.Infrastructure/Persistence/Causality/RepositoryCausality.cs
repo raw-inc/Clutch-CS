@@ -52,7 +52,10 @@ internal static class RepositoryCausality
                 && string.Equals(entry.Key, mutation.Key, StringComparison.Ordinal)));
         }
         string[] clocks = parents.Select(entry => Find(document, entry) ?? CausalClock.Legacy(entry)).ToArray();
-        string stamped = mutation.CausalVersion ?? CausalClock.Advance(clocks, position!.Origin.ToString("N"), position.Sequence);
+
+        // 旧版の確定位置は親として保持し、今回新しく作る版にだけID生成方式の世代を付けます。
+        // 元要求に確定済みの因果情報がある場合は、回復・再送でもその情報を変更しません。
+        string stamped = mutation.CausalVersion ?? CausalClock.Advance(clocks, DerivedRootIdentity.Origin(position!.Origin), position.Sequence);
         _ = CausalClock.Read(stamped);
         string[] verifiedParents = parents.Select(entry => Find(document, entry)).OfType<string>().ToArray();
         if (verifiedParents.Any(clock => !CausalClock.Includes(stamped, clock)))
@@ -159,7 +162,14 @@ internal static class RepositoryCausality
     private static RepositoryCausalEntry[] Read(RepositoryDocument document, string scope, string key)
     {
         DurableEntry? entry = document.Entries.GetValueOrDefault(DurableRepository.GetAddress(Scope, EntryKey(scope, key)));
-        RepositoryCausalEntry[] values = entry?.Value?.Json.Deserialize<RepositoryCausalEntry[]>() ?? [];
+        return ReadValue(entry?.Value?.Json, scope, key);
+    }
+
+    /// <summary>保存先の対象と版の重複を検証し、別の項目の世代を流用しません。</summary>
+    /// <returns>指定した項目の因果情報です。</returns>
+    internal static RepositoryCausalEntry[] ReadValue(JsonElement? value, string scope, string key)
+    {
+        RepositoryCausalEntry[] values = value?.Deserialize<RepositoryCausalEntry[]>() ?? [];
         if (values.Any(value => !string.Equals(value.Scope, scope, StringComparison.Ordinal) || !string.Equals(value.Key, key, StringComparison.Ordinal))
             || values.Select(value => value.Version).Distinct(StringComparer.Ordinal).Count() != values.Length)
         {

@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using ReArtWord.Contents.BackgroundService.Client.Localization;
@@ -52,6 +53,8 @@ public sealed partial class SnapshotPanel
     private IReadOnlyList<SnapshotTarget> captureTargets = [];
     private readonly List<TargetRow> rows = [];
     private SnapshotRestoreRequest? pendingRestore;
+
+    private int SelectedRestoreCount => rows.Count(row => !string.Equals(row.Choice, MatchOmit, StringComparison.Ordinal) && !string.Equals(row.Choice, MatchExclude, StringComparison.Ordinal));
 
     /// <summary>新しい取得は通常の保持期間を既定として開始します。</summary>
     private void OpenCapture()
@@ -159,8 +162,8 @@ public sealed partial class SnapshotPanel
         captureOpen = false;
         foreach (SnapshotTarget? item in fixedTargets)
         {
-            SnapshotCaptureRequest? request = new SnapshotCaptureRequest(Guid.CreateVersion7(), item, fixedPermanent);
-            await Journal.StartAsync(request.OperationId, "Capture selected snapshot scope", "/api/snapshots/capture", "/api/snapshots/captures/" + request.OperationId, request, cancellationToken: UiCancellation).ConfigureAwait(true);
+            SnapshotCaptureRequest? request = new SnapshotCaptureRequest(OperationIdentity.CreateDurableRequest(), item, fixedPermanent);
+            await Journal.StartAsync(request.OperationId, "Capture selected snapshot scope", "/api/v2/snapshots/capture", "/api/snapshots/captures/" + request.OperationId, request, cancellationToken: UiCancellation).ConfigureAwait(true);
         }
 
         message = Ui.Deferred("Capture responses received for {0} targets. Check each operation’s actual result in history.", fixedTargets.Length);
@@ -172,9 +175,9 @@ public sealed partial class SnapshotPanel
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "UIコールバックの呼出し署名を維持し、取消可能なI/Oには画面が所有するトークンを渡します。")]
     private Task CaptureAsync() => GuardAsync(async () =>
     {
-        SnapshotCaptureRequest? request = new SnapshotCaptureRequest(Guid.CreateVersion7(), Target(), permanent);
+        SnapshotCaptureRequest? request = new SnapshotCaptureRequest(OperationIdentity.CreateDurableRequest(), Target(), permanent);
         captureOpen = false;
-        await Journal.StartAsync(request.OperationId, "Capture snapshot", "/api/snapshots/capture", "/api/snapshots/captures/" + request.OperationId, request, cancellationToken: UiCancellation).ConfigureAwait(true);
+        await Journal.StartAsync(request.OperationId, "Capture snapshot", "/api/v2/snapshots/capture", "/api/snapshots/captures/" + request.OperationId, request, cancellationToken: UiCancellation).ConfigureAwait(true);
         message = Ui.Deferred("Operation {0}: {1}", request.OperationId, OperationJournal.Outcome(Journal.LastResult));
     });
 
@@ -182,9 +185,25 @@ public sealed partial class SnapshotPanel
     /// <returns>要求処理と現時点の画面反映の完了です。</returns>
     // 抑制理由: UIコールバックの呼出し署名を維持し、取消可能なI/Oには画面が所有するトークンを渡します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "UIコールバックの呼出し署名を維持し、取消可能なI/Oには画面が所有するトークンを渡します。")]
-    private Task OpenRestoreAsync() => GuardAsync(async () =>
+    private Task OpenRestoreAsync() => LoadSnapshotsAsync(true, UiCancellation);
+
+    /// <summary>候補を表示した時点を、まだ照会していない状態と区別します。</summary>
+    /// <returns>この接続で照会した候補の反映です。</returns>
+    protected override Task OnInitializedAsync() => LoadSnapshotsAsync(false, UiCancellation);
+
+    private DateTimeOffset? snapshotCheckedAt;
+    private int snapshotRead;
+
+    /// <summary>現在の接続先で閲覧できる先頭ページを取得します。</summary>
+    /// <returns>取得件数と時刻の反映です。</returns>
+        private Task LoadSnapshotsAsync(bool open, CancellationToken cancellationToken = default) => GuardAsync(async () =>
     {
-        SnapshotListPage? page = await Api.GetAsync<SnapshotListPage>("/api/snapshots", cancellationToken: UiCancellation).ConfigureAwait(true);
+        int sequence = ++snapshotRead;
+        SnapshotListPage? page = await Api.GetAsync<SnapshotListPage>("/api/snapshots", cancellationToken: cancellationToken).ConfigureAwait(true);
+        if (sequence != snapshotRead)
+        {
+            return;
+        }
         if (page is null)
         {
             throw UiError.InvalidOperation("Snapshot candidates could not be retrieved.");
@@ -193,7 +212,8 @@ public sealed partial class SnapshotPanel
         snapshots.Clear();
         rows.Clear();
         AddPage(page);
-        restoreOpen = true;
+        snapshotCheckedAt = Api.UtcNow;
+        restoreOpen = open;
     });
 
     /// <summary>スナップショット一覧の次ページを取得します。</summary>
@@ -281,7 +301,7 @@ public sealed partial class SnapshotPanel
                                                                                                        : row.Choice;
             return new SnapshotSelection(row.Target, version, excluded);
         }).ToArray();
-        pendingRestore = new SnapshotRestoreRequest(Guid.NewGuid(), selections, point);
+        pendingRestore = new SnapshotRestoreRequest(Guid.NewGuid(), selections, point) { IdentityFormat = Contracts.Execution.EDerivedIdFormat.Uuid8 };
         restoreOpen = false;
         return Task.CompletedTask;
     });

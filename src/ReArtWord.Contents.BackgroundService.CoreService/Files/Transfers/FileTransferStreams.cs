@@ -18,14 +18,16 @@ internal sealed class FileTransferStreams(CommonConfiguration configuration, Pee
     internal void Register(ManagementRegistry registry)
     {
         registry.ReadValue("transfer.stream", _ => true);
-        registry.Transient("transfer.stream.open", async (value, token) => await OpenAsync(registry, ManagementRegistry.Body<Guid>(value), token).ConfigureAwait(false));
+        registry.ReadValue("transfer.stream.clock", _ => true);
+        registry.Transient("transfer.stream.open", async (value, token) => await OpenAsync(registry, ManagementRegistry.Body<Guid>(value), false, token).ConfigureAwait(false));
+        registry.Transient("transfer.stream.clock.open", async (value, token) => await OpenAsync(registry, ManagementRegistry.Body<Guid>(value), true, token).ConfigureAwait(false));
     }
 
     /// <summary>元の接続IDへ一つの待受だけを確保します。</summary>
     /// <returns>短命で一回限りの許可です。</returns>
     // 抑制理由: sessionの所有権を辞書へ移動し、回収ループまたは停止で解放します。
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW141", Justification = "sessionを辞書で所有し非同期回収します。")]
-    private async Task<Contracts.Files.Transfers.FileTransferTicket> OpenAsync(ManagementRegistry registry, Guid id, CancellationToken cancellationToken = default)
+    private async Task<Contracts.Files.Transfers.FileTransferTicket> OpenAsync(ManagementRegistry registry, Guid id, bool clockAware, CancellationToken cancellationToken = default)
     {
         if (id == Guid.Empty)
         {
@@ -36,6 +38,10 @@ internal sealed class FileTransferStreams(CommonConfiguration configuration, Pee
         {
             if (sessions.TryGetValue(id, out FileTransferSession? known))
             {
+                if (known.ClockAware != clockAware)
+                {
+                    throw new ManagementInputException("The file connection mode does not match its original request.");
+                }
                 return known.Ticket;
             }
             await ReapAsync(false, cancellationToken).ConfigureAwait(false);
@@ -46,8 +52,13 @@ internal sealed class FileTransferStreams(CommonConfiguration configuration, Pee
             string address = configuration.Cluster.BindAddress;
             string interfaceId = configuration.Cluster.InterfaceId ?? ObserverNetwork.GetInterfaces()
                 .Single(item => item.Addresses.Any(value => string.Equals(value.Address, address, StringComparison.Ordinal))).InterfaceId;
+            ManagementTransport.Datagrams.RequestAdmissionClock? clock = null;
+            if (clockAware)
+            {
+                clock = cluster.AdmissionClock;
+            }
             FileTransferSession session = new(new LocalNetworkBinding(interfaceId, address),
-                new(cluster.LocalClusterId, cluster.LocalPeerId, cluster.LocalInstanceId), registry);
+                new(cluster.LocalClusterId, cluster.LocalPeerId, cluster.LocalInstanceId), registry, clock);
             sessions.Add(id, session);
             return session.Ticket;
         }

@@ -4,19 +4,26 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Nodes
 @using ReArtWord.Contents.BackgroundService.Contracts.Workflow
 <section class="card">
-    <div class="toolbar"><h2>@Ui["Shared state conflicts"]</h2><button disabled="@busy" @onclick="LoadAsync">@Ui["Review current candidates"]</button></div>
-    <p class="small muted">@Ui["Compare concurrently saved candidates. Resolution checks all reviewed revisions and does not rewrite an already-running occurrence."]</p>
+    <header class="review-heading">
+        <div><h2>@Ui["Shared state conflicts"]</h2>
+            @if(!loaded || conflicts.Count>0){<p class="small muted">@Ui["Compare the saved values and choose the revision to keep."]</p>}</div>
+    </header>
+    @if(!loaded){<p class="lookup-status"><span class="badge pending">@Ui["Not checked"]</span></p>}
     @if(loaded)
     {
-        <p>@Ui.Format("{0} items · observed on {1} / {2}", conflicts.Count, cluster, peer)</p>
-        <div class="table-wrap"><table><thead><tr><th>@Ui["Storage purpose / target"]</th><th>@Ui["Affected scope"]</th><th>@Ui["Candidates"]</th><th></th></tr></thead><tbody>
+        <p role="status" class="lookup-status"><span class="badge @(conflicts.Count>0?"warn":"good")">@(conflicts.Count == 0 ? Ui["No conflicts"] : Ui.Format("Unresolved: {0}", conflicts.Count))</span> <small class="muted">@Ui.Format("Checked at {0}", FormatTime(checkedAt,"HH:mm"))</small></p>
+        @if(conflicts.Count>0)
+        {
+        <div class="table-wrap standalone-records"><table class="record-table"><thead><tr><th>@Ui["Storage purpose / target"]</th><th>@Ui["Affected scope"]</th><th class="numeric">@Ui["Candidates"]</th><th>@Ui["Actions"]</th></tr></thead><tbody>
         @foreach(var conflict in conflicts)
         {
-            <tr><td>@conflict.Scope / @conflict.Key</td><td>@string.Join(", ",conflict.WorkflowIds.Concat(conflict.OperationalFields))</td><td>@conflict.CandidateVersions.Count @(conflict.ValuesHidden?Ui["Content hidden"]:"")</td><td><button disabled="@(!SameConnection||busy||!conflict.DetailAvailable)" @onclick="()=>OpenAsync(conflict)">@Ui["Compare"]</button>@if(!conflict.DetailAvailable){<small>@conflict.DetailReason</small>}</td></tr>
+            <tr><td data-field='@Ui["Storage purpose / target"]'>@conflict.Scope / @conflict.Key</td><td data-field='@Ui["Affected scope"]'>@string.Join(", ",conflict.WorkflowIds.Concat(conflict.OperationalFields))</td><td class="numeric" data-field='@Ui["Candidates"]'>@conflict.CandidateVersions.Count @(conflict.ValuesHidden?Ui["Content hidden"]:"")</td><td data-field='@Ui["Actions"]'><button disabled="@(!SameConnection||busy||!conflict.DetailAvailable)" @onclick="()=>OpenAsync(conflict)">@Ui["Compare"]</button>@if(!conflict.DetailAvailable){<small>@conflict.DetailReason</small>}</td></tr>
         }
         </tbody></table></div>
+        }
         @if(cursor is not null){<button disabled="@(busy||!SameConnection)" @onclick="()=>LoadPageAsync(true)">@Ui["Show more candidates"]</button>}
     }
+    <button disabled="@busy" @onclick="LoadAsync"><UiIcon Name="@(loaded?"refresh":"search")" /><span class="control-label">@Ui[loaded?"Check again":"Show candidates"]</span></button>
     @if(message is not null){<p class="notice">@(message?.Invoke())</p>}
     @if(lastId is Guid id)
     {
@@ -30,28 +37,50 @@
     }
 </section>
 <Modal Open="@(selected is not null)" Title="@Ui["Compare shared state candidates"]" Close="Cancel">
+    <ChildContent>
     @if(selected is { } current)
     {
         <p>@current.Scope / @current.Key</p>
-        <p class="small mono">@Ui["Conflict ID"] @current.Id</p>
+        <details class="secondary-details"><summary>@Ui["Conflict ID"]</summary><code>@current.Id</code></details>
         @if(!current.Resolvable){<p class="notice error">@Ui["This purpose is unsupported or the candidate is invalid. Check diagnostics and stored artifacts instead of resolving here."]</p>}
         @if(current.ValuesHidden){<p>@Ui["Secret values are not displayed or saved on this device. Select a reviewed candidate revision."]</p>}
-        @foreach(var candidate in current.Candidates)
-        {
-            <details class="card"><summary>@candidate.Version @(candidate.Value is null&&!current.ValuesHidden?Ui["· Deletion candidate"]:"")</summary>
-                @if(!current.ValuesHidden){<pre>@Preview(candidate.Value)</pre>}
-                <button disabled="@(busy||!current.Resolvable)" @onclick="()=>Choose(candidate.Version)">@Ui["Choose this candidate"]</button>
-            </details>
-        }
-        <p>@Ui["Selected candidate"]: @(version??Ui["Not selected"])</p>
+        var previews = current.ValuesHidden ? [] : current.Candidates.Select(candidate => Preview(candidate.Value)).ToArray();
+        var difference = DifferingRange(previews);
+        <div class="conflict-candidates">
+            @for(var index=0;index<current.Candidates.Count;index++)
+            {
+                var candidate=current.Candidates[index];
+                <section class="candidate-option @(candidate.Version==version?"chosen":"")" @key="candidate.Version">
+                    <label><input type="radio" name="conflict-choice" checked="@(version==candidate.Version)" disabled="@(busy||!current.Resolvable)" @onchange="()=>Choose(candidate.Version)" />
+                        <strong>@Ui.Format("Candidate {0}", index+1)</strong>@if(candidate.Version==version){<span>@Ui["Selected"]</span>}
+                    </label>
+                    <details><summary><code>@candidate.Version[..Math.Min(12,candidate.Version.Length)]</code><span>· @Ui["Revision"]</span></summary><code>@candidate.Version</code></details>
+                    @if(candidate.Value is null&&!current.ValuesHidden){<small>@Ui["· Deletion candidate"]</small>}
+                    @if(!current.ValuesHidden)
+                    {
+                        var text = previews[index];
+                        <pre>@text[..difference.Prefix]<mark>@text[difference.Prefix..(text.Length-difference.Suffix)]</mark>@text[(text.Length-difference.Suffix)..]</pre>
+                    }
+                </section>
+            }
+        </div>
         @if(CanEdit(current,SelectedCandidate))
         {
-            <label><input type="checkbox" checked="@edit" @onchange="ChangeEdit" disabled="@busy" />@Ui["Edit the selected candidate for comparison"]</label>
+            <div class="comparison-edit">
+                <label><input type="checkbox" checked="@edit" @onchange="ChangeEdit" disabled="@busy" />@Ui["Edit the selected candidate for comparison"]</label>
+                <p class="small muted">@Ui["Editing creates a comparison draft. The selected revision changes only when you confirm the resolution."]</p>
+            </div>
             @if(edit){<label>@Ui["Content to edit (JSON)"]<textarea rows="12" @bind="edited" @bind:event="oninput" disabled="@busy" /></label><p class="small">@Ui["Definition and operational-setting hashes are recalculated while retaining the saved envelope. JSON null differs from deletion."]</p>}
         }
-        <label><input type="checkbox" @bind="reviewed" disabled="@busy" />@Ui["I reviewed all displayed candidate revisions"]</label>
-        <div class="toolbar"><button disabled="@(busy||!SameConnection||!current.Resolvable||version is null||!reviewed)" @onclick="ResolveAsync">@Ui["Resolve using the reviewed candidate"]</button><button disabled="@busy" @onclick="Cancel">@Ui["Cancel without changes"]</button></div>
+
         @if(message is not null){<p class="notice">@(message?.Invoke())</p>}
         @if(!SameConnection){<p class="notice error">@Ui["The connection changed. Retrieve the list again."]</p>}
     }
+    </ChildContent>
+    <ActionFields>
+        <label class="resolution-review"><input type="checkbox" @bind="reviewed" disabled="@busy" />@Ui["I reviewed all displayed candidate revisions"]</label>
+    </ActionFields>
+    <Actions>
+        <button class="primary" disabled="@(busy||!SameConnection||selected?.Resolvable!=true||version is null||!reviewed)" @onclick="ResolveAsync">@Ui["Resolve using the reviewed candidate"]</button>
+    </Actions>
 </Modal>

@@ -80,7 +80,7 @@ public sealed class UpdateJournal
         {
             return false;
         }
-        DurableReceipt receipt = await repository.ApplyBatchAsync(Guid.CreateVersion7(), [new DurableMutation(scope, "dispatch", null, NodeValue.FromObject(ContractJson.Hash(job)))], cancellationToken).ConfigureAwait(false);
+        DurableReceipt receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new DurableMutation(scope, "dispatch", null, NodeValue.FromObject(ContractJson.Hash(job)))], cancellationToken).ConfigureAwait(false);
         return receipt.Outcome == EOutcome.Succeeded;
     }
 }

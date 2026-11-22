@@ -1,6 +1,6 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Scripting.Runtimes
 <div class="runtime-picker">
-    <div class="runtime-choice">
+    <div class="runtime-current">
         <select aria-label="@Ui["Script runtime"]" value="@Value" disabled="@Disabled" @onfocus="()=>LoadAsync(false,UiCancellation)" @onchange="e=>SelectAsync(e,UiCancellation)">
             <option value="">@Ui["Default runtime"]@(catalog?.EffectivePath is {} effective ? " · " + effective : string.Empty)</option>
             @if(!string.IsNullOrWhiteSpace(Value) && catalog?.Entries.Any(entry=>entry.Path==Value)!=true)
@@ -12,8 +12,23 @@
                 <option value="@entry.Path" disabled="@(!entry.Available)">@EntryLabel(entry)</option>
             }
         </select>
-        <button type="button" disabled="@(Disabled||busy||PeerId is null)" title="@Ui["Refresh runtime choices"]" @onclick="()=>LoadAsync(true,UiCancellation)"><UiIcon Name="refresh" /></button>
     </div>
+    @if((string.IsNullOrWhiteSpace(Value) ? catalog?.EffectivePath : Value) is { Length: > 0 } path)
+    {
+        <code class="runtime-current-path">@path</code>
+    }
+    <div class="runtime-actions">
+        <button type="button" disabled="@(Disabled||busy||PeerId is null)" title="@Ui["Refresh runtime choices"]" @onclick="()=>LoadAsync(true,UiCancellation)"><UiIcon Name="refresh" /><span class="control-label">@Ui["Refresh runtime choices"]</span></button>
+        @if(Manage)
+        {
+            <button type="button" disabled="@(Disabled||busy||catalog is null||string.Equals(Value??string.Empty,catalog.DefaultPath??string.Empty,StringComparison.OrdinalIgnoreCase))" @onclick="()=>SetDefaultAsync(UiCancellation)">@Ui["Use selected runtime as default"]</button>
+        }
+    </div>
+    @if(Manage)
+    {
+        @if(catalog is null || string.Equals(Value??string.Empty,catalog.DefaultPath??string.Empty,StringComparison.OrdinalIgnoreCase)){<small>@Ui["Select another runtime to change the default."]</small>}
+        @if(catalog is not null){<small>@Ui["Configured default"]: @(catalog.DefaultPath??Ui["Automatic detection"])</small>}
+    }
     <details class="secondary-details">
         <summary>@Ui["Register an executable path"]</summary>
         <div class="runtime-choice">
@@ -22,11 +37,6 @@
             <button type="button" disabled="@(Disabled||busy||string.IsNullOrWhiteSpace(manual)||PeerId is null)" @onclick="()=>RegisterAsync(UiCancellation)">@Ui["Register and select"]</button>
         </div>
     </details>
-    @if(Manage)
-    {
-        <button type="button" disabled="@(Disabled||busy||catalog is null)" @onclick="()=>SetDefaultAsync(UiCancellation)">@Ui["Use selected runtime as default"]</button>
-        @if(catalog is not null){<small>@Ui["Configured default"]: @(catalog.DefaultPath??Ui["Automatic detection"])</small>}
-    }
     @if(problem is not null){<small class="error" role="status">@Ui[problem]</small>}
 </div>
 @if(browse && ClusterId is not null && PeerId is not null)

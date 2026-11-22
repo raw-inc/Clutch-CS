@@ -35,11 +35,12 @@ internal static class ProcessManagement
             ResolveProcessLaunchRequest request = ManagementRegistry.Body<ResolveProcessLaunchRequest>(value);
             return await service.Processes.ResolveLaunchAsync(request.Id, request.ConfirmedIdentity, cancellation).ConfigureAwait(false);
         });
-        registry.Write("nodes.execute", async (value, cancellation) =>
+        registry.WriteCommand("nodes.execute", async (command, cancellation) =>
         {
-            RemoteExecutionRequest request = ManagementRegistry.Body<RemoteExecutionRequest>(value);
+            RemoteExecutionRequest request = ManagementRegistry.Body<RemoteExecutionRequest>(command.Payload);
             TracePolicy trace = service.Trace.GetPolicy(request.WorkflowId, new(request.Trace, request.TraceSelection));
-            request = request with { Operational = service.Operational.Capture(), Trace = trace.Enabled, TraceSelection = trace.Selection };
+            request = request with { Operational = service.Operational.Capture(), Trace = trace.Enabled, TraceSelection = trace.Selection,
+                Admission = command.Admission?.ForDeadline(request.ExpiresAt) };
             return await service.Cluster.ExecuteAsync(request, cancellation).ConfigureAwait(false);
         });
         registry.Read("resources.capture", async (_, cancellation) => await service.Resources.CaptureAsync(cancellation).ConfigureAwait(false));

@@ -71,7 +71,7 @@ public sealed partial class AvailabilityPanel
     /// <summary>未確認の版を区別して短い識別表示を作ります。</summary>
     /// <returns>版の先頭文字列、未確認ならダッシュです。</returns>
     private static string Revision(string? revision) => revision is null ? "—"
-                                                                         : revision[..Math.Min(10, revision.Length)];
+                                                                         : AbbreviatedRevision(revision);
 
     /// <summary>オフライン時の利用方針に対応する表示を返します。</summary>
     /// <returns>設定された利用方針の表示キーです。</returns>

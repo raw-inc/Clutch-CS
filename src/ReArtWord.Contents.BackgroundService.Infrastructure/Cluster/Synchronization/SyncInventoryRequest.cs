@@ -8,4 +8,7 @@ namespace ReArtWord.Contents.BackgroundService.Infrastructure.Cluster.Synchroniz
 /// <param name="ExpiresAt">再送で延ばさない元の同期期限です。</param>
 /// <param name="Boundary">依頼側が保持する非圧縮区間です。</param>
 /// <param name="AllowPending">元の照合を処理中として受け取り、同じIDで結果だけを再照会できます。</param>
-internal sealed record SyncInventoryRequest(Guid Id, IReadOnlyList<string> Hashes, DateTimeOffset ExpiresAt, HistoryRetentionBoundary? Boundary = null, bool AllowPending = false);
+/// <param name="RetirementRanges">依頼元が退役済みIDの区間を読み込めるかです。省略時は個別IDへ展開します。</param>
+/// <param name="Timing">同じ両実体の経過時間で固定した期限です。旧形式ではnullです。</param>
+internal sealed record SyncInventoryRequest(Guid Id, IReadOnlyList<string> Hashes, DateTimeOffset ExpiresAt, HistoryRetentionBoundary? Boundary = null, bool AllowPending = false,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] SyncTiming? Timing = null, bool RetirementRanges = false);

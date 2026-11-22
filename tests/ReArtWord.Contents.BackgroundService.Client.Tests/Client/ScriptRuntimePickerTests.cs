@@ -30,7 +30,7 @@ public sealed class ScriptRuntimePickerTests
         {
             Assert.Equal("peer-a", request.Headers.GetValues("X-Contents-Peer").Single());
             Assert.Equal("cluster-a", request.Headers.GetValues("X-Contents-Cluster").Single());
-            string change = "/api/scripts/runtimes/change";
+            string change = "/api/v2/scripts/runtimes/change";
             if (string.Equals(request.RequestUri!.AbsolutePath, change, StringComparison.Ordinal))
             {
                 writes++;

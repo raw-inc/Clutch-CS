@@ -4,7 +4,7 @@
   "node.websocket.listen.name": "WebSocket待受",
   "node.websocket.listen.description": "同時接続数を制限して文字列・バイト列を受信します。固定値または後続ノードで返信できます。",
   "node.websocket.reply.name": "WebSocket返信",
-  "node.websocket.reply.description": "受信した返信ハンドルを使い、元の接続・元のPeerから一回だけ返信します。",
+  "node.websocket.reply.description": "受信した返信ハンドルを使い、元の接続・元のピアから一回だけ返信します。",
   "port.websocket.listen.out.value": "受信メッセージ",
   "port.websocket.listen.out.request": "返信先",
   "port.websocket.listen.out.messageType": "メッセージ種類",

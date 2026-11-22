@@ -7,7 +7,7 @@ import { validateHostsEntry, validateHostsText } from './hosts-model.js';
 /** hosts設定を複数ホストへ変更する画面を構成します。
  * @returns dispose・reload・hasChangesを含む結果です。
  */
-export function hostsBulkView(root, ctx, hosts)
+export function hostsBulkView(root, ctx, hosts, actions)
 {
     const choices = new Map(), added = new Map();
     let rows = [], loaded = false;
@@ -28,7 +28,8 @@ export function hostsBulkView(root, ctx, hosts)
         render();
     }), preview);
     title.append(action(ctx, 'Refresh settings', 'refresh', () => ctx.discard(reload, hasChanges())));
-    root.append(title, node('p', ctx.t('disable / other / enable: other preserves each host’s current setting. Missing entries also appear as other.'), 'hm-muted'), tools, status, listing, bar);
+    root.append(title, node('p', ctx.t('disable / other / enable: other preserves each host’s current setting. Missing entries also appear as other.'), 'hm-muted'), tools, status, listing);
+    actions.append(bar);
 
     /** 保存前の変更予定を呼出し元へ返します。
      * @returns 呼出し元が使用する値です。

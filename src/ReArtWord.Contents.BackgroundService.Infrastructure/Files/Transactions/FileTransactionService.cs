@@ -90,7 +90,9 @@ public sealed class FileTransactionService : IFileTransactionDispatcher, IDispos
     public async Task<FileTransactionResult> ExecuteAsync(FileTransactionRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        IReadOnlyList<RemoteExecutionRequest> originalTargets = request.Targets;
         request = ContractJson.Copy(request);
+        request = request with { Targets = request.Targets.Select((target, index) => target with { Admission = originalTargets[index].Admission }).ToArray() };
         if (request.Targets.Select(target => target.Operational?.Revision).Distinct(StringComparer.Ordinal).Skip(1).Any())
         {
             return new FileTransactionResult(request.OperationId, EOutcome.NotExecuted, [], "File.OperationalVersionMismatch");
@@ -117,6 +119,7 @@ public sealed class FileTransactionService : IFileTransactionDispatcher, IDispos
                 members = [local];
             }
             FileTransactionOperation operation = new(ContractJson.Hash(request), request, members, cluster.LocalPeerId, cluster.LocalInstanceId, null, new FileTransactionResult(request.OperationId, EOutcome.Unknown, request.Targets.Select(Empty).ToArray(), "File.InProgress"));
+            operation = operation with { IdentityFormat = EDerivedIdFormat.Uuid8 };
             await journal.BeginAsync(operation, cancellationToken).ConfigureAwait(false);
             return await RunAsync(operation, false, cancellationToken).ConfigureAwait(false);
         }
@@ -161,6 +164,7 @@ public sealed class FileTransactionService : IFileTransactionDispatcher, IDispos
     /// <returns>確認済みの段階結果。</returns>
     private async Task<FileTransactionResult> RunAsync(FileTransactionOperation operation, bool recover, CancellationToken cancellationToken = default)
     {
+        using DerivedIdentityScope identities = new(operation.IdentityFormat);
         try
         {
             if (!MembersRemain(operation.Members) || operation.Request.Targets.Count == 0 || operation.Request.Targets.Select(target => target.Id).Distinct().Count() != operation.Request.Targets.Count)
@@ -327,7 +331,7 @@ public sealed class FileTransactionService : IFileTransactionDispatcher, IDispos
         {
             return await cluster.ExecuteAsync(request, cancellationToken).ConfigureAwait(false);
         }
-        ClusterRequest command = new(request.Id, "node.execute", request.TargetPeerId, request.TargetInstanceId, request.ExpiresAt, NodeValue.FromObject(request));
+        ClusterRequest command = new(request.DeliveryId, "node.execute", request.TargetPeerId, request.TargetInstanceId, request.ExpiresAt, NodeValue.FromObject(request));
         ClusterRequestStatus status = await cluster.QueryRequestAsync(command, cancellationToken).ConfigureAwait(false);
         return status.Response?.Value?.Json.Deserialize<NodeResult>() ?? NodeResult.Failure(status.Reason ?? "File.ExecutionUnconfirmed", "元の実行結果を確認できません。", EOutcome.Unknown);
     }
@@ -338,7 +342,7 @@ public sealed class FileTransactionService : IFileTransactionDispatcher, IDispos
     {
         foreach (RemoteExecutionRequest request in operation.Request.Targets)
         {
-            ClusterRequestStatus status = await cluster.QueryRequestAsync(new ClusterRequest(request.Id, "node.execute", request.TargetPeerId, request.TargetInstanceId, request.ExpiresAt, NodeValue.FromObject(request)), cancellationToken).ConfigureAwait(false);
+            ClusterRequestStatus status = await cluster.QueryRequestAsync(new ClusterRequest(request.DeliveryId, "node.execute", request.TargetPeerId, request.TargetInstanceId, request.ExpiresAt, NodeValue.FromObject(request)), cancellationToken).ConfigureAwait(false);
             if (status.Running || status.Response?.Value is null)
             {
                 return false;

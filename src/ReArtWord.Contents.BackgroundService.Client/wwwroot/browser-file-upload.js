@@ -145,7 +145,7 @@ async function uploadEntriesAsync(entries, name, target, directory, manifest, { 
         committing = true;
 
         // A lost commit reply is unknown, not a reason to repeat a write.
-        const result = await api('/api/browser-files/commit', target, stage, signal);
+        const result = await api('/api/v2/browser-files/commit', target, stage, signal);
         completed = true;
         progress('completed', transferred, total);
         return result;

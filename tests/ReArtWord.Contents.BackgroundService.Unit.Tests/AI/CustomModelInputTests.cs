@@ -7,6 +7,7 @@ using ReArtWord.Contents.BackgroundService.Runtime.Nodes;
 using ReArtWord.Contents.BackgroundService.Runtime.Workflows.Compilation;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Workflows;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.AI;
@@ -16,7 +17,7 @@ public sealed class CustomModelInputTests
 {
     /// <summary>モデル候補を持つ全サービスで、接続値が保存値より優先されます。</summary>
     /// <returns>外部サービスを使わず、二回のHTTP本文を確認します。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData("ai.audio.qwen.generate", "model")]
     [InlineData("ai.audio.qwen.tts.generate", "model")]
     [InlineData("ai.audio.qwen.audio3.generate", "model")]

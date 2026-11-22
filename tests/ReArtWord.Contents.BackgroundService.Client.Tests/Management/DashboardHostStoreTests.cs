@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Client.Tests.Client;
 using ReArtWord.Contents.BackgroundService.ClientHost.Management.Overview;
 using ReArtWord.Contents.BackgroundService.ClientHost.Networking;
 using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
@@ -85,6 +86,43 @@ public sealed class DashboardHostStoreTests : IDisposable
         Directory.Delete(pending);
         await store.ObserveAsync([]);
         Assert.Single(await store.ReadAsync(null));
+    }
+
+    /// <summary>時計を戻しても稼働表示は保たれ、削除後は新しい受信によってだけ表示が戻ります。</summary>
+    /// <returns>経過時間による表示期限と削除の境界です。</returns>
+    [Fact]
+    public async Task ClockRollbackDoesNotHideLiveHostsOrPreventRediscoveryAsync()
+    {
+        ObservationClock clock = new();
+        PeerInfo peer = Peer("clock-host") with { LastSeen = clock.GetUtcNow(), ObservationAge = new(clock) };
+        DashboardPeerSnapshot snapshot = new("cluster", peer, null, null, null, []);
+        discovered.Add(new("cluster", [peer], [], peer.LastSeen));
+        using DashboardHostStore store = new(directory, () => discovered, clock);
+        await store.ObserveAsync([snapshot]);
+        clock.Adjust(TimeSpan.FromHours(-1));
+        Assert.True(Assert.Single(await store.ReadAsync(null)).Online);
+        Assert.False(await store.RemoveAsync(peer.HostId));
+        clock.Advance(TimeSpan.FromSeconds(16));
+        Assert.False(Assert.Single(await store.ReadAsync(null)).Online);
+        Assert.True(await store.RemoveAsync(peer.HostId));
+        await store.ObserveAsync([snapshot]);
+        Assert.Empty(await store.ReadAsync(null));
+        clock.Advance(TimeSpan.FromSeconds(1));
+        clock.Adjust(TimeSpan.FromHours(-1));
+        PeerInfo fresh = peer with { LastSeen = clock.GetUtcNow(), ObservationAge = new(clock) };
+        discovered[0] = new("cluster", [fresh], [], fresh.LastSeen);
+        await store.ObserveAsync([snapshot with { Peer = fresh }]);
+        Assert.True(Assert.Single(await store.ReadAsync(null)).Online);
+        discovered.Clear();
+        Assert.True(await store.RemoveAsync(peer.HostId));
+        using DashboardHostStore restarted = new(directory, () => discovered, clock);
+        await restarted.ObserveAsync([snapshot]);
+        Assert.Empty(await restarted.ReadAsync(null));
+        clock.Adjust(TimeSpan.FromHours(-1));
+        fresh = peer with { LastSeen = clock.GetUtcNow(), ObservationAge = new(clock) };
+        discovered.Add(new("cluster", [fresh], [], fresh.LastSeen));
+        await restarted.ObserveAsync([snapshot with { Peer = fresh }]);
+        Assert.True(Assert.Single(await restarted.ReadAsync(null)).Online);
     }
 
     /// <summary>生存を観測したPC情報です。</summary>

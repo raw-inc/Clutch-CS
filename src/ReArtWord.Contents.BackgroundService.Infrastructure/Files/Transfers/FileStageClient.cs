@@ -33,7 +33,7 @@ internal sealed class FileStageClient(PeerCluster cluster, IDurableRepository re
         bool created = request is null;
         if (request is null)
         {
-            request = new ClusterRequest(id, kind, target.PeerId, target.InstanceId, DateTimeOffset.UtcNow.AddMinutes(5), payload.Copy());
+            request = ClusterRequest.Start(id, kind, target.PeerId, target.InstanceId, TimeSpan.FromMinutes(5), payload.Copy());
             DurableMutation[] mutation = [new(scope, id.ToString("N"), null, NodeValue.FromObject(request))];
             DurableReceipt saved;
             if (local)
@@ -63,5 +63,6 @@ internal sealed class FileStageClient(PeerCluster cluster, IDurableRepository re
 
     /// <summary>段階の一件識別子を元の実行IDから固定します。</summary>
     /// <returns>元操作と段階に固有のID。</returns>
-    public static Guid Identity(Guid id, string phase) => new(Convert.FromHexString(ContractJson.Hash(new { id, phase })).AsSpan(0, 16));
+    public static Guid Identity(Guid id, string phase)
+        => DerivedOperationIdentity.FromHash(Convert.FromHexString(ContractJson.Hash(new { id, phase })), DerivedIdentityScope.Current);
 }

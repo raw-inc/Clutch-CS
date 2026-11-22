@@ -49,13 +49,11 @@ internal static class SqliteHistoryHotDeletion
             return 0;
         }
         SqliteHistoryRetirement.Compressed(session, [row], now);
-        int days = Enum.GetValues<ERetentionCategory>().Where(value => !HistoryRetentionPolicy.IsLog(value)).Max(value => policy.Window(value).TotalDays ?? 0);
-        DateTimeOffset floor = HistoryRetentionPolicy.Boundary(policy, now).AddDays(-Math.Max(1, days));
-        SqliteHistoryRetirement.Retire(session, row, floor);
+        SqliteHistoryRetirement.Retire(session, row);
         RepositoryDocument metadata = new();
         SqliteHistoryGuard.Load(session, metadata);
         RepositoryHistoryGuard.Merge(metadata, new(new Dictionary<ERetentionCategory, DateTimeOffset>(),
-            new Dictionary<ERetentionCategory, DateTimeOffset> { [category] = DateTimeOffset.FromUnixTimeSeconds(recorded).AddSeconds(1) }, floor, now));
+            new Dictionary<ERetentionCategory, DateTimeOffset> { [category] = DateTimeOffset.FromUnixTimeSeconds(recorded).AddSeconds(1) }, default, now, RetirementFormat: 1));
         session.Save(metadata);
         command.CommandText = """
             DELETE FROM records WHERE kind=$kind AND key=$key;

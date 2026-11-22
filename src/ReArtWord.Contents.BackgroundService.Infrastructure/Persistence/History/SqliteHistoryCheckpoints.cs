@@ -44,7 +44,8 @@ internal static class SqliteHistoryCheckpoints
         SqliteCausality.Load(session, metadata, current.Select(entry => (entry.Scope, entry.Key)));
         SqliteHistoryGuard.Load(session, metadata);
         RepositorySnapshot snapshot = new(current, [], CausalEntries: RepositoryCausality.Export(metadata, current), LegacyEntries: RepositoryLegacyAncestry.Export(metadata, current),
-            HistoryBoundary: RepositoryHistoryGuard.Read(metadata), RetiredOperations: SqliteHistoryGuard.Export(session));
+            HistoryBoundary: RepositoryHistoryGuard.Read(metadata), RetiredOperations: SqliteHistoryGuard.Export(session),
+            RetiredKeys: SqliteHistoryGuard.ExportKeys(session), RetiredRanges: SqliteRetiredRanges.Export(session));
         byte[] raw = HistoryCheckpointCodec.Encode(snapshot);
         command.CommandText = "INSERT INTO history_checkpoints(id,sequence,created_at,payload,raw_length,hash,compressed,delete_at) VALUES($id,$sequence,$time,$data,$length,$hash,0,$delete)";
         command.Parameters.AddWithValue("$id", Guid.CreateVersion7(now).ToString("N"));

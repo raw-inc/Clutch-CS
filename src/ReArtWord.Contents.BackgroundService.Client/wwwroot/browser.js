@@ -72,7 +72,7 @@ window.contentsBrowser = {
     dashboardDropTarget: (board, x, y) =>
     {
         const rows = [];
-        for (const card of board.querySelectorAll(':scope > .dashboard-cards > [data-card-id]'))
+        for (const card of board.querySelectorAll('.dashboard-cards > [data-card-id]'))
         {
             const rect = card.getBoundingClientRect(), last = rows.at(-1);
             if (!last || 1 < Math.abs(last.top - rect.top))
@@ -216,6 +216,21 @@ window.contentsBrowser.pwaStatus = async() =>
 
 // 最前面の表示領域を使い、SVG内のノードやスクロール領域で切り取られないようにする。
 const contentsDialogFocus = new Map();
+
+// ダイアログごとに編集開始時の値を保持し、開閉やフォーカス移動だけでは破棄確認を出さない。
+const dialogValues = new WeakMap();
+
+/** 編集できる項目の値と並びを取得します。
+ * @returns 現在の編集内容を比較するための文字列です。
+ */
+function editableValues(element)
+{
+    return JSON.stringify(Array.from(element.querySelectorAll('input,select,textarea,[data-member-id]')).filter(item => item.closest('dialog') === element).map(item =>
+        [item.dataset.memberId ?? '', item.value ?? '', item.checked ?? false]));
+}
+
+window.contentsBrowser.mayDiscardDialog = (element, message) => dialogValues.get(element) === editableValues(element) || window.confirm(message);
+
 window.contentsBrowser.openDialog = (element, id) =>
 {
     if (!element?.isConnected)
@@ -223,8 +238,14 @@ window.contentsBrowser.openDialog = (element, id) =>
         return;
     }
     const previous = document.activeElement;
+    const left = window.scrollX, top = window.scrollY;
+    if (element.hasAttribute('data-confirm-discard'))
+    {
+        dialogValues.set(element, editableValues(element));
+    }
     if (element instanceof HTMLDialogElement && !element.open)
     {
+        element.classList.toggle('dialog-stacked', !!document.querySelector('dialog.dialog:modal'));
         element.showModal();
     }
 
@@ -269,7 +290,11 @@ window.contentsBrowser.openDialog = (element, id) =>
     element.addEventListener('keydown', trap);
     element.addEventListener('cancel', cancel);
     contentsDialogFocus.set(id, { element, previous, trap, cancel });
-    (controls()[0] ?? element).focus();
+    (controls()[0] ?? element).focus({ preventScroll: true });
+    if (window.scrollX !== left || window.scrollY !== top)
+    {
+        window.scrollTo({ left, top, behavior: 'instant' });
+    }
 };
 window.contentsBrowser.closeDialog = id =>
 {
@@ -287,6 +312,69 @@ window.contentsBrowser.closeDialog = id =>
     }
     if (state.previous?.isConnected)
     {
-        state.previous.focus();
+        state.previous.focus({ preventScroll: true });
+    }
+};
+
+// 矢印キーで表示可能な項目に移動し、クリックと同じ経路で内容を切り替える。
+document.addEventListener('keydown', event =>
+{
+    const previousKey = 'ArrowUp', nextKey = 'ArrowDown', firstKey = 'Home', lastKey = 'End';
+    const tab = event.target.closest?.('.dashboard-sections [role="tab"]');
+    if (!tab || ![previousKey, nextKey, firstKey, lastKey].includes(event.key))
+    {
+        return;
+    }
+    const tabs = [...tab.parentElement.querySelectorAll('[role="tab"]:enabled')];
+    const position = tabs.indexOf(tab);
+    const delta = event.key === previousKey ? -1 : 1;
+    let index = (tabs.length + position + delta) % tabs.length;
+    if (event.key === firstKey || event.key === lastKey)
+    {
+        index = event.key === firstKey ? 0 : tabs.length - 1;
+    }
+    event.preventDefault();
+    tabs[index].focus();
+    tabs[index].click();
+});
+
+window.contentsBrowser.narrowEditor = () => window.matchMedia('(max-width: 760px)').matches;
+
+/** 選択したタブが幅の変更で隠れたとき、その列だけをスクロールします。 */
+function revealEditorTab(strip)
+{
+    const active = strip?.querySelector('[aria-pressed="true"]');
+    if (active)
+    {
+        const tab = active.getBoundingClientRect(), bounds = strip.getBoundingClientRect();
+        strip.scrollLeft += Math.min(0, tab.left - bounds.left) + Math.max(0, tab.right - bounds.right);
+    }
+}
+
+let editorTabsResize;
+
+/** 送りボタンの表示後にタブ列が狭くなるため、ウィンドウではなく列の幅を監視します。 */
+function revealResizedEditorTabs(entries)
+{
+    for (const { target } of entries)
+    {
+        if (target.isConnected)
+        {
+            revealEditorTab(target);
+        }
+        else
+        {
+            editorTabsResize.unobserve(target);
+        }
+    }
+}
+
+window.contentsBrowser.revealTab = strip =>
+{
+    if (strip)
+    {
+        editorTabsResize ??= new ResizeObserver(revealResizedEditorTabs);
+        editorTabsResize.observe(strip);
+        revealEditorTab(strip);
     }
 };

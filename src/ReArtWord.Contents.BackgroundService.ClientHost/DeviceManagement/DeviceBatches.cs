@@ -40,7 +40,7 @@ internal sealed class DeviceBatches(DeviceBatchStore store, IDeviceRemote remote
                 throw new InvalidOperationException("Device.PreviousChangeUnconfirmed");
             }
             DeviceBatchRequest owned = ContractJson.Copy(request);
-            DeviceBatchState state = new(owned, DateTimeOffset.UtcNow, true, new DeviceChangeResult?[owned.Changes.Count]);
+            DeviceBatchState state = new(owned, DateTimeOffset.UtcNow, true, new DeviceChangeResult?[owned.Changes.Count]) { IdentityFormat = EDerivedIdFormat.Uuid8 };
             await store.SaveAsync(state, cancellationToken).ConfigureAwait(false);
             if (!pending.Writer.TryWrite(state))
             {
@@ -73,7 +73,7 @@ internal sealed class DeviceBatches(DeviceBatchStore store, IDeviceRemote remote
             {
                 if (results[index]?.Outcome == EOutcome.Unknown)
                 {
-                    DeviceChangeResult? result = await remote.ResultAsync(state.Request.Changes[index], cancellationToken).ConfigureAwait(false);
+                    DeviceChangeResult? result = await remote.ResultAsync(state.Request.Changes[index] with { IdentityFormat = state.IdentityFormat }, cancellationToken).ConfigureAwait(false);
                     if (result is not null)
                     {
                         results[index] = result;

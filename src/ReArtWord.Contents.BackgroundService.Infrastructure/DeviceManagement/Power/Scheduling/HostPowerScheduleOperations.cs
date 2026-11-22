@@ -41,7 +41,7 @@ internal sealed class HostPowerScheduleOperations(PeerCluster cluster, IDurableR
         {
             return null;
         }
-        HostPowerScheduleOccurrence accepted = new(scheduleId, due, Guid.CreateVersion7(), EOutcome.Unknown, "powerSchedule.unconfirmed");
+        HostPowerScheduleOccurrence accepted = new(scheduleId, due, OperationIdentity.Create(), EOutcome.Unknown, "powerSchedule.unconfirmed");
         DurableReceipt result = await cluster.ReplicateAsync(accepted.OperationId,
             [new(HostPowerScheduleStore.Occurrences, key, current?.Version, NodeValue.FromObject(accepted))], cancellationToken).ConfigureAwait(false);
         return result.Outcome == EOutcome.Succeeded ? accepted
@@ -50,15 +50,15 @@ internal sealed class HostPowerScheduleOperations(PeerCluster cluster, IDurableR
 
     /// <summary>起動対象の生存を送信直前にも確認し、同じクラスタのCoreだけへ配送します。</summary>
     /// <returns>パケットまたはOS要求の受付結果です。</returns>
-    internal async Task<NodeResult> DispatchAsync(string hostId, HostPowerSchedule schedule, HostPowerScheduleOccurrence occurrence, CancellationToken cancellationToken = default)
+    internal async Task<NodeResult> DispatchAsync(string hostId, HostPowerSchedule schedule, HostPowerScheduleOccurrence occurrence, RequestAdmission admission, CancellationToken cancellationToken = default)
     {
         DateTimeOffset expires = occurrence.DueAt.AddMinutes(1);
         DateTimeOffset now = clock.GetUtcNow();
-        if (expires <= now)
+        if (admission.IsExpired || admission.SourceNow < occurrence.DueAt)
         {
             return NodeResult.Failure("powerSchedule.missed", "The scheduled time is no longer current.", EOutcome.NotExecuted);
         }
-        PeerInfo[] peers = cluster.GetPeers().Where(peer => now - peer.LastSeen <= TimeSpan.FromSeconds(15)).ToArray();
+        PeerInfo[] peers = cluster.GetPeers().Where(peer => peer.AgeAt(now) <= TimeSpan.FromSeconds(15)).ToArray();
         PeerInfo? target;
         object payload;
         string operation;
@@ -100,7 +100,7 @@ internal sealed class HostPowerScheduleOperations(PeerCluster cluster, IDurableR
             return NodeResult.Failure("powerSchedule.noTarget", "No eligible Core is available in this cluster.", EOutcome.NotExecuted);
         }
         ManagementCommand command = new(occurrence.OperationId, cluster.LocalClusterId, target.PeerId, target.InstanceId, expires, operation, ContractJson.ToValue(payload));
-        ClusterRequest request = new(command.RequestId, ManagementWire.ExecuteKind, command.TargetPeerId, command.TargetInstanceId, command.ExpiresAt, ContractJson.ToValue(command));
+        ClusterRequest request = new(command.RequestId, ManagementWire.ExecuteKind, command.TargetPeerId, command.TargetInstanceId, command.ExpiresAt, ContractJson.ToValue(command)) { Admission = admission };
         ClusterResponse response = await cluster.RequestAsync(request, cancellationToken).ConfigureAwait(false);
         ManagementReply? reply = response.Value?.Json.Deserialize<ManagementReply>(ContractJson.Options);
         if (response.Outcome != EOutcome.Succeeded || reply?.Outcome != EOutcome.Succeeded || reply.Value is null)

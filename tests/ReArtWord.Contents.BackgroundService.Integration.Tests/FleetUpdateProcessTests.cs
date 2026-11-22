@@ -57,7 +57,7 @@ public sealed class FleetUpdateProcessTests
                 {
                     return false;
                 }
-                plan = await preview.Content.ReadFromJsonAsync<FleetUpdateRequest>(ContractJson.Options, token).ConfigureAwait(true);
+                plan = await preview.Content.ReadFromJsonAsync<FleetUpdateRequest>(ClientObservationJson.Options, token).ConfigureAwait(true);
                 return plan?.Targets.Count == 4;
             }, timeout.Token).ConfigureAwait(true);
             Assert.Equal(parallelism, plan!.Release.MaximumParallelism);
@@ -69,7 +69,7 @@ public sealed class FleetUpdateProcessTests
             using (HttpResponseMessage duplicate = await client.SendAsync(HttpMethod.Post, "client/updates", plan, cancellationToken: timeout.Token).ConfigureAwait(true))
             {
                 duplicate.EnsureSuccessStatusCode();
-                Assert.Equal(plan.OperationId, (await duplicate.Content.ReadFromJsonAsync<FleetUpdateStatus>(ContractJson.Options, timeout.Token).ConfigureAwait(true))!.Request.OperationId);
+                Assert.Equal(plan.OperationId, (await duplicate.Content.ReadFromJsonAsync<FleetUpdateStatus>(ClientObservationJson.Options, timeout.Token).ConfigureAwait(true))!.Request.OperationId);
             }
             FleetUpdateStatus? status = null;
 
@@ -79,7 +79,7 @@ public sealed class FleetUpdateProcessTests
             {
                 using HttpResponseMessage response = await client.SendAsync(HttpMethod.Get, "client/updates/" + plan.OperationId.ToString("D"), cancellationToken: timeout.Token).ConfigureAwait(true);
                 Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync(timeout.Token).ConfigureAwait(true));
-                status = await response.Content.ReadFromJsonAsync<FleetUpdateStatus>(ContractJson.Options, timeout.Token).ConfigureAwait(true);
+                status = await response.Content.ReadFromJsonAsync<FleetUpdateStatus>(ClientObservationJson.Options, timeout.Token).ConfigureAwait(true);
                 FleetUpdatePeerProgress[] active = status!.Peers.Where(peer => peer.State is "Preparing" or "Updating" or "Retrying").ToArray();
                 Assert.InRange(active.Length, 0, plan.Release.MaximumParallelism);
                 Assert.Equal(active.Length, active.Select(peer => peer.Target.ClusterId).Distinct().Count());
@@ -95,7 +95,7 @@ public sealed class FleetUpdateProcessTests
             Assert.All(status.Peers, peer => Assert.Single(peer.Attempts));
             using (HttpResponseMessage overview = await client.SendAsync(HttpMethod.Get, "client/updates", cancellationToken: timeout.Token).ConfigureAwait(true))
             {
-                FleetUpdateView[] views = (await overview.Content.ReadFromJsonAsync<FleetUpdateView[]>(ContractJson.Options, timeout.Token).ConfigureAwait(true))!;
+                FleetUpdateView[] views = (await overview.Content.ReadFromJsonAsync<FleetUpdateView[]>(ClientObservationJson.Options, timeout.Token).ConfigureAwait(true))!;
                 Assert.Equal(plan.OperationId, Assert.Single(views).OperationId);
                 Assert.Equal(4, views[0].Peers.Count);
                 Assert.Equal(EOutcome.Succeeded, views[0].Outcome);
@@ -110,7 +110,7 @@ public sealed class FleetUpdateProcessTests
             await client.StopAsync(timeout.Token).ConfigureAwait(true);
             await client.StartAsync(timeout.Token).ConfigureAwait(true);
             using HttpResponseMessage reloaded = await client.SendAsync(HttpMethod.Get, "client/updates/" + plan.OperationId.ToString("D"), cancellationToken: timeout.Token).ConfigureAwait(true);
-            FleetUpdateStatus restored = (await reloaded.Content.ReadFromJsonAsync<FleetUpdateStatus>(ContractJson.Options, timeout.Token).ConfigureAwait(true))!;
+            FleetUpdateStatus restored = (await reloaded.Content.ReadFromJsonAsync<FleetUpdateStatus>(ClientObservationJson.Options, timeout.Token).ConfigureAwait(true))!;
             Assert.Equal(EOutcome.Succeeded, restored.Outcome);
             Assert.Equal(status.Peers.SelectMany(peer => peer.Attempts).Select(attempt => attempt.OperationId),
                 restored.Peers.SelectMany(peer => peer.Attempts).Select(attempt => attempt.OperationId));

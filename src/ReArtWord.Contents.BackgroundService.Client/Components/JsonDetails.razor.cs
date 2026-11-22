@@ -9,6 +9,14 @@ namespace ReArtWord.Contents.BackgroundService.Client.Components;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1515", Justification = "Razor が生成する公開 partial 宣言と同じコンポーネント型を構成するため。")]
 public sealed partial class JsonDetails
 {
+    /// <summary>ダイアログ本文と同じ領域で内容をスクロールします。</summary>
+    [Parameter]
+    public bool ExpandBody
+    {
+        get;
+        set;
+    }
+
     /// <summary>整形して表示する実際の値です。</summary>
     [Parameter]
     public object? Value
@@ -23,7 +31,7 @@ public sealed partial class JsonDetails
     {
         get;
         set;
-    } = "Exact JSON";
+    } = "View JSON";
 
     private static readonly JsonSerializerOptions options = new(ContractJson.Options)
     {

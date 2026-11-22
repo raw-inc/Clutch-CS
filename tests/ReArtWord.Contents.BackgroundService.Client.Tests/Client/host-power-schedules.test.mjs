@@ -193,13 +193,13 @@ test('bulk enable and disable preserve each hosts schedule fields and skip empty
     initial[2].schedules = [];
     const state = await fixtureAsync(t, 'succeeded', structuredClone(initial));
     await state.buttons.get('powerSchedule.bulkDisable').onclick();
-    await state.buttons.get('powerSchedule.bulkApply').onclick();
+    await state.buttons.get('powerSchedule.confirmDisable').onclick();
     let requests = state.calls.filter(call => call.path.endsWith('/save')).map(call => call.request);
     assert.equal(requests.length, 1);
     assert.deepEqual(requests[0].schedules, initial[0].schedules.map(item => ({ ...item, enabled: false })));
     state.dialogs.at(-1).close();
     await state.buttons.get('powerSchedule.bulkEnable').onclick();
-    await state.buttons.get('powerSchedule.bulkApply').onclick();
+    await state.buttons.get('powerSchedule.confirmEnable').onclick();
     requests = state.calls.filter(call => call.path.endsWith('/save')).map(call => call.request);
     assert.equal(requests.length, 3);
     assert.deepEqual(requests[1].schedules, initial[0].schedules);
@@ -272,7 +272,7 @@ test('individual drafts and stale confirmation never silently overwrite host set
     await state.buttons.get('powerSchedule.bulkDisable').onclick();
     state.savedViews[0].revision = 'external-save';
     await buttonsIn(state.root, 'Refresh settings')[0].onclick();
-    await assert.rejects(state.buttons.get('powerSchedule.bulkApply').onclick(), /powerSchedule.bulkChanged/u);
+    await assert.rejects(state.buttons.get('powerSchedule.confirmDisable').onclick(), /powerSchedule.bulkChanged/u);
     assert.equal(state.calls.some(call => call.path.endsWith('/save')), false);
 });
 

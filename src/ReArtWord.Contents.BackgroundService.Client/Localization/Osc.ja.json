@@ -41,7 +41,7 @@
   "Not used with the current selection": "現在の選択では使用しません",
   "port.type.null": "null",
   "port.osc.packet.in.packet": "元のOSCパケット",
-  "node.osc.parse.name": "OSCパケットを解析",
+  "node.osc.parse.name": "OSC パケットを解析",
   "node.osc.parse.description": "OSCパケットObjectまたは生のOSCバイト列を解析します。OSC受信と同じ順序付きの引数型を指定すると、引数ごとの出力が現れます。個数・型の不一致は失敗となり、自動変換しません。型未指定ならパケット形式で受け渡し、Bundleの時刻と構造を保持します。入力上限1MiB。通信は行いません。",
   "port.osc.parse.in.value": "OSCパケット／バイト列",
   "port.osc.parse.out.value": "OSCパケット",

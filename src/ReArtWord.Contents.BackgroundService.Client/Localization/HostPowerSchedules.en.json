@@ -23,7 +23,8 @@
   "powerSchedule.bulkHelp": "Replace all schedules on the selected hosts with the list below, including time, weekdays and enabled state. Each host keeps its selected cluster. Nothing changes until you save.",
   "powerSchedule.bulkEnable": "Enable all saved schedules",
   "powerSchedule.bulkDisable": "Disable all saved schedules",
-  "powerSchedule.bulkToggleHelp": "Change only the enabled state of all saved schedules on the selected hosts. Times, time zones, weekdays and actions are preserved. Hosts without schedules are unchanged.",
+  "powerSchedule.bulkEnableHelp": "Enabled schedules can wake or shut down PCs at the configured times.",
+  "powerSchedule.bulkDisableHelp": "Disabled schedules will no longer run at their configured times.",
   "powerSchedule.bulkSource": "Copy from host",
   "powerSchedule.bulkCopy": "Copy saved schedules",
   "powerSchedule.bulkApply": "Save to selected hosts",
@@ -58,5 +59,10 @@
   "powerSchedule.day6": "Sat",
   "host.power.scheduleExpired": "The expired power schedule was not executed",
   "host.power.scheduleAlreadyAccepted": "This shutdown time was already accepted on this PC",
-  "host.power.scheduleClaimUnconfirmed": "The PC could not persist the schedule claim and was not shut down"
+  "host.power.scheduleClaimUnconfirmed": "The PC could not persist the schedule claim and was not shut down",
+  "powerSchedule.helpTitle": "When schedules run",
+  "powerSchedule.more": "Wake requirements and history",
+  "powerSchedule.changing": "Schedules changing",
+  "powerSchedule.confirmEnable": "Enable these schedules",
+  "powerSchedule.confirmDisable": "Disable these schedules"
 }

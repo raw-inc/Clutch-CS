@@ -28,7 +28,8 @@ public static partial class WindowsIdleInput
             int stateOffset = IntPtr.Size == 8 ? 16
                                                : 8;
             DateTimeOffset? latest = null;
-            List<string> identities = [];
+            List<string> identities = [], samples = [];
+            TimeSpan? shortest = TimeSpan.MaxValue;
             for (int index = 0; index < count; index++)
             {
                 IntPtr item = IntPtr.Add(sessions, index * size);
@@ -46,14 +47,29 @@ public static partial class WindowsIdleInput
                 if (activity is not null)
                 {
                     identities.Add(activity.Identity);
+                    samples.Add(activity.InputSample ?? activity.Identity);
+                    if (activity.IdleFor is not { } idle)
+                    {
+                        shortest = null;
+                    }
+                    else if (idle < shortest)
+                    {
+                        shortest = idle;
+                    }
                     if (latest is null || latest < activity.LastActivity)
                     {
                         latest = activity.LastActivity;
                     }
                 }
             }
-            return latest is DateTimeOffset time ? new(0, time, ContractJson.Hash(identities.Order(StringComparer.Ordinal).ToArray()))
-                                                 : null;
+            if (latest is not { } time)
+            {
+                return null;
+            }
+            return new(0, time, ContractJson.Hash(identities.Order(StringComparer.Ordinal).ToArray()))
+            {
+                IdleFor = shortest, InputSample = ContractJson.Hash(samples.Order(StringComparer.Ordinal).ToArray())
+            };
         }
         finally
         {
@@ -93,7 +109,7 @@ public static partial class WindowsIdleInput
             {
                 return (true, null);
             }
-            long input = Marshal.ReadInt64(data, 192), current = Marshal.ReadInt64(data, 200);
+            long input = Marshal.ReadInt64(data, 192);
             if (input == 0)
             {
                 using Process process = Process.GetCurrentProcess();
@@ -105,17 +121,16 @@ public static partial class WindowsIdleInput
                 }
                 return (true, local with { Identity = $"{local.Identity}:{Marshal.ReadInt64(data, 168)}" });
             }
-            long activity = Math.Max(input, Math.Max(Marshal.ReadInt64(data, 168), Marshal.ReadInt64(data, 176)));
-            if (input <= 0 || current < activity)
+            long logon = Marshal.ReadInt64(data, 168), connect = Marshal.ReadInt64(data, 176);
+            long activity = Math.Max(input, Math.Max(logon, connect));
+            if (input < 0 || logon < 0 || connect < 0)
             {
                 return (false, null);
             }
-            DateTimeOffset sampled = DateTimeOffset.FromFileTime(current);
-            if (TimeSpan.FromMinutes(1) < (sampled - DateTimeOffset.UtcNow).Duration())
-            {
-                return (false, null);
-            }
-            return (true, new(id, DateTimeOffset.FromFileTime(activity), $"wts:{id}:{activity}"));
+
+            // WTSは入力日時を返すため、時計補正をまたぐ差分を無操作時間として使いません。
+            // 入力・接続・ログオンの組合せが変わらずに経過した時間を監視側で測ります。
+            return (true, new(id, DateTimeOffset.FromFileTime(activity), $"wts:{id}:{activity}") { InputSample = $"wts:{id}:{input}:{connect}:{logon}" });
         }
         catch (ArgumentOutOfRangeException)
         {
@@ -150,7 +165,7 @@ public static partial class WindowsIdleInput
         {
             return null;
         }
-        return new(process.SessionId, DateTimeOffset.UtcNow - TimeSpan.FromMilliseconds(elapsed), $"console:{process.SessionId}:{inputTick}");
+        return new(process.SessionId, DateTimeOffset.UtcNow - TimeSpan.FromMilliseconds(elapsed), $"console:{process.SessionId}:{inputTick}") { IdleFor = TimeSpan.FromMilliseconds(elapsed) };
     }
 
     /// <summary>このプロセスの対話セッションの最終入力tickを取得します。</summary>

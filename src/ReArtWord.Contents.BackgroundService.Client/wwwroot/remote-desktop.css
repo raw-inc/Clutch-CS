@@ -1,33 +1,28 @@
 
 .page:has(.desktop-workspace) {
     max-width: none;
-    padding: 16px 24px 38px;
 }
 
 .remote-tools:has(.desktop-workspace) .page-title {
     margin-bottom: 12px;
 }
 
-.page:has(.desktop-workspace) .page-title h1 {
-    font-size: 20px;
-}
-
 .desktop-workspace {
     position: relative;
     display: grid;
     grid-template-columns: 44px minmax(0, 1fr);
-    grid-template-rows: 44px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
     min-width: 0;
     min-height: 0;
     overflow: hidden;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-panel);
     background: var(--paper);
 }
 
 .desktop-toolbar {
-    grid-column: 1/-1;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 6px;
     padding: 5px 10px;
@@ -38,54 +33,28 @@
     white-space: nowrap;
 }
 
-.desktop-toolbar > select {
+.desktop-targets select {
     height: 30px;
-    padding: 4px 8px;
+    padding-block: 4px;
     font-size: 11px;
     flex: 0 1 180px;
     width: 180px;
     min-width: 110px;
 }
 
-.desktop-toolbar > select:nth-child(2) {
-    flex-basis: 200px;
-    width: 200px;
-}
-
-.desktop-toolbar .desktop-connect {
+.desktop-targets .desktop-connect {
     height: 30px;
     font-size: 11px;
     padding: 4px 10px;
     flex: none;
-    flex-direction: row-reverse;
+    min-height: 36px;
 }
 
 .desktop-connection {
-    display: flex;
     flex: none;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-    margin: 0 6px;
-    font-size: 10px;
-    color: var(--muted);
-}
-
-.desktop-connection::before {
-    content: '';
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--muted);
-    flex: none;
-}
-
-.desktop-connection[data-state="connected"]::before {
-    background: var(--green);
-}
-
-.desktop-connection[data-state="pending"]::before {
-    background: var(--warn);
+    align-self: center;
+    justify-self: start;
+    margin: 0;
 }
 
 .desktop-keybar {
@@ -102,17 +71,9 @@
     font-size: 10px;
     line-height: 1;
     border: 1px solid var(--line);
-    border-radius: 4px;
+    border-radius: var(--radius-control);
     background: transparent;
     color: var(--muted);
-}
-
-.desktop-key-separator {
-    height: 22px;
-    width: 1px;
-    flex: none;
-    margin: 0 3px;
-    background: var(--line);
 }
 
 .desktop-rail {
@@ -142,13 +103,21 @@
     height: 32px;
     padding: 6px;
     border: 1px solid transparent;
-    border-radius: 4px;
+    border-radius: var(--radius-control);
     background: transparent;
     color: var(--muted);
     font-size: 0;
     cursor: pointer;
     list-style: none;
     margin: 0;
+}
+
+.desktop-workspace .desktop-targets .desktop-action:enabled {
+    border-color: var(--button-line);
+    border-bottom-color: var(--button-line-bottom);
+    background: var(--button-face);
+    color: var(--ink);
+    box-shadow: var(--button-shadow);
 }
 
 .desktop-workspace .ui-icon {
@@ -166,6 +135,10 @@
     color: var(--ink);
 }
 
+.desktop-workspace .desktop-targets .desktop-action:enabled:hover {
+    background: var(--button-hover);
+}
+
 .desktop-menu[open] > summary,
 .desktop-workspace [aria-pressed="true"] {
     background: var(--accent-soft);
@@ -179,10 +152,9 @@
     padding: 6px 8px;
     gap: 6px;
     font-size: 11px;
-    flex-direction: row-reverse;
 }
 
-.desktop-toolbar .desktop-action[data-muted="true"] {
+.desktop-quick-controls .desktop-action[data-muted="true"] {
     color: var(--warn);
     background: color-mix(in srgb, var(--warn) 12%, var(--panel));
     border-color: color-mix(in srgb, var(--warn) 40%, var(--line));
@@ -192,15 +164,17 @@
     position: absolute;
     z-index: 4;
     left: 48px;
-    top: 48px;
+    grid-row: 2;
+    top: 4px;
     width: min(300px, calc(100% - 56px));
-    max-height: calc(100% - 56px);
+    max-height: calc(100% - 8px);
     overflow: auto;
     padding: 16px;
-    background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-control);
     box-shadow: 0 8px 26px #0006;
+    background: var(--panel);
+    overscroll-behavior: contain;
 }
 
 .desktop-popover h2 {
@@ -250,10 +224,9 @@
     font-size: 11px;
 }
 
-.desktop-toolbar > .desktop-transmission-preset {
-    min-width: 190px;
-    max-width: 230px;
+.desktop-targets label:has(.desktop-transmission-preset) {
     flex: 0 1 220px;
+    max-width: min(100%, 220px);
 }
 
 .desktop-bitrate-mode[data-quality="false"][aria-pressed="false"] span:first-child,
@@ -362,7 +335,7 @@
 .desktop-empty .ui-icon {
     width: 32px;
     height: 32px;
-    color: #68798e;
+    color: var(--control);
 }
 
 .desktop-empty p {
@@ -378,13 +351,13 @@
     padding: 10px 12px;
     min-width: 190px;
     max-width: calc(100% - 20px);
-    background: color-mix(in srgb, var(--panel) 60%, transparent);
     border: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
-    border-radius: 4px;
+    border-radius: var(--radius-control);
     pointer-events: none;
     font-size: 11px;
     font-variant-numeric: tabular-nums;
-    text-shadow: 0 1px 2px #0009;
+    background: var(--panel);
+    color: var(--ink);
 }
 
 .desktop-stats > div {
@@ -406,22 +379,18 @@
 }
 
 @media (max-width: 650px) {
-    .page:has(.desktop-workspace) {
-        padding: 12px 10px 34px;
-    }
-
     .desktop-toolbar {
         padding: 4px 6px;
         gap: 4px;
     }
 
-    .desktop-toolbar > select {
+    .desktop-targets select {
         min-width: 100px;
         height: 26px;
-        padding: 3px 7px;
+        padding-block: 3px;
     }
 
-    .desktop-toolbar .desktop-connect {
+    .desktop-targets .desktop-connect {
         height: 26px;
         padding: 3px 8px;
     }
@@ -431,10 +400,6 @@
         width: 26px;
         min-width: 26px;
         padding: 4px;
-    }
-
-    .desktop-connection {
-        display: none;
     }
 
     .desktop-stats {
@@ -531,4 +496,726 @@
     bottom: 0;
     pointer-events: none;
     touch-action: auto;
+}
+
+.desktop-deck-scroll {
+    grid-column: 1 / -1;
+    max-height: 45dvh;
+}
+
+.desktop-deck {
+    min-width: 0;
+    background: var(--card);
+}
+
+.desktop-control-scroll {
+    display: contents;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-deck-scroll {
+    display: contents;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-deck-scroll::before,
+.desktop-workspace[data-state="connected"] .desktop-deck-scroll::after,
+.desktop-workspace:not([data-state="connected"]) .desktop-control-scroll::before,
+.desktop-workspace:not([data-state="connected"]) .desktop-control-scroll::after {
+    content: none;
+}
+
+.desktop-targets {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 8px 12px;
+    padding: 12px;
+}
+
+.desktop-targets label {
+    margin: 0;
+    flex: 0 1 12rem;
+    min-width: 0;
+    font-weight: 600;
+}
+
+.desktop-targets label select {
+    width: 100%;
+    height: 36px;
+}
+
+.desktop-targets .desktop-labeled {
+    width: auto;
+    min-width: 80px;
+    height: var(--tool-control-height);
+    gap: 8px;
+    font-size: 13px;
+}
+
+.desktop-deck > details > summary {
+    margin: 0;
+    padding: 7px 12px 5px;
+    border-block: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.desktop-deck .desktop-keybar {
+    flex-wrap: wrap;
+    flex: 0 1 auto;
+}
+
+@media (max-width: 650px) {
+    .desktop-targets {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: end;
+        gap: 6px;
+        padding: 8px;
+    }
+
+    .desktop-workspace:not([data-state="connected"]) .desktop-targets label {
+        max-width: none;
+    }
+
+    .desktop-workspace:not([data-state="connected"]) .desktop-targets:not(:has(.desktop-cluster-field)) > .desktop-host-field {
+        grid-column: 1 / -1;
+    }
+
+    .desktop-targets label select {
+        min-width: 0;
+        max-width: none;
+    }
+
+    .desktop-targets .desktop-connection {
+        justify-self: start;
+    }
+
+    .desktop-targets > label:has(.desktop-transmission-preset) {
+        grid-column: 1 / -1;
+    }
+}
+
+.desktop-popover > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.desktop-workspace :is(.desktop-toolbar, .desktop-targets, .desktop-keybar) button:disabled {
+    color: var(--disabled-ink);
+    background: var(--disabled-face);
+    border-color: var(--line);
+    box-shadow: none;
+    opacity: 1;
+}
+
+@media (max-width: 680px) {
+    .desktop-workspace[data-state="connected"] .desktop-targets > label:has(:disabled) {
+        display: none;
+    }
+}
+
+.desktop-popover-content > p {
+    white-space: pre-line;
+}
+
+.desktop-action .ui-icon {
+    order: -1;
+}
+
+.desktop-bitrate-mode[data-quality="false"][aria-pressed="false"] span:first-child::before,
+.desktop-bitrate-mode[data-quality="false"][aria-pressed="true"] span:last-child::before {
+    content: "✓ ";
+}
+
+.desktop-workspace .desktop-labeled {
+    width: auto;
+    min-width: max-content;
+    font-size: 13px;
+}
+
+.desktop-popover header {
+    background: var(--panel);
+    z-index: 1;
+}
+
+.desktop-popover .codec-apply {
+    width: fit-content;
+    margin-block-start: 12px;
+    margin: 0;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-targets {
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding-block: 3px;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-targets > strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-targets .desktop-labeled {
+    min-height: 34px;
+    height: 34px;
+    padding-block: 4px;
+}
+
+.desktop-workspace .desktop-targets .desktop-reload {
+    min-width: 0;
+}
+
+@media (min-width: 1001px) {
+    .desktop-workspace .desktop-targets .desktop-reload {
+        margin-inline-start: auto;
+    }
+}
+
+.desktop-workspace[data-state="connected"] .desktop-targets label:has(:disabled) {
+    display: none;
+}
+
+.desktop-popover > header h2,
+.desktop-popover > header .icon-button {
+    margin: 0;
+    align-self: center;
+}
+
+.desktop-toolbar .desktop-action[aria-pressed="true"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+    box-shadow: inset 0 -2px var(--accent);
+}
+
+.desktop-menu[open] .desktop-popover {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    overflow: hidden;
+    padding: 0;
+}
+
+.desktop-popover > header,
+.desktop-popover > footer {
+    padding: 10px 16px;
+}
+
+.desktop-popover > footer {
+    border-block-start: 1px solid var(--line);
+}
+
+.desktop-popover > footer:empty {
+    display: none;
+}
+
+.desktop-popover-content {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px 16px 16px;
+    scrollbar-color: var(--control) transparent;
+    overscroll-behavior: contain;
+}
+
+.desktop-targets button {
+    min-height: 40px;
+}
+
+.desktop-workspace[data-state="connected"] :is(.desktop-connect, .desktop-reload):disabled {
+    display: none;
+}
+
+.desktop-popover-content :is(select, input):disabled {
+    color: var(--disabled-ink);
+    border-color: var(--disabled-line);
+    opacity: 1;
+}
+
+.desktop-workspace .desktop-targets > .desktop-connect,
+.desktop-workspace .desktop-targets .desktop-labeled {
+    min-height: 40px;
+    font-size: 13px;
+}
+
+.desktop-popover-content button[role="switch"] {
+    display: flex;
+    align-items: center;
+    justify-content: start;
+    width: 100%;
+    gap: 8px;
+    background: transparent;
+    border-color: transparent;
+    padding-inline: 0;
+}
+
+.desktop-popover-content button[role="switch"]::before {
+    content: "";
+    flex: none;
+    width: 24px;
+    height: 14px;
+    border: 1px solid var(--control);
+    border-radius: 8px;
+    background: radial-gradient(circle at 6px center, currentcolor 4px, transparent 5px) var(--nested);
+}
+
+.desktop-popover-content button[role="switch"][aria-checked="true"]::before {
+    border-color: var(--accent);
+    background: radial-gradient(circle at 17px center, var(--on-accent) 4px, transparent 5px) var(--accent);
+}
+
+.desktop-details-list {
+    display: grid;
+    grid-template-columns: minmax(4em, auto) minmax(0, 1fr);
+    gap: 8px 12px;
+    margin: 0;
+    font-size: 13px;
+}
+
+.desktop-details-list dd,
+.desktop-details-list p {
+    margin: 0;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+.desktop-details-list dt {
+    color: var(--muted);
+}
+
+.desktop-details-list dt:has(+ dd > :empty),
+.desktop-details-list dd:has(> :empty) {
+    display: none;
+}
+
+.desktop-deck details[open] .desktop-toolbar {
+    flex-wrap: wrap;
+    white-space: normal;
+}
+
+.desktop-deck details[open] .desktop-toolbar .desktop-action.icon-button {
+    width: auto;
+    max-width: 100%;
+    min-height: 32px;
+    padding: 4px 7px;
+    gap: 4px;
+}
+
+.desktop-deck details[open] .desktop-toolbar .desktop-action.icon-button::after {
+    content: attr(aria-label);
+    font-size: 12px;
+}
+
+.desktop-deck details[open] .desktop-toolbar .desktop-action[data-preference]:disabled::before {
+    content: attr(data-preference);
+    order: 1;
+    margin-inline-start: 3px;
+    border-inline-start: 1px solid var(--line);
+    padding-inline-start: 5px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.page.remote-tools:has(.desktop-workspace[data-state="connected"]) {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+}
+
+.remote-tools:has(.desktop-workspace[data-state="connected"]) > .page-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+}
+
+.desktop-workspace[data-state="connected"] {
+    --desktop-screen-row: 2;
+
+    grid-template-columns: auto minmax(0, 1fr);
+    background: var(--panel);
+    border: 0;
+    border-radius: 0;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-rail {
+    grid-row: 1;
+    grid-column: 1;
+    flex-direction: row;
+    align-items: center;
+    padding: 2px 4px;
+    gap: 2px;
+    overflow: visible;
+    border-right: 0;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-deck {
+    grid-row: 1;
+    grid-column: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    overflow: visible;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-viewport {
+    grid-row: var(--desktop-screen-row);
+    grid-column: 1 / -1;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-popover {
+    grid-column: 1 / -1;
+    left: 4px;
+    width: min(320px, calc(100% - 8px));
+}
+
+.desktop-workspace[data-state="connected"] .desktop-viewport[data-single-monitor="true"][data-scale="fit"] .desktop-monitor > span {
+    display: none;
+}
+
+@media (min-width: 901px) and (pointer: fine) {
+    :root:has(.desktop-workspace[data-state="connected"]) {
+        --statusbar-height: 26px;
+    }
+}
+
+@media (max-width: 650px) {
+    .desktop-workspace[data-state="connected"] .desktop-deck {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: end;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-targets {
+        display: flex;
+        padding: 2px 4px;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-targets > strong {
+        flex: 1;
+        line-height: 1.15;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-targets .desktop-connection {
+        font-size: 11px;
+        min-height: 24px;
+        margin: 0;
+        padding: 2px 4px;
+        white-space: nowrap;
+    }
+
+}
+
+@media (min-width: 480px) and (max-height: 500px) and (orientation: landscape) {
+    .desktop-workspace[data-state="connected"] .desktop-deck {
+        flex-wrap: nowrap;
+    }
+
+    :root:has(.desktop-workspace[data-state="connected"]) {
+        --topbar-height: 44px;
+    }
+}
+
+.desktop-workspace[data-state="connected"] :is(.desktop-deck, .desktop-rail, .desktop-targets) {
+    background: var(--panel);
+}
+
+.desktop-workspace[data-state="connected"] .desktop-deck > details {
+    flex: none;
+}
+
+.desktop-workspace[data-state="connected"] .desktop-deck details[open] > .desktop-control-scroll {
+    display: flex;
+    position: absolute;
+    z-index: 3;
+    grid-column: 1 / -1;
+    grid-row: var(--desktop-screen-row);
+    inset: 4px 4px auto auto;
+    width: min(540px, calc(100% - 8px));
+    max-height: calc(100% - 8px);
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
+    background: var(--panel);
+}
+
+.desktop-workspace[data-state="connected"] .desktop-control-scroll > .desktop-toolbar {
+    align-items: center;
+    padding: 8px;
+}
+
+.desktop-workspace .desktop-deck > details > summary {
+    padding-inline-end: 30px;
+    min-height: 40px;
+}
+
+.desktop-workspace:not([data-state="connected"]) .desktop-targets .desktop-connection {
+    align-self: end;
+    margin-block-end: 6px;
+    border: 1px solid var(--line);
+    background: var(--nested);
+}
+
+.desktop-popover > footer:not(:empty) {
+    background: var(--card);
+    padding: 8px 16px;
+}
+
+.desktop-permission.warn,
+.desktop-popover-content .desktop-settings-notice {
+    display: flex;
+    align-items: start;
+    gap: 6px;
+    font-size: 13px;
+    padding: 8px;
+    border-radius: var(--radius-control);
+}
+
+.desktop-permission.warn {
+    background: var(--warn-soft);
+    color: var(--warn);
+}
+
+.desktop-popover-content .desktop-settings-notice {
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding-inline: 6px;
+    word-break: auto-phrase;
+}
+
+.desktop-popover-content :is(.desktop-settings-notice, .desktop-permission) .ui-icon {
+    flex: none;
+}
+
+@media (max-width: 500px) {
+    .desktop-workspace[data-state="connected"] .desktop-popover {
+        width: calc(100% - 8px);
+    }
+}
+
+@media (max-width: 480px) {
+    .desktop-workspace[data-state="connected"] {
+        --desktop-screen-row: 3;
+
+        grid-template-columns: auto minmax(0, 1fr);
+        grid-template-rows: auto auto minmax(0, 1fr);
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-deck,
+    .desktop-workspace[data-state="connected"] .desktop-deck > details[open] {
+        display: contents;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-targets {
+        grid-row: 1;
+        grid-column: 1 / -1;
+        padding: 6px 16px 0;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-viewport[data-single-monitor="true"][data-scale="fit"]:not(:fullscreen) {
+        align-items: start;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-rail {
+        grid-row: 2;
+        padding-inline-start: 8px;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-deck > details {
+        grid-row: 2;
+        grid-column: 2;
+        justify-self: end;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-deck > details[open]::details-content {
+        display: contents;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-deck > details > summary {
+        grid-row: 2;
+        grid-column: 2;
+        justify-self: end;
+        border-block: 0;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-popover {
+        grid-row: var(--desktop-screen-row);
+    }
+}
+
+.desktop-display-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
+.desktop-display-controls .desktop-screen-tabs {
+    flex-wrap: wrap;
+}
+
+.desktop-quick-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.desktop-workspace .desktop-toolbar .desktop-action:enabled:not([aria-pressed="true"]) {
+    border-color: var(--button-line);
+    border-bottom-color: var(--button-line-bottom);
+    background: var(--button-face);
+    color: var(--ink);
+    box-shadow: var(--button-shadow);
+}
+
+.desktop-workspace .desktop-toolbar .desktop-action:enabled:not([aria-pressed="true"]):hover {
+    background: var(--button-hover);
+}
+
+@media (min-width: 1001px) {
+    .desktop-workspace:not([data-state="connected"]) {
+        grid-template-columns: 164px minmax(0, 1fr);
+    }
+
+    .desktop-workspace:not([data-state="connected"]) .desktop-popover {
+        left: 168px;
+        width: min(320px, calc(100% - 172px));
+    }
+
+    .desktop-workspace:not([data-state="connected"]) .desktop-rail {
+        align-items: stretch;
+        padding-inline: 6px;
+    }
+
+    .desktop-workspace:not([data-state="connected"]) .desktop-rail :is(summary, button.desktop-action) {
+        justify-content: start;
+        width: 100%;
+        min-height: 36px;
+        font-size: 12px;
+        gap: 6px;
+    }
+
+    .desktop-workspace:not([data-state="connected"]) .desktop-rail :is(summary, button.desktop-action) .ui-icon {
+        order: -1;
+        flex: none;
+    }
+
+}
+
+@media (max-width: 390px) {
+    .desktop-workspace[data-state="connected"] .desktop-rail :is(summary, .desktop-action) {
+        width: 28px;
+        height: 32px;
+        padding-inline: 3px;
+    }
+}
+
+.desktop-popover-content .codec-field-note {
+    font-size: 13px;
+    word-break: auto-phrase;
+}
+
+.desktop-rail :is(summary, button.desktop-labeled) > .control-label {
+    display: none;
+}
+
+@media (min-width: 1001px) {
+    .desktop-workspace:not([data-state="connected"]) .desktop-rail :is(summary, button.desktop-labeled) > .control-label {
+        display: inline;
+    }
+
+    .desktop-workspace:not([data-state="connected"]) .desktop-rail .desktop-labeled > .control-label {
+        font-size: 12px;
+    }
+}
+
+.desktop-workspace[data-state="connected"] .desktop-rail button.desktop-labeled {
+    min-width: 32px;
+    width: auto;
+    padding-inline: 6px;
+}
+
+@media (min-width: 1280px) and (min-height: 620px) {
+    .desktop-workspace[data-state="connected"] .desktop-rail :is(summary, button.desktop-labeled) {
+        gap: 5px;
+        width: auto;
+        padding-inline: 7px;
+    }
+
+    .desktop-workspace[data-state="connected"] .desktop-rail :is(summary, button.desktop-labeled) > .control-label {
+        display: inline;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) and (orientation: portrait) {
+    .desktop-workspace[data-state="connected"] .desktop-rail :is(summary, button),
+    .desktop-workspace[data-state="connected"] .desktop-targets .desktop-labeled {
+        min-height: 44px;
+    }
+}
+
+.desktop-workspace .desktop-deck > details:not([open]) > summary {
+    border-block-color: transparent;
+}
+
+.desktop-workspace:not([data-state="connected"]) .desktop-targets :is(label select, button) {
+    min-height: var(--tool-control-height);
+}
+
+.desktop-workspace .desktop-targets .desktop-labeled > .ui-icon {
+    width: 16px;
+    height: 16px;
+}
+
+@media (max-width: 820px) {
+    .desktop-connected-cluster {
+        display: none;
+    }
+}
+
+@media (max-width: 650px), (pointer: coarse) {
+    .desktop-deck details[open] .desktop-toolbar button,
+    .desktop-deck details[open] .desktop-toolbar .desktop-action.icon-button {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .desktop-deck details[open] .desktop-keybar {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(44px, 1fr));
+        gap: 6px;
+    }
+
+    .desktop-deck .desktop-keybar .desktop-key {
+        min-width: 44px;
+        height: 44px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .desktop-deck .desktop-keybar .desktop-key:enabled:not([aria-pressed="true"]) {
+        background: var(--button-face);
+        color: var(--ink);
+        border-color: var(--button-line);
+        border-bottom-color: var(--button-line-bottom);
+        box-shadow: var(--button-shadow);
+    }
+
+    .desktop-deck .desktop-keybar .desktop-key:enabled[aria-pressed="true"] {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+        color: var(--accent);
+    }
 }

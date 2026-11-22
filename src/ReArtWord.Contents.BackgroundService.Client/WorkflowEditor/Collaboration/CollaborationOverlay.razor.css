@@ -1,11 +1,17 @@
+.drag-outline {
+    rx: var(--radius-panel);
+}
+
 .running-outline {
+    rx: calc(var(--radius-panel) + 2px);
     fill: none;
-    stroke: var(--accent, #8fb9ee);
+    stroke: var(--accent);
     stroke-width: 2.5;
-    filter: drop-shadow(0 0 5px var(--accent, #8fb9ee));
+    filter: drop-shadow(0 0 5px var(--accent));
     pointer-events: none;
 }
 
 .collaborator-selection {
+    rx: calc(var(--radius-panel) + 3px);
     pointer-events: none;
 }

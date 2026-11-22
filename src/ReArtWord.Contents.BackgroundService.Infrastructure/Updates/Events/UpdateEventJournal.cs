@@ -21,6 +21,7 @@ internal static class UpdateEventJournal
     internal static async Task<IReadOnlyList<DurableMutation>> CreateAsync(IDurableRepository repository, string owner,
         ClusterUpdateStatus? before, ClusterUpdateStatus current, CancellationToken cancellationToken = default)
     {
+        using DerivedIdentityScope identities = new(current.IdentityFormat);
         List<(string Name, UpdateEventData Data)> changes = [];
         UpdateEventData summary = new(current.Request.OperationId, current.Outcome, current.Completed, ReleaseId: current.Request.Manifest.ReleaseId, Reason: current.Reason);
         if (before is null)
@@ -59,7 +60,7 @@ internal static class UpdateEventJournal
             {
                 continue;
             }
-            WorkflowEvent notification = new(eventId, name, DateTimeOffset.UtcNow, owner, ContractJson.ToValue(data), CausationId: data.OperationId);
+            WorkflowEvent notification = new(eventId, name, DateTimeOffset.UtcNow, owner, ContractJson.ToValue(data), CausationId: data.OperationId) { IdentityFormat = current.IdentityFormat };
             mutations.Add(new(Scope(owner), key, null, ContractJson.ToValue(notification)));
         }
         return mutations;

@@ -25,5 +25,6 @@
   "wake.unavailable": "The saved NIC information or send route could not be confirmed. Nothing was sent.",
   "Device.InvalidWakeSelection": "The Wake-on-LAN adapter selection is invalid.",
   "Device.WakeInterfaceChanged": "A selected NIC is no longer in the retrieved inventory. Refresh its settings.",
-  "wake.selection.saved": "Wake-on-LAN adapter selection saved"
+  "wake.selection.saved": "Wake-on-LAN adapter selection saved",
+  "wake.overrideHint": "Selecting an individual adapter switches from automatic to explicit selection."
 }

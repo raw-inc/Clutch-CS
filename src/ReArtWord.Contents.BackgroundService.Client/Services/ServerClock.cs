@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Net.Http.Headers;
+using ReArtWord.Contents.BackgroundService.Contracts.Management;
+using ReArtWord.Contents.BackgroundService.Contracts.Observability;
 
 namespace ReArtWord.Contents.BackgroundService.Client.Services;
 
@@ -12,11 +14,32 @@ internal sealed class ServerClock(TimeProvider? provider = null)
     private DateTimeOffset? latest;
     private DateTimeOffset anchor;
     private long received;
+    private long sequence;
+    private long instanceRequestStarted;
+    private long requestSequence;
+    private long instanceRequestOrder;
+
+    /// <summary>単調時計の分解能内で同時に始まったHTTP要求にも、異なる順序番号を付けます。</summary>
+    /// <returns>このブラウザーの時計対応で使用する要求順序です。</returns>
+    internal long NextRequestOrder() => Interlocked.Increment(ref requestSequence);
 
     /// <summary>要求開始時の単調時刻です。</summary>
     internal long Timestamp => clock.GetTimestamp();
 
-    /// <summary>ClientHostの時刻軸で現在の観測年齢を判定します。</summary>
+    /// <summary>ブラウザー側の時刻補正と切り離して、操作の準備にかかった時間を返します。</summary>
+    /// <returns>指定した起点からの経過時間です。</returns>
+    internal TimeSpan ElapsedSince(long started) => clock.GetElapsedTime(started);
+
+    /// <summary>送信元での最終受信からの経過時間に通信待ちの上限を加え、以後は閲覧側の経過時間で管理します。</summary>
+    /// <returns>遅延した応答を受信時点で新鮮に戻さない年齢です。</returns>
+    internal ObservationAge ObserveAge(TimeSpan age, long requestStarted)
+    {
+        TimeSpan elapsed = ElapsedSince(requestStarted);
+        return new(clock, TimeSpan.MaxValue - age < elapsed ? TimeSpan.MaxValue
+                                                            : age + elapsed);
+    }
+
+    /// <summary>ClientHostの時刻軸で現在の最終受信からの経過時間を判定します。</summary>
     internal DateTimeOffset UtcNow
     {
         get
@@ -29,20 +52,35 @@ internal sealed class ServerClock(TimeProvider? provider = null)
         }
     }
 
-    /// <summary>古いキャッシュ応答では時計を巻き戻さず、通信待ち時間も観測年齢へ含めます。</summary>
-    internal void Observe(HttpResponseHeaders headers, long started)
+    /// <summary>古いキャッシュ応答では時計を巻き戻さず、通信待ち時間も最終受信からの経過時間へ含めます。</summary>
+    internal void Observe(HttpResponseHeaders headers, long started, Guid requestId = default, long requestOrder = 0)
     {
-        string timeHeader = "X-Contents-Observed-At", instanceHeader = "X-Contents-Host-Instance", format = "O";
-        if (!headers.TryGetValues(timeHeader, out IEnumerable<string>? times)
-            || !headers.TryGetValues(instanceHeader, out IEnumerable<string>? identities)
+        string format = "O";
+        if (!headers.TryGetValues(ObservationHeaders.ObservedAt, out IEnumerable<string>? times)
+            || !headers.TryGetValues(ObservationHeaders.Instance, out IEnumerable<string>? identities)
             || !DateTimeOffset.TryParseExact(times.FirstOrDefault(), format, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTimeOffset time)
             || !Guid.TryParse(identities.FirstOrDefault(), out Guid host))
         {
             return;
         }
+        long incomingSequence = 0;
+        if (headers.TryGetValues(ObservationHeaders.Sequence, out IEnumerable<string>? numbers)
+            && (!long.TryParse(numbers.FirstOrDefault(), NumberStyles.None, CultureInfo.InvariantCulture, out incomingSequence) || incomingSequence <= 0
+                || requestId == Guid.Empty || !headers.TryGetValues(ObservationHeaders.Request, out IEnumerable<string>? requests)
+                || !Guid.TryParse(requests.FirstOrDefault(), out Guid echoed) || echoed != requestId))
+        {
+            return;
+        }
         using (gate.EnterScope())
         {
-            if (host == instance && latest.HasValue && time <= latest.Value)
+            bool earlierRequest = 0 < requestOrder && 0 < instanceRequestOrder ? requestOrder < instanceRequestOrder
+                                                                               : started < instanceRequestStarted;
+
+            // 新しいHostの応答を確認した後に、以前の要求の遅着応答へ戻りません。
+            // 照合IDは別のHTTP要求のキャッシュを除外し、同じHost内の順序は日時ではなく連番で判定します。
+            if (latest.HasValue && (host != instance && earlierRequest
+                || host == instance && (0 < sequence && incomingSequence <= sequence
+                    || sequence == 0 && incomingSequence == 0 && time <= latest.Value)))
             {
                 return;
             }
@@ -50,7 +88,13 @@ internal sealed class ServerClock(TimeProvider? provider = null)
             anchor = time + clock.GetElapsedTime(started, now);
             received = now;
             latest = time;
+            if (host != instance)
+            {
+                instanceRequestStarted = started;
+                instanceRequestOrder = requestOrder;
+            }
             instance = host;
+            sequence = incomingSequence;
         }
     }
 }

@@ -17,7 +17,7 @@ internal sealed class DeviceBatchRunner(IDeviceRemote remote, DeviceBatchStore s
             for (int index = 0; index < state.Request.Changes.Count; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                DevicePlannedChange change = state.Request.Changes[index];
+                DevicePlannedChange change = state.Request.Changes[index] with { IdentityFormat = state.IdentityFormat };
                 Guid id = change.Request.OperationId;
                 if (blocked.Contains(change.Target.HostId))
                 {

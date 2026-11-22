@@ -68,7 +68,8 @@ public sealed class SqliteReadCostTests
     [Theory]
     [InlineData(0)]
     [InlineData(4, Skip = "LEGACY-SPEC: 段階的履歴同期以前はversion 4を未対応としていたため。VersionFourSupportsCurrentReadAsyncで現仕様を検証します。")]
-    [InlineData(5)]
+    [InlineData(5, Skip = "LEGACY-SPEC: version 5は削除済みIDの区間を保存する形式です。ExactHistoryRetirementTestsで再起動後の読取りを検証します。")]
+    [InlineData(7)]
     public async Task InvalidIdentityClosesTheFailedSession(int version)
     {
         using MediaTestFiles files = new();

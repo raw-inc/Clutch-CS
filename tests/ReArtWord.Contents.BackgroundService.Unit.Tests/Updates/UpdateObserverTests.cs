@@ -79,7 +79,8 @@ public sealed class UpdateObserverTests
     [InlineData(false, false)]
     [InlineData(true, true)]
     [InlineData(false, false, true)]
-    public async Task ReceiptLossRetriesOnlyTheOriginalResultQueryAsync(bool loseFirstQuery, bool loseEveryQuery, bool firstReceiptMissing = false)
+    [InlineData(false, false, true, true)]
+    public async Task ReceiptLossRetriesOnlyTheOriginalResultQueryAsync(bool loseFirstQuery, bool loseEveryQuery, bool firstReceiptMissing = false, bool sourceClockBehind = false)
     {
         using UdpClient reservation = new(new IPEndPoint(IPAddress.Loopback, 0));
         int port = ((IPEndPoint)reservation.Client.LocalEndPoint!).Port;
@@ -91,7 +92,7 @@ public sealed class UpdateObserverTests
         UdpTransport target = new(new("target", binding.BindAddress, binding.BroadcastAddress, port, cluster), instance, TimeProvider.System);
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable targetLifetime = ((IAsyncDisposable)target).ConfigureAwait(true);
         target.Initialize(nic);
-        UpdateObserver observer = new(binding, cluster);
+        UpdateObserver observer = new(binding, cluster, confirmationTimeout: TimeSpan.FromSeconds(6));
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable observerLifetime = observer.ConfigureAwait(true);
         ConcurrentDictionary<Guid, byte> effects = new();
         ConcurrentDictionary<Guid, byte> deliveries = new();
@@ -100,6 +101,15 @@ public sealed class UpdateObserverTests
         Guid firstQuery = Guid.Empty;
         target.Received = async (message, _, token) =>
         {
+            string inspection = "inspect";
+            if (string.Equals(message.Kind, inspection, StringComparison.Ordinal))
+            {
+                // 時計照会には旧Coreと同じ未対応の応答を返します。このテストでは、操作の実行応答と結果照会だけを失わせます。
+                ClusterResponse unsupported = new(EOutcome.NotExecuted, Reason: "Cluster.InspectionTargetUnavailable");
+                await target.SendAsync(new(Guid.NewGuid(), cluster, "target", instance, "reply", message.SenderId, message.Id,
+                    JsonSerializer.SerializeToElement(unsupported), message.InstanceId), token).ConfigureAwait(false);
+                return;
+            }
             string execute = "request";
             if (string.Equals(message.Kind, execute, StringComparison.Ordinal))
             {
@@ -159,6 +169,13 @@ public sealed class UpdateObserverTests
             await ((Task)found).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
         ManagementCommand command = new(Guid.NewGuid(), cluster, "target", instance, DateTimeOffset.UtcNow.AddSeconds(6), "write", NodeValue.FromObject(true));
+        if (sourceClockBehind)
+        {
+            // 送信元のUTCが1時間遅れていても、受け付けられた更新の結果を元のIDで取得できます。
+            ManagementTransport.AdmissionTestClock clock = new();
+            clock.Adjust(DateTimeOffset.UtcNow - clock.GetUtcNow() - TimeSpan.FromHours(1));
+            command = ManagementCommand.Start(command.RequestId, cluster, "target", instance, TimeSpan.FromSeconds(6), "write", command.Payload, clock);
+        }
         ManagementReply reply = await observer.SendAsync(command, false, timeout.Token).ConfigureAwait(true);
         Assert.Equal(command.RequestId, Assert.Single(effects).Key);
         Assert.Single(deliveries);

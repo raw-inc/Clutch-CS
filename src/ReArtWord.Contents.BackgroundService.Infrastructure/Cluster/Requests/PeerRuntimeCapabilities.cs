@@ -42,7 +42,7 @@ internal sealed class PeerRuntimeCapabilities(PeerCluster cluster)
             return null;
         }
         PeerInfo peer = announcement.Peer;
-        if (!enabled || peer.InstanceId == cluster.LocalInstanceId)
+        if (!enabled || string.Equals(peer.PeerId, cluster.LocalPeerId, StringComparison.Ordinal))
         {
             return announcement;
         }

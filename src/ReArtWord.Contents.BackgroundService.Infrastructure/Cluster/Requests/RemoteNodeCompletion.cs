@@ -15,9 +15,21 @@ internal static class RemoteNodeCompletion
     public static async Task<ClusterResponse> SendAsync(PeerCluster cluster, ClusterRequest request, Func<ClusterRequest, CancellationToken, Task<ClusterResponse>> local, string kind, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        request = ContractJson.Copy(request);
+        request = ContractJson.Copy(request) with { Admission = request.Admission,
+            DeliveryPrepared = request.DeliveryPrepared, DeliveryTiming = request.DeliveryTiming };
         if (string.Equals(request.TargetPeerId, cluster.LocalPeerId, StringComparison.Ordinal))
         {
+            if (request.DeliveryTiming is { } timing)
+            {
+                try
+                {
+                    request = cluster.AdmissionClock.Accept(new(request, timing.InstanceId, timing.StartByTicks, timing.SourceNow));
+                }
+                catch (Exception error) when (error is InvalidDataException or OverflowException or ArgumentException)
+                {
+                    return new ClusterResponse(EOutcome.NotExecuted, Reason: "Execution.AdmissionClockInvalid");
+                }
+            }
             return await local(request, cancellationToken).ConfigureAwait(false);
         }
         Guid instance = cluster.GetPeers().FirstOrDefault(peer => string.Equals(peer.PeerId, request.TargetPeerId, StringComparison.Ordinal))?.InstanceId ?? request.TargetInstanceId;
@@ -26,7 +38,33 @@ internal static class RemoteNodeCompletion
         {
             instance = request.TargetInstanceId;
         }
-        WireMessage? response = await cluster.ExchangeAsync(kind, request.TargetPeerId, instance, JsonSerializer.SerializeToElement(request), cancellationToken).ConfigureAwait(false);
+        JsonElement? body = null;
+        string execution = "request";
+        if (string.Equals(kind, execution, StringComparison.Ordinal) && instance == request.TargetInstanceId)
+        {
+            try
+            {
+                ClockedClusterRequest? timed = null;
+                if (request.DeliveryTiming is { } timing)
+                {
+                    timed = new(request, timing.InstanceId, timing.StartByTicks, timing.SourceNow);
+                }
+                else if (!request.DeliveryPrepared)
+                {
+                    timed = await cluster.RequestClocks.PrepareAsync(request, cluster.InspectAsync, cancellationToken).ConfigureAwait(false);
+                }
+                if (timed is not null)
+                {
+                    kind = ClockedClusterRequest.Kind;
+                    body = JsonSerializer.SerializeToElement(timed);
+                }
+            }
+            catch (Exception error) when (error is IOException or InvalidDataException or JsonException)
+            {
+                return new ClusterResponse(EOutcome.Unknown, Reason: "Cluster.AdmissionClockUnconfirmed");
+            }
+        }
+        WireMessage? response = await cluster.ExchangeAsync(kind, request.TargetPeerId, instance, body ?? JsonSerializer.SerializeToElement(request), cancellationToken).ConfigureAwait(false);
         return response?.Body.Deserialize<ClusterResponse>() ?? new ClusterResponse(EOutcome.Unknown, Reason: "Cluster.ResponseUnconfirmed");
     }
 
@@ -54,7 +92,7 @@ internal static class RemoteNodeCompletion
         {
             return NodeResult.Failure("Detached.RemoteExecutionNotAllowed", "明示離脱中の実行先はこのPeerだけです。", EOutcome.NotExecuted);
         }
-        ClusterRequest command = new(request.Id, "node.execute", request.TargetPeerId, request.TargetInstanceId, request.ExpiresAt, NodeValue.FromObject(request));
+        ClusterRequest command = new(request.DeliveryId, "node.execute", request.TargetPeerId, request.TargetInstanceId, request.ExpiresAt, NodeValue.FromObject(request)) { Admission = request.Admission };
         ClusterResponse response = await cluster.RequestAsync(command, cancellationToken).ConfigureAwait(false);
         response = await ConfirmAsync(cluster, command, response, cancellationToken).ConfigureAwait(false);
         return response.Value?.Json.Deserialize<NodeResult>() ?? NodeResult.Failure(response.Reason ?? "Execution.Unconfirmed", "実行結果を確認できません。", response.Outcome);

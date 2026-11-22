@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using System.Globalization;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
@@ -46,7 +47,8 @@ public sealed partial class RetentionDialog
         get; set;
     } = null!;
 
-    private bool open, applyExisting, expand;
+    private bool open, busy, applyExisting, expand;
+    private LogOptionsChangeRequest? pending;
     private Func<string>? message;
     private LogOptions? options;
     private LogRetentionView? shared, observed;
@@ -65,7 +67,7 @@ public sealed partial class RetentionDialog
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "UIコールバックの呼出し署名を維持し、取消可能なI/Oには画面が所有するトークンを渡します。")]
     private async Task OpenAsync()
     {
-        if (Disabled)
+        if (Disabled || busy)
         {
             return;
         }
@@ -148,6 +150,11 @@ public sealed partial class RetentionDialog
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "UIコールバックの呼出し署名を維持し、取消可能なI/Oには画面が所有するトークンを渡します。")]
     private async Task SaveAsync()
     {
+        if (busy || pending is not null)
+        {
+            return;
+        }
+
         try
         {
             if (options is null)
@@ -177,28 +184,59 @@ public sealed partial class RetentionDialog
                 RetentionWindow window = data.Window(Enum.Parse<ERetentionCategory>(level + "Log", ignoreCase: true));
                 return new LogRetentionRule(level, window.RawDays, window.TotalDays);
             }).ToArray();
-            Guid id = Guid.CreateVersion7();
+            Guid id = OperationIdentity.CreateDurableRequest();
             LogOptionsChangeRequest request = new(options with
             {
                 Retention = retention, RollingTime = rollingTime, TimeZoneId = timeZone
             }, applyExisting, expand, OperationId: id, ExpectedRevision: shared?.Configuration.Saved?.Revision, DataRetention: data);
-            JsonElement response = await Journal.StartAsync(id, "Save shared log retention", "/api/logs/retention", "/api/configuration/operations/" + id,
-                request, cancellationToken: UiCancellation).ConfigureAwait(true);
+
+            // 以前の短縮が既存分に未適用なら、今回の日数が同じでも保存済みの期限は短くなり得ます。
+            if (applyExisting && Enum.GetValues<ERetentionCategory>().Any(category => data.Window(category).TotalDays is not null))
+            {
+                pending = request;
+                return;
+            }
+
+            await SaveRequestAsync(request, UiCancellation).ConfigureAwait(true);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or TimeZoneNotFoundException or InvalidTimeZoneException)
+        {
+            message = Ui.DeferredException(exception);
+        }
+    }
+
+    /// <summary>確認画面に表示した条件を固定して保存します。</summary>
+    /// <returns>要求と反映結果の表示が完了するまでの処理です。</returns>
+    private async Task SaveRequestAsync(LogOptionsChangeRequest request, CancellationToken cancellationToken = default)
+    {
+        if (busy)
+        {
+            return;
+        }
+
+        Guid id = request.OperationId;
+        pending = null;
+        busy = true;
+        try
+        {
+            JsonElement response = await Journal.StartAsync(id, "Save shared log retention", "/api/v2/logs/retention", "/api/configuration/operations/" + id,
+                request, cancellationToken: cancellationToken).ConfigureAwait(true);
             ClusterOperationalSaveResult? result = response.Deserialize<ClusterOperationalSaveResult>(ContractJson.Options);
             message = Ui.Deferred("Saved {0} / shared {1} / snapshot {2} / applied {3}", result?.Saved.Outcome, result?.Shared.Outcome, result?.Snapshot.Outcome, result?.Activation.Outcome);
-            shared = await Api.GetAsync<LogRetentionView>("/api/logs/retention", cancellationToken: UiCancellation).ConfigureAwait(true);
+            shared = await Api.GetAsync<LogRetentionView>("/api/logs/retention", cancellationToken: cancellationToken).ConfigureAwait(true);
             observed = shared;
         }
-        catch (Exception exception) when (exception is HttpRequestException or InvalidOperationException or ArgumentException or TimeZoneNotFoundException or InvalidTimeZoneException)
+        catch (HttpRequestException)
         {
-            if (exception is HttpRequestException)
-            {
-                message = Ui.Deferred("The retention API result is unconfirmed.");
-            }
-            else
-            {
-                message = Ui.DeferredException(exception);
-            }
+            message = Ui.Deferred("The retention API result is unconfirmed.");
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException)
+        {
+            message = Ui.DeferredException(exception);
+        }
+        finally
+        {
+            busy = false;
         }
     }
 

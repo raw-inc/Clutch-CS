@@ -13,6 +13,8 @@ namespace ReArtWord.Contents.BackgroundService.Infrastructure.Observability.Debu
 public sealed class WorkflowDebugService
 {
     private readonly PeerCluster cluster;
+    private readonly TimeProvider clock;
+    private long armOrder;
     private readonly Lock gate = new();
     private readonly Dictionary<Guid, Control> controls = [];
     private static string PrepareKind => "workflow.debug.prepare";
@@ -21,14 +23,21 @@ public sealed class WorkflowDebugService
     private static string ReadKind => "workflow.debug.snapshot";
 
     /// <summary>永続履歴を作らない診断専用の内部要求だけを登録します。</summary>
-    public WorkflowDebugService(PeerCluster cluster, WorkflowDebugRecorder recorder)
+    public WorkflowDebugService(PeerCluster cluster, WorkflowDebugRecorder recorder, TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(cluster);
         ArgumentNullException.ThrowIfNull(recorder);
         this.cluster = cluster;
+        clock = timeProvider ?? TimeProvider.System;
         recorder.Claim = ClaimAsync;
-        cluster.RegisterRuntimeHandler(PrepareKind, (request, _) => Task.FromResult(new ClusterResponse(EOutcome.Succeeded,
-            NodeValue.FromObject(recorder.Prepare(request.Payload.Json.Deserialize<WorkflowDebugArm>()!)))));
+        cluster.RegisterRuntimeHandler(PrepareKind, (request, _) =>
+        {
+            WorkflowDebugArm arm = request.Payload.Json.Deserialize<WorkflowDebugArm>()!;
+
+            // 旧Coreからの予約には換算済みの期限がありません。仮保持を10分に限り、実際の取得権は必ず元の所有者に照会します。
+            TimeSpan remaining = request.Admission?.ForDeadline(arm.ExpiresAt).Remaining ?? WorkflowDebugArm.Lifetime;
+            return Task.FromResult(new ClusterResponse(EOutcome.Succeeded, NodeValue.FromObject(recorder.Prepare(arm, remaining))));
+        });
         cluster.RegisterRuntimeHandler(ClaimKind, (request, _) => Task.FromResult(new ClusterResponse(EOutcome.Succeeded,
             NodeValue.FromObject(Claim(request.Payload.Json.Deserialize<ClaimRequest>()!)))));
         cluster.RegisterRuntimeHandler(CancelKind, (request, _) =>
@@ -67,7 +76,8 @@ public sealed class WorkflowDebugService
                 {
                     throw new InvalidOperationException("Debug capture requires a participating cluster.");
                 }
-                control = new(new(request.OperationId, request.WorkflowId, cluster.LocalPeerId, cluster.LocalInstanceId, DateTimeOffset.UtcNow.AddMinutes(10)), members);
+                RequestAdmission reservation = RequestAdmission.Start(clock, WorkflowDebugArm.Lifetime);
+                control = new(new(request.OperationId, request.WorkflowId, cluster.LocalPeerId, cluster.LocalInstanceId, reservation.ExpiresAt), members, reservation, checked(++armOrder));
                 controls.Add(request.OperationId, control);
                 created = true;
             }
@@ -82,7 +92,7 @@ public sealed class WorkflowDebugService
             {
                 foreach (PeerInfo member in control.Members)
                 {
-                    ClusterResponse response = await SendAsync(PrepareKind, member.PeerId, member.InstanceId, NodeValue.FromObject(control.Arm), false, cancellationToken).ConfigureAwait(false);
+                    ClusterResponse response = await PrepareAsync(control, member, cancellationToken).ConfigureAwait(false);
                     if (response.Outcome != EOutcome.Succeeded || response.Value?.Json.ValueKind != JsonValueKind.True)
                     {
                         throw new IOException("Debug preparation: " + member.PeerId + " / " + response.Outcome + " / " + response.Reason);
@@ -117,7 +127,7 @@ public sealed class WorkflowDebugService
         using (gate.EnterScope())
         {
             Prune();
-            id = controls.Values.Where(item => string.Equals(item.Arm.WorkflowId, workflowId, StringComparison.Ordinal)).MaxBy(item => item.Arm.ExpiresAt)?.Arm.Id;
+            id = controls.Values.Where(item => string.Equals(item.Arm.WorkflowId, workflowId, StringComparison.Ordinal)).MaxBy(item => item.Order)?.Arm.Id;
         }
         if (id is Guid found)
         {
@@ -139,7 +149,7 @@ public sealed class WorkflowDebugService
             {
                 return null;
             }
-            if (control.State is EWorkflowDebugState.Armed && (control.Arm.ExpiresAt <= DateTimeOffset.UtcNow || !Matches(control)))
+            if (control.State is EWorkflowDebugState.Armed && (control.Reservation.IsExpired || !Matches(control)))
             {
                 control.State = EWorkflowDebugState.Expired;
                 control.Reason = "debug.expiredOrMembershipChanged";
@@ -215,7 +225,11 @@ public sealed class WorkflowDebugService
     {
         using (gate.EnterScope())
         {
-            if (!controls.TryGetValue(request.Id, out Control? control) || control.Arm.ExpiresAt <= DateTimeOffset.UtcNow || !Matches(control))
+            if (!controls.TryGetValue(request.Id, out Control? control) || control.Reservation.IsExpired || !Matches(control))
+            {
+                return false;
+            }
+            if (control.State is EWorkflowDebugState.Cancelled or EWorkflowDebugState.Expired or EWorkflowDebugState.Unconfirmed)
             {
                 return false;
             }
@@ -253,11 +267,31 @@ public sealed class WorkflowDebugService
     private bool Matches(Control control) => control.Members.Select(peer => peer.InstanceId).ToHashSet()
         .SetEquals(cluster.GetPeers().Where(peer => PeerStatusRules.CanParticipate(peer.Status)).Select(peer => peer.InstanceId));
 
+    /// <summary>受付要求と予約期限を同じ発行元の時計で表し、配布までに経過した時間を予約から差し引きます。</summary>
+    /// <returns>固定した参加実体での準備結果です。</returns>
+    private Task<ClusterResponse> PrepareAsync(Control control, PeerInfo member, CancellationToken cancellationToken = default)
+    {
+        TimeSpan remaining = control.Reservation.Remaining;
+        if (remaining <= TimeSpan.Zero)
+        {
+            return Task.FromResult(new ClusterResponse(EOutcome.NotExecuted, Reason: "debug.expired"));
+        }
+        DateTimeOffset now = control.Arm.ExpiresAt - remaining;
+        TimeSpan delivery = TimeSpan.FromSeconds(15);
+        if (remaining < delivery)
+        {
+            delivery = remaining;
+        }
+        RequestAdmission admission = new(clock, delivery, now + delivery, now);
+        ClusterRequest request = new(Guid.CreateVersion7(now), PrepareKind, member.PeerId, member.InstanceId, admission.ExpiresAt, NodeValue.FromObject(control.Arm)) { Admission = admission };
+        return cluster.RequestAsync(request, cancellationToken);
+    }
+
     /// <summary>内部操作と読取りを既存の固定実体通信へ分けます。</summary>
     /// <returns>配送確認または取得不能です。</returns>
     private Task<ClusterResponse> SendAsync(string kind, string peer, Guid instance, NodeValue value, bool read, CancellationToken cancellationToken = default)
     {
-        ClusterRequest request = new(Guid.CreateVersion7(), kind, peer, instance, DateTimeOffset.UtcNow.AddSeconds(15), value);
+        ClusterRequest request = ClusterRequest.Start(kind, peer, instance, TimeSpan.FromSeconds(15), value);
         return read ? cluster.InspectAsync(request, cancellationToken)
                     : cluster.RequestAsync(request, cancellationToken);
     }
@@ -265,14 +299,14 @@ public sealed class WorkflowDebugService
     /// <summary>記録は再起動を跨がず、予約から30分後にはメタデータも削除します。</summary>
     private void Prune()
     {
-        foreach (Guid id in controls.Where(pair => pair.Value.Arm.ExpiresAt.AddMinutes(20) <= DateTimeOffset.UtcNow).Select(pair => pair.Key).ToArray())
+        foreach (Guid id in controls.Where(pair => pair.Value.Reservation.Remaining <= -WorkflowDebugArm.Retention).Select(pair => pair.Key).ToArray())
         {
             controls.Remove(id);
         }
     }
 
     /// <summary>取得権の競合だけを短い排他で直列化します。</summary>
-    private sealed record Control(WorkflowDebugArm Arm, PeerInfo[] Members)
+    private sealed record Control(WorkflowDebugArm Arm, PeerInfo[] Members, RequestAdmission Reservation, long Order)
     {
         internal EWorkflowDebugState State
         {

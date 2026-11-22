@@ -1,4 +1,4 @@
-import { node, empty } from './dom.js';
+import { node, empty, icon } from './dom.js';
 
 // Each read owns its generation. A late response never replaces a newer scope or a disposed view.
 /** 照会の世代と取消しを管理する読取り処理を構成します。
@@ -62,7 +62,7 @@ export function createReader(ctx, hosts, query, changed)
 }
 
 /** 照会状態を画面表示用の状態に変換します。 */
-export function readStatus(root, ctx, states)
+export function readStatus(root, ctx, states, retry)
 {
     root.replaceChildren();
     const entries = [...states.values()], pending = entries.filter(state => state.loading);
@@ -72,12 +72,19 @@ export function readStatus(root, ctx, states)
         const line = node('div', '', 'hm-loading');
         line.setAttribute('role', 'status');
         line.append(node('span', '', 'hm-spinner'), node('span', `${ctx.t('Loading settings')} · ${entries.length - pending.length} / ${entries.length}`));
-        root.append(line);
+        const skeleton = node('div', '', 'skeleton skeleton-line');
+        skeleton.setAttribute('aria-hidden', 'true');
+        root.append(line, skeleton);
     }
     for (const state of entries.filter(state => state.error))
     {
         const error = node('div', '', 'hm-read-error');
-        error.append(node('strong', state.host.target.hostId), node('span', ctx.t(state.error)));
+        error.setAttribute('role', 'alert');
+        error.append(icon('warning'), node('strong', state.host.target.hostId), node('span', ctx.t(state.error)));
+        if (retry)
+        {
+            error.append(ctx.button('Refresh settings', retry));
+        }
         root.append(error);
     }
 }

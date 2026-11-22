@@ -67,7 +67,7 @@ internal static class FileReservationRecovery
         if (release.Outcome == EOutcome.Succeeded)
         {
             NodeValue resolved = WithRelease(entry, release, true);
-            DurableReceipt saved = await repository.ApplyBatchAsync(Guid.CreateVersion7(), [new(scope, key, entry.Version, resolved)], cancellationToken).ConfigureAwait(false);
+            DurableReceipt saved = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new(scope, key, entry.Version, resolved)], cancellationToken).ConfigureAwait(false);
             if (saved.Outcome != EOutcome.Succeeded)
             {
                 return new(EOutcome.Unknown, "File.RecoveryRecordUnconfirmed");
@@ -133,7 +133,7 @@ internal static class FileReservationRecovery
             }
             recovered = true;
             NodeValue resolved = WithRelease(entry, released, false);
-            await repository.ApplyBatchAsync(Guid.CreateVersion7(), [new(scope, entry.Key, entry.Version, resolved)], cancellationToken).ConfigureAwait(false);
+            await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new(scope, entry.Key, entry.Version, resolved)], cancellationToken).ConfigureAwait(false);
         }
         return recovered;
     }

@@ -10,8 +10,9 @@
     width: 100%;
     overflow: hidden;
     color: var(--ink);
-    font-size: 13px;
-    font-weight: 500;
+    font-family: var(--font-title);
+    font-size: 15px;
+    font-weight: 700;
     line-height: 24px;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -36,8 +37,8 @@
     margin: 0;
     padding: 0 4px;
     border: 1px solid var(--accent);
-    border-radius: 3px;
-    background: #20242a;
+    border-radius: var(--radius-control);
+    background: var(--panel);
     color: var(--ink);
     font-size: 13px;
 }

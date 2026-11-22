@@ -156,12 +156,24 @@ public sealed class PeerCoordinatorElectionTests
     private sealed class ElectionClock(DateTimeOffset? initial = null) : TimeProvider
     {
         private DateTimeOffset now = initial ?? DateTimeOffset.UtcNow;
+        private long timestamp;
+
+        /// <summary>無通信時間を日時とは別に計測します。</summary>
+        /// <returns>試験開始からの経過tickです。</returns>
+        public override long GetTimestamp() => timestamp;
+
+        /// <summary>TimeSpanと同じ単位で経過時間を進めます。</summary>
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
 
         /// <summary>現在の試験時刻です。</summary>
         /// <returns>単調に進めるUTC時刻です。</returns>
         public override DateTimeOffset GetUtcNow() => now;
 
         /// <summary>無通信時間だけを進めます。</summary>
-        internal void Advance(TimeSpan elapsed) => now += elapsed;
+        internal void Advance(TimeSpan elapsed)
+        {
+            now += elapsed;
+            timestamp += elapsed.Ticks;
+        }
     }
 }

@@ -102,7 +102,9 @@ public sealed class ClusterConfigurationStore : IClusterOperationalProvider, IDi
         ClusterConfigurationStored? saved = await ReadStoredAsync(SavedScope, Id, cancellationToken).ConfigureAwait(false);
         if (saved is null && allowSeed)
         {
-            ClusterOperationalSaveResult result = await SaveAsync(new(WorkflowStore.PhaseId(Guid.Empty, Id + ".seed"), seed, null), cancellationToken).ConfigureAwait(false);
+            // 初回導入の元IDは、導入途中で終了した旧版の受付と共通にします。
+            // 保存を新しく開始した後の子操作には、保存記録に固定した生成方式を使用します。
+            ClusterOperationalSaveResult result = await SaveAsync(new(WorkflowStore.PhaseId(Guid.Empty, Id + ".seed", EDerivedIdFormat.Legacy), seed, null), cancellationToken).ConfigureAwait(false);
             if (result.Activation.Outcome != EOutcome.Succeeded)
             {
                 return result.Activation;
@@ -144,6 +146,7 @@ public sealed class ClusterConfigurationStore : IClusterOperationalProvider, IDi
     /// <returns>保存、共有、スナップショット、ローカル実適用の個別結果です。</returns>
     public async Task<ClusterOperationalSaveResult> SaveAsync(ClusterOperationalSaveRequest request, CancellationToken cancellationToken = default)
     {
+        using DerivedIdentityScope identities = new(EDerivedIdFormat.Uuid8);
         ArgumentNullException.ThrowIfNull(request);
         request = ContractJson.Copy(request);
         await mutex.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -189,6 +192,7 @@ public sealed class ClusterConfigurationStore : IClusterOperationalProvider, IDi
     /// <returns>このPeerの実適用結果です。</returns>
     public async Task<ConfigurationPhaseResult> ActivateAsync(ClusterOperationalActivateRequest request, CancellationToken cancellationToken = default)
     {
+        using DerivedIdentityScope identities = new(EDerivedIdFormat.Uuid8);
         ArgumentNullException.ThrowIfNull(request);
         await mutex.WaitAsync(cancellationToken).ConfigureAwait(false);
         try

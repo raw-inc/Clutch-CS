@@ -4,7 +4,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Processes;
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Processes.Groups;
 
 /// <summary>保存した一回の計画を、停止確認・待機・順次起動の順で進めます。</summary>
-internal sealed class ProcessGroupExecution(ProcessService processes, TimeProvider clock, string groupId)
+internal sealed class ProcessGroupExecution(ProcessService processes, string groupId)
 {
     /// <summary>一段階を保存してから副作用を実行し、未確定な操作を自動で再送しません。</summary>
     /// <returns>次の巡回へ保存する操作状態です。</returns>
@@ -35,7 +35,12 @@ internal sealed class ProcessGroupExecution(ProcessService processes, TimeProvid
         }
         if (run.Phase == EProcessGroupPhase.Waiting)
         {
-            if (clock.GetUtcNow() < run.NextAt)
+            TimeSpan? remaining = processes.WaitClock.Remaining(run.WaitOrigin, run.NextAt);
+            if (remaining is null)
+            {
+                return Pause(run, EOutcome.Unknown, "processGroup.waitClockUnconfirmed");
+            }
+            if (TimeSpan.Zero < remaining)
             {
                 return run;
             }
@@ -72,9 +77,10 @@ internal sealed class ProcessGroupExecution(ProcessService processes, TimeProvid
         {
             return Advance(run);
         }
-        if (run.RecoverOnly && observed.Status.NextRecoveryAt is { } due && clock.GetUtcNow() < due)
+        if (run.RecoverOnly && observed.Status.RecoveryRemaining is { Ticks: > 0 } delay)
         {
-            return run with { Phase = EProcessGroupPhase.Waiting, NextAt = due };
+            ProcessWaitOrigin origin = processes.WaitClock.Capture();
+            return run with { Phase = EProcessGroupPhase.Waiting, NextAt = origin.Wall + delay, WaitOrigin = origin };
         }
         ProcessGroupRun claimed = run with { Claimed = true };
         if (!await save(claimed, cancellationToken).ConfigureAwait(false))
@@ -96,7 +102,8 @@ internal sealed class ProcessGroupExecution(ProcessService processes, TimeProvid
     /// <returns>次の一段階または完了です。</returns>
     private ProcessGroupRun Advance(ProcessGroupRun run)
     {
-        DateTimeOffset now = clock.GetUtcNow();
+        ProcessWaitOrigin origin = processes.WaitClock.Capture();
+        DateTimeOffset now = origin.Wall;
         if (run.Phase == EProcessGroupPhase.Stopping)
         {
             if (0 < run.Index)
@@ -107,16 +114,24 @@ internal sealed class ProcessGroupExecution(ProcessService processes, TimeProvid
             {
                 return Finish(run);
             }
-            DateTimeOffset start = run.StartNotBefore is { } earliest && now < earliest ? earliest
-                                                                                        : now;
-            return run with { Phase = EProcessGroupPhase.Waiting, Index = 0, Claimed = false, NextAt = start.AddMilliseconds(run.Targets![0].DelayMilliseconds) };
+            TimeSpan? remaining = processes.WaitClock.Remaining(run.WaitOrigin, run.StartNotBefore);
+            if (remaining is not { } wait)
+            {
+                return Pause(run, EOutcome.Unknown, "processGroup.waitClockUnconfirmed");
+            }
+            DateTimeOffset start = now;
+            if (TimeSpan.Zero < wait)
+            {
+                start += wait;
+            }
+            return run with { Phase = EProcessGroupPhase.Waiting, Index = 0, Claimed = false, NextAt = start.AddMilliseconds(run.Targets![0].DelayMilliseconds), WaitOrigin = origin };
         }
         int index = run.Index + 1;
         if (index == run.Targets!.Count)
         {
             return Finish(run);
         }
-        return run with { Phase = EProcessGroupPhase.Waiting, Index = index, Claimed = false, NextAt = now.AddMilliseconds(run.Targets[index].DelayMilliseconds) };
+        return run with { Phase = EProcessGroupPhase.Waiting, Index = index, Claimed = false, NextAt = now.AddMilliseconds(run.Targets[index].DelayMilliseconds), WaitOrigin = origin };
     }
 
     /// <summary>完了した操作の識別子と結果だけを残します。</summary>

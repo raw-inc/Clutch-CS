@@ -31,18 +31,18 @@ public sealed class SnapshotMaterializationTests
         await using ConfiguredAsyncDisposable exportLifetime = exports.ConfigureAwait(true);
         using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
         using CancellationTokenSource queued = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token);
-        Task<SyncManifest> first = exports.CreateAsync(local, true, timeout.Token);
+        Task<SyncManifest> first = exports.CreateAsync(local, true, cancellationToken: timeout.Token);
         Task<SyncManifest>? second = null;
         try
         {
             await repository.Entered.Task.WaitAsync(timeout.Token).ConfigureAwait(true);
-            second = exports.CreateAsync(local, true, queued.Token);
+            second = exports.CreateAsync(local, true, cancellationToken: queued.Token);
             Assert.Equal(1, repository.Calls);
             if (cancelQueued)
             {
                 await queued.CancelAsync().ConfigureAwait(true);
                 _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await second.ConfigureAwait(false)).ConfigureAwait(true);
-                second = exports.CreateAsync(local, true, timeout.Token);
+                second = exports.CreateAsync(local, true, cancellationToken: timeout.Token);
             }
             repository.Permits.Release(2);
             SyncManifest[] results = await Task.WhenAll(first, second).ConfigureAwait(true);

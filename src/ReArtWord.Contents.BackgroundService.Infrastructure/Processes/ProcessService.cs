@@ -18,12 +18,14 @@ public sealed class ProcessService : IProcessService, IDisposable
     private readonly ProcessRegistry registry;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> gates = new(StringComparer.Ordinal);
     private readonly ProcessHandleMonitor monitor;
-    private readonly ProcessReplacementProbe replacements = new();
     private readonly TimeProvider clock;
     private readonly ProcessLifecyclePublisher events;
     private readonly Func<SystemBootSession?> boot;
     private long registrationRevision;
     private readonly ProcessGroupOwnership ownership = new();
+
+    /// <summary>個別復旧とグループ内の待機で共有する時計です。</summary>
+    internal ProcessWaitClock WaitClock => monitor.Waits;
 
     /// <summary>この所有者で確定した登録変更だけを監視ループへ通知します。</summary>
     internal long RegistrationRevision => Volatile.Read(ref registrationRevision);
@@ -43,7 +45,7 @@ public sealed class ProcessService : IProcessService, IDisposable
         registry = new ProcessRegistry(repository, peerId, boot);
         clock = timeProvider ?? TimeProvider.System;
         this.events = new(peerId, events, clock, log);
-        monitor = new(platform ?? new DefaultProcessPlatform());
+        monitor = new(platform ?? new DefaultProcessPlatform(), new(clock, boot));
         Options = options;
         Groups = new(repository, peerId, this, ownership, clock, log);
     }
@@ -319,7 +321,7 @@ public sealed class ProcessService : IProcessService, IDisposable
                 return new ProcessOperationResult(EOutcome.NotExecuted, null, "process.notRegistered");
             }
             (string? version, ProcessStateRecord state) = await registry.ReadStateAsync(definition, cancellationToken).ConfigureAwait(false);
-            ProcessSession session = new(registry, definition, Options, version, state, monitor, replacements, clock, events, automatic);
+            ProcessSession session = new(registry, definition, Options, version, state, monitor, monitor.Replacements, clock, events, automatic);
             return await action(session, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is System.Data.Common.DbException or IOException or JsonException or OverflowException or InvalidOperationException)

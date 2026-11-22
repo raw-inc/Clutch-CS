@@ -191,13 +191,13 @@ public abstract class DurableRepository : IDurableRepository, ILocalSnapshotBatc
             return new(operationId, fingerprint, EOutcome.Unknown, [], RepositoryHistoryGuard.ExpiredReason);
         }
         if (!document.Receipts.ContainsKey(operationId) && !document.Prepared.ContainsKey(operationId)
-            && RepositoryHistoryGuard.Expired(operationId, RepositoryHistoryGuard.Read(document), document.History?.RetiredOperations.GetValueOrDefault(operationId)) is { } expired)
+            && RepositoryHistoryGuard.FindExpired(document, operationId) is { } expired)
         {
             return expired;
         }
         if (document.Receipts.TryGetValue(operationId, out DurableReceipt? completed))
         {
-            if (string.Equals(completed.Fingerprint, fingerprint, StringComparison.Ordinal))
+            if (RepositoryHistoryGuard.HasUnknownContent(completed) || string.Equals(completed.Fingerprint, fingerprint, StringComparison.Ordinal))
             {
                 return completed;
             }
@@ -305,13 +305,13 @@ public abstract class DurableRepository : IDurableRepository, ILocalSnapshotBatc
                 return new(operationId, fingerprint, EOutcome.Unknown, [], RepositoryHistoryGuard.ExpiredReason);
             }
         }
-        if (!completingPrepared && !document.Receipts.ContainsKey(operationId) && RepositoryHistoryGuard.Expired(operationId, RepositoryHistoryGuard.Read(document), document.History?.RetiredOperations.GetValueOrDefault(operationId)) is { } expired)
+        if (!completingPrepared && !document.Receipts.ContainsKey(operationId) && RepositoryHistoryGuard.FindExpired(document, operationId) is { } expired)
         {
             return expired;
         }
         if (document.Receipts.TryGetValue(operationId, out DurableReceipt? previous))
         {
-            if (string.Equals(previous.Fingerprint, fingerprint, StringComparison.Ordinal))
+            if (RepositoryHistoryGuard.HasUnknownContent(previous) || string.Equals(previous.Fingerprint, fingerprint, StringComparison.Ordinal))
             {
                 return previous;
             }

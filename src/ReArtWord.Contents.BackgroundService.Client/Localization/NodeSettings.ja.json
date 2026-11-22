@@ -58,7 +58,7 @@
   "choice.failurePolicy.waitForManual": "手動対応を待つ",
   "choice.scope.workflow": "ワークフロー内で共有",
   "choice.scope.peer": "このPeer内",
-  "choice.scope.cluster": "クラスタ内の全WFで共有",
+  "choice.scope.cluster": "クラスタ内の全ワークフローで共有",
   "choice.mediaKind.text": "テキスト",
   "choice.mediaKind.audio": "音声",
   "choice.mediaKind.picture": "画像",

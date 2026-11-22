@@ -16,7 +16,7 @@ test('folder names allow Unicode and spaces without permitting traversal, reserv
     }
 });
 
-test('host changes use the pinned instance and reject changed discovery before dispatch', async() =>
+test('host changes use the pinned instance and reject changed discovery before dispatch', { skip: '旧方式はブラウザー日時で直接送信します。時計確認後の送信はprepared host mutationsのケースで検証します。' }, async() =>
 {
     const peer = { clusterId: 'cluster', peerId: 'peer', instanceId: crypto.randomUUID(), status: 'ready' };
     let peers = [peer];
@@ -43,7 +43,38 @@ test('host changes use the pinned instance and reject changed discovery before d
     assert.equal(requests.length, 2);
 });
 
-test('unknown or failed host responses are reported without retrying the mutation', async() =>
+test('prepared host mutations keep the pinned instance and reject changed discovery', async() =>
+{
+    const peer = { clusterId: 'cluster', peerId: 'peer', instanceId: crypto.randomUUID(), status: 'ready' };
+    let peers = [peer];
+    const requests = [];
+    const ctx = { peers: async() => peers,
+
+        t: text => text,
+
+        api: async(path, target, body) =>
+        {
+            assert.equal(target, peer);
+            if (path === '/api/request-clock')
+            {
+                return { instanceId: crypto.randomUUID(), elapsedTicks: 0, observedAt: '2026-01-01T00:00:00Z' };
+            }
+            requests.push(body.request);
+            assert.equal(path, '/api/v2/nodes/execute-clocked');
+            return { outcome: 'succeeded' };
+        } };
+    await mutateHostFileAsync(ctx, peer, 'directory.delete', 'C:/chosen/folder');
+    assert.equal(requests[0].targetInstanceId, peer.instanceId);
+    assert.equal(requests[0].targetPeerId, peer.peerId);
+    assert.deepEqual(requests[0].node.settings, { path: 'C:/chosen/folder', recursive: true });
+    await mutateHostFileAsync(ctx, peer, 'directory.create', 'C:/chosen/new');
+    assert.deepEqual(requests[1].node.settings, { path: 'C:/chosen/new', existingFileMode: 'error' });
+    peers = [{ ...peer, instanceId: crypto.randomUUID() }];
+    await assert.rejects(mutateHostFileAsync(ctx, peer, 'file.delete', 'C:/chosen/file'), /changed/);
+    assert.equal(requests.length, 2);
+});
+
+test('unknown or failed host responses are reported without retrying the mutation', { skip: '旧方式は時計確認の通信を行いません。現在の方式はprepared host responsesのケースで検証します。' }, async() =>
 {
     const peer = { clusterId: 'cluster', peerId: 'peer', instanceId: crypto.randomUUID(), status: 'ready' };
     for (const outcome of ['unknown', 'failed', 'notExecuted', 'cancelled'])
@@ -61,6 +92,80 @@ test('unknown or failed host responses are reported without retrying the mutatio
         await assert.rejects(mutateHostFileAsync(ctx, peer, 'directory.create', 'C:/chosen/new'), /Unconfirmed/);
         assert.equal(calls, 1);
     }
+});
+
+test('prepared host responses remain unconfirmed without repeating the mutation', async() =>
+{
+    const peer = { clusterId: 'cluster', peerId: 'peer', instanceId: crypto.randomUUID(), status: 'ready' };
+    for (const outcome of ['unknown', 'failed', 'notExecuted', 'cancelled'])
+    {
+        let calls = 0;
+        const ctx = { peers: async() => [peer],
+
+            t: text => text,
+
+            api: async(path) =>
+            {
+                if (path === '/api/request-clock')
+                {
+                    return { instanceId: crypto.randomUUID(), elapsedTicks: 0, observedAt: '2026-01-01T00:00:00Z' };
+                }
+                calls++;
+                return { outcome, message: 'Unconfirmed or rejected' };
+            } };
+        await assert.rejects(mutateHostFileAsync(ctx, peer, 'directory.create', 'C:/chosen/new'), /Unconfirmed/);
+        assert.equal(calls, 1);
+    }
+});
+
+test('manual file requests use the Host clock without reading browser UTC', async(t) =>
+{
+    t.mock.method(Date, 'now', () =>
+    {
+        throw new Error('Browser UTC must not determine admission.');
+    });
+    const peer = { clusterId: 'cluster', peerId: 'peer', instanceId: crypto.randomUUID(), status: 'ready' };
+    const origin = '2026-01-01T00:00:00Z', instanceId = crypto.randomUUID();
+    let sent;
+    const ctx = { peers: async() => [peer],
+
+        t: text => text,
+
+        api: async(path, target, body) =>
+        {
+            if (path === '/api/request-clock')
+            {
+                return { instanceId, elapsedTicks: 500000, observedAt: origin };
+            }
+            sent = body;
+            return { outcome: 'succeeded' };
+        } };
+    await mutateHostFileAsync(ctx, peer, 'directory.create', 'C:/chosen/new');
+    const lifetime = Date.parse(sent.request.expiresAt) - Date.parse(origin);
+    assert.ok(0 < lifetime && lifetime <= 300000);
+    assert.equal(sent.timing.sourceNow, new Date(origin).toISOString());
+    assert.equal(sent.timing.instanceId, instanceId);
+    assert.equal(sent.timing.startByTicks, 500000 + lifetime * 10000);
+});
+
+test('unconfirmed admission clocks never dispatch a file mutation', async() =>
+{
+    const peer = { clusterId: 'cluster', peerId: 'peer', instanceId: crypto.randomUUID(), status: 'ready' };
+    let writes = 0;
+    const ctx = { peers: async() => [peer],
+
+        t: text => text,
+
+        api: async(path, target, body) =>
+        {
+            if (body)
+            {
+                writes++;
+            }
+            return {};
+        } };
+    await assert.rejects(mutateHostFileAsync(ctx, peer, 'file.delete', 'C:/chosen/file'), /could not be prepared/);
+    assert.equal(writes, 0);
 });
 
 test('local creation stays inside the chosen folder and never adopts an existing file or directory', async() =>

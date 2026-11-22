@@ -29,7 +29,6 @@ public sealed partial class NodeGraph : IAsyncDisposable
     } = System.Collections.Immutable.ImmutableDictionary<string, bool?>.Empty;
 
     private static string EscapeKey => "Escape";
-    private static string MatchProperties => "properties";
     private static string EnterKey => "Enter";
 
     [Inject]
@@ -149,12 +148,12 @@ public sealed partial class NodeGraph : IAsyncDisposable
             {
                 await connections.InvokeVoidAsync("update", UiCancellation).ConfigureAwait(true);
             }
-
         }
         finally
         {
             renderGate.Release();
         }
+        await NotifyOverlapAsync(UiCancellation).ConfigureAwait(true);
     }
 
     /// <summary>ブラウザーから通知された倍率を有効範囲に収めて反映します。</summary>

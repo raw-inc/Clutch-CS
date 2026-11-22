@@ -28,19 +28,24 @@ test('terminal native fullscreen modes, controls, resize and Core policy', { tim
             let value;
             switch (url.pathname)
             {
+                case '/client/clusters':value = [{ clusterId: peer.clusterId, peers: [peer] }];
+                    break;
                 case '/client/terminal/sessions':value = [{ clusterId: peer.clusterId, peer, sessions, confirmed: true }];
                     break;
                 case '/api/terminal/shells':value = [{ name: 'pwsh', path: 'C:/pwsh.exe' }];
                     break;
                 case '/api/terminal/capabilities':value = { userAvailable: true, administratorAvailable: false, administratorReason: 'CoreAdministratorRequired', settings };
                     break;
-                case '/api/terminal/settings/save':settings = { ...body, version: 'saved' };
+                case '/api/v2/terminal/settings/save':settings = { ...body, version: 'saved' };
                     value = settings;
                     break;
-                case '/api/terminal/create':value = { ...body, shell: body.shell || 'C:/pwsh.exe', exited: false, sequence: 0 };
+                case '/api/v2/terminal/create':value = { ...body, shell: body.shell || 'C:/pwsh.exe', exited: false, sequence: 0 };
                     sessions.push(value);
                     break;
-                case '/api/terminal/claim':value = { ...sessions.find(s => s.sessionId === body.sessionId), owner: body.owner };
+                case '/api/v2/terminal/claim':value = { ...sessions.find(s => s.sessionId === body.sessionId), owner: body.owner };
+                    break;
+                case '/api/v2/terminal/close':sessions.splice(sessions.findIndex(s => s.sessionId === body.sessionId), 1);
+                    value = { outcome: 'succeeded' };
                     break;
                 default:res.statusCode = 404;
                     value = { error: 'unexpected' };
@@ -52,7 +57,7 @@ test('terminal native fullscreen modes, controls, resize and Core policy', { tim
         if (url.pathname === '/terminal')
         {
             res.setHeader('Content-Type', 'text/html');
-            res.end(String.raw`<link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/remote-tools.css"><link rel="stylesheet" href="/vendor/xterm/xterm.css">
+            res.end(String.raw`<link rel="stylesheet" href="/styles/fonts.css"><link rel="stylesheet" href="/styles/theme.css"><link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/styles/controls.css"><link rel="stylesheet" href="/styles/status.css"><link rel="stylesheet" href="/remote-tools.css"><link rel="stylesheet" href="/vendor/xterm/xterm.css">
 <div style="height:90px"></div><main id="app" class="remote-tools" style="padding:12px"></main><footer class="app-statusbar" style="height:26px"></footer>
 <script src="/vendor/xterm/xterm.js"></script><script src="/vendor/xterm/addon-fit.js"></script>
 <script>
@@ -63,7 +68,7 @@ window.inputs=[];window.WebSocket=class{
  send(text){const value=JSON.parse(text);if(value.type!=='input')return;inputs.push(value.request);this.session.sequence=value.request.sequence+1;setTimeout(()=>{this.receive({type:'ack',session:this.session});if(!this.output){this.output=true;const text='Clutch-CS Terminal test peer\r\nPS > ';this.receive({type:'output',output:{session:this.session,offset:0,nextOffset:text.length,data:btoa(text)}});}},0);}
  close(){this.readyState=3;}
 };
-</script><script type="module">import{mount,unmount}from'/remote-tools.js';window.unmount=()=>unmount(document.querySelector('#app'));await mount(document.querySelector('#app'),'terminal','ja');window.mounted=true;</script>`);
+</script><script type="module">import{mount,unmount}from'/remote-tools.js';window.unmount=()=>unmount(document.querySelector('#app'));await mount(document.querySelector('#app'),'terminal',new URL(location.href).searchParams.get('language')||'ja');window.mounted=true;</script>`);
             return;
         }
         const file = resolve(root, '.' + url.pathname);
@@ -73,7 +78,7 @@ window.inputs=[];window.WebSocket=class{
             res.end();
             return;
         }
-        res.setHeader('Content-Type', file.endsWith('.js') ? 'text/javascript' : file.endsWith('.css') ? 'text/css' : 'application/octet-stream');
+        res.setHeader('Content-Type', file.endsWith('.js') ? 'text/javascript' : file.endsWith('.css') ? 'text/css' : file.endsWith('.svg') ? 'image/svg+xml' : 'application/octet-stream');
         res.end(readFileSync(file));
     });
     await new Promise(resolve =>
@@ -105,9 +110,82 @@ window.inputs=[];window.WebSocket=class{
     const button = name => page.getByRole('button', { name, exact: true });
 
     await button('host / peer').click();
-    assert(await button('＋ 管理者実行').isDisabled());
-    await button('＋ ユーザー実行').click();
+    assert(await button('管理者実行').isDisabled());
+    await t.test('管理者実行の注意は狭い画面でも起動操作の幅で表示する', async() =>
+    {
+        await page.setViewportSize({ width: 390, height: 844 });
+        const hint = page.locator('.terminal-launch-hint');
+        await hint.waitFor();
+        const bounds = await hint.evaluate(element =>
+        {
+            const hintRect = element.getBoundingClientRect();
+            const session = document.querySelector('.terminal-session-actions').getBoundingClientRect();
+            const controls = document.querySelector('.terminal-screen-actions').getBoundingClientRect();
+            return { hint: hintRect.width, available: session.width, hintEnd: hintRect.bottom, controlsTop: controls.top };
+        });
+        assert.ok((bounds.available - 1) <= bounds.hint, JSON.stringify(bounds));
+        assert.ok(bounds.hintEnd <= bounds.controlsTop, JSON.stringify(bounds));
+        const [shell, path, start] = await Promise.all([page.locator('.terminal-shell').boundingBox(), page.locator('.terminal-shell-path').boundingBox(), button('ユーザー実行').boundingBox()]);
+        assert.ok(shell && path && start && shell.y + shell.height <= path.y && path.y + path.height <= start.y);
+        await page.setViewportSize({ width: 1280, height: 800 });
+    });
+    await t.test('広い画面では起動操作と端末操作を同じ高さに置く', { skip: 'シェルの見出しを起動欄の上に置くため、欄の上端を揃える旧レイアウトの検証を終了します。' }, async() =>
+    {
+        const toolbar = page.locator('.terminal-toolbar');
+        const [session, controls] = await toolbar.locator(':scope > div').evaluateAll(elements => elements.map(element => element.getBoundingClientRect().top));
+        assert.ok(Math.abs(session - controls) <= 1);
+    });
+    await t.test('広い画面ではユーザー実行とコピーの縦中心を揃える', async() =>
+    {
+        const start = await button('ユーザー実行').boundingBox();
+        const copy = await button('コピー').boundingBox();
+        assert.ok(start && copy);
+        assert.ok(start.x + start.width <= copy.x);
+        assert.ok(Math.abs(start.y + start.height / 2 - (copy.y + copy.height / 2)) <= 1);
+    });
+    await button('ユーザー実行').click();
     await page.waitForFunction(() => (0) < (window.inputs.length));
+
+    /** 接続中のカードで状態表示と二つの操作の位置、各ラベルの収まりを確認します。
+     * @returns 各画面幅での確認が済むと完了するPromiseです。
+     */
+    async function checkSessionActionsAsync(widths)
+    {
+        const current = page.locator('.terminal-session[aria-current="true"]');
+        const sources = page.locator('.terminal-sources');
+        for (const width of widths)
+        {
+            await page.setViewportSize({ width, height: 800 });
+            if (width <= 650 && await sources.getAttribute('open') === null)
+            {
+                await sources.locator(':scope > summary').click();
+            }
+            await current.waitFor();
+            const aligned = await current.evaluate(element =>
+            {
+                const row = element.getBoundingClientRect();
+                const state = element.querySelector('.badge').getBoundingClientRect();
+                const buttons = [...element.querySelectorAll('button')];
+                const [left, right] = buttons.map(control => control.getBoundingClientRect());
+                const labelsFit = buttons.every(control =>
+                {
+                    const label = control.querySelector('.control-label') ?? control;
+                    const line = document.createRange();
+                    line.selectNodeContents(label);
+                    return line.getClientRects().length === 1 && control.scrollWidth <= control.clientWidth;
+                });
+                return left.top === right.top && left.height === right.height && state.bottom < left.top
+                    && row.left <= left.left && left.right < right.left && right.right <= row.right && labelsFit;
+            });
+            assert.equal(aligned, true, width + 'px');
+        }
+        await page.setViewportSize({ width: 1280, height: 800 });
+    }
+
+    await t.test('共有セッションの操作は接続状態の下で横一列に並ぶ', { skip: '接続中のセッションから引き継ぎを外し、状態と終了操作を並べる仕様へ変更しました。' }, async() =>
+    {
+        await checkSessionActionsAsync([1280, 768, 390, 320]);
+    });
 
     /** 試験用の端末寸法を返します。
      * @returns 呼出し元が使用する値です。
@@ -117,8 +195,8 @@ window.inputs=[];window.WebSocket=class{
     const initial = await dimensions();
     await t.test('disconnect is beside creation; policy saves without disconnecting the current shell', async() =>
     {
-        const order = await page.locator('.terminal-toolbar').evaluate(el => [...el.children].map(c => c.textContent));
-        assert(order.indexOf('接続解除') === order.indexOf('＋ 管理者実行') + 1);
+        const order = await page.locator('.terminal-session-actions').evaluate(el => [...el.querySelectorAll('button')].map(c => c.textContent));
+        assert(order.indexOf('接続解除') === order.indexOf('管理者実行') + 1);
         await button('厳密な非昇格: OFF').click();
         await button('厳密な非昇格: ON').waitFor();
         assert.equal(sessions.length, 1);
@@ -172,6 +250,136 @@ window.inputs=[];window.WebSocket=class{
             await page.waitForFunction(() => (0) < (window.inputs.length));
             await page.screenshot({ path: process.env.CONTENTS_TEST_TERMINAL_SCREENSHOT });
         }
+    });
+    await t.test('英語表示でも引き継ぎと終了のラベルが一行に収まる', { skip: '接続後も引き継ぎを表示していた旧仕様の検証を終了します。' }, async() =>
+    {
+        await page.goto(base + '/terminal?language=en');
+        await page.waitForFunction(() => window.mounted);
+        await button('host / peer').click();
+        await button('Take over').click();
+        await checkSessionActionsAsync([950, 651]);
+    });
+
+    /** 共有セッションの状態に応じて操作を表示し、横幅に合わせて並べることを確認します。
+     * @returns 各画面幅での確認が済むと完了するPromiseです。
+     */
+    async function checkVisibleSessionActionsAsync(widths, connected, actions)
+    {
+        const row = page.locator(connected ? '.terminal-session[aria-current="true"]' : '.terminal-session:not([aria-current])');
+        const sources = page.locator('.terminal-sources');
+        for (const width of widths)
+        {
+            await page.setViewportSize({ width, height: 800 });
+            await page.evaluate(() => new Promise(resolve =>
+            {
+                requestAnimationFrame(() => resolve());
+            }));
+            if (width <= 650 && await sources.getAttribute('open') === null)
+            {
+                await sources.locator(':scope > summary').click();
+            }
+            await row.waitFor();
+            assert.equal(await row.getByRole('button').count(), actions.length);
+            for (const name of actions)
+            {
+                assert.ok(await row.getByRole('button', { name, exact: true }).isVisible(), name);
+            }
+            const layout = await row.evaluate(element =>
+            {
+                const [name, left, right] = element.children;
+                const bounds = element.getBoundingClientRect(), style = getComputedStyle(element);
+                const leftBounds = left.getBoundingClientRect(), rightBounds = right.getBoundingClientRect();
+                const available = element.clientWidth - parseFloat(style.paddingInlineStart) - parseFloat(style.paddingInlineEnd);
+                const canShareRow = leftBounds.width + parseFloat(style.columnGap) + rightBounds.width <= available;
+                const layoutMatchesWidth = canShareRow
+                    ? leftBounds.right < rightBounds.left && Math.abs(leftBounds.top + leftBounds.height / 2 - (rightBounds.top + rightBounds.height / 2)) <= 1
+                    : Math.abs(leftBounds.left - rightBounds.left) <= 1 && leftBounds.bottom < rightBounds.top;
+                const titles = [left, right].map(control =>
+                {
+                    const label = control.querySelector('.control-label, .badge') ?? control;
+                    const range = document.createRange();
+                    range.selectNodeContents(label);
+                    return range.getClientRects().length === 1 && label.scrollWidth <= label.clientWidth && control.scrollWidth <= control.clientWidth;
+                });
+                return {
+                    inside: bounds.left <= Math.min(leftBounds.left, rightBounds.left) && Math.max(leftBounds.right, rightBounds.right) <= bounds.right,
+                    afterName: name.getBoundingClientRect().bottom < Math.min(leftBounds.top, rightBounds.top),
+                    layoutMatchesWidth,
+                    singleRow: canShareRow,
+                    titles,
+                };
+            });
+            assert.ok(layout.inside && layout.afterName && layout.layoutMatchesWidth && layout.titles.every(Boolean), width + 'px ' + JSON.stringify(layout));
+            if (width === 1440)
+            {
+                assert.ok(layout.singleRow, 'The desktop session actions must fit side by side');
+            }
+        }
+    }
+
+    for (const { language, claim, terminate, status, widths } of [
+        { language: 'ja', claim: '接続を引き継ぐ', terminate: 'セッションを終了', status: '接続中', widths: [1440, 1280, 768, 390, 320] },
+        { language: 'en', claim: 'Take over', terminate: 'End session', status: 'Connected', widths: [1440, 1280, 950, 651, 390, 320] },
+    ])
+    {
+        await t.test('共有セッションの状態と画面幅に合わせて操作を表示する ' + language, async() =>
+        {
+            await page.setViewportSize({ width: 1280, height: 800 });
+            await page.goto(base + '/terminal?language=' + language);
+            await page.waitForFunction(() => window.mounted);
+            await button('host / peer').click();
+            await checkVisibleSessionActionsAsync(widths, false, [claim, terminate]);
+            await page.setViewportSize({ width: 1280, height: 800 });
+            await button(claim).click();
+            const current = page.locator('.terminal-session[aria-current="true"]');
+            await current.getByText(status, { exact: true }).waitFor();
+            await checkVisibleSessionActionsAsync(widths, true, [terminate]);
+        });
+    }
+    await t.test('終了する共有セッションは確認後にだけ一度終了する', { skip: 'セッションIDを本文に表示する旧仕様です。新しい表示でも取消しと確定を検証します。' }, async() =>
+    {
+        await page.setViewportSize({ width: 1440, height: 900 });
+        const entry = page.locator('.terminal-session[aria-current="true"]');
+        await entry.getByRole('button', { name: 'End session', exact: true }).click();
+        const dialog = page.getByRole('dialog', { name: 'End session' });
+        await dialog.waitFor();
+        assert.ok((await dialog.innerText()).includes(sessions[0].sessionId));
+        await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+        await dialog.waitFor({ state: 'hidden' });
+        assert.equal(operations.filter(o => o.path.endsWith('/close')).length, 0);
+        await entry.waitFor();
+
+        await entry.getByRole('button', { name: 'End session', exact: true }).click();
+        await dialog.getByRole('button', { name: 'End session', exact: true }).click();
+        await page.waitForFunction(() => !document.querySelector('.terminal-session'));
+        assert.equal(operations.filter(o => o.path.endsWith('/close')).length, 1);
+        assert.equal(sessions.length, 0);
+    });
+    await t.test('一覧と同じセッション名で確認し、確定後にだけ一度終了する', async() =>
+    {
+        await page.setViewportSize({ width: 1440, height: 900 });
+        const entry = page.locator('.terminal-session[aria-current="true"]');
+        const label = await entry.locator(':scope > span').first().innerText();
+        await entry.getByRole('button', { name: 'End session', exact: true }).click();
+        const dialog = page.getByRole('dialog', { name: 'End session' });
+        await dialog.waitFor();
+        assert.equal(await dialog.locator('.terminal-confirm-session > span').first().innerText(), label);
+        assert.equal(await dialog.locator('.terminal-confirm-session .badge').innerText(), 'Connected');
+        assert.match(await dialog.locator('.notice').innerText(), /This screen will also disconnect/);
+        const identifier = dialog.locator('details code');
+        assert.equal(await dialog.locator('details').getAttribute('open'), null);
+        await dialog.getByText('Session ID', { exact: true }).click();
+        assert.equal(await identifier.innerText(), sessions[0].sessionId);
+        await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+        await dialog.waitFor({ state: 'hidden' });
+        assert.equal(operations.filter(o => o.path.endsWith('/close')).length, 0);
+        await entry.waitFor();
+
+        await entry.getByRole('button', { name: 'End session', exact: true }).click();
+        await dialog.getByRole('button', { name: 'End session', exact: true }).click();
+        await page.waitForFunction(() => !document.querySelector('.terminal-session'));
+        assert.equal(operations.filter(o => o.path.endsWith('/close')).length, 1);
+        assert.equal(sessions.length, 0);
     });
     assert.deepEqual(errors, []);
 });

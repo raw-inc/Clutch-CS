@@ -1,4 +1,5 @@
 using ReArtWord.Contents.BackgroundService.Contracts.Retention;
+using System.Text.Json.Serialization;
 
 namespace ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.History;
 
@@ -7,5 +8,7 @@ namespace ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Histor
 /// <param name="DeletedBefore">種類ごとの保存区間の下限です。</param>
 /// <param name="OperationBefore">未知の時刻付き操作を新規受付しない境界です。</param>
 /// <param name="ObservedAt">この基準点が確認した共有状態の日時です。</param>
+/// <param name="RetirementFormat">1では実際に退役したIDの区間を使用し、日時だけの受付境界を新たに進めません。</param>
 public sealed record HistoryRetentionBoundary(IReadOnlyDictionary<ERetentionCategory, DateTimeOffset> RawBefore,
-    IReadOnlyDictionary<ERetentionCategory, DateTimeOffset> DeletedBefore, DateTimeOffset OperationBefore, DateTimeOffset ObservedAt);
+    IReadOnlyDictionary<ERetentionCategory, DateTimeOffset> DeletedBefore, DateTimeOffset OperationBefore, DateTimeOffset ObservedAt,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] int RetirementFormat = 0);

@@ -3,6 +3,7 @@ using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Desktop;
 using ReArtWord.Contents.BackgroundService.CoreService.Desktop.Video;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 using ReArtWord.Contents.BackgroundService.Runtime.Processes;
 
@@ -41,7 +42,7 @@ public sealed class DesktopReferenceTests
 
     /// <summary>疎な更新は新しい参照で始まり、完全静止では重複フレームを増やしません。</summary>
     /// <returns>製品の符号化引数による実ビットストリームの検証です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData("libx264", false)]
     [InlineData("libx265", false)]
     [InlineData("libvpx-vp9", false)]

@@ -112,10 +112,10 @@ export function scopeRemote(history, connections, tell, send, changed)
     function hex(raw)
     {
         const lines = [];
-        for (let offset = 0; offset < raw.length; offset += 16)
+        for (let offset = 0; offset < raw.length; offset += 8)
         {
-            const bytes = raw.subarray(offset, offset + 16);
-            const values = [...bytes].map(value => value.toString(16).padStart(2, '0').toUpperCase()).join(' ').padEnd(47);
+            const bytes = raw.subarray(offset, offset + 8);
+            const values = [...bytes].map(value => value.toString(16).padStart(2, '0').toUpperCase()).join(' ').padEnd(23);
             const ascii = [...bytes].map(value => (32) <= (value) && value <= 126 ? String.fromCharCode(value) : '.').join('');
             lines.push(offset.toString(16).padStart(4, '0').toUpperCase() + '  ' + values + '  ' + ascii);
         }
@@ -135,7 +135,8 @@ export function scopeRemote(history, connections, tell, send, changed)
             return;
         }
         tell('detail', { id: selected.id, details: value.details, rawLength: value.raw.length, originalLength: value.originalLength,
-            time: value.time, observers: selected.observers, observationCount: selected.observationCount, hex: hex(value.raw) });
+            time: value.time, observers: selected.observers, observationCount: selected.observationCount, hex: hex(value.raw),
+            source: selected.source, sourcePort: selected.sourcePort, destination: selected.destination, destinationPort: selected.destinationPort });
         cancelSelection();
     }
 
@@ -208,7 +209,8 @@ export function scopeRemote(history, connections, tell, send, changed)
                 tell('detail', { id, removed: true });
                 return;
             }
-            selected = { id, references: [...row.references], deadline: performance.now() + 10000, observers: row.observers, observationCount: row.observationCount };
+            selected = { id, references: [...row.references], deadline: performance.now() + 10000, observers: row.observers, observationCount: row.observationCount,
+                source: row.source, sourcePort: row.sourcePort, destination: row.destination, destinationPort: row.destinationPort };
             tell('detail', { id, pending: true });
             requestDetail();
         },

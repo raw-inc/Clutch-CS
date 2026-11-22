@@ -12,7 +12,9 @@ namespace ReArtWord.Contents.BackgroundService.Infrastructure.Installation;
 /// <summary>実サービス登録、正常起動確認と対象processの停止を扱います。</summary>
 public sealed class InstallationPlatform : IInstallationPlatform
 {
+    private static string ProcessIdentityCapability => "supportsProcessIdentity";
     private JsonElement preflight;
+    private ProcessIdentity? launched;
 
     /// <summary>Windows のサービス配置を保護し、ユーザー導入では本人の書込み権限を保ちます。</summary>
     public void PrepareDirectory(string path, bool perUser, bool privateData = false, bool recursive = false)
@@ -107,9 +109,15 @@ public sealed class InstallationPlatform : IInstallationPlatform
     public async Task StartAsync(InstallationRecord record, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
+        launched = null;
         preflight = await VerifyProcessAsync(record, false, cancellationToken).ConfigureAwait(false);
+        bool verifyIdentity = preflight.TryGetProperty(ProcessIdentityCapability, out JsonElement supported) && supported.GetBoolean();
         if (!record.Settings.PerUser)
         {
+            if (verifyIdentity && !OperatingSystem.IsMacOS() && await InstallationLaunchIdentity.ServicePidAsync(record.ServiceName, cancellationToken).ConfigureAwait(false) != 0)
+            {
+                throw new InvalidOperationException("このサービスには既に実行中のプロセスがあります。");
+            }
             if (OperatingSystem.IsWindows())
             {
                 await WindowsInstallation.StartAsync(record, cancellationToken).ConfigureAwait(false);
@@ -117,6 +125,10 @@ public sealed class InstallationPlatform : IInstallationPlatform
             else
             {
                 await UnixInstallation.StartAsync(StartupRegistration.ForCore(record), cancellationToken).ConfigureAwait(false);
+            }
+            if (verifyIdentity)
+            {
+                launched = await InstallationLaunchIdentity.WaitForServiceAsync(record.ServiceName, cancellationToken).ConfigureAwait(false);
             }
             return;
         }
@@ -127,6 +139,10 @@ public sealed class InstallationPlatform : IInstallationPlatform
         start.ArgumentList.Add("--config");
         start.ArgumentList.Add(Path.Combine(record.Settings.Root, "config", "contents.toml"));
         using Process process = Process.Start(start) ?? throw new IOException("The installed service could not start.");
+        if (verifyIdentity)
+        {
+            launched = ProcessOs.Identity(process);
+        }
     }
 
     /// <summary>配置に対応するOS操作を行います。</summary>
@@ -214,6 +230,10 @@ public sealed class InstallationPlatform : IInstallationPlatform
             body["configurationHash"] = preflight.GetProperty("configurationHash").GetString();
             body["manifestHash"] = preflight.GetProperty("manifestHash").GetString();
             body["startedAfter"] = preflight.GetProperty("startedAfter").GetDateTimeOffset();
+            if (preflight.TryGetProperty(ProcessIdentityCapability, out JsonElement supported) && supported.GetBoolean())
+            {
+                body["expectedProcess"] = launched ?? throw new InvalidOperationException("今回の起動に対応するプロセスを確認できません。");
+            }
         }
         await InstallationFiles.WriteAsync(request, body, cancellationToken).ConfigureAwait(false);
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

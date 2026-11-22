@@ -8,7 +8,7 @@
     border: 0;
     padding: 1px 4px;
     background: transparent;
-    font-size: 10px;
+    font-size: inherit;
     color: var(--muted);
     height: 22px;
 }
@@ -28,7 +28,7 @@
     z-index: 20;
     padding: 14px;
     border: 1px solid var(--line);
-    border-radius: 6px 6px 0 0;
+    border-radius: var(--radius-panel) var(--radius-panel) 0 0;
     background: var(--panel);
     color: var(--ink);
     box-shadow: 0 -8px 28px #0006;
@@ -52,7 +52,7 @@
 .transfer-job {
     padding: 10px;
     border: 1px solid var(--line);
-    border-radius: 4px;
+    border-radius: var(--radius-control);
     margin-top: 8px;
     background: var(--paper);
 }

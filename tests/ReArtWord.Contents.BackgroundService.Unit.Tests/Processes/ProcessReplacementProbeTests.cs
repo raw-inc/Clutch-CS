@@ -12,6 +12,27 @@ namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Processes;
 /// <summary>引数照会中の終了と、稼働中の候補を確認できない状態を区別します。</summary>
 public sealed class ProcessReplacementProbeTests
 {
+    /// <summary>時計補正を挟むと新旧の判定が変わる実プロセスは、後継と断定せず、新規起動の根拠にも使いません。</summary>
+    /// <returns>実行ファイルが一致する生存候補の保留です。</returns>
+    [Fact]
+    public async Task LiveProcessAcrossClockRollbackRemainsUnconfirmed()
+    {
+        using ApplicationProcessFixture app = new(delayMilliseconds: -1);
+        using Process candidate = ApplicationReplacementTests.StartSuccessor(app, false);
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(20));
+        await ApplicationRecoveryTests.WaitForStartAsync(app, timeout.Token).ConfigureAwait(true);
+        ProcessWaitOrigin now = ProcessWaitClock.OperatingSystemClock.Capture();
+        ProcessWaitOrigin prior = now with { Uptime = now.Uptime - TimeSpan.FromMinutes(1), Wall = now.Wall.AddHours(1) };
+        ProcessReplacementWindow window = Window(app, candidate) with
+        {
+            Match = EProcessRestartMatch.ExecutableOnly, NotBefore = prior.Wall, AliveOrigin = prior, WaitOrigin = prior
+        };
+        ProcessReplacementProbe probe = new(waits: ProcessWaitClock.OperatingSystemClock);
+        (ProcessIdentity? identity, string? problem) = await probe.FindAsync("app", window, timeout.Token).ConfigureAwait(true);
+        Assert.Null(identity);
+        Assert.Equal("process.replacementUnconfirmed", problem);
+    }
+
     /// <summary>照会失敗で監視を中断せず、生存が不明な候補を候補なしとして扱いません。</summary>
     /// <returns>実プロセスの終了状態に対応する候補照合結果です。</returns>
     [Theory]

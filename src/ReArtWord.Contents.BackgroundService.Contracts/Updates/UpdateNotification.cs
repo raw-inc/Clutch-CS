@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using ReArtWord.Contents.BackgroundService.Contracts.Serialization;
 
 namespace ReArtWord.Contents.BackgroundService.Contracts.Updates;
@@ -9,8 +10,15 @@ namespace ReArtWord.Contents.BackgroundService.Contracts.Updates;
 /// <param name="Data">パス・接続秘密値を除いた結果です。</param>
 public sealed record UpdateNotification(Guid Id, string Name, DateTimeOffset ObservedAt, UpdateEventData Data)
 {
+    /// <summary>更新開始時の方式を、ClientHostからCoreへの配送にも引き継ぎます。</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public EDerivedIdFormat IdentityFormat
+    {
+        get; init;
+    }
+
     /// <summary>配送時刻・配送先を変更しても同じ事象を増やしません。</summary>
     /// <returns>内容から識別できる通知です。</returns>
-    public static UpdateNotification Create(string name, UpdateEventData data, DateTimeOffset observedAt)
-        => new(new Guid(Convert.FromHexString(ContractJson.Hash(new { name, data })).AsSpan(0, 16)), name, observedAt, data);
+    public static UpdateNotification Create(string name, UpdateEventData data, DateTimeOffset observedAt, EDerivedIdFormat format = EDerivedIdFormat.Legacy)
+        => new(DerivedOperationIdentity.FromHash(Convert.FromHexString(ContractJson.Hash(new { name, data })), format), name, observedAt, data) { IdentityFormat = format };
 }

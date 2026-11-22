@@ -1,84 +1,88 @@
-
 .health-indicator {
     display: inline-flex;
     align-items: center;
-    gap: 0;
-    flex: none;
+    gap: 6px;
     min-height: 24px;
-    padding: 4px;
-    color: var(--muted);
-    background: transparent;
-    border: 0;
+    color: var(--warn);
+    line-height: 1.4;
+    vertical-align: middle;
+}
+
+.health-indicator > :is(.ui-icon, .activity-ring, .power-unknown) {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    width: 18px;
+    height: 18px;
 }
 
 .health-indicator.good {
     color: var(--green);
 }
 
-.health-indicator.warn {
-    color: var(--warn);
+.health-indicator .health-label,
+.health-indicator .background-sync {
+    font-size: 13px;
+    overflow-wrap: anywhere;
 }
 
-.health-indicator.good .activity-ring,
-.power-syncing.confirmed .activity-ring {
-    color: color-mix(in srgb, var(--green) 92%, #111317);
-}
-
-.health-indicator .dot {
-    width: 6px;
-    height: 6px;
-}
-
-.health-label {
-    max-width: 0;
-    opacity: 0;
+.health-indicator.good > .health-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
     overflow: hidden;
+    clip-path: inset(50%);
     white-space: nowrap;
-    transform: translateX(-6px);
-    font-size: 11px;
-    transition: max-width 0.24s ease, opacity 0.18s ease, transform 0.24s ease, margin 0.24s ease;
 }
 
-.health-indicator:hover .health-label,
-.health-indicator:focus .health-label {
-    max-width: 230px;
-    opacity: 1;
-    transform: translateX(0);
-    margin-left: 8px;
+.health-indicator .background-sync {
+    color: var(--ink);
 }
 
-.health-indicator:focus-visible {
-    outline: 1px solid var(--accent);
-    outline-offset: 3px;
+clutch-status-labels {
+    display: contents;
 }
 
-.health-indicator.good:not(:hover, :focus) .health-label {
-    transition-delay: 0.25s;
+[data-status-label] {
+    box-sizing: content-box;
+    min-inline-size: var(--status-width, 3em);
+    justify-content: center;
+    text-align: center;
+    vertical-align: middle;
 }
 
-.health-indicator:not(.good) .health-label {
-    max-width: 230px;
-    opacity: 1;
-    transform: translateX(0);
-    margin-left: 8px;
-    transition-delay: 0s;
-}
-
-.health-indicator.history-sync {
-    max-width: 100%;
-}
-
-.health-indicator.history-sync .health-label {
-    max-width: none;
-    opacity: 1;
-    transform: translateX(0);
-    margin-left: 8px;
-    transition-delay: 0s;
+.badge:not([data-status-label]) {
     white-space: normal;
+    overflow-wrap: anywhere;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .health-label {
-        transition: none;
-    }
+.process-status::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentcolor;
+}
+
+.health-indicator.syncing {
+    color: var(--muted);
+}
+
+.health-indicator.offline {
+    color: var(--danger);
+}
+
+.history-progress-ring {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    fill: none;
+    stroke-width: 3px;
+    stroke: var(--accent);
+}
+
+.history-progress-ring .history-progress-track {
+    stroke: var(--line);
 }

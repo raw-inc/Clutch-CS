@@ -1,3 +1,5 @@
+import { setControlLabel } from './ui-icons.js';
+
 // Own only Terminal's fullscreen state; leaving it never closes the shared shell.
 /** ターミナルの全画面表示と元の表示への復帰を構成します。
  * @returns buttons・update・exit・disposeを含む結果です。
@@ -66,7 +68,7 @@ export function createTerminalFullscreen(root, screen, ctx, options)
     for (const [button, icon] of [[full, 'fullscreen'], [content, 'video-fullscreen']])
     {
         button.className = 'terminal-action';
-        button.prepend(ctx.icon(icon));
+        setControlLabel(button, ctx.icon(icon));
     }
     full.className += ' terminal-fullscreen';
 

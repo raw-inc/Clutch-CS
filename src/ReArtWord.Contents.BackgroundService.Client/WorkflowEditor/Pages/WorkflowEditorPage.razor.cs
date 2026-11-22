@@ -127,7 +127,9 @@ public sealed partial class WorkflowEditorPage : IAsyncDisposable
     private Func<string>? message;
 
     private double zoom = .9;
+
     private bool catalogOpen, inspectorOpen, showDetails = true;
+    private string? pickedWorkflow;
     private bool documentsOpen, documentToolsOpen, saveOptionsOpen, collaborationOpen, viewOptionsOpen, compatibilityOpen, debugOpen;
     private GraphViewOptions viewOptions = new();
     private string? viewProblem;
@@ -172,6 +174,7 @@ public sealed partial class WorkflowEditorPage : IAsyncDisposable
     {
         ToggleStates.Reset();
         Model.Changed += Changed;
+        Collaboration.RosterChanged += RequestRenderFromEvent;
         await ReadViewAsync().ConfigureAwait(true);
         await GuardAsync(async () =>
         {
@@ -344,6 +347,7 @@ public sealed partial class WorkflowEditorPage : IAsyncDisposable
         try
         {
             Model.Changed -= Changed;
+            Collaboration.RosterChanged -= RequestRenderFromEvent;
             Notices.Set("operation", null);
             Activity.Reset();
             await lifetime.CancelAsync().ConfigureAwait(true);

@@ -8,7 +8,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Workflow;
 namespace ReArtWord.Contents.BackgroundService.Contracts.Execution;
 
 /// <summary>同一IDの再送を新しい実行にしない分散ノード要求です。</summary>
-/// <param name="Id">実行要求識別子。</param>
+/// <param name="Id">ノード実行と、その永続記録を特定する識別子。</param>
 /// <param name="CausationId">入力となった一件の識別子。</param>
 /// <param name="WorkflowId">ワークフロー識別子。</param>
 /// <param name="Revision">開始時定義の版。</param>
@@ -25,6 +25,7 @@ namespace ReArtWord.Contents.BackgroundService.Contracts.Execution;
 /// <param name="Hooks">この一件につながる事象を処理済みの購読ノード。</param>
 /// <param name="BufferedReceipt">完了記録の永続化を実行経路の後へ分離します。実体変更時の再実行はしません。</param>
 /// <param name="IsValueRead">起動操作ではなく、他ノードへ現在値を供給するための要求時評価です。</param>
+/// <param name="ReceiptId">有限期限の通信受付・結果照会に使う識別子です。省略した旧要求ではIdを使用します。</param>
 public sealed record RemoteExecutionRequest(
     Guid Id,
     Guid CausationId,
@@ -42,8 +43,21 @@ public sealed record RemoteExecutionRequest(
     TraceSelection? TraceSelection = null,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<WorkflowHookStep>? Hooks = null,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)] bool BufferedReceipt = false,
-    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)] bool IsValueRead = false)
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)] bool IsValueRead = false,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)] Guid ReceiptId = default)
 {
+    /// <summary>新規要求では永続記録のUUIDv8と受付期限を持つUUIDv7を分けます。旧要求の再送では元のIdを使い続けます。</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public Guid DeliveryId => ReceiptId == Guid.Empty ? Id
+                                                      : ReceiptId;
+
+    /// <summary>通信処理が受信側の時計へ換算した受付期限です。要求の同一性を保つため、JSONや保存する要求本文には含めません。</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public RequestAdmission? Admission
+    {
+        get; init;
+    }
+
     /// <summary>進捗表示の所有実行です。他ノードの要求・過去の保存形式へは追加しません。</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public Management.Preview.ProgressSession? Progress

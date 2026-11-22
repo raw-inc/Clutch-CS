@@ -1,4 +1,5 @@
-import { node, checkbox, table, details, action, badge, empty } from './dom.js';
+import { node, checkbox, table, details, action, badge, empty, recordCount } from './dom.js';
+import { uiIcon } from '../ui-icons.js';
 import { validateNetwork } from './network-model.js';
 import { vlanLabel, vlanTone } from './vlan.js';
 import { validateVirtualSwitch } from './virtual-switches.js';
@@ -9,6 +10,9 @@ import { powerPreview } from './power-model.js';
 import { windowsUpdatePreview } from './windows-update.js';
 import { loginPreview } from './login.js';
 import { wakePreview } from './wake-on-lan.js';
+
+const firewallRuleRemoval = 'firewallRuleRemove';
+const environmentArea = 'environment';
 
 /** 現在の値を確認用の説明に変換します。
  * @returns 呼出し元が使用する値です。
@@ -38,7 +42,8 @@ export function describe(value, translate = key => key)
     const names = { name: 'Name', value: 'Value', expandable: 'Expand variable references', enabled: 'Status', family: 'Address family', dhcp: 'DHCP',
         automaticMetric: 'Automatic metric', metric: 'Metric', addresses: 'Addresses', automaticDns: 'Automatic DNS', dns: 'DNS servers (in priority order)',
         gateways: 'Default gateways', routerDiscovery: 'Router discovery (IPv6)', direction: 'Direction', action: 'Action', protocol: 'Protocol', profile: 'Profile',
-        localPorts: 'Local ports', remotePorts: 'Remote ports', localAddresses: 'Local addresses', remoteAddresses: 'Remote addresses', program: 'Program', switchName: 'Virtual switch', vlanMode: 'VLAN mode' };
+        localPorts: 'Local ports', remotePorts: 'Remote ports', localAddresses: 'Local addresses', remoteAddresses: 'Remote addresses', program: 'Program', switchName: 'Virtual switch',
+        vlanMode: 'VLAN mode', vlanId: 'VLAN ID', macAddress: 'MAC address' };
     return Object.entries(value).filter(([key, item]) => item !== null && !['revision', 'detailsHash', 'id', 'editable'].includes(key))
         .map(([key, item]) => `${translate(names[key] ?? key)}: ${Array.isArray(item) ? item.map(value => describe(value, translate)).join(', ') : describe(item, translate)}`).join('\n');
 }
@@ -61,7 +66,8 @@ function virtualNicValues(item, translate)
  */
 export function previewValues(item, translate = key => key)
 {
-    const custom = { power: powerPreview, display: displayPreview, windowsUpdate: windowsUpdatePreview, login: loginPreview, wakeOnLan: wakePreview };
+    const custom = { power: powerPreview, display: displayPreview, windowsUpdate: windowsUpdatePreview, login: loginPreview, wakeOnLan: wakePreview,
+        [firewallRuleRemoval]: firewallRemovalValues, virtualNicDelete: virtualNicRemovalValues };
     if (custom[item.action])
     {
         return custom[item.action](item, translate);
@@ -70,7 +76,6 @@ export function previewValues(item, translate = key => key)
     const expectedVirtualswitchcreate = 'virtualSwitchCreate';
     const expectedVirtualswitchdelete = 'virtualSwitchDelete';
     const expectedNetwork = 'network';
-    const expectedEnvironment = 'environment';
     const expectedFirewallruleadd = 'firewallRuleAdd';
 
     let before = item.before.data, after = item.change;
@@ -94,7 +99,7 @@ export function previewValues(item, translate = key => key)
     if (item.action === expectedVirtualswitchdelete)
     {
         const ports = before.ports.map(port => `${port.managementOS ? translate('Management OS') : port.virtualMachine} · ${port.name}`).join('\n') || '—';
-        return [`${translate('Name')}: ${before.switch.name}\n${translate('Switch type')}: ${translate(before.switch.kind)}\n${translate('Physical interface')}: ${before.switch.physicalInterface || '—'}\n${translate('Connected adapters')}:\n${ports}`, translate('Delete switch and its management OS adapters. The physical NIC is retained; connectivity may be interrupted.')];
+        return [`${translate('Name')}: ${before.switch.name}\n${translate('Switch type')}: ${translate(before.switch.kind)}\n${translate('Physical interface')}: ${before.switch.physicalInterface || '—'}\n${translate('Connected adapters')}:\n${ports}`, translate('Delete')];
     }
     if (item.action === expectedNetwork)
     {
@@ -112,7 +117,7 @@ export function previewValues(item, translate = key => key)
     {
         after = translate('Delete');
     }
-    if (item.action === expectedEnvironment && !item.change.delete)
+    if (item.action === environmentArea && !item.change.delete)
     {
         before = before == null ? null : { value: before.value, expandable: before.expandable };
         after = { value: item.change.value, expandable: item.change.expandable };
@@ -133,7 +138,27 @@ export function previewValues(item, translate = key => key)
  */
 function deletesResource(item)
 {
-    return ['virtualNicDelete', 'firewallRuleRemove'].includes(item.action) || item.change.delete;
+    return ['virtualNicDelete', 'virtualSwitchDelete', firewallRuleRemoval].includes(item.action) || item.change.delete;
+}
+
+/** 削除する仮想NICを、スイッチ名・VLAN・MACアドレスで確認できるようにします。
+ * @returns 適用前の仮想NICと削除後の状態です。
+ */
+function virtualNicRemovalValues(item, translate)
+{
+    const { name, switchName, vlanMode, vlanId, macAddress } = item.before.data;
+    return [describe({ name, switchName, vlanMode: translate(vlanMode), vlanId, macAddress }, translate), translate('Delete')];
+}
+
+/** 削除する規則の条件だけを確認できるようにします。
+ * @returns 適用前の規則と削除後の状態です。
+ */
+function firewallRemovalValues(item, translate)
+{
+    const { name, enabled, direction, action, protocol, profile, localPorts, remotePorts, localAddresses, remoteAddresses, program } = item.before.data;
+    const current = { name, enabled, direction: translate(direction), action: translate(action),
+        protocol, profile, localPorts, remotePorts, localAddresses, remoteAddresses, program };
+    return [describe(current, translate), translate('Delete')];
 }
 
 /** 表示モードの変更前後を説明します。
@@ -150,6 +175,18 @@ function displayPreview(item, translate)
 function impactMessage(previews)
 {
     const display = 'display', power = 'power', updates = 'windowsUpdate', login = 'login';
+    if (previews.every(item => item.action === firewallRuleRemoval))
+    {
+        return 'I checked the affected traffic. Removing these rules can block permitted connections or allow traffic that was blocked.';
+    }
+    if (previews.every(item => item.action === 'virtualSwitchDelete'))
+    {
+        return 'Removing these switches also removes their management OS adapters and may interrupt the connection. The physical NIC is retained. I have checked the impact.';
+    }
+    if (previews.every(item => item.query.area === 'firewall'))
+    {
+        return 'I checked the affected profiles, rules and access path. Firewall changes can affect which connections are allowed.';
+    }
     if (previews.some(item => item.query.area === login))
     {
         return 'I reviewed the account, physical access and login policies, including any selected login notice removal.';
@@ -302,7 +339,7 @@ async function preparePreviewAsync(ctx, item, inventories)
  * @returns 処理の完了と結果を伝えるPromiseです。
  * @contract 公開済みのJavaScriptメソッド名と呼出し側の契約を維持します。
  */
-export async function showPreview(ctx, proposed, refreshHistory, current = () => true, submitted)
+export async function showPreview(ctx, proposed, refreshHistory, current = () => true, submitted, returnToEditor = false)
 {
     if (!proposed.length)
     {
@@ -343,13 +380,20 @@ export async function showPreview(ctx, proposed, refreshHistory, current = () =>
         throw new Error(ctx.t('Select at most 256 changes at a time.'));
     }
     ctx.say('');
-    const dialog = ctx.dialog('Confirm changes');
+    const hasDeletion = previews.some(deletesResource);
+    const deletionOnly = hasDeletion && previews.every(deletesResource);
+    const dialog = ctx.dialog(deletionOnly ? 'Confirm deletions' : 'Confirm changes');
     dialog.element?.classList.add('hm-preview-dialog');
     const summary = node('div', '', 'hm-summary');
     summary.append(badge(`${ctx.t('Affected hosts')}: ${new Set(previews.map(item => item.host.target.hostId)).size}`), badge(`${ctx.t('Changes')}: ${previews.length}`));
     dialog.root.append(summary, node('p', ctx.t('Review the before and after values for each target.'), 'hm-muted'));
     const layout = node('div', '', 'hm-preview-layout'), targets = node('div', '', 'hm-preview-targets'), detail = node('div');
-    layout.append(targets, detail);
+    const multiple = 1 < previews.length;
+    if (multiple)
+    {
+        layout.append(targets);
+    }
+    layout.append(detail);
     dialog.root.append(layout);
 
     /** 対象を表示し、現在の操作位置へ配置します。 */
@@ -363,29 +407,26 @@ export async function showPreview(ctx, proposed, refreshHistory, current = () =>
             target.setAttribute('aria-pressed', String(target === button));
         }
         const card = node('section', '', 'hm-preview');
-        card.append(node('h3', item.label ?? item.action));
+        card.append(node('p', item.host.target.hostId, 'hm-muted'), node('h3', item.label ?? item.action));
         if (['network', 'networkProtocols'].includes(item.action))
         {
             card.append(badge(vlanLabel(item.before.data.vlanMode, item.before.data.vlanId, ctx.t), vlanTone(item.before.data.vlanMode)));
         }
         const columns = node('div', '', 'hm-comparison');
         const [beforeText, afterText] = previewValues(item, ctx.t);
-        const contents = item.action === expectedHosts ? hostsDiff(item.before.data.content, item.change.content, ctx) : [node('pre', beforeText), node('pre', afterText)];
+        const removal = deletesResource(item);
+        if (removal && item.action === environmentArea)
+        {
+            const impact = node('p', '', 'notice warning');
+            impact.append(uiIcon('warning'), node('span', ctx.t('Apps that use this value may behave differently the next time they start.')));
+            card.append(impact);
+        }
+        const result = removal ? node('p', afterText, 'hm-removal-effect') : node('pre', afterText);
+        const contents = item.action === expectedHosts ? hostsDiff(item.before.data.content, item.change.content, ctx) : [node('pre', beforeText), result];
         for (const [index, label] of ['Before', 'After'].entries())
         {
             const column = node('div');
             column.append(node('h4', ctx.t(label)));
-            if (['virtualNicCreate', 'virtualNicVlan', 'virtualNicDelete'].includes(item.action))
-            {
-                const expectedVirtualniccreate = 'virtualNicCreate';
-                const expectedVirtualnicdelete = 'virtualNicDelete';
-
-                const current = index === 0 && item.action !== expectedVirtualniccreate ? item.before.data : index === 1 && item.action !== expectedVirtualnicdelete ? { vlanId: item.change.vlanId, vlanMode: item.change.vlanId == null ? 'Untagged' : 'Access' } : null;
-                if (current)
-                {
-                    column.append(badge(vlanLabel(current.vlanMode, current.vlanId, ctx.t), vlanTone(current.vlanMode)));
-                }
-            }
             column.append(contents[index]);
             columns.append(column);
         }
@@ -393,13 +434,22 @@ export async function showPreview(ctx, proposed, refreshHistory, current = () =>
         detail.append(card);
     }
 
-    for (const item of previews)
+    if (multiple)
     {
-        const button = ctx.button(item.host.target.hostId, () => show(item, button));
-        button.append(node('small', item.label ?? ctx.t(item.query.area)));
-        targets.append(button);
+        for (const item of previews)
+        {
+            const button = ctx.button(item.host.target.hostId, () => show(item, button));
+            button.replaceChildren(node('strong', item.host.target.hostId), node('small', item.label ?? ctx.t(item.query.area)));
+            targets.append(button);
+        }
     }
     show(previews[0], targets.firstElementChild);
+    appendPreviewActions(ctx, dialog, previews, { needsAcknowledgement, hasDeletion, deletionOnly, returnToEditor }, refreshHistory, submitted);
+}
+
+/** 変更内容に応じた確認と確定操作をプレビューの下部に表示します。 */
+function appendPreviewActions(ctx, dialog, previews, { needsAcknowledgement, hasDeletion, deletionOnly, returnToEditor }, refreshHistory, submitted)
+{
     const risk = previews.some(item => ['network', 'firewall', 'display', 'power', 'windowsUpdate', 'login'].includes(item.query.area));
     const acknowledgement = checkbox(ctx.t(impactMessage(previews)));
     const footer = dialog.footer ?? dialog.root;
@@ -414,7 +464,19 @@ export async function showPreview(ctx, proposed, refreshHistory, current = () =>
         footer.append(previous.root);
     }
     const actions = node('div', '', 'hm-actions');
-    const confirm = ctx.button('Apply confirmed changes', async () =>
+    let label = hasDeletion ? 'Apply changes including deletions' : 'Apply confirmed changes';
+    if (deletionOnly)
+    {
+        const removalLabels = { environment: 'Delete variable', virtualNicDelete: 'Delete management OS vNIC',
+            virtualSwitchDelete: 'Delete virtual switch', [firewallRuleRemoval]: 'Remove rule' };
+        label = previews.length === 1 ? removalLabels[previews[0].action] ?? 'Delete' :
+            ctx.t(previews.every(item => item.action === environmentArea) ? 'Delete {0} variables' : 'Delete {0} items').replace('{0}', String(previews.length));
+    }
+
+    /** 確認した対象と変更内容だけを送信します。
+     * @returns 操作の送信と履歴の再取得が完了するまでのPromiseです。
+     */
+    async function applyAsync()
     {
         if ((risk && !acknowledgement.control.checked) || (needsAcknowledgement && !previous.control.checked))
         {
@@ -437,7 +499,11 @@ export async function showPreview(ctx, proposed, refreshHistory, current = () =>
         {
             await refreshHistory();
         }
-    }, 'primary');
+    }
+
+    const confirm = hasDeletion ? action(ctx, label, 'trash', applyAsync) : ctx.button(label, applyAsync, 'primary');
+    confirm.classList.toggle('danger', hasDeletion);
+    confirm.classList.toggle('confirm-action', hasDeletion);
     confirm.disabled = risk || needsAcknowledgement;
 
     /** 適用に必要な条件と入力を確認します。 */
@@ -447,7 +513,7 @@ export async function showPreview(ctx, proposed, refreshHistory, current = () =>
     };
 
     acknowledgement.control.onchange = previous.control.onchange = check;
-    actions.append(ctx.button('Back to editing', dialog.close), confirm);
+    actions.append(ctx.button(returnToEditor ? 'Back to editing' : 'Cancel', dialog.close), confirm);
     footer.append(actions);
 }
 
@@ -485,7 +551,7 @@ export function showHistory(root, ctx, states, refresh)
     feedback.setAttribute('role', 'status');
     root.append(feedback);
     const tools = node('div', '', 'hm-toolbar');
-    tools.append(badge(`${states.length} ${ctx.t('operations')}`), action(ctx, 'Refresh results', 'refresh', refresh));
+    tools.append(badge(recordCount(ctx, 'count.operations', states.length)), action(ctx, 'Refresh results', 'refresh', refresh));
     root.append(tools);
     if (!states.length)
     {

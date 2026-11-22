@@ -118,6 +118,22 @@ export class DomNode
         return { add: (...names) =>
         {
             this.className = [...new Set([...this.className.split(' ').filter(Boolean), ...names])].join(' ');
+        },
+
+        toggle: (name, enabled) =>
+        {
+            const current = new Set(this.className.split(' ').filter(Boolean));
+            const include = enabled ?? !current.has(name);
+            if (include)
+            {
+                current.add(name);
+            }
+            else
+            {
+                current.delete(name);
+            }
+            this.className = [...current].join(' ');
+            return include;
         } };
     }
 

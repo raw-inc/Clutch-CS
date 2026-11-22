@@ -12,7 +12,7 @@ internal sealed class HistoryArchiveWorker(ServiceRuntime runtime, HistoryArchiv
     /// <returns>停止まで所有する保守ループです。</returns>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        HistoryRetentionPeerGate peers = new(runtime.Cluster);
+        HistoryRetentionPeerGate peers = runtime.Cluster.Retention;
         using PeriodicTimer timer = new(TimeSpan.FromSeconds(2));
         while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
         {
@@ -31,11 +31,11 @@ internal sealed class HistoryArchiveWorker(ServiceRuntime runtime, HistoryArchiv
             {
                 if (!await peers.ReadyAsync(stoppingToken).ConfigureAwait(false))
                 {
-                    archive.Hold("History.RetentionPeerUpgradeRequired");
+                    archive.Hold(peers.Problem ?? "History.RetentionClockUnconfirmed");
                     continue;
                 }
                 await archive.MaintainAsync(runtime.Configuration.HistoryArchive, HistoryRetentionPolicy.Resolve(effective.Settings, runtime.Configuration.Logs),
-                    DateTimeOffset.UtcNow, stoppingToken).ConfigureAwait(false);
+                    peers.Clock.Capture(), stoppingToken).ConfigureAwait(false);
             }
             catch (Exception exception) when (exception is not (OutOfMemoryException or OperationCanceledException))
             {

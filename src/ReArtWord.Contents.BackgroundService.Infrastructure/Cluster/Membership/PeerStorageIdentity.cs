@@ -68,7 +68,7 @@ internal sealed record PeerStorageIdentity(string ClusterId, string PeerId, stri
                 throw new InvalidDataException("保存済みNICまたはIPと一致しません。人によるinterfaceIdの再選択が必要です。");
             }
         }
-        DurableReceipt saved = await repository.ApplyBatchAsync(Guid.CreateVersion7(), [new DurableMutation(scope, key, entry?.Version, NodeValue.FromObject(expected))], cancellationToken).ConfigureAwait(false);
+        DurableReceipt saved = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new DurableMutation(scope, key, entry?.Version, NodeValue.FromObject(expected))], cancellationToken).ConfigureAwait(false);
         if (saved.Outcome != EOutcome.Succeeded)
         {
             throw new InvalidDataException("保存先identityを原子的に確認できません。");

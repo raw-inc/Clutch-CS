@@ -6,8 +6,8 @@
     min-height: 120px;
     resize: vertical;
     overflow: hidden;
-    border: 1px solid var(--line);
-    border-radius: 4px;
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
     background: var(--paper);
 }
 
@@ -49,7 +49,7 @@
 }
 
 .code-input > textarea::selection {
-    background: #628cc366;
+    background: color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
 .code-input:focus-within {
@@ -59,20 +59,20 @@
 .code-input ::deep .code-keyword,
 .code-input ::deep .code-literal,
 .code-input ::deep [class~="code-built_in"] {
-    color: #a8bced;
+    color: var(--accent);
 }
 
 .code-input ::deep .code-string,
 .code-input ::deep .code-regexp {
-    color: #b5c99d;
+    color: var(--green);
 }
 
 .code-input ::deep .code-number {
-    color: #dab98c;
+    color: var(--warn);
 }
 
 .code-input ::deep .code-comment {
-    color: #7f9095;
+    color: var(--muted);
 }
 
 .code-input ::deep .code-attr,
@@ -80,14 +80,14 @@
 .code-input ::deep .code-property,
 .code-input ::deep .code-title,
 .code-input ::deep .code-section {
-    color: #8db5cf;
+    color: light-dark(#235c70, #91c9d8);
 }
 
 .code-input ::deep .code-variable,
 .code-input ::deep .code-symbol,
 .code-input ::deep .code-meta,
 .code-input ::deep .code-bullet {
-    color: #c8abc9;
+    color: var(--violet);
 }
 
 .code-input-inline {

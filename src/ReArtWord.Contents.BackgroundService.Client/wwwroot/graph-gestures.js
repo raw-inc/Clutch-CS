@@ -133,8 +133,8 @@ export function attachGraphGestures(svg, receiver, initialZoom)
         if (pan.selection)
         {
             pan.rectangle = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            pan.rectangle.setAttribute('fill', '#62aee833');
-            pan.rectangle.setAttribute('stroke', '#62aee8');
+            pan.rectangle.setAttribute('fill', 'color-mix(in srgb, var(--accent) 20%, transparent)');
+            pan.rectangle.setAttribute('stroke', 'var(--accent)');
             pan.rectangle.setAttribute('stroke-dasharray', '5 3');
             pan.rectangle.setAttribute('pointer-events', 'none');
             svg.append(pan.rectangle);

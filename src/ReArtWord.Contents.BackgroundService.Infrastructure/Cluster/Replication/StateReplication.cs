@@ -27,6 +27,9 @@ public sealed class StateReplication : IDisposable
         this.cluster = cluster;
         this.repository = repository;
         cluster.RegisterHandler("state.cas", ApplyAsync);
+        SharedDedupeReservations reservations = new(cluster, repository, stateStore, CompareAsync);
+        cluster.RegisterHandler(SharedDedupeReservations.Kind, reservations.HandleAsync);
+        stateStore.ReserveShared = reservations.ReserveAsync;
         stateStore.SharedWriter = WriteAsync;
         stateStore.BindDetached(cluster);
     }
@@ -41,7 +44,7 @@ public sealed class StateReplication : IDisposable
             return new StateWriteResult(false, null, EOutcome.NotExecuted, "State.CoordinatorUnavailable");
         }
         StateUpdate update = new(scope, key, expectedVersion, value);
-        ClusterRequest request = new(Guid.CreateVersion7(), "state.cas", coordinator.PeerId, coordinator.InstanceId, DateTimeOffset.UtcNow.AddSeconds(30), NodeValue.FromObject(update));
+        ClusterRequest request = ClusterRequest.StartDurable("state.cas", coordinator.PeerId, coordinator.InstanceId, TimeSpan.FromSeconds(30), NodeValue.FromObject(update));
         ClusterResponse response = await cluster.RequestAsync(request, cancellationToken).ConfigureAwait(false);
         return response.Value?.Json.Deserialize<StateWriteResult>() ?? new StateWriteResult(false, null, response.Outcome, response.Reason);
     }
@@ -50,10 +53,18 @@ public sealed class StateReplication : IDisposable
     /// <returns>状態更新結果。</returns>
     private async Task<ClusterResponse> ApplyAsync(ClusterRequest request, CancellationToken cancellationToken = default)
     {
+        StateUpdate update = request.Payload.Json.Deserialize<StateUpdate>() ?? throw new InvalidDataException("比較更新が不正です。");
+        return await CompareAsync(request.Id, update, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>状態の比較更新と期限付きキーの確保で、同じ版検査と保存排他を使用します。</summary>
+    /// <returns>確定した版、または比較不成立の結果です。</returns>
+    private async Task<ClusterResponse> CompareAsync(Guid id, StateUpdate update, CancellationToken cancellationToken = default)
+    {
         await updates.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            return await ApplyCurrentAsync(request, cancellationToken).ConfigureAwait(false);
+            return await ApplyCurrentAsync(id, update, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -63,13 +74,12 @@ public sealed class StateReplication : IDisposable
 
     /// <summary>待機中に進んだ版を再確認し、不一致の配送・prepare・abortを省きます。</summary>
     /// <returns>永続受付に対応する比較結果です。</returns>
-    private async Task<ClusterResponse> ApplyCurrentAsync(ClusterRequest request, CancellationToken cancellationToken = default)
+    private async Task<ClusterResponse> ApplyCurrentAsync(Guid id, StateUpdate update, CancellationToken cancellationToken = default)
     {
         if (!string.Equals(cluster.CoordinatorId, cluster.LocalPeerId, StringComparison.Ordinal))
         {
             return new ClusterResponse(EOutcome.NotExecuted, Reason: "State.CoordinatorChanged");
         }
-        StateUpdate update = request.Payload.Json.Deserialize<StateUpdate>() ?? throw new InvalidDataException("比較更新が不正です。");
         if (!NodeStateScope.IsShared(update.Scope))
         {
             return new ClusterResponse(EOutcome.NotExecuted, Reason: "State.SharedScopeRequired");
@@ -92,7 +102,7 @@ public sealed class StateReplication : IDisposable
             string conflict = "Persistence.VersionConflict";
             return new(EOutcome.Failed, NodeValue.FromObject(new StateWriteResult(false, previous, EOutcome.Failed, conflict)), conflict);
         }
-        DurableReceipt receipt = await cluster.ReplicateAsync(request.Id, [new DurableMutation(update.Scope, update.Key, expected, update.Value)], cancellationToken).ConfigureAwait(false);
+        DurableReceipt receipt = await cluster.ReplicateAsync(id, [new DurableMutation(update.Scope, update.Key, expected, update.Value)], cancellationToken).ConfigureAwait(false);
         DurableEntry? current = await repository.ReadAsync(update.Scope, update.Key, cancellationToken).ConfigureAwait(false);
         VersionedState? state = null;
         if (current?.Value is not null)

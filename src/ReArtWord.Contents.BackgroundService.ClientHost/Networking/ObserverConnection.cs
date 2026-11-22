@@ -62,8 +62,8 @@ internal sealed class ObserverConnection : IAsyncDisposable
     public IReadOnlyList<DiscoveredCluster> GetClusters() => Volatile.Read(ref observers)
         .SelectMany(item => item.Value.GetClusters()).GroupBy(cluster => cluster.ClusterId, StringComparer.Ordinal)
         .Select(group => new DiscoveredCluster(group.Key,
-            group.SelectMany(cluster => cluster.Peers).GroupBy(peer => peer.InstanceId).Select(peers => peers.MaxBy(peer => peer.LastSeen)!).ToArray(),
-            group.SelectMany(cluster => cluster.CoordinatorCandidates).Distinct(StringComparer.Ordinal).ToArray(), group.Max(cluster => cluster.LastSeen)))
+            group.SelectMany(cluster => cluster.Peers).GroupBy(peer => peer.InstanceId).Select(peers => peers.MinBy(peer => peer.AgeAt(DateTimeOffset.UtcNow))!).ToArray(),
+            group.SelectMany(cluster => cluster.CoordinatorCandidates).Distinct(StringComparer.Ordinal).ToArray(), group.MinBy(cluster => cluster.AgeAt(DateTimeOffset.UtcNow))!.LastSeen))
         .OrderBy(cluster => cluster.ClusterId, StringComparer.Ordinal).ToArray();
 
     /// <summary>対象を観測した一経路だけを返し、複数経路・複数実体の曖昧さを拒否します。</summary>

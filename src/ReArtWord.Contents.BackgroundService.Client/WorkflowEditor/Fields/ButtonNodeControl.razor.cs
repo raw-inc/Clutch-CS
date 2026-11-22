@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Components;
+using ReArtWord.Contents.BackgroundService.Client.WorkflowEditor.Documents;
 using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Workflow;
 
@@ -46,33 +47,35 @@ public sealed partial class ButtonNodeControl
             {
                 return value.GetString()!;
             }
-            return Ui["Press button"];
+            return Ui.Format("Run {0}", Node.LogicalName ?? Ui["Button"]);
         }
     }
 
     /// <summary>未保存の表示を保存済み定義として実行しないため、利用できない理由を示します。</summary>
-    private string? DisabledReason
+    private string? DisabledReason => UnavailableReason(Model, Node, Pressed.HasDelegate, ToggleState);
+
+    /// <summary>表示とカードの寸法計算で、同じ無効理由を使います。</summary>
+    /// <returns>操作できない理由です。実行できる場合はnullです。</returns>
+    internal static string? UnavailableReason(EditorDocument model, NodeDefinition node, bool canPress, bool? toggleState)
     {
-        get
+        if (!canPress)
         {
-            if (!Pressed.HasDelegate)
-            {
-                return "Button operation is unavailable in this view.";
-            }
-            if (Model.Locks.Node(Model.Draft.Document.Id, Node.Id))
-            {
-                return "The selected restore scope is read-only";
-            }
-            if (Model.Draft.Dirty || Model.Draft.BaseRevision is null || Model.HasInvalidInputs)
-            {
-                return "Save and activate the workflow before running it.";
-            }
-            if (IsToggle && ToggleState is null)
-            {
-                return "The toggle state could not be confirmed yet.";
-            }
-            return null;
+            return "Button operation is unavailable in this view.";
         }
+        if (model.Locks.Node(model.Draft.Document.Id, node.Id))
+        {
+            return "The selected restore scope is read-only";
+        }
+        if (model.Draft.Dirty || model.Draft.BaseRevision is null || model.HasInvalidInputs)
+        {
+            return "Save and activate the workflow before running it.";
+        }
+        string toggle = "control.toggleButton";
+        if (string.Equals(node.Type, toggle, StringComparison.Ordinal) && toggleState is null)
+        {
+            return "The toggle state could not be confirmed yet.";
+        }
+        return null;
     }
 
     /// <summary>受付処理中の連打を抑え、後続の完了待ちではボタンを占有しません。</summary>

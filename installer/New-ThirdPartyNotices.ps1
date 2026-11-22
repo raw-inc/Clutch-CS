@@ -4,7 +4,7 @@ param(
     [Parameter(Mandatory)][string] $PackageRoot,
     [Parameter(Mandatory)][string] $CatalogPath,
     [Parameter(Mandatory)][string] $NoticesPath,
-    [string] $RuntimeVersion = '10.0.13'
+    [string] $RuntimeVersion = '10.0.15'
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'ThirdParty/Read-Notice.ps1')
@@ -181,10 +181,11 @@ $catalog = [ordered]@{
     Installer = @($installer | Sort-Object -Unique | ForEach-Object { Get-License $_ } | Sort-Object -Culture en-US { $_.Name }, { $_.Version })
     ClutchCs = @($clutch | Sort-Object -Unique | ForEach-Object { Get-License $_ } | Sort-Object -Culture en-US { $_.Name }, { $_.Version })
 }
-# Web UI と Core に同梱する JavaScript の通知文書を収録する。
-$scriptNames = @('xterm.js / addon-fit', '@noble/hashes', 'highlight.js', 'Acorn')
-$scriptNames += @(Get-Content -LiteralPath (Join-Path $web 'vendor/code-editor/packages.json') -Raw | ConvertFrom-Json | Select-Object -ExpandProperty name)
-foreach ($entry in $webNotices | Where-Object { $_.name -in $scriptNames }) {
+# Web UI と Core に同梱するスクリプト・書体・アイコンのライセンスを収録する。
+$assetNames = @('xterm.js / addon-fit', '@noble/hashes', 'highlight.js', 'Acorn')
+$assetNames += @(Get-Content -LiteralPath (Join-Path $web 'vendor/code-editor/packages.json') -Raw | ConvertFrom-Json | Select-Object -ExpandProperty name)
+$assetNames += @(Get-Content -LiteralPath (Join-Path $PSScriptRoot 'ThirdParty/client-assets.json') -Raw | ConvertFrom-Json | Select-Object -ExpandProperty name)
+foreach ($entry in $webNotices | Where-Object { $_.name -in $assetNames }) {
     $texts = @($entry.project, $entry.authors)
     foreach ($notice in $entry.notices) {
         $texts += [IO.File]::ReadAllText((Join-Path $web $notice.href.TrimStart('/')))

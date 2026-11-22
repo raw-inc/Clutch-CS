@@ -47,6 +47,13 @@ public sealed partial class OverviewHostCard
     private static readonly string[] powerActions = ["restart", "shutdown"];
     private bool powerBusy;
     private string? powerProblem;
+    private string HealthState => (Offline, stale) switch
+    {
+        (true, _) => "Offline",
+        (_, true) => "Previous / unconfirmed",
+        _ => (PowerTarget?.Peer.Status ?? item.Peer.Status).ToString()
+    };
+
     private bool Offline => PowerPeers.Count != 0 && PowerPeers.All(peer => !peer.Online);
     private DashboardHostPeer? PowerTarget => PowerPeers.Where(peer => peer.Online && peer.Peer.Status is EPeerStatus.Ready or EPeerStatus.Syncing)
         .OrderByDescending(peer => peer.Peer.InstanceId == item.Peer.InstanceId).ThenBy(peer => peer.ClusterId, StringComparer.Ordinal).FirstOrDefault();
@@ -74,7 +81,7 @@ public sealed partial class OverviewHostCard
                 {
                     return;
                 }
-                HostWakeResult? wakeResult = await Api.PostAsync<HostWakeResult>("/client/host-manager/wake", new HostWakeStart(Guid.NewGuid(), item.Peer.HostId), UiCancellation).ConfigureAwait(true);
+                HostWakeResult? wakeResult = await Api.PostAsync<HostWakeResult>("/client/host-manager/wake", new HostWakeStart(Guid.NewGuid(), item.Peer.HostId) { IdentityFormat = Contracts.Execution.EDerivedIdFormat.Uuid8 }, UiCancellation).ConfigureAwait(true);
                 powerProblem = wakeResult?.Reason ?? "wake.unconfirmed";
                 return;
             }
@@ -106,8 +113,8 @@ public sealed partial class OverviewHostCard
             EHostPowerAction kind = action switch { "restart" => EHostPowerAction.Restart, _ => EHostPowerAction.Shutdown };
             Guid id = Guid.NewGuid();
             HostPowerRequest request = new(id, item.Peer.HostId, target.Peer.InstanceId, kind);
-            Guid command = ManagementCommandIdentity.Create(id, "host.power");
-            System.Text.Json.JsonElement response = await Journal.StartAsync(id, Ui.Format("Power action for {0}", item.Peer.HostId), "/api/host/power",
+            Guid command = ManagementCommandIdentity.Create(id, "host.power", Contracts.Execution.EDerivedIdFormat.Uuid8);
+            System.Text.Json.JsonElement response = await Journal.StartAsync(id, Ui.Format("Power action for {0}", item.Peer.HostId), "/api/v2/host/power",
                 "/client/commands/" + command + "/result", request, targetPeer: target.Peer.PeerId, targetCluster: target.ClusterId, cancellationToken: UiCancellation).ConfigureAwait(true);
             NodeResult? result = ManagementApi.ReadResponse<NodeResult>(response);
             powerProblem = result?.Outcome == Contracts.Execution.EOutcome.Succeeded ? "The OS accepted the power request. The PC may disconnect before a reply arrives."
@@ -189,7 +196,7 @@ public sealed partial class OverviewHostCard
 
     /// <summary>同一PCの実測を過去値として扱うべきか確認します。</summary>
     /// <returns>指定した条件を満たすかどうかです。</returns>
-    private bool Previous(OverviewPeer item) => IsPrevious?.Invoke(item) ?? (item.Problem is not null || DashboardMetrics.IsStale(item.Latest, DateTimeOffset.UtcNow));
+    private bool Previous(OverviewPeer item) => IsPrevious?.Invoke(item) ?? (item.Problem is not null || DashboardMetrics.IsStale(item.Latest, Api.UtcNow));
 
     /// <summary>未計測を区別した使用率の表示を作ります。</summary>
     /// <returns>小数点以下1桁の使用率、未計測ならダッシュです。</returns>
@@ -233,8 +240,14 @@ public sealed partial class OverviewHostCard
                                                                : value.Value.ToString("0.0", CultureInfo.CurrentCulture) + " °C";
 
     /// <summary>取得不能を区別して通信量を毎秒の単位で表示します。</summary>
-    /// <returns>MiB/sまたはKiB/sの通信量、取得不能ならダッシュです。</returns>
-    private static string Rate(double? value) => value is null ? "—"
-                                                               : 1048576 <= value.Value ? (value.Value / 1048576).ToString("0.00", CultureInfo.CurrentCulture) + " MiB/s"
-                                                                                        : (value.Value / 1024).ToString("0.0", CultureInfo.CurrentCulture) + " KiB/s";
+    /// <returns>概要と同じ毎秒ビット数で表した通信量です。</returns>
+    private static string Rate(double? value)
+    {
+        if (value is null)
+        {
+            return "—";
+        }
+        var (number, unit) = NetworkThroughput(value);
+        return number + " " + unit;
+    }
 }

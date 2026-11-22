@@ -9,6 +9,7 @@ function fixture(t)
 {
     const original = Object.getOwnPropertyDescriptor(globalThis, 'document'), doc = new EventTarget(), controller = new AbortController();
     let active = true, focus = 0, fit = 0, exit = 0;
+    doc.createElement = () => ({});
     doc.fullscreenElement = null;
     doc.exitFullscreen = async() =>
     {
@@ -36,8 +37,8 @@ function fixture(t)
 
         button: (label, action) => ({ label, onclick: action, attrs: {},
 
-            /** 子要素を表示順の先頭へ追加します。 */
-            prepend()
+            /** 表示するラベルの差し替えを受け付けます。 */
+            replaceChildren()
             {},
 
             /** 属性の値を試験用DOMへ記録します。 */

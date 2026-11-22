@@ -84,6 +84,33 @@ public sealed class PeerRecoveryTransitionTests
         Assert.Empty(await repository.GetConflictsAsync(string.Empty));
     }
 
+    /// <summary>分断中に同じPeer IDで参加した二つの実体は、双方の時計がどちらへずれていても通常実行を停止します。</summary>
+    [Theory]
+    [InlineData(-3600)]
+    [InlineData(0)]
+    [InlineData(3600)]
+    public void RejoinedParticipantsWithTheSameIdentityHoldBothInstances(int offsetSeconds)
+    {
+        ClusterOptions options = new("cluster", "same", "host", "127.0.0.1", "127.255.255.255", 12345, 1, true, Path.GetTempPath());
+        ManagementTransport.AdmissionTestClock clock = new();
+        PeerMembership first = new(options, Guid.NewGuid(), clock);
+        first.SetLocal(EPeerStatus.Ready);
+        clock.Adjust(TimeSpan.FromSeconds(offsetSeconds));
+        PeerMembership other = new(options, Guid.NewGuid(), clock);
+        other.SetLocal(EPeerStatus.Ready);
+        BackgroundService.ManagementTransport.Datagrams.PeerAnnouncement firstReady = first.CreateAnnouncement("same");
+        BackgroundService.ManagementTransport.Datagrams.PeerAnnouncement otherReady = other.CreateAnnouncement("same");
+        Assert.False(first.Observe(otherReady, options.BindAddress));
+        Assert.False(other.Observe(firstReady, options.BindAddress));
+        foreach (PeerMembership member in new[] { first, other })
+        {
+            Assert.True(member.IdentityConflict);
+            Assert.Null(member.Coordinator);
+            member.SetLocal(EPeerStatus.Ready);
+            Assert.Equal(EPeerStatus.Conflict, Assert.Single(member.Snapshot()).Status);
+        }
+    }
+
     /// <summary>準備確認の待機中に受け付けた離脱を、後続の通常参加保存で失いません。</summary>
     /// <returns>実SQLiteの再読と新しい実体での復旧結果です。</returns>
     [Fact]

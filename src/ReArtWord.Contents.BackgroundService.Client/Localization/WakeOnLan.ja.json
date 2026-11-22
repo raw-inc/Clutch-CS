@@ -25,5 +25,6 @@
   "wake.unavailable": "保存されたNIC情報または送信経路を確認できませんでした。送信していません。",
   "Device.InvalidWakeSelection": "Wake-on-LANのNIC選択が不正です。",
   "Device.WakeInterfaceChanged": "選択したNICが取得一覧にありません。設定を再取得してください。",
-  "wake.selection.saved": "Wake-on-LANのNIC選択を保存しました"
+  "wake.selection.saved": "Wake-on-LANのNIC選択を保存しました",
+  "wake.overrideHint": "NICを個別に選ぶと、既定の選択は解除されます。"
 }

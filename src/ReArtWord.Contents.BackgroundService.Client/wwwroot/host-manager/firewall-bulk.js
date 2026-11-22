@@ -7,7 +7,7 @@ import { firewallForm } from './firewall-form.js';
 /** ファイアウォールの一括編集画面を構成します。
  * @returns reload・hasChanges・disposeを含む結果です。
  */
-export function firewallBulkView(root, ctx, hosts)
+export function firewallBulkView(root, ctx, hosts, actions)
 {
     const choices = new Map(), profileChoices = new Map(), stagedGroups = new Map();
     let loaded = false, offset = 0, pageReader = null, groups = [];
@@ -42,7 +42,8 @@ export function firewallBulkView(root, ctx, hosts)
         reset();
         firewallForm(ctx, hosts);
     }, hasChanges()), true));
-    root.append(title, node('p', ctx.t('other leaves each host unchanged. Missing rules are copied only when their complete conditions are supported.'), 'hm-muted'), status, profiles, tools, pageStatus, listing, bar);
+    root.append(title, node('p', ctx.t('other leaves each host unchanged. Missing rules are copied only when their complete conditions are supported.'), 'hm-muted'), status, profiles, tools, pageStatus, listing);
+    actions.append(bar);
 
     /** 現在選択されている値を取得します。
      * @returns 呼出し元が使用する値です。

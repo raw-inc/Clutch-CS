@@ -20,7 +20,7 @@ internal static class CoreManagement
     {
         registry.ReadValue("health", _ => Health(service));
         Infrastructure.Processes.HostPowerController power = new(service.Configuration.Cluster.HostId, service.Cluster.LocalInstanceId, () => service.Status);
-        registry.Write("host.power", async (value, cancellation) => await power.ExecuteAsync(ManagementRegistry.Body<HostPowerRequest>(value), cancellation).ConfigureAwait(false));
+        registry.WriteCommand("host.power", async (command, cancellation) => await power.ExecuteAsync(ManagementRegistry.Body<HostPowerRequest>(command.Payload), command.Admission, cancellation).ConfigureAwait(false));
         Infrastructure.Processes.WakeOnLanSender wake = new();
         registry.Write("host.wake", async (value, cancellation) => await wake.SendAsync(ManagementRegistry.Body<HostWakeRequest>(value), cancellation).ConfigureAwait(false));
         registry.ReadValue("status", _ => Status(service));
@@ -88,7 +88,11 @@ internal static class CoreManagement
         {
             resource = DashboardSampleHistory.Project(resource);
         }
-        return new { health = Health(service), status = Status(service), resource };
+
+        // 採取後にOS時刻が補正されても古さを誤らないよう、単調時計で測った経過時間を添えます。
+        // observedAtは旧ClientHostが使うため従来どおり残します。
+        return new { health = Health(service), status = Status(service), resource, observedAt = DateTimeOffset.UtcNow,
+            resourceAgeTicks = resource?.Age?.Elapsed.Ticks };
     }
 
     /// <summary>秘密の本文を応答・監査記録へ戻さず、保存結果だけを記録します。</summary>

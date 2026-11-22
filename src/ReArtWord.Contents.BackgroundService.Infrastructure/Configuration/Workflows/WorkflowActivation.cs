@@ -324,7 +324,7 @@ internal sealed class WorkflowActivation
         }
         string scope = "peer:" + cluster.LocalPeerId + ":effective";
         DurableEntry? current = await repository.ReadAsync(scope, workflow.Definition.Id, cancellationToken).ConfigureAwait(false);
-        DurableReceipt saved = await repository.ApplyBatchAsync(Guid.CreateVersion7(), [new DurableMutation(scope, workflow.Definition.Id, current?.Version, NodeValue.FromObject(ContractJson.Copy(workflow)))], cancellationToken).ConfigureAwait(false);
+        DurableReceipt saved = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new DurableMutation(scope, workflow.Definition.Id, current?.Version, NodeValue.FromObject(ContractJson.Copy(workflow)))], cancellationToken).ConfigureAwait(false);
         if (saved.Outcome == EOutcome.Succeeded && Availability is not null && !workflow.LocalOnly)
         {
             await Availability.RememberAdoptedAsync(workflow, cancellationToken).ConfigureAwait(false);

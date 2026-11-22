@@ -30,6 +30,7 @@ internal static class RepositoryCodec
         {
             throw new InvalidDataException("保存内容の整合性を確認できません。");
         }
+        envelope.Data.History?.RetiredRanges?.Validate();
         return envelope.Data;
     }
 }

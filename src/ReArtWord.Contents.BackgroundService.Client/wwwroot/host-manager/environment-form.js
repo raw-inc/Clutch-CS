@@ -1,5 +1,5 @@
 import { hasControlCharacters } from './input-validation.js';
-import { node, input, textarea, field, checkbox, action, section } from './dom.js';
+import { node, input, textarea, field, checkbox, action, section, hostCount } from './dom.js';
 
 /** 環境変数の入力と検証を構成します。 */
 export function environmentForm(ctx, targets, sourceHost, variable)
@@ -8,7 +8,7 @@ export function environmentForm(ctx, targets, sourceHost, variable)
     name.readOnly = !!variable;
     const valueRoot = node('div'), text = textarea(variable?.value ?? '', 6);
     let entries = (variable?.value ?? '').split(';'), pathMode = false;
-    dialog.root.append(node('p', `${ctx.t('Affected hosts')}: ${targets.map(item => item.host.target.hostId).join(', ')}`, 'hm-muted'));
+    dialog.root.append(node('p', `${ctx.t('Affected hosts')}: ${targets.map(item => item.host.target.hostId).join(', ')} (${hostCount(ctx, targets.length)}) · ${ctx.t(targets[0].query.scope)}`));
     if (variable)
     {
         dialog.root.append(node('p', `${ctx.t('Based on')}: ${sourceHost.target.hostId} · ${ctx.t(targets[0].query.scope)}`, 'hm-muted'));

@@ -1,0 +1,46 @@
+.trace-status td {
+    overflow-wrap: anywhere;
+}
+
+.trace-status td small {
+    display: block;
+    color: var(--muted);
+}
+
+.trace-settings .review-heading {
+    margin-block-end: 12px;
+}
+
+.trace-settings .review-heading h2 {
+    margin: 0;
+}
+
+@media (max-width: 680px) {
+    .trace-status tbody tr {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 4px 12px;
+    }
+
+    .trace-status tbody tr .trace-workflow {
+        grid-column: 1 / -1;
+        padding: 0 0 4px;
+        border-block-end: 1px solid var(--line);
+    }
+
+    .trace-status tbody tr > td[data-field] {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 2px 0;
+    }
+}
+
+.trace-content-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 16px;
+}
+
+.trace-content-options > label {
+    margin-block: 0;
+}

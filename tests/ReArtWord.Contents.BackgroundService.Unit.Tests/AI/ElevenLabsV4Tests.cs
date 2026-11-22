@@ -4,6 +4,7 @@ using ReArtWord.Contents.BackgroundService.Contracts.Nodes;
 using ReArtWord.Contents.BackgroundService.Contracts.Values;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Data;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.AI;
@@ -13,7 +14,7 @@ public sealed class ElevenLabsV4Tests
 {
     /// <summary>単一話者をinputsへ包み、未指定設定を追加せずMP3またはWAVを確定します。</summary>
     /// <returns>API要求と検証済み音声の確認です。</returns>
-    [Theory]
+    [MediaTheory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task GeneratesOneVoiceWithDialogueApiAsync(bool wave)
@@ -53,7 +54,7 @@ public sealed class ElevenLabsV4Tests
 
     /// <summary>連続値の安定度・類似度と前後文をDialogueの正しい項目へ渡します。</summary>
     /// <returns>旧TTSのvoice_settingsやspeedを送らない確認です。</returns>
-    [Fact]
+    [MediaFact]
     public async Task SendsOnlyConfiguredDialogueSettingsAsync()
     {
         using MediaTestFiles files = new();

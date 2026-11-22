@@ -1,8 +1,8 @@
 @using ReArtWord.Contents.BackgroundService.Client.Components
 @using ReArtWord.Contents.BackgroundService.Contracts.Observability.Logging
 <div class="log-export-control">
-    <button @onclick="()=>StartAsync(ELogExportFormat.Log)" disabled="@(working || Disabled)"><UiIcon Name="save" />@Ui["log.export.textButton"]</button>
-    <button @onclick="()=>StartAsync(ELogExportFormat.Zip)" disabled="@(working || Disabled)">@Ui["log.export.button"]</button>
+    <button @onclick="()=>StartAsync(ELogExportFormat.Log)" disabled="@(working || Disabled)"><UiIcon Name="save" /><span class="control-label">@Ui["log.export.textButton"]</span></button>
+    <button @onclick="()=>StartAsync(ELogExportFormat.Zip)" disabled="@(working || Disabled)"><UiIcon Name="download" /><span class="control-label">@Ui["log.export.button"]</span></button>
     @if(working){<span class="small" role="status">@Ui.Format("log.export.progress", status?.Entries ?? 0)</span><button class="quiet" @onclick="CancelAsync">@Ui["Cancel"]</button>}
     @if(status?.State is "completed")
     {

@@ -85,7 +85,7 @@ internal sealed class FleetUpdates(FleetUpdatePlanner planner, FleetUpdateStore 
             }
             FleetUpdateStatus status = new(owned, false, EOutcome.Unknown,
                 owned.Targets.Select(target => new FleetUpdatePeerProgress(target, "Queued", [])).ToArray(), DateTimeOffset.UtcNow,
-                Client: clientProgress);
+                Client: clientProgress) { IdentityFormat = EDerivedIdFormat.Uuid8 };
             await store.SaveAsync(status, cancellationToken).ConfigureAwait(false);
             active = true;
             if (!pending.Writer.TryWrite(status))

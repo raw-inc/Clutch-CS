@@ -18,8 +18,7 @@ internal sealed class SyncHistoryOffers(PeerCluster cluster, RecoveryRepository 
     internal Task<SyncResponse> ReceiveAsync(SyncHistoryRequest request, string peerId, Guid instanceId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (request.Id == Guid.Empty || request.Receipts is null || request.Receipts.Count is < 1 or > 32
-            || request.ExpiresAt <= clock.GetUtcNow() || clock.GetUtcNow().AddMinutes(1) < request.ExpiresAt)
+        if (request.Id == Guid.Empty || request.Receipts is null || request.Receipts.Count is < 1 or > 32)
         {
             throw new SyncFailureException("Sync.Range");
         }
@@ -39,12 +38,17 @@ internal sealed class SyncHistoryOffers(PeerCluster cluster, RecoveryRepository 
                 {
                     return Task.FromResult(new SyncResponse(Reason: "Sync.ExportCapacity"));
                 }
-                offer = new(fingerprint, request.ExpiresAt, clock, token => CreateAsync(target, request, token), stopping);
+                SyncLifetime lifetime = exports.Clocks.Accept(request.Timing, request.ExpiresAt, instanceId, TimeSpan.FromMinutes(1));
+                offer = new(fingerprint, lifetime, clock, token => CreateAsync(target, request, lifetime, token), stopping);
                 offers.Add(key, offer);
             }
             if (!string.Equals(offer.Fingerprint, fingerprint, StringComparison.Ordinal))
             {
                 throw new SyncFailureException("Sync.ManifestMismatch");
+            }
+            if (offer.Deadline.Expired)
+            {
+                throw new SyncFailureException("Sync.SessionExpired");
             }
             return offer.Work.IsCompleted ? offer.Work
                                           : Task.FromResult(new SyncResponse(Pending: true));
@@ -53,14 +57,14 @@ internal sealed class SyncHistoryOffers(PeerCluster cluster, RecoveryRepository 
 
     /// <summary>作成開始を受信スレッドから分離し、背景本文を現在値の転送と区別します。</summary>
     /// <returns>元の有限バッチに対応する書出しです。</returns>
-    private async Task<SyncResponse> CreateAsync(PeerInfo target, SyncHistoryRequest request, CancellationToken cancellationToken = default)
+    private async Task<SyncResponse> CreateAsync(PeerInfo target, SyncHistoryRequest request, SyncLifetime lifetime, CancellationToken cancellationToken = default)
     {
         await Task.Yield();
         try
         {
             IReadOnlyList<RecoveryRecordBody> bodies = await store.ReadBodiesAsync(request.Receipts, cancellationToken).ConfigureAwait(false);
             RepositorySnapshot snapshot = new([], [], RecoveredHistory: bodies);
-            return new(await exports.CreatePayloadAsync(target, snapshot, SyncManifest.HistoryPhase, cancellationToken).ConfigureAwait(false));
+            return new(await exports.CreateReplyAsync(target, snapshot, SyncManifest.HistoryPhase, request.Timing, lifetime, false, cancellationToken).ConfigureAwait(false));
         }
         catch (Exception error) when (SyncFailureException.IsExpected(error))
         {
@@ -76,7 +80,7 @@ internal sealed class SyncHistoryOffers(PeerCluster cluster, RecoveryRepository 
         Offer[] expired;
         using (gate.EnterScope())
         {
-            KeyValuePair<(string Peer, Guid Instance, Guid Request), Offer>[] selected = offers.Where(pair => pair.Value.ExpiresAt <= clock.GetUtcNow()).ToArray();
+            KeyValuePair<(string Peer, Guid Instance, Guid Request), Offer>[] selected = offers.Where(pair => pair.Value.Deadline.Expired).ToArray();
             expired = selected.Select(pair => pair.Value).ToArray();
             foreach (KeyValuePair<(string Peer, Guid Instance, Guid Request), Offer> pair in selected)
             {
@@ -128,11 +132,11 @@ internal sealed class SyncHistoryOffers(PeerCluster cluster, RecoveryRepository 
         private readonly Lazy<Task<SyncResponse>> work;
 
         /// <summary>受入時の指紋・期限を固定して作成を開始します。</summary>
-        internal Offer(string fingerprint, DateTimeOffset expires, TimeProvider clock, Func<CancellationToken, Task<SyncResponse>> create, CancellationToken stopping)
+        internal Offer(string fingerprint, SyncLifetime deadline, TimeProvider clock, Func<CancellationToken, Task<SyncResponse>> create, CancellationToken stopping)
         {
             Fingerprint = fingerprint;
-            ExpiresAt = expires;
-            expiry = new(expires - clock.GetUtcNow(), clock);
+            Deadline = deadline;
+            expiry = new(deadline.Remaining, clock);
             lifetime = CancellationTokenSource.CreateLinkedTokenSource(expiry.Token, stopping);
             work = new(() => create(lifetime.Token));
         }
@@ -144,7 +148,7 @@ internal sealed class SyncHistoryOffers(PeerCluster cluster, RecoveryRepository 
         }
 
         /// <summary>再送で延長しない固定期限です。</summary>
-        internal DateTimeOffset ExpiresAt
+        internal SyncLifetime Deadline
         {
             get;
         }

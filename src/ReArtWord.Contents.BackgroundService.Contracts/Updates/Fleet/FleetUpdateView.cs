@@ -17,12 +17,19 @@ namespace ReArtWord.Contents.BackgroundService.Contracts.Updates.Fleet;
 public sealed record FleetUpdateView(Guid OperationId, string ReleaseId, int MaximumAttempts, bool Completed, EOutcome Outcome,
     IReadOnlyList<FleetUpdatePeerProgress> Peers, DateTimeOffset UpdatedAt, string? Reason = null, ClientUpdateProgress? Client = null, int MaximumParallelism = 2)
 {
+    /// <summary>簡略進捗から通知を復元するときも、保存時の生成方式を維持します。</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public EDerivedIdFormat IdentityFormat
+    {
+        get; init;
+    }
+
     /// <summary>マニフェストや元配布パスを含めず、所有者用の表示へ変換します。</summary>
     /// <returns>既存の結果照会と同じ固定操作の表示です。</returns>
     public static FleetUpdateView From(FleetUpdateStatus status)
     {
         ArgumentNullException.ThrowIfNull(status);
         return new(status.Request.OperationId, status.Request.Release.Manifest.ReleaseId, status.Request.Release.MaximumAttempts,
-            status.Completed, status.Outcome, status.Peers, status.UpdatedAt, status.Reason, status.Client, status.Request.Release.MaximumParallelism);
+            status.Completed, status.Outcome, status.Peers, status.UpdatedAt, status.Reason, status.Client, status.Request.Release.MaximumParallelism) { IdentityFormat = status.IdentityFormat };
     }
 }

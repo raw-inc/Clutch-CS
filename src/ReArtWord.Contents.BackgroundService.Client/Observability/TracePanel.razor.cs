@@ -14,6 +14,14 @@ namespace ReArtWord.Contents.BackgroundService.Client.Observability;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1515", Justification = "Razor が生成する公開 partial 宣言と同じコンポーネント型を構成するため。")]
 public sealed partial class TracePanel
 {
+    /// <summary>追跡設定を閉じたことを親画面へ通知します。</summary>
+    [Parameter]
+    public EventCallback Close
+    {
+        get;
+        set;
+    }
+
     [Inject]
     private ManagementApi Api
     {
@@ -35,7 +43,15 @@ public sealed partial class TracePanel
     private bool outputs = true;
     private bool raw = true;
     private string rawLimit = string.Empty;
-    private bool stopOpen;
+    private TraceView? pendingStop;
+
+    /// <summary>通常設定をまだ確認できない行では、設定が無効と表示しません。</summary>
+    /// <returns>確認できた値に対応する表示です。</returns>
+    private string Flag(bool? value) => Ui[value?.ToString() ?? "Unconfirmed"];
+
+    /// <summary>画面を開いた接続先から現在の追跡状態を読み込みます。</summary>
+    /// <returns>初期状態の照会です。</returns>
+    protected override Task OnInitializedAsync() => RefreshAsync();
 
     /// <summary>表示対象の最新状態を取得して画面へ反映します。</summary>
     /// <returns>要求処理と現時点の画面反映の完了です。</returns>
@@ -101,7 +117,7 @@ public sealed partial class TracePanel
 
         TraceStatus? current = state.States.FirstOrDefault(item => string.Equals(item.WorkflowId, workflow, StringComparison.Ordinal));
         TraceChange? request = new TraceChange(Guid.NewGuid(), workflow, enabled, current?.Version, new(inputs, outputs, raw, bytes));
-        await SendAsync(request.OperationId, "Change temporary tracing", "/api/trace", "/api/trace/operations/", request).ConfigureAwait(true);
+        await SendAsync(request.OperationId, "Change temporary tracing", "/api/v2/trace", "/api/trace/operations/", request).ConfigureAwait(true);
     }
 
     /// <summary>選択した対象の停止を要求し、元の操作結果を保持します。</summary>
@@ -110,14 +126,14 @@ public sealed partial class TracePanel
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "UIコールバックの呼出し署名を維持し、取消可能なI/Oには画面が所有するトークンを渡します。")]
     private async Task StopAsync()
     {
-        if (state?.Loaded != true)
+        if (pendingStop is not { Loaded: true, Targets.Count: > 0 } confirmed)
         {
             return;
         }
 
-        TraceClusterStopRequest? request = new TraceClusterStopRequest(Guid.NewGuid(), state.Version, state.Targets);
-        stopOpen = false;
-        await SendAsync(request.OperationId, "Request cluster stop", "/api/trace/cluster-stop", "/api/trace/cluster-stop/", request).ConfigureAwait(true);
+        TraceClusterStopRequest request = new(Guid.NewGuid(), confirmed.Version, confirmed.Targets);
+        pendingStop = null;
+        await SendAsync(request.OperationId, "Request cluster stop", "/api/v2/trace/cluster-stop", "/api/trace/cluster-stop/", request).ConfigureAwait(true);
     }
 
     /// <summary>確認した対象の抑止解除を要求します。</summary>
@@ -132,7 +148,7 @@ public sealed partial class TracePanel
         }
 
         TraceStopReleaseRequest? request = new TraceStopReleaseRequest(Guid.NewGuid(), version);
-        await SendAsync(request.OperationId, "Release tracing restart hold", "/api/trace/cluster-stop/release", "/api/trace/operations/", request).ConfigureAwait(true);
+        await SendAsync(request.OperationId, "Release tracing restart hold", "/api/v2/trace/cluster-stop/release", "/api/trace/operations/", request).ConfigureAwait(true);
     }
 
     /// <summary>操作を記録してから管理先へ送信し、現時点の結果を保持します。</summary>

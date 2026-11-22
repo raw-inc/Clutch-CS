@@ -3,18 +3,18 @@ import { node, field, input, select, table, integer, action, badge, details, emp
 import { vlanLabel, vlanTone } from './vlan.js';
 
 /** 仮想NICの一覧と編集操作を構成します。 */
-export function virtualNics(root, ctx, entries)
+export function virtualNics(root, ctx, entries, showSwitches)
 {
     const toolbar = node('div', '', 'hm-toolbar'), available = entries.filter(entry => entry.state.switches.length);
     const create = action(ctx, 'Create management OS vNIC', 'plus', () => form(available[0], null), true);
     create.disabled = !available.length;
-    toolbar.append(create, node('span', ctx.t('Connect management OS adapters to an existing switch. Create or delete switches in Virtual switches.'), 'hm-muted'));
+    toolbar.append(node('span', ctx.t('Connect management OS adapters to an existing switch. Create or delete switches in Virtual switches.'), 'hm-muted'), create);
     root.append(toolbar);
     if (!entries.length)
     {
         return;
     }
-    const rows = table(['Name', 'Host / virtual switch', 'VLAN mode', 'Edit'].map(ctx.t));
+    const rows = table(['Name', 'Host / virtual switch', 'VLAN mode', 'Actions'].map(ctx.t));
     let count = 0;
     for (const entry of entries)
     {
@@ -43,7 +43,20 @@ export function virtualNics(root, ctx, entries)
             rows.add([ctx.button(adapter.name, () => previewNic(entry, null, adapter), 'hm-link'), host.target.hostId, badge(ctx.t('Unconfirmed'), 'warn'), badge(ctx.t('Read only'))]);
         }
     }
-    root.append(count ? rows.root : empty(ctx.t('No virtual interfaces'), ctx.t('Create a management OS adapter on an existing virtual switch.'), 'network'));
+    if (count)
+    {
+        root.append(rows.root);
+    }
+    else
+    {
+        const description = available.length ? 'Create a management OS adapter on an existing virtual switch.' : 'A virtual switch is required to create a virtual NIC.';
+        const state = empty(ctx.t('No virtual interfaces'), ctx.t(description), 'network');
+        if (!available.length)
+        {
+            state.append(action(ctx, 'Virtual switches', 'network', showSwitches));
+        }
+        root.append(state);
+    }
     const switches = table(['Host', 'Virtual switch', 'Physical interface'].map(ctx.t));
     for (const { host, state } of entries)
     {
@@ -52,7 +65,7 @@ export function virtualNics(root, ctx, entries)
             switches.add([host.target.hostId, `${item.name} · ${item.kind}`, item.physicalInterface]);
         }
     }
-    root.append(details(ctx.t('Virtual switches'), switches.root));
+    root.append(details(ctx.t('Available switches for these adapters'), switches.root));
 
     /** 仮想NICに対応するIPアドレスと経路情報を表示します。 */
     function appendAddressFacts(facts, adapter)

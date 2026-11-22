@@ -54,8 +54,8 @@ public sealed class ClusterWorkflowConcurrencyLimiter : IWorkflowConcurrencyLimi
             {
                 return new(null, NodeResult.Failure("concurrency.unavailable", "Cluster concurrency coordination is unavailable."));
             }
-            ClusterRequest command = new(Guid.CreateVersion7(), AcquireKind, coordinator.PeerId, coordinator.InstanceId,
-                DateTimeOffset.UtcNow.AddSeconds(30), NodeValue.FromObject(request));
+            ClusterRequest command = ClusterRequest.Start(AcquireKind, coordinator.PeerId, coordinator.InstanceId,
+                TimeSpan.FromSeconds(30), NodeValue.FromObject(request));
             ClusterResponse response = await cluster.RequestAsync(command, cancellationToken).ConfigureAwait(false);
             response = await RemoteNodeCompletion.ConfirmAsync(cluster, command, response, cancellationToken).ConfigureAwait(false);
             if (response.Outcome != EOutcome.Succeeded || response.Value is null)
@@ -133,8 +133,8 @@ public sealed class ClusterWorkflowConcurrencyLimiter : IWorkflowConcurrencyLimi
             PeerInfo? coordinator = Coordinator();
             if (coordinator is not null)
             {
-                ClusterRequest command = new(Guid.CreateVersion7(), ReleaseKind, coordinator.PeerId, coordinator.InstanceId,
-                    DateTimeOffset.UtcNow.AddSeconds(5), NodeValue.FromObject(request));
+                ClusterRequest command = ClusterRequest.Start(ReleaseKind, coordinator.PeerId, coordinator.InstanceId,
+                    TimeSpan.FromSeconds(5), NodeValue.FromObject(request));
                 _ = await cluster.RequestAsync(command, timeout.Token).ConfigureAwait(false);
             }
         }

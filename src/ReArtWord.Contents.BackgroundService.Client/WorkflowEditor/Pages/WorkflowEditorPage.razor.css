@@ -1,6 +1,6 @@
 .status-separator {
     margin: 0 10px;
-    color: #555b65;
+    color: var(--muted);
 }
 
 .studio {
@@ -42,11 +42,12 @@
     font-weight: 500;
     background: transparent;
     border: 1px solid transparent;
+    border-bottom-color: var(--control);
     padding: 3px 5px;
 }
 
 .document-title input:hover {
-    border-color: var(--line);
+    border-color: var(--control);
 }
 
 .document-title input:focus {
@@ -57,7 +58,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 11px;
+    font-size: 13px;
     color: var(--muted);
     white-space: nowrap;
 }
@@ -84,12 +85,12 @@
 }
 
 .split-button button:first-child {
-    border-radius: 4px 0 0 4px;
+    border-radius: var(--radius-control) 0 0 var(--radius-control);
 }
 
 .split-button button:last-child {
-    border-radius: 0 4px 4px 0;
-    border-left: 1px solid #577caa;
+    border-radius: 0 var(--radius-control) var(--radius-control) 0;
+    border-left: 1px solid var(--accent);
     min-width: 27px;
     padding: 5px;
 }
@@ -138,10 +139,10 @@
     gap: 15px;
     white-space: pre-wrap;
     padding: 7px 18px;
-    background: #28313e;
-    color: #bfcee4;
+    background: var(--accent-soft);
+    color: var(--muted);
     font-size: 11px;
-    border-bottom: 1px solid #3e4c5e;
+    border-bottom: 1px solid var(--line);
     max-height: 110px;
     overflow: auto;
 }
@@ -196,26 +197,26 @@
 
 .inspector {
     border-left: 1px solid var(--line);
-    overflow: auto;
-    padding: 0 18px 22px;
+    display: flex;
+    flex-direction: column;
 }
 
 .inspector-heading {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    padding: 14px 0 11px;
+    flex: none;
     margin-bottom: 6px;
     background: var(--panel);
     z-index: 2;
     border-bottom: 1px solid var(--line);
+    gap: 8px 12px;
+    padding: 10px 12px;
 }
 
 .inspector-heading h2 {
-    font-size: 12px;
     margin: 0;
+    font-size: 16px;
 }
 
 .inspector-heading button {
@@ -225,7 +226,7 @@
 
 .inspector ::deep fieldset > h3 {
     font-size: 11px;
-    color: #bdc7d5;
+    color: var(--muted);
     padding-top: 13px;
     border-top: 1px solid var(--line);
     margin-top: 20px;
@@ -260,21 +261,25 @@
 
 .inspector ::deep .danger {
     margin-top: 20px;
-    width: 100%;
-    background: transparent;
+    width: fit-content;
+    max-inline-size: 100%;
+    white-space: normal;
 }
 
 .editor-statusbar {
     display: flex;
     align-items: center;
     gap: 12px;
-    height: 27px;
     flex-shrink: 0;
     background: var(--paper);
     border-top: 1px solid var(--line);
     padding: 0 16px;
     font-size: 10px;
     color: var(--muted);
+    min-height: 36px;
+    height: auto;
+    flex-wrap: wrap;
+    row-gap: 4px;
 }
 
 .editor-statusbar button {
@@ -297,16 +302,16 @@
     position: relative;
     overflow: auto;
     background-color: var(--paper);
-    background-image: radial-gradient(#383c45 0.65px, transparent 0.65px);
+    background-image: radial-gradient(var(--line) 0.65px, transparent 0.65px);
     background-size: 20px 20px;
 }
 
 .canvas-hint > span:last-child {
-    color: #717b8c;
+    color: var(--muted);
 }
 
 .canvas-hint .dot {
-    color: #769bc8;
+    color: var(--accent);
 }
 
 .canvas-empty {
@@ -322,13 +327,13 @@
 .canvas-empty ::deep > .ui-icon {
     width: 40px;
     height: 40px;
-    color: #62748b;
+    color: var(--muted);
     margin-bottom: 15px;
 }
 
 .canvas-empty h2 {
     font-size: 17px;
-    color: #c1cbda;
+    color: var(--ink);
     margin-bottom: 8px;
 }
 
@@ -494,11 +499,11 @@
     align-items: center;
     gap: 7px;
     z-index: 1;
-    color: #909aaa;
-    background: #20242bee;
+    color: var(--muted);
+    background: color-mix(in srgb, var(--panel) 95%, transparent);
     padding: 6px 9px;
-    border: 1px solid #303641;
-    border-radius: 4px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
     font-size: 9px;
     pointer-events: none;
     position: absolute;
@@ -526,15 +531,20 @@
 }
 
 .studio .editor-toolbar {
-    height: 34px;
-    padding: 0 13px;
+    min-height: 44px;
+    height: auto;
+    padding: 4px 12px;
+    flex-wrap: wrap;
+    gap: 6px;
     border-top: 0;
-    background: var(--panel);
+    background: var(--card);
 }
 
 .studio .editor-toolbar button {
     height: 27px;
     font-size: 11px;
+    min-height: 32px;
+    border-radius: var(--radius-control);
 }
 
 .studio .editor-toolbar .icon-button {
@@ -543,7 +553,9 @@
 }
 
 .studio .editor-statusbar {
-    height: 29px;
+    height: auto;
+    min-height: 40px;
+    padding-block: 4px;
 }
 
 .editor-statusbar .toolbar-divider {
@@ -553,6 +565,7 @@
 
 .editor-statusbar .zoom-tools button {
     height: 22px;
+    min-width: 30px;
 }
 
 .studio .canvas-container {
@@ -566,24 +579,23 @@
 }
 
 .studio .canvas-empty button {
-    background: #242830;
-    border: 1px solid #3b444e;
-    color: #c0ccd9;
+    background: var(--raised);
+    border: 1px solid var(--line);
+    color: var(--muted);
     margin: 0;
 }
 
 .studio .inspector {
-    padding: 0 15px 18px;
+    padding-inline: 15px;
+    background: var(--card);
+    border-inline-start: 1px solid var(--line);
 }
 
 .studio .inspector-heading {
-    padding: 9px 0;
+    padding: 9px 12px;
     margin-bottom: 12px;
-}
-
-.studio .inspector-heading .toolbar {
-    gap: 3px;
-    margin: 0;
+    border-radius: var(--radius-control);
+    background: var(--panel);
 }
 
 .studio .inspector-heading .icon-button {
@@ -646,13 +658,11 @@
     margin: 0;
     padding: 6px 15px;
     font-size: 11px;
-    background: #252932;
+    background: var(--raised);
 }
 
 .graph-legend {
-    border-top: 1px solid var(--line);
-    margin-top: 20px;
-    padding-top: 5px;
+    margin-block: 16px 0;
 }
 
 .graph-legend-types,
@@ -703,4 +713,415 @@
     right: 12px;
     max-width: calc(100% - 24px);
     z-index: 3;
+}
+
+.workflow-input-switch {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    gap: 6px;
+}
+
+.studio .editor-toolbar button[aria-pressed="true"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    box-shadow: inset 0 -2px var(--accent);
+}
+
+@media (max-width: 750px) {
+    .studio .editor-toolbar {
+        max-height: 25vh;
+        overflow-y: auto;
+    }
+
+    .editor-toolbar .toolbar-spacer,
+    .editor-toolbar .toolbar-divider {
+        display: none;
+    }
+}
+
+.studio .editor-toolbar button:not(.icon-button) {
+    padding-block: 6px 4px;
+}
+
+.workflow-picker-list {
+    display: grid;
+    gap: 6px;
+    max-height: 48vh;
+    overflow-y: auto;
+}
+
+.workflow-picker-list label {
+    align-items: center;
+    padding: 6px 12px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-content: start;
+    gap: 10px;
+    margin: 0;
+    min-height: 44px;
+    border-block-end: 1px solid var(--line);
+}
+
+.workflow-picker-list label:has(:checked) {
+    background: var(--accent-soft);
+}
+
+.editor-toolbar button[aria-pressed="true"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+    box-shadow: inset 0 -2px var(--accent);
+}
+
+.editor-view-options label:has(:disabled) {
+    background: var(--disabled-face);
+    color: var(--disabled-ink);
+}
+
+.canvas-editors:not(:empty) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--panel);
+}
+
+.file-actions-list > button:first-child {
+    grid-column: 1 / -1;
+}
+
+.editor-view-options > label {
+    min-height: 36px;
+    margin: 0;
+}
+
+.editor-view-options {
+    gap: 8px;
+}
+
+.editor-view-options select {
+    padding-inline: 10px 30px;
+    min-height: 36px;
+    margin-block-end: 8px;
+}
+
+@media (max-width: 760px) {
+    .studio .document-title + .save-state {
+        display: inline-flex;
+    }
+}
+
+.inspector-heading .inspector-settings {
+    grid-column: 1 / -1;
+    justify-self: start;
+}
+
+.graph-legend > summary,
+.studio .inspector ::deep details > summary {
+    padding-block: 6px;
+    cursor: pointer;
+}
+
+.workflow-picker-list input[type="radio"] {
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0;
+}
+
+.workflow-picker-list label span {
+    text-align: start;
+}
+
+.inspector-heading button[aria-label] {
+    margin-inline-start: auto;
+}
+
+.editor-view-options > button {
+    justify-self: start;
+    border: 1px solid var(--control);
+}
+
+.workflow-picker-list + .toolbar {
+    align-items: center;
+}
+
+.editor-statusbar .arrange-nodes {
+    flex: none;
+    min-height: 32px;
+    padding-inline: 8px;
+}
+
+.studio .library,
+.studio .inspector {
+    border-inline: 1px solid var(--line);
+}
+
+.inspector ::deep details {
+    margin-block: 8px;
+}
+
+.studio .editor-toolbar .active,
+.studio .editor-toolbar [aria-pressed="true"] {
+    background: var(--accent-soft);
+    color: var(--ink);
+}
+
+.canvas-pane {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+}
+
+.canvas-pane > .canvas-container {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+}
+
+.editor-participants {
+    position: relative;
+    min-width: 0;
+}
+
+.editor-participants > summary {
+    min-height: 32px;
+    padding-block: 4px;
+    white-space: nowrap;
+}
+
+.editor-participants > .participants-list {
+    position: absolute;
+    z-index: 3;
+    width: max-content;
+    max-width: min(20rem, 80vw);
+    border: 1px solid var(--control);
+    border-radius: var(--radius-control);
+    overflow: hidden;
+    background: var(--panel);
+}
+
+.participants-list > ul {
+    max-block-size: min(30dvh, 18rem);
+    margin: 0;
+    padding: 6px 12px;
+    font-size: 13px;
+    list-style: none;
+}
+
+.inspector > clutch-scroll-area {
+    flex: 1;
+}
+
+.inspector-content {
+    padding-block-end: 18px;
+}
+
+.editor-participants li {
+    display: grid;
+    gap: 2px;
+    padding: 6px 8px;
+    border-inline-start: 3px dashed var(--editor-color, var(--control));
+    overflow-wrap: anywhere;
+}
+
+.editor-participants li + li {
+    margin-block-start: 6px;
+}
+
+.collaborator-name {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+    align-items: baseline;
+}
+
+.editor-view-options .live-policy.unavailable {
+    padding: 8px 12px;
+    border: 1px solid var(--disabled-line);
+    background: var(--disabled-face);
+    border-radius: var(--radius-control);
+}
+
+.editor-view-options .live-policy label,
+.editor-view-options .live-policy p {
+    margin-block: 4px;
+    border: 0;
+}
+
+.studio .arrange-nodes.warn {
+    color: var(--warn);
+    background: var(--warn-soft);
+    border-color: var(--warn);
+}
+
+@media (max-width: 750px) {
+    .studio .document-heading {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        height: auto;
+        gap: 5px 8px;
+        padding: 5px 8px;
+    }
+
+    .studio .document-heading .feature-stage {
+        display: none;
+    }
+
+    .studio .document-title {
+        min-width: 0;
+    }
+
+    .studio .document-actions {
+        grid-column: 1 / -1;
+        justify-content: start;
+        flex-wrap: wrap;
+        margin: 0;
+    }
+
+    .studio .document-actions button {
+        min-height: 34px;
+        padding-inline: 7px;
+    }
+
+    .studio .editor-statusbar {
+        flex-wrap: wrap;
+    }
+
+    .editor-statusbar .zoom-tools button {
+        min-width: 32px;
+        height: 32px;
+    }
+
+    .editor-statusbar > span:has(.status-separator) {
+        display: none;
+    }
+}
+
+@media (pointer: coarse) {
+    .editor-statusbar .zoom-tools button {
+        min-width: 44px;
+        height: 44px;
+    }
+}
+
+.document-title input:not(:focus) {
+    text-overflow: ellipsis;
+}
+
+.studio .library {
+    background: var(--card);
+}
+
+.inspector-heading .toolbar > button {
+    white-space: nowrap;
+}
+
+.studio ::deep .node-button-reason {
+    font-size: 12px;
+    line-height: 1.35;
+    color: var(--muted);
+    word-break: auto-phrase;
+}
+
+.workflow-input-short {
+    display: none;
+}
+
+@media (max-width: 440px) {
+    .studio .document-heading .save-state {
+        grid-column: 2;
+        margin-block-start: -3px;
+    }
+
+    .studio .document-actions {
+        gap: 4px;
+    }
+
+    .studio .document-actions > .icon-button {
+        min-width: 28px;
+        width: 28px;
+        padding-inline: 4px;
+    }
+
+    .workflow-input-full {
+        position: absolute;
+        inline-size: 1px;
+        block-size: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+    }
+
+    .workflow-input-short {
+        display: inline;
+    }
+
+    .workflow-input-switch {
+        white-space: nowrap;
+        font-size: 12px;
+    }
+
+    .studio .editor-toolbar button {
+        padding-inline: 6px;
+    }
+}
+
+.node-overlap-notice {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.editor-toolbar .debug-next-input {
+    border-inline-start: 1px solid var(--line);
+}
+
+@media (max-width: 350px) {
+    .studio .document-actions > button:first-child ::deep .ui-icon {
+        display: none;
+    }
+}
+
+.editor-view-options .live-policy input:disabled {
+    border-color: var(--disabled-line);
+    box-shadow: none;
+}
+
+.code-edit-sheet {
+    height: min(58dvh, 32rem);
+}
+
+.code-edit-sheet ::deep .code-input-inline {
+    height: min(56dvh, 32rem);
+}
+
+.code-edit-sheet ::deep .cm-content {
+    font-size: 16px;
+    padding-inline: 12px;
+}
+
+.collaborator-swatch {
+    width: 8px;
+    height: 8px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--editor-color);
+}
+
+.collaborator-swatches {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.collaborator-nodes {
+    display: block;
+    color: var(--muted);
+}
+
+.code-draft-note {
+    margin-block: 6px 0;
 }

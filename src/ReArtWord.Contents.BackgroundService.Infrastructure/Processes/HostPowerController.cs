@@ -38,6 +38,11 @@ public sealed class HostPowerController
     /// <summary>古い表示・別PC・未確認状態を拒否してから一度だけOSへ要求します。</summary>
     /// <returns>OSの受付結果です。実際の再起動・停止完了の保証とは区別します。</returns>
     public Task<NodeResult> ExecuteAsync(HostPowerRequest request, CancellationToken cancellationToken = default)
+        => ExecuteAsync(request, null, cancellationToken);
+
+    /// <summary>予定停止は、予定担当が選んだ一分間の残りを、このPCでの経過時間で検査してから受け付けます。</summary>
+    /// <returns>対象と受付位置を確認したOS操作の結果です。</returns>
+    public Task<NodeResult> ExecuteAsync(HostPowerRequest request, RequestAdmission? admission, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         if (request.OperationId == Guid.Empty || request.InstanceId != instanceId || !string.Equals(request.HostId, hostId, StringComparison.Ordinal)
@@ -47,9 +52,8 @@ public sealed class HostPowerController
         }
         if (request.NotAfter is not null || request.ScheduledAt is not null)
         {
-            DateTimeOffset now = clock.GetUtcNow();
             if (request.Action != EHostPowerAction.Shutdown || request.ScheduledAt is not { } due || request.NotAfter is not { } expiry
-                || now < due || expiry <= now || expiry <= due || TimeSpan.FromMinutes(1) < expiry - due)
+                || expiry <= due || TimeSpan.FromMinutes(1) < expiry - due || !WithinSchedule(due, expiry, admission))
             {
                 return Task.FromResult(NodeResult.Failure("host.power.scheduleExpired", "The scheduled shutdown window is invalid or expired.", EOutcome.NotExecuted));
             }
@@ -67,6 +71,20 @@ public sealed class HostPowerController
             }
         }
         return execute(request.Action, cancellationToken);
+    }
+
+    /// <summary>新形式では予定担当の期限へ換算し、換算情報のない旧形式では従来の日時検査を使います。</summary>
+    /// <returns>予定が到来し、元の受付期間がまだ残っているかです。</returns>
+    private bool WithinSchedule(DateTimeOffset due, DateTimeOffset expiry, RequestAdmission? admission)
+    {
+        if (admission is null)
+        {
+            DateTimeOffset now = clock.GetUtcNow();
+            return due <= now && now < expiry;
+        }
+        TimeSpan outer = admission.Remaining;
+        TimeSpan remaining = outer + (expiry - admission.ExpiresAt);
+        return TimeSpan.Zero < outer && TimeSpan.Zero < remaining && remaining <= expiry - due;
     }
 
     /// <summary>シェルや利用者入力を使わず、OSの固定コマンドだけを選びます。</summary>

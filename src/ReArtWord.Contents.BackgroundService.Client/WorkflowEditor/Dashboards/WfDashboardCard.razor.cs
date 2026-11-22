@@ -47,6 +47,12 @@ public sealed partial class WfDashboardCard
         get; set;
     }
 
+    /// <summary>カードの配置編集中は実行操作を休止します。</summary>
+    [Parameter] public bool EditingLayout
+    {
+        get; set;
+    }
+
     /// <summary>共有トグル状態です。未確認はnullです。</summary>
     [Parameter]
     public bool? Toggle

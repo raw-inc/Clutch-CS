@@ -5,8 +5,22 @@
         <textarea @ref="input" rows="4" maxlength="@WfDashboardLayout.MaximumCommentLength" aria-label="@Ui["Dashboard comment"]" value="@text" @oninput="e=>text=e.Value?.ToString()??string.Empty" @onblur="Apply" @onkeydown="Key"></textarea>
         <small class="muted">@Ui["Leave the field to apply; Escape cancels. Save the dashboard to share the comment."]</small>
     }
+    else if (ReadOnly)
+    {
+        var value = Text ?? string.Empty;
+        var lines = value.Split('\n');
+        @if(lines.Length > 6)
+        {
+            <p class="comment-text">@string.Join('\n',lines.Take(4))</p>
+            <details class="secondary-details comment-continuation"><summary>@Ui["Read the rest of the comment"]</summary><p class="comment-text">@string.Join('\n',lines.Skip(4))</p></details>
+        }
+        else
+        {
+            <p class="comment-text">@value</p>
+        }
+    }
     else
     {
-        <button @ref="label" type="button" class="comment-text @(string.IsNullOrEmpty(Text)?"empty":null)" disabled="@ReadOnly" aria-label="@Ui["Edit dashboard comment"]" @onclick="Begin">@(string.IsNullOrEmpty(Text)?Ui["Click to enter a comment"]:Text)</button>
+        <button @ref="label" type="button" class="row-button comment-text @(string.IsNullOrEmpty(Text)?"empty":null)" disabled="@ReadOnly" aria-label="@Ui["Edit dashboard comment"]" @onclick="Begin">@(string.IsNullOrEmpty(Text)?Ui["Click to enter a comment"]:Text)</button>
     }
 </div>

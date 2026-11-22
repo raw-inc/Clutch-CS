@@ -1,4 +1,4 @@
-import { node, heading, action, badge, table } from './dom.js';
+import { node, heading, action, badge, table, hostCount, targetHosts } from './dom.js';
 import { createReader, readStatus, noSelection } from './loader.js';
 
 /** 外部管理や期限による上書きを、手動更新の確認済み表示から分けます。
@@ -53,8 +53,11 @@ function editable(state)
 function renderState(root, ctx, state)
 {
     const value = state.snapshot.data, section = node('section', '', 'hm-section');
-    section.append(node('h3', state.host.target.hostId), node('p', `Windows · ${value.edition}`), badge(ctx.t(windowsUpdateStatus(value))));
+    const header = node('div', '', 'hm-toolbar');
+    header.append(node('h3', state.host.target.hostId), badge(ctx.t(windowsUpdateStatus(value))));
+    section.append(header, node('p', `Windows · ${value.edition}`));
     const list = table([ctx.t('Setting'), ctx.t('Status')]);
+    list.root.classList.add('hm-facts');
     list.add([ctx.t('Update installation in progress'), ctx.t(value.installInProgress == null ? 'Unconfirmed' : value.installInProgress ? 'Yes' : 'No')]);
     list.add([ctx.t('Windows update restart pending'), ctx.t(value.rebootRequired ? 'Yes' : 'No')]);
     section.append(list.root);
@@ -65,29 +68,32 @@ function renderState(root, ctx, state)
     const buttons = node('div', '', 'hm-actions');
     for (const [label, manualOnly] of [['Require manual updates', true], ['Release automatic update restriction', false]])
     {
-        const button = action(ctx, label, 'settings', () => previewUpdate(ctx, [state], manualOnly));
+        const button = action(ctx, label, manualOnly ? 'settings' : 'undo', () => previewUpdate(ctx, [state], manualOnly));
         button.disabled = !editable(state);
         buttons.append(button);
     }
-    section.append(buttons);
+    header.append(buttons);
     root.append(section);
 }
 
 /** 自動更新の制限を、Hostごとの確認済みポリシーに適用します。
  * @returns 読取りの寿命制御です。
  */
-export function windowsUpdateView(root, ctx)
+export function windowsUpdateView(root, ctx, actionArea)
 {
     const hosts = structuredClone(ctx.hosts());
     if (!hosts.length)
     {
         return noSelection(root, ctx);
     }
-    const title = heading(ctx.t('Windows Update'), `${ctx.t('Selected hosts')}: ${hosts.length}`), status = node('div'), listing = node('div');
+    const title = heading(ctx.t('Windows Update'), `${ctx.t('Selected hosts')}: ${hostCount(ctx, hosts.length)}`), status = node('div'), listing = node('div');
     const reader = createReader(ctx, hosts, () => ({ area: 'windowsUpdate' }), render);
     const manual = action(ctx, 'Require manual updates for selected hosts', 'settings', () => previewUpdate(ctx, [...reader.states.values()], true));
     manual.disabled = true;
-    title.append(action(ctx, 'Refresh settings', 'refresh', () => reader.load()), manual);
+    title.append(action(ctx, 'Refresh settings', 'refresh', () => reader.load()));
+    const actions = node('div', '', 'hm-selection-bar');
+    actions.append(node('strong', targetHosts(ctx, hosts)), manual);
+    actionArea.append(actions);
     root.append(title, node('p', ctx.t('Manual mode disables automatic Windows updates without an expiry. Install updates explicitly from Windows Settings. Existing installations or pending restarts are not canceled.'), 'hm-muted'),
         node('p', ctx.t('This controls Windows Update. Microsoft Store, Defender intelligence and other applications have separate update settings.'), 'hm-muted'), status, listing);
 

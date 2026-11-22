@@ -17,7 +17,7 @@
     gap: 7px;
     border: 0;
     border-radius: 0;
-    border-right: 1px solid #33363d;
+    border-right: 1px solid var(--line);
     background: transparent;
     font-size: 11px;
     padding: 6px 14px;
@@ -25,7 +25,7 @@
     max-width: 240px;
     flex-shrink: 0;
     position: relative;
-    color: #959eab;
+    color: var(--muted);
 }
 
 .workflow-tab > span:first-child {
@@ -45,7 +45,7 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: #788ba4;
+    background: var(--accent);
 }
 
 .workflow-tab:hover {
@@ -58,12 +58,12 @@
 }
 
 .workflow-tab .tab-state {
-    font-size: 8px;
+    font-size: 12px;
     color: var(--warn);
 }
 
 .workflow-tab small {
-    font-size: 9px;
+    font-size: 12px;
     color: var(--warn);
 }
 
@@ -136,7 +136,7 @@
     width: 232px;
     padding: 5px;
     border: 1px solid var(--line);
-    border-radius: 7px;
+    border-radius: var(--radius-panel);
     background: var(--raised);
     box-shadow: 0 8px 24px #0005;
 }
@@ -160,4 +160,83 @@
     border-top: 1px solid var(--line);
     border-radius: 0;
     margin-top: 4px;
+}
+
+.editor-workflow-strip {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    flex: none;
+    background: var(--paper);
+}
+
+.editor-workflow-strip > clutch-scroll-area {
+    flex: 1;
+    min-width: 0;
+}
+
+.other-drafts {
+    display: none;
+}
+
+@media (max-width: 750px) {
+    .other-drafts {
+        display: inline-flex;
+        margin-inline: 6px;
+        white-space: nowrap;
+    }
+}
+
+.editor-workflow-strip button[data-scroll-control] {
+    display: none;
+}
+
+.editor-workflow-strip [data-scroll-overflow] {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) 32px;
+}
+
+.editor-workflow-strip [data-scroll-overflow] > nav {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.editor-workflow-strip [data-scroll-overflow] > button[data-scroll-control] {
+    display: flex;
+    grid-row: 1;
+    align-self: center;
+    inline-size: 100%;
+    min-inline-size: 0;
+    min-block-size: 32px;
+    padding: 0;
+}
+
+@media (max-width: 750px) {
+    .editor-workflow-tabs {
+        height: 44px;
+    }
+
+    .editor-workflow-strip [data-scroll-overflow] {
+        grid-template-columns: 44px minmax(0, 1fr) 44px;
+    }
+
+    .editor-workflow-strip [data-scroll-overflow] > button[data-scroll-control] {
+        min-block-size: 44px;
+    }
+}
+
+.scroll-workflows-back {
+    grid-column: 1;
+}
+
+.scroll-workflows-forward {
+    grid-column: 3;
+}
+
+.scroll-workflows-back ::deep .ui-icon {
+    rotate: 90deg;
+}
+
+.scroll-workflows-forward ::deep .ui-icon {
+    rotate: -90deg;
 }

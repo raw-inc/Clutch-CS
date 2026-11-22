@@ -101,6 +101,11 @@ internal sealed class RequestExecutor
         if (string.Equals(request.Kind, nodeKind, StringComparison.Ordinal) && RemoteExecutionHandler is not null)
         {
             RemoteExecutionRequest nodeRequest = request.Payload.Json.Deserialize<RemoteExecutionRequest>() ?? throw new InvalidDataException("要求が不正です。");
+            if (nodeRequest.ReceiptId != Guid.Empty && nodeRequest.DeliveryId != request.Id)
+            {
+                return new(EOutcome.NotExecuted, Reason: "Execution.RequestIdentityMismatch");
+            }
+            nodeRequest = nodeRequest with { Admission = request.Admission?.ForDeadline(nodeRequest.ExpiresAt) };
             NodeResult result = await RemoteExecutionHandler(nodeRequest, cancellationToken).ConfigureAwait(false);
             return new ClusterResponse(result.Outcome, NodeValue.FromObject(result), result.ReasonCode);
         }
@@ -162,7 +167,7 @@ internal sealed class RequestExecutor
                 return new ClusterRequestStatus(true);
             }
         }
-        DurableEntry? entry = await repository.ReadAsync(scope, query.Id.ToString("N"), cancellationToken).ConfigureAwait(false);
+        DurableEntry? entry = await BoundedRequestReceipts.ReadAsync(repository, scope, query.Id, cancellationToken).ConfigureAwait(false);
         RequestReceipt? receipt = entry?.Value?.Json.Deserialize<RequestReceipt>();
         if (receipt is null)
         {
@@ -197,7 +202,7 @@ internal sealed class RequestExecutor
         DurableEntry? entry;
         try
         {
-            entry = await repository.ReadAsync(scope, request.Id.ToString("N"), cancellationToken).ConfigureAwait(false);
+            entry = await BoundedRequestReceipts.ReadAsync(repository, scope, request.Id, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -224,9 +229,16 @@ internal sealed class RequestExecutor
         {
             return new ClusterResponse(EOutcome.NotExecuted, Reason: "Cluster.TargetNotReady");
         }
-        if (request.ExpiresAt <= clock.GetUtcNow())
+        if (request.Admission?.IsExpired ?? request.ExpiresAt <= clock.GetUtcNow())
         {
             return new ClusterResponse(EOutcome.NotExecuted, Reason: "Execution.Expired");
+        }
+
+        // ノードのUUIDv7受付は生成から6分を超えて新規開始できません。結果整理後に記録方式だけを
+        // 同期保存へ変えても、この制約を迂回して同じ操作を再実行できないようにします。
+        if (BoundedRequestReceipts.HasBoundedNodeReceipt(request) && !RuntimeRequestIdentity.TryDeadline(request, clock.GetUtcNow(), out _))
+        {
+            return new(EOutcome.NotExecuted, Reason: "Execution.RuntimeDeadlineInvalid");
         }
         RequestOperation candidate = new(fingerprint, operation => RunAsync(request, operation, handler));
         return await WaitAsync(running.GetOrAdd(request.Id, candidate), fingerprint, waitForCompletion, cancellationToken).ConfigureAwait(false);
@@ -265,11 +277,14 @@ internal sealed class RequestExecutor
         try
         {
             string key = request.Id.ToString("N");
-            RequestReceipt started = new(operation.Fingerprint, request.TargetInstanceId, request.ExpiresAt, null);
-            DurableEntry? claim = await RequestReceiptPersistence.WriteAsync(repository, scope, key, null, NodeValue.FromObject(started), cancellationToken).ConfigureAwait(false);
+            string receiptScope = BoundedRequestReceipts.Select(scope, request, bounded: BoundedRequestReceipts.HasBoundedNodeReceipt(request));
+            DateTimeOffset? savedAt = BoundedRequestReceipts.IsBounded(receiptScope, key) ? clock.GetUtcNow()
+                                                                                          : null;
+            RequestReceipt started = new(operation.Fingerprint, request.TargetInstanceId, request.ExpiresAt, null, savedAt);
+            DurableEntry? claim = await RequestReceiptPersistence.WriteAsync(repository, receiptScope, key, null, NodeValue.FromObject(started), cancellationToken).ConfigureAwait(false);
             if (claim is null)
             {
-                DurableEntry? current = await repository.ReadAsync(scope, key, cancellationToken).ConfigureAwait(false);
+                DurableEntry? current = await BoundedRequestReceipts.ReadAsync(repository, scope, request.Id, cancellationToken).ConfigureAwait(false);
                 RequestReceipt? receipt = current?.Value?.Json.Deserialize<RequestReceipt>();
                 if (receipt is not null)
                 {
@@ -297,7 +312,8 @@ internal sealed class RequestExecutor
                 // 接続秘密や入力値を含み得る例外本文を通信結果へ載せません。
                 response = new ClusterResponse(EOutcome.Unknown, Reason: "Execution.HandlerFailed");
             }
-            DurableEntry? complete = await RequestReceiptPersistence.WriteAsync(repository, scope, key, claim.Version, NodeValue.FromObject(started with { Response = response }), cancellationToken).ConfigureAwait(false);
+            DurableEntry? complete = await RequestReceiptPersistence.WriteAsync(repository, receiptScope, key, claim.Version,
+                NodeValue.FromObject(started.Complete(response, clock.GetUtcNow())), cancellationToken).ConfigureAwait(false);
             if (complete is null)
             {
                 return new ClusterResponse(EOutcome.Unknown, Reason: "Execution.CompletionUnconfirmed");
@@ -316,35 +332,6 @@ internal sealed class RequestExecutor
         {
             operation.Admission.TrySetResult(result);
             running.TryRemove(request.Id, out _);
-        }
-    }
-
-    /// <summary>同じ指紋の受付通知と完了だけを共有し、保存定期照会と入力を保持するfaulted タスクを残しません。</summary>
-    private sealed record RequestOperation
-    {
-        /// <summary>登録後にだけ開始できる一回の実行を作成します。</summary>
-        internal RequestOperation(string fingerprint, Func<RequestOperation, Task<ClusterResponse>> run)
-        {
-            Fingerprint = fingerprint;
-            Completion = new(() => run(this), LazyThreadSafetyMode.ExecutionAndPublication);
-        }
-
-        /// <summary>受付前も異内容の同じIDを拒否します。</summary>
-        internal string Fingerprint
-        {
-            get;
-        }
-
-        /// <summary>永続受付が成立するまで副作用を開始済みと報告しません。</summary>
-        internal TaskCompletionSource<ClusterResponse> Admission
-        {
-            get;
-        } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        /// <summary>依頼元の取消とは独立した所有タスクです。</summary>
-        internal Lazy<Task<ClusterResponse>> Completion
-        {
-            get;
         }
     }
 }

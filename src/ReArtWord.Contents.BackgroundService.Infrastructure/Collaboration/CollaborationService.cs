@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ReArtWord.Contents.BackgroundService.Contracts.Observability;
 using ReArtWord.Contents.BackgroundService.Contracts.Cluster;
 using ReArtWord.Contents.BackgroundService.Contracts.Collaboration;
 using ReArtWord.Contents.BackgroundService.Contracts.Configuration;
@@ -22,8 +23,8 @@ public sealed class CollaborationService : ISnapshotEditor
     private readonly CollaborationOptions options;
     private readonly Lock gate = new();
     private readonly Dictionary<string, DraftSession> drafts = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, DateTimeOffset> queryAfter = new(StringComparer.Ordinal);
-    private readonly Dictionary<(string Peer, Guid Instance, Guid Ui, string Workflow), PresenceView> presence = [];
+    private readonly Dictionary<string, ObservationAge> queried = new(StringComparer.Ordinal);
+    private readonly PresenceTracker presence;
     private readonly CollaborationSnapshotEditor snapshotEditor;
 
     /// <summary>保存定義の読み取りと一時UDP通知を接続します。</summary>
@@ -35,6 +36,7 @@ public sealed class CollaborationService : ISnapshotEditor
         this.cluster = cluster;
         clock = timeProvider ?? TimeProvider.System;
         this.options = options ?? new CollaborationOptions();
+        presence = new(cluster, clock, this.options);
         snapshotEditor = new CollaborationSnapshotEditor(this, workflows, cluster);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(this.options.MaximumDrafts);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(this.options.MaximumPresence);
@@ -44,6 +46,7 @@ public sealed class CollaborationService : ISnapshotEditor
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(this.options.DraftLifetime, TimeSpan.Zero);
         cluster.RegisterTransientHandler("collaboration.changes", ReceiveChangesAsync);
         cluster.RegisterTransientHandler("collaboration.presence", ReceivePresenceAsync);
+        cluster.RegisterTransientHandler("collaboration.presence-sequenced", ReceiveSequencedPresenceAsync);
         cluster.RegisterTransientHandler("collaboration.query", ReceiveQueryAsync);
         cluster.RegisterTransientHandler("collaboration.draft", ReceiveDraftAsync);
     }
@@ -58,19 +61,18 @@ public sealed class CollaborationService : ISnapshotEditor
         using (gate.EnterScope())
         {
             Prune();
-            DateTimeOffset now = clock.GetUtcNow();
-            query = !queryAfter.TryGetValue(workflowId, out DateTimeOffset next) || next <= now || TimeSpan.FromSeconds(5) < next - now;
+            query = !queried.TryGetValue(workflowId, out ObservationAge age) || TimeSpan.FromSeconds(5) <= age.Elapsed;
             if (query)
             {
-                if (!queryAfter.ContainsKey(workflowId) && options.MaximumDrafts <= queryAfter.Count)
+                if (!queried.ContainsKey(workflowId) && options.MaximumDrafts <= queried.Count)
                 {
-                    queryAfter.Remove(queryAfter.MinBy(item => item.Value).Key);
+                    queried.Remove(queried.MaxBy(item => item.Value.Elapsed).Key);
                 }
-                queryAfter[workflowId] = now.AddSeconds(5);
+                queried[workflowId] = new(clock);
             }
             if (!drafts.ContainsKey(workflowId) && saved is not null)
             {
-                AddDraft(new DraftSession(saved.Definition, saved.Revision, clock.GetUtcNow()));
+                AddDraft(new DraftSession(saved.Definition, saved.Revision, clock.GetUtcNow(), clock));
             }
             if (drafts.TryGetValue(workflowId, out DraftSession? current))
             {
@@ -150,10 +152,15 @@ public sealed class CollaborationService : ISnapshotEditor
 
     /// <summary>UI実体を分けて編集位置を通知します。</summary>
     /// <returns>ローカル登録と一度の送信完了です。</returns>
-    public Task UpdatePresenceAsync(PresenceUpdate update, CancellationToken cancellationToken = default)
+    public async Task UpdatePresenceAsync(PresenceUpdate update, CancellationToken cancellationToken = default)
     {
         ValidatePresence(update);
-        return cluster.PublishTransientAsync("collaboration.presence", NodeValue.FromObject(update), cancellationToken);
+        PresenceAnnouncement announcement = presence.Create(update);
+        await cluster.PublishTransientAsync("collaboration.presence-sequenced", ContractJson.ToValue(announcement), cancellationToken).ConfigureAwait(false);
+
+        // 旧Coreは新しい通知種別を処理しないため、従来の本文も一度だけ送ります。
+        // 新Coreは送信元実体を識別し、新形式を受信済みなら互換通知で在席期間を更新しません。
+        await cluster.PublishTransientAsync("collaboration.presence", NodeValue.FromObject(update), cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>期限切れの編集者を除いて取得します。</summary>
@@ -164,7 +171,7 @@ public sealed class CollaborationService : ISnapshotEditor
         using (gate.EnterScope())
         {
             Prune();
-            return ContractJson.Copy(presence.Values.Where(item => string.Equals(item.Presence.WorkflowId, workflowId, StringComparison.Ordinal)).ToArray());
+            return presence.Read(workflowId);
         }
     }
 
@@ -189,7 +196,7 @@ public sealed class CollaborationService : ISnapshotEditor
             Prune();
             if (!drafts.TryGetValue(request.WorkflowId, out DraftSession? session))
             {
-                session = new DraftSession(saved?.Definition ?? request.Original, saved?.Revision, clock.GetUtcNow());
+                session = new DraftSession(saved?.Definition ?? request.Original, saved?.Revision, clock.GetUtcNow(), clock);
                 AddDraft(session);
             }
             if (saved is not null)
@@ -217,15 +224,17 @@ public sealed class CollaborationService : ISnapshotEditor
     {
         PresenceUpdate update = value.Json.Deserialize<PresenceUpdate>(ContractJson.Options)!;
         ValidatePresence(update);
-        using (gate.EnterScope())
-        {
-            Prune();
-            presence[(peerId, instance, update.UiInstanceId, update.WorkflowId)] = new PresenceView(peerId, instance, ContractJson.Copy(update), clock.GetUtcNow() + options.PresenceLifetime);
-            while (options.MaximumPresence < presence.Count)
-            {
-                presence.Remove(presence.MinBy(item => item.Value.ExpiresAt).Key);
-            }
-        }
+        presence.ReceiveLegacy(peerId, instance, update);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>送信元実体と通知順序を照合し、重複通知で表示期間を延長しません。</summary>
+    /// <returns>一件の参加表示の反映完了です。</returns>
+    private Task ReceiveSequencedPresenceAsync(string peerId, Guid instance, NodeValue value, CancellationToken cancellationToken = default)
+    {
+        PresenceAnnouncement announcement = value.Json.Deserialize<PresenceAnnouncement>(ContractJson.Options)!;
+        ValidatePresence(announcement.Presence);
+        presence.Receive(peerId, instance, announcement);
         return Task.CompletedTask;
     }
 
@@ -280,7 +289,7 @@ public sealed class CollaborationService : ISnapshotEditor
             Prune();
             if (!drafts.TryGetValue(announcement.Draft.WorkflowId, out DraftSession? session))
             {
-                session = new DraftSession(announcement.Original, announcement.Draft.BaseRevision, clock.GetUtcNow());
+                session = new DraftSession(announcement.Original, announcement.Draft.BaseRevision, clock.GetUtcNow(), clock);
                 AddDraft(session);
             }
             session.MergeAnnouncement(announcement, clock.GetUtcNow(), options.MaximumChanges, options.MaximumDraftBytes);
@@ -308,19 +317,14 @@ public sealed class CollaborationService : ISnapshotEditor
         drafts[session.View.WorkflowId] = session;
         while (options.MaximumDrafts < drafts.Count)
         {
-            drafts.Remove(drafts.MinBy(item => item.Value.View.UpdatedAt).Key);
+            drafts.Remove(drafts.MaxBy(item => item.Value.IdleFor).Key);
         }
     }
 
     /// <summary>通知や編集が止まった一時状態を退場させます。</summary>
     private void Prune()
     {
-        DateTimeOffset now = clock.GetUtcNow();
-        foreach (KeyValuePair<(string Peer, Guid Instance, Guid Ui, string Workflow), PresenceView> entry in presence.Where(item => item.Value.ExpiresAt <= now).ToArray())
-        {
-            presence.Remove(entry.Key);
-        }
-        foreach (string key in drafts.Where(item => item.Value.View.UpdatedAt + options.DraftLifetime <= now).Select(item => item.Key).ToArray())
+        foreach (string key in drafts.Where(item => options.DraftLifetime <= item.Value.IdleFor).Select(item => item.Key).ToArray())
         {
             drafts.Remove(key);
         }

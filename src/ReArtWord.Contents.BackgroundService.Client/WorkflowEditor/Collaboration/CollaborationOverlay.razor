@@ -4,27 +4,38 @@
 @inject EditorDocument Model
 @inject EditorNodeActivity Activity
 <g class="collaboration-overlay" pointer-events="none">
-    @foreach(var peer in Collaboration.Presence.Where(item=>item.Presence.UiInstanceId!=Collaboration.UiInstanceId && item.ExpiresAt>DateTimeOffset.UtcNow && string.Equals(item.Presence.WorkflowId,Model.Draft.Document.Id,StringComparison.Ordinal)))
+    @{
+        var editors = Collaboration.OtherEditors(Model.Draft.Document.Id).ToArray();
+        var selections = editors.SelectMany((peer,index)=>peer.Presence.SelectedNodeIds.Select(id=>(Id:id,Presence:peer.Presence,Index:index))).GroupBy(item=>item.Id,StringComparer.Ordinal);
+    }
+    @foreach(var group in selections)
     {
-        var presence=peer.Presence;
-        var color=Color(presence.UiInstanceId);
-        @foreach(var selected in presence.SelectedNodeIds)
+        @if(Bounds.TryGetValue(group.Key,out var box))
         {
-            @if(Bounds.TryGetValue(selected,out var box))
+            @foreach(var item in group)
             {
-                <rect class="collaborator-selection" x="@(box.Position.X-3)" y="@(box.Position.Y-3)" width="@(box.Size.Width+6)" height="@(box.Size.Height+6)" rx="12" fill="none" stroke="@color" stroke-width="2" stroke-dasharray="6 4"><title>@Label(presence) · @selected</title></rect>
+                <rect class="collaborator-selection" x="@(box.Position.X-3)" y="@(box.Position.Y-3)" width="@(box.Size.Width+6)" height="@(box.Size.Height+6)" fill="none" stroke="@Color(item.Index)" stroke-width="2" stroke-dasharray="6 4"><title>@Label(item.Presence) · @group.Key</title></rect>
+            }
+            @foreach(var (item,slot) in group.Take(4).Select((item,slot)=>(item,slot)))
+            {
+                <circle cx="@(box.Position.X+6+slot*12)" cy="@(box.Position.Y-11)" r="4" fill="@Color(item.Index)"><title>@Ui.Format("Selected by {0}",Label(item.Presence))</title></circle>
             }
         }
+    }
+    @foreach(var (peer,index) in editors.Select((peer,index)=>(peer,index)))
+    {
+        var presence=peer.Presence;
+        var color=Color(index);
         @if(presence.DragPosition is {} position && Model.Draft.Document.Nodes.Any(node=>string.Equals(node.Id,presence.DragNodeId,StringComparison.Ordinal)))
         {
-            <g><rect x="@position.X" y="@position.Y" width="320" height="64" rx="8" fill="none" stroke="@color" stroke-width="2" stroke-dasharray="6 4" />
-            <text x="@(position.X+8)" y="@(position.Y+22)" fill="#d3c4ff">@Label(presence) · @presence.DragNodeId · @Ui["Moving"]</text>
+            <g><rect x="@position.X" y="@position.Y" width="320" height="64" class="drag-outline" fill="none" stroke="@color" stroke-width="2" stroke-dasharray="6 4" />
+            <title>@Label(presence) · @presence.DragNodeId · @Ui["Moving"]</title>
             </g>
         }
         @if(presence.CursorX is double x && presence.CursorY is double y)
         {
             <g><path d="@FormattableString.Invariant($"M{x},{y} l0,16 l5,-5 l8,0 z")" fill="@color" />
-            <text x="@(x+16)" y="@(y+18)" fill="#d3c4ff">@Label(presence) @if(presence.Dirty){<tspan> · @Ui["Unsaved"]</tspan>}</text>
+            <title>@Label(presence) · @Ui[presence.Dirty?"Unsaved":"No local changes"]</title>
             </g>
         }
     }
@@ -32,7 +43,7 @@
     {
         @foreach(var item in Bounds.Where(item=>Activity.IsRunning(Model.ClusterId,Model.Draft,item.Key)))
         {
-            <rect class="running-outline" x="@(item.Value.Position.X-2)" y="@(item.Value.Position.Y-2)" width="@(item.Value.Size.Width+4)" height="@(item.Value.Size.Height+4)" rx="11"><title>@Ui["Running · saved workflow version"]</title></rect>
+            <rect class="running-outline" x="@(item.Value.Position.X-2)" y="@(item.Value.Position.Y-2)" width="@(item.Value.Size.Width+4)" height="@(item.Value.Size.Height+4)"><title>@Ui["Running · saved workflow version"]</title></rect>
         }
     }
 </g>

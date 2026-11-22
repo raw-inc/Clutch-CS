@@ -23,6 +23,20 @@ public sealed partial class PeerStateLabel
         set;
     }
 
+    /// <summary>同期中の表示を識別するホストまたはクラスタです。</summary>
+    [Parameter] public string Identity
+    {
+        get; set;
+    } = string.Empty;
+
+    private string Tone => State switch
+    {
+        nameof(EPeerStatus.Ready) => "good",
+        nameof(EPeerStatus.Syncing) => "syncing",
+        "Offline" => "offline",
+        _ => "warn"
+    };
+
     private string Percent => Math.Floor(History?.ProgressPercent ?? 0).ToString("0", CultureInfo.InvariantCulture);
 
     private string Description

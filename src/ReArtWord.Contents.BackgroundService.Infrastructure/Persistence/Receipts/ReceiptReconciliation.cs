@@ -29,7 +29,7 @@ internal static class ReceiptReconciliation
     {
         DurableReceipt? previous = document.Receipts.GetValueOrDefault(incoming.OperationId);
         if (!CanReconcile(previous, incoming)
-            || RepositoryHistoryGuard.Expired(incoming.OperationId, RepositoryHistoryGuard.Read(document), document.History?.RetiredOperations.GetValueOrDefault(incoming.OperationId)) is not null)
+            || RepositoryHistoryGuard.FindExpired(document, incoming.OperationId) is not null)
         {
             return false;
         }

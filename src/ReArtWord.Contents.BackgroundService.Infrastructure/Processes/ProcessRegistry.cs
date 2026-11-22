@@ -65,7 +65,7 @@ internal sealed class ProcessRegistry
                 Ready = null, Healthy = null, ExitCounted = false, ExitCode = null, ExitedAt = null, NextRecoveryAt = null, ExitUnobserved = false, Replacement = null, ReplacementProblem = null, RecoveryReplacement = null };
             mutations.Add(new DurableMutation(statesScope, definition.Id, stateVersion, Encode(changed)));
         }
-        DurableReceipt receipt = await repository.ApplyBatchAsync(Guid.CreateVersion7(), mutations, cancellationToken).ConfigureAwait(false);
+        DurableReceipt receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), mutations, cancellationToken).ConfigureAwait(false);
         return receipt.Outcome;
     }
 
@@ -85,7 +85,7 @@ internal sealed class ProcessRegistry
             mutations.Add(new(statesScope, id, state.Version, null));
         }
         mutations.AddRange(await Schedules.RegistrationAsync(previous with { Schedules = [] }, previous, now, cancellationToken).ConfigureAwait(false));
-        return (await repository.ApplyBatchAsync(Guid.CreateVersion7(), mutations, cancellationToken).ConfigureAwait(false)).Outcome;
+        return (await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), mutations, cancellationToken).ConfigureAwait(false)).Outcome;
     }
 
     /// <summary>故障状態と比較保存用の版を読みます。</summary>
@@ -101,7 +101,7 @@ internal sealed class ProcessRegistry
     /// <returns>成功以外を暗黙に再試行しない保存結果です。</returns>
     internal async ValueTask<EOutcome> SaveStateAsync(string id, string? expectedVersion, ProcessStateRecord state, CancellationToken cancellationToken = default)
     {
-        DurableReceipt receipt = await repository.ApplyBatchAsync(Guid.CreateVersion7(), [new DurableMutation(statesScope, id, expectedVersion, Encode(state))], cancellationToken).ConfigureAwait(false);
+        DurableReceipt receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new DurableMutation(statesScope, id, expectedVersion, Encode(state))], cancellationToken).ConfigureAwait(false);
         return receipt.Outcome;
     }
 

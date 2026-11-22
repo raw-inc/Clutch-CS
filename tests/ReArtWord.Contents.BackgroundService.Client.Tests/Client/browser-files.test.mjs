@@ -299,7 +299,7 @@ test('unsupported browser keeps two panes and uses selection before folder navig
     const chooser = all(f.panes[0]).find(item => item.type === 'file');
     chooser.files = [new File(['abc'], 'pick.txt')];
     chooser.onchange();
-    await f.button('Copy selected →').onclick();
+    await f.button('Copy to host').onclick();
     assert.equal(f.calls.find(item => item.path.endsWith('/open')).body.destinationPath, 'C:/sub/pick.txt');
 });
 
@@ -312,10 +312,10 @@ test('local folder access is requested only by the explicit picker and enables b
     assert.deepEqual(f.picks, [{ mode: 'readwrite' }]);
     await f.selectHost();
     f.button('local.txt', f.panes[0]).onclick({ detail: 1 });
-    await f.button('Copy selected →').onclick();
+    await f.button('Copy to host').onclick();
     assert.equal(f.calls.filter(item => item.path.endsWith('/commit')).length, 1);
     f.button('remote.txt', f.panes[1]).onclick({ detail: 1 });
-    await f.button('← Copy selected').onclick();
+    await f.button('Copy to this device').onclick();
     assert.equal(f.fetches, 1);
     assert.equal(await(await f.folder.children.get('remote.txt').getFile()).text(), 'abc');
 });
@@ -332,7 +332,7 @@ test('denied and revoked permissions never enumerate or write local files', asyn
     await f.selectHost();
     folder.permission = 'denied';
     f.button('remote.txt', f.panes[1]).onclick({ detail: 1 });
-    await f.button('← Copy selected').onclick();
+    await f.button('Copy to this device').onclick();
     assert.equal(f.fetches, 0);
     assert.equal(folder.children.size, 0);
     assert.match(f.root.textContent, /not granted/);
@@ -367,7 +367,7 @@ test('a restarted host cannot receive a copy from an old browser selection', asy
     await f.selectHost();
     f.setPeers([{ ...peer, instanceId: 'new' }]);
     f.button('local.txt', f.panes[0]).onclick({ detail: 1 });
-    await f.button('Copy selected →').onclick();
+    await f.button('Copy to host').onclick();
     assert.ok(!f.calls.some(item => item.path.endsWith('/open')));
     assert.match(f.root.textContent, /Host instance changed/);
 });
@@ -380,7 +380,7 @@ test('lost commit stops a multi-file batch without replaying the uncertain copy'
     chooser.files = [new File(['a'], 'one.txt'), new File(['b'], 'two.txt')];
     chooser.onchange();
     f.failCommit();
-    await f.button('Copy selected →').onclick();
+    await f.button('Copy to host').onclick();
     assert.equal(f.calls.filter(item => item.path.endsWith('/commit')).length, 1);
     assert.equal(f.calls.filter(item => item.path.endsWith('/open')).length, 1);
     assert.match(f.root.textContent, /Commit unconfirmed/);

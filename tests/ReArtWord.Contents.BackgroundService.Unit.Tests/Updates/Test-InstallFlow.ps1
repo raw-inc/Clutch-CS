@@ -70,7 +70,7 @@ roots = ["$content"]
             $start.WorkingDirectory = [IO.Path]::GetDirectoryName($data.executable)
             $process = [Diagnostics.Process]::Start($start)
             $owned.Add($process)
-            return
+            return @{processId=$process.Id;startedAt=$process.StartTime.ToUniversalTime().ToString("o")}
         }
         throw 'Unexpected action.'
     }.GetNewClosure()

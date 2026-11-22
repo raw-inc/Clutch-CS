@@ -31,10 +31,29 @@ public sealed partial class SafetyPanel
     private ManualSafetyChange? pending;
     private JsonElement? result;
     private Guid? lastOperation;
-    private readonly List<(string Workflow, string Scope)> targets = [];
+    private readonly List<(string Workflow, string Scope, string Kind)> targets = [];
     private int selected;
+    private string? targetWorkflow;
+    private bool targetsLoaded;
     private ManualSafetyStatus? Current => targets.Count == 0 ? null
                                                               : status?.States.FirstOrDefault(item => string.Equals(item.WorkflowId, targets[selected].Workflow, StringComparison.Ordinal) && string.Equals(item.Scope, targets[selected].Scope, StringComparison.Ordinal));
+
+    private string ConfirmationAction => pending switch
+    {
+        { Stopped: true } => "Pause new inputs",
+        { Continued: true } => "Allow new inputs temporarily",
+        _ => "Restore normal safety behavior"
+    };
+
+    private string OverrideState => (status?.Loaded == true, targets.Count, Current) switch
+    {
+        (false, _, _) => "Not checked",
+        (_, 0, _) when targetsLoaded => "No eligible targets",
+        (_, 0, _) => "No target selected",
+        (_, _, { Stopped: true }) => "New inputs stopped",
+        (_, _, { Continued: true }) => "Temporary continuation past an automatic stop",
+        _ => "No temporary override"
+    };
 
     /// <summary>対象の現在値を取得して編集または選択画面を開きます。</summary>
     /// <returns>要求処理と現時点の画面反映の完了です。</returns>
@@ -51,12 +70,18 @@ public sealed partial class SafetyPanel
             }
 
             targets.Clear();
+            targetsLoaded = false;
+            targetWorkflow = null;
             selected = 0;
             preview = null;
             open = true;
         }
         catch (Exception exception) when (exception is HttpRequestException or InvalidOperationException or JsonException or OperationCanceledException)
         {
+            status = null;
+            targets.Clear();
+            targetsLoaded = false;
+            targetWorkflow = null;
             message = Ui.Deferred("Safety state and effective targets could not be confirmed.");
         }
     }
@@ -76,21 +101,29 @@ public sealed partial class SafetyPanel
             }
 
             targets.Clear();
-            foreach (NodeDefinition? node in workflow.Effective.Nodes)
+            HashSet<string> nodes = workflow.Effective.Nodes.Select(node => node.Id).ToHashSet(StringComparer.Ordinal);
+            HashSet<string> groups = workflow.Effective.Nodes.Select(node => node.Safety?.Group).OfType<string>().ToHashSet(StringComparer.Ordinal);
+            foreach (NodeDefinition node in workflow.Effective.Nodes)
             {
-                targets.Add((workflow.Effective.Id, node.Id));
-                if (node.Safety?.Group is string group && !targets.Contains((workflow.Effective.Id, group)))
-                {
-                    targets.Add((workflow.Effective.Id, group));
-                }
+                string kind = groups.Contains(node.Id) ? "Node and safety group"
+                                                       : "Node";
+                targets.Add((workflow.Effective.Id, node.Id, kind));
+            }
+            foreach (string group in groups.Where(group => !nodes.Contains(group)))
+            {
+                targets.Add((workflow.Effective.Id, group, "Safety group"));
             }
 
             selected = 0;
+            targetsLoaded = true;
+            targetWorkflow = summary.Name;
             preview = null;
         }
         catch (Exception exception) when (exception is HttpRequestException or JsonException or InvalidOperationException)
         {
             targets.Clear();
+            targetsLoaded = false;
+            targetWorkflow = null;
             message = Ui.Deferred("The complete target node list could not be retrieved.{0}", exception.Message);
         }
     }
@@ -110,7 +143,7 @@ public sealed partial class SafetyPanel
         pending = null;
         try
         {
-            (string Workflow, string Scope) target = targets[selected];
+            (string Workflow, string Scope, string Kind) target = targets[selected];
             ManualSafetyChange? request = new ManualSafetyChange(Guid.NewGuid(), target.Workflow, target.Scope, stopped, Current?.Version, continued);
             preview = await Api.PostAsync<ManualSafetyPreview>("/api/safety/preview", request, cancellationToken: UiCancellation).ConfigureAwait(true);
             if (preview is null || !string.Equals(preview.WorkflowId, request.WorkflowId, StringComparison.Ordinal) || !string.Equals(preview.Scope, request.Scope, StringComparison.Ordinal))
@@ -178,7 +211,7 @@ public sealed partial class SafetyPanel
     private async Task ApplyAsync(ManualSafetyChange request)
     {
         lastOperation = request.OperationId;
-        result = await Api.PostAsync<JsonElement>("/api/safety", request, cancellationToken: UiCancellation).ConfigureAwait(true);
+        result = await Api.PostAsync<JsonElement>("/api/v2/safety", request, cancellationToken: UiCancellation).ConfigureAwait(true);
         if (result is JsonElement value && value.ValueKind == JsonValueKind.Object && value.TryGetProperty(MatchOperationId, out JsonElement identity) && identity.GetGuid() != request.OperationId)
         {
             result = null;

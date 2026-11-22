@@ -19,7 +19,7 @@ before(async () =>
             if (pathname === '/')
             {
                 response.setHeader('Content-Type', 'text/html; charset=utf-8');
-                response.end('<!doctype html><link rel="stylesheet" href="/script-editor.css"><fieldset><div class="code-input"><pre></pre><textarea aria-label="Script code"></textarea></div></fieldset><button id="next">Next</button>');
+                response.end('<!doctype html><link rel="stylesheet" href="/styles/controls.css"><link rel="stylesheet" href="/script-editor.css"><fieldset><div class="code-input"><pre></pre><textarea aria-label="Script code"></textarea></div></fieldset><button id="next">Next</button>');
                 return;
             }
             const file = path.resolve(root, '.' + decodeURIComponent(pathname));
@@ -60,6 +60,7 @@ async function openEditorAsync(context, language, text)
     await page.addStyleTag({ content: '.code-input{height:280px;width:700px;--ink:#eee;--paper:#202329;--line:#555;--muted:#aaa;--accent:#aac}' });
     await page.evaluate(async ({ language, text }) =>
     {
+        await import('/scroll-area.js');
         const { attachCodeEditor } = await import('/script-code.js');
         const input = document.querySelector('textarea');
         input.value = text;
@@ -224,10 +225,19 @@ test('Pythonの標準メンバーでも、モジュールへ呼出し括弧を�
     assert.equal(await page.locator('textarea').inputValue(), 'os.path');
 });
 
+/** 入力間隔をテストが進める時間だけで決め、実行環境の負荷による待ち時間を除きます。
+ * @returns 時刻を固定すると完了します。
+ */
+async function freezeAnalysisClockAsync(page)
+{
+    await page.clock.install({ time: new Date(0) });
+    await page.clock.pauseAt(new Date(60000));
+}
+
 test('フォーカスを維持したまま連続入力をまとめ、最後のコードだけを自動解析へ通知する', async context =>
 {
     const page = await openEditorAsync(context, 'csharp', '');
-    await page.clock.install();
+    await freezeAnalysisClockAsync(page);
     await page.keyboard.insertText('public static int Run()');
     await page.clock.fastForward(400);
     assert.deepEqual(await page.evaluate(() => window.analyses), []);
@@ -244,7 +254,7 @@ for (const operation of ['blur', 'lock', 'replace', 'dispose'])
     test(`${operation}で古いコードの自動解析予約を取り消す`, async context =>
     {
         const page = await openEditorAsync(context, 'javascript', '');
-        await page.clock.install();
+        await freezeAnalysisClockAsync(page);
         await page.keyboard.insertText('export function run() {return 1;}');
         await page.evaluate(operation =>
         {
@@ -270,7 +280,7 @@ for (const operation of ['blur', 'lock', 'replace', 'dispose'])
 test('IME変換中には解析せず、確定した文字列を解析へ渡す', async context =>
 {
     const page = await openEditorAsync(context, 'python', '');
-    await page.clock.install();
+    await freezeAnalysisClockAsync(page);
     const session = await page.context().newCDPSession(page);
     await session.send('Input.imeSetComposition', { text: 'にほん', selectionStart: 3, selectionEnd: 3 });
     await page.clock.fastForward(1000);
@@ -278,4 +288,41 @@ test('IME変換中には解析せず、確定した文字列を解析へ渡す',
     await session.send('Input.insertText', { text: '日本' });
     await page.clock.fastForward(1000);
     assert.deepEqual(await page.evaluate(() => window.analyses), ['日本']);
+});
+
+test('the code editor indicates clipped text at the correct horizontal edge', async context =>
+{
+    const longLine = 'const longLine = "' + 'z'.repeat(240) + '";';
+    const source = [longLine, ...Array.from({ length: 100 }, (_, index) => '// line ' + index)].join('\n');
+    const page = await openEditorAsync(context, 'javascript', source);
+    const surface = page.locator('clutch-scroll-area.script-editor-surface');
+    const port = surface.locator('.cm-scroller');
+    await port.evaluate(element =>
+    {
+        element.style.maxHeight = '140px';
+        element.scrollLeft = 0;
+    });
+    await page.waitForSelector('.script-editor-surface[data-scroll-after]:not([data-scroll-before])');
+    await port.evaluate(element =>
+    {
+        element.scrollLeft = (element.scrollWidth - element.clientWidth) / 2;
+    });
+    await page.waitForSelector('.script-editor-surface[data-scroll-before][data-scroll-after]');
+    const geometry = await surface.evaluate(element =>
+    {
+        const scroller = element.querySelector('.cm-scroller'), gutters = element.querySelector('.cm-gutters');
+        const before = getComputedStyle(element, '::before'), after = getComputedStyle(element, '::after');
+        return { gutter: gutters.offsetWidth, scrollbar: scroller.offsetWidth - scroller.clientWidth,
+            verticalOverflow: scroller.scrollHeight - scroller.clientHeight,
+            left: Number.parseFloat(before.insetInlineStart), right: Number.parseFloat(after.insetInlineEnd) };
+    });
+    assert.ok(0 < geometry.verticalOverflow && 0 < geometry.gutter);
+    assert.equal(geometry.left, geometry.gutter);
+    assert.equal(geometry.right, geometry.scrollbar);
+    await port.evaluate(element =>
+    {
+        element.scrollLeft = element.scrollWidth;
+    });
+    await page.waitForSelector('.script-editor-surface[data-scroll-before]:not([data-scroll-after])');
+    assert.equal(await page.locator('textarea').inputValue(), source);
 });

@@ -36,7 +36,8 @@ internal sealed class ConcurrencyAuthority(PeerCluster cluster, IDurableReposito
         }
         using CancellationTokenSource lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, stopping.Token);
         long started = clock.GetTimestamp();
-        DateTimeOffset queuedAt = clock.GetUtcNow(), nextOwnership = DateTimeOffset.MinValue;
+        DateTimeOffset queuedAt = clock.GetUtcNow();
+        long? ownershipChecked = null;
         bool registered = false, confirmedOwner = false;
         DateTimeOffset? deadline = null;
         if (request.WaitTimeoutMilliseconds != 0)
@@ -97,9 +98,9 @@ internal sealed class ConcurrencyAuthority(PeerCluster cluster, IDurableReposito
                 {
                     queue.Changes.Release();
                 }
-                if (nextOwnership <= clock.GetUtcNow())
+                if (ownershipChecked is null || TimeSpan.FromSeconds(5) <= clock.GetElapsedTime(ownershipChecked.Value))
                 {
-                    nextOwnership = clock.GetUtcNow().AddSeconds(5);
+                    ownershipChecked = clock.GetTimestamp();
                     double remaining = request.WaitTimeoutMilliseconds == 0 ? 2000
                                                                             : Math.Clamp(request.WaitTimeoutMilliseconds - clock.GetElapsedTime(started).TotalMilliseconds, 1, 2000);
                     bool? present = await RecoverAsync(target, queue, request, TimeSpan.FromMilliseconds(remaining), lifetime.Token).ConfigureAwait(false);
@@ -220,9 +221,8 @@ internal sealed class ConcurrencyAuthority(PeerCluster cluster, IDurableReposito
         {
             await permits.RestoreAsync(target, queue, cancellationToken).ConfigureAwait(false);
             checking = [request];
-            if (queue.NextRecovery <= clock.GetUtcNow())
+            if (queue.BeginRecovery(clock))
             {
-                queue.NextRecovery = clock.GetUtcNow().AddSeconds(5);
                 checking = queue.Active.Select(permit => permit.Request).Append(request).DistinctBy(value => value.TicketId).ToArray();
             }
         }
@@ -253,7 +253,7 @@ internal sealed class ConcurrencyAuthority(PeerCluster cluster, IDurableReposito
                     ConcurrencyPermit[] remaining = queue.Active.Where(permit => !ownership.TryGetValue(permit.Request.TicketId, out bool present) || present).ToArray();
                     if (remaining.Length != queue.Active.Count)
                     {
-                        _ = await permits.SaveAsync(target, queue, remaining, Guid.CreateVersion7(), cancellationToken).ConfigureAwait(false);
+                        _ = await permits.SaveAsync(target, queue, remaining, OperationIdentity.Create(), cancellationToken).ConfigureAwait(false);
                     }
                 }
             }

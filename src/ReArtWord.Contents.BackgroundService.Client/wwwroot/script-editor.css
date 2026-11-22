@@ -4,7 +4,8 @@
     min-height: 0;
 }
 
-.script-editor-surface .cm-editor {
+.script-editor-surface > .cm-editor {
+    overflow: clip;
     color: var(--ink);
     background: var(--paper);
     font: 12px/1.6 Consolas, monospace;
@@ -13,6 +14,8 @@
 .script-editor-surface .cm-editor .cm-scroller {
     font-family: inherit;
     overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--control) var(--nested);
 }
 
 .script-editor-surface .cm-editor .cm-content {
@@ -31,11 +34,11 @@
 
 .script-editor-surface .cm-editor [class~="cm-selectionBackground"],
 .script-editor-surface .cm-focused [class~="cm-selectionBackground"] {
-    background: #628cc366;
+    background: color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
 .script-editor-surface .cm-editor [class~="cm-matchingBracket"] {
-    background: #628cc344;
+    background: color-mix(in srgb, var(--accent) 25%, transparent);
     outline: 1px solid var(--accent);
 }
 
@@ -53,5 +56,5 @@
 
 .contents-code-completion.cm-tooltip.cm-tooltip-autocomplete [aria-selected="true"] {
     color: var(--ink);
-    background: #628cc366;
+    background: color-mix(in srgb, var(--accent) 32%, transparent);
 }

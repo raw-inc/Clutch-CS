@@ -76,5 +76,7 @@ internal sealed class ServiceBootstrap
 
     /// <summary>暗黙の再受付で別操作IDを生成しないための内容識別子です。</summary>
     /// <returns>操作種類と対象から生成したIDです。</returns>
-    private static Guid Identity(params string[] parts) => new(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('\0', parts))).AsSpan(0, 16));
+    // 初回導入の元IDを変えると、導入途中で終了した旧版の要求とは別の操作になります。
+    // ここは旧方式を維持し、新しく開始する保存の子操作だけを保存側の生成方式へ切り替えます。
+    private static Guid Identity(params string[] parts) => DerivedOperationIdentity.FromHash(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('\0', parts))), EDerivedIdFormat.Legacy);
 }

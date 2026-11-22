@@ -3,13 +3,13 @@
  */
 export function scopeTable(container, ctx, send, report)
 {
-    const height = 26, viewport = document.createElement('div'), table = document.createElement('table');
+    const height = 26, overscan = 6, viewport = document.createElement('div'), table = document.createElement('table');
     const header = document.createElement('thead'), labels = document.createElement('tr'), body = document.createElement('tbody');
-    viewport.className = 'scope-list';
+    viewport.className = 'scope-list record-detail-scroll';
     viewport.tabIndex = 0;
     viewport.setAttribute('aria-label', ctx.t('Captured packets', '取得したパケット'));
     table.className = 'scope-packets';
-    for (const label of ['#', ctx.t('Time', '時刻'), 'Protocol', 'Source', 'Destination', 'Info', ctx.t('Seen', '観測')])
+    for (const label of ['#', ctx.t('Time', '時刻'), ctx.t('Protocol', 'プロトコル'), ctx.t('Source', '送信元'), ctx.t('Destination', '宛先'), ctx.t('Info', '内容'), ctx.t('Seen', '観測')])
     {
         const cell = document.createElement('th');
         cell.textContent = label;
@@ -20,15 +20,24 @@ export function scopeTable(container, ctx, send, report)
     viewport.append(table);
     const panels = document.createElement('div'), description = document.createElement('pre'), hex = document.createElement('pre');
     panels.className = 'scope-details';
+    panels.dataset.empty = 'true';
+    const detailHint = ctx.t('Select a packet to view its full contents.', 'パケットを選ぶと内容の全文を表示します。');
     for (const [name, content] of [[ctx.t('Packet details', 'パケット詳細'), description], ['Hex / ASCII', hex]])
     {
         const section = document.createElement('section'), title = document.createElement('h2');
         title.textContent = name;
-        section.append(title, content);
+        const empty = document.createElement('p');
+        empty.className = 'scope-detail-empty';
+        empty.textContent = detailHint;
+        section.append(title, empty, content);
         panels.append(section);
     }
-    container.append(viewport, panels);
-    let follow = true, hostNames = false, selected = null, request = 0, programmedScroll = -1, anchor = null, anchorOffset = 0, requestedAnchor = null;
+    const scrollArea = document.createElement('clutch-scroll-area');
+    scrollArea.dataset.scrollAxis = 'both';
+    scrollArea.append(viewport);
+    container.append(scrollArea, panels);
+    let follow = true, hostNames = false, selected = null, request = 0, programmedScroll = -1, anchor = null;
+    let firstRendered = 0, requestedOffset = 0, requestedAnchor = null;
     let format;
     try
     {
@@ -42,8 +51,12 @@ export function scopeTable(container, ctx, send, report)
     /** スクロールのたびに保持データを再転送せず、表示範囲だけ要求します。 */
     function refresh()
     {
+        const firstVisible = Math.floor(viewport.scrollTop / height);
+        const start = Math.max(0, firstVisible - overscan);
+        const count = Math.min(200, Math.ceil(viewport.clientHeight / height) + 2 * overscan);
         requestedAnchor = anchor;
-        send({ type: 'view', request: ++request, start: Math.max(0, Math.floor(viewport.scrollTop / height)), anchor, count: Math.min(200, Math.ceil(viewport.clientHeight / height) + 5), follow });
+        requestedOffset = Math.max(0, viewport.scrollTop - firstRendered * height);
+        send({ type: 'view', request: ++request, start, anchor, count, follow });
     }
 
     /** ポートを常に残し、名前が解決できない場合はIPへ戻します。
@@ -75,7 +88,7 @@ export function scopeTable(container, ctx, send, report)
         {
             return;
         }
-        anchorOffset = viewport.scrollTop % height;
+        firstRendered = view.first;
         const fragment = document.createDocumentFragment();
         fragment.append(spacer(view.first * height));
         for (const packet of view.rows)
@@ -96,25 +109,28 @@ export function scopeTable(container, ctx, send, report)
         }
         fragment.append(spacer((view.total - view.first - view.rows.length) * height));
         body.replaceChildren(fragment);
+        viewport.dataset.scrollable = String(viewport.clientHeight < viewport.scrollHeight);
         anchor = view.rows[0]?.id ?? null;
         if (follow || requestedAnchor !== null)
         {
-            const target = follow ? viewport.scrollHeight : view.first * height + anchorOffset;
+            const target = follow ? viewport.scrollHeight : view.first * height + requestedOffset;
             if (viewport.scrollTop !== target)
             {
                 viewport.scrollTop = target;
                 programmedScroll = viewport.scrollTop;
             }
         }
-        report(view);
+        report(view, follow);
     }
 
     viewport.addEventListener('scroll', () =>
     {
         if (viewport.scrollTop === programmedScroll)
         {
+            programmedScroll = -1;
             return;
         }
+        programmedScroll = -1;
         anchor = null;
         follow = viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop < height;
         refresh();
@@ -134,6 +150,7 @@ export function scopeTable(container, ctx, send, report)
         if (row)
         {
             selected = Number(row.dataset.packet);
+            panels.dataset.empty = 'false';
             anchor = null;
             follow = false;
             send({ type: 'detail', id: selected });
@@ -153,7 +170,9 @@ export function scopeTable(container, ctx, send, report)
             }
             description.textContent = value.pending ? ctx.t('Loading packet details…', 'パケットの詳細を取得しています…')
                 : value.removed ? ctx.t('Packet details have expired or the source is disconnected.', '詳細の保持期限が切れたか、取得側との接続が終了しています。')
-                    : value.time + '\n' + value.observers.join('\n') + '\n' + value.rawLength + ' / ' + value.originalLength + ' bytes\n\n' + (value.details ?? '');
+                    : value.time + '\n' + value.observers.join('\n') + '\n' +
+                        ctx.t('Source', '送信元') + ': ' + endpoint(value.source, null, value.sourcePort) + '\n' +
+                        ctx.t('Destination', '宛先') + ': ' + endpoint(value.destination, null, value.destinationPort) + '\n' + value.rawLength + ' / ' + value.originalLength + ' bytes\n\n' + (value.details ?? '');
             hex.textContent = value.hex ?? '';
         },
 
@@ -164,10 +183,15 @@ export function scopeTable(container, ctx, send, report)
             refresh();
         },
 
-        /** 最新行への追従を再開します。 */
-        latest()
+        get following()
         {
-            follow = true;
+            return follow;
+        },
+
+        /** 一覧の追従状態を切り替えます。 */
+        latest(enabled = true)
+        {
+            follow = enabled;
             anchor = null;
             selected = null;
             refresh();

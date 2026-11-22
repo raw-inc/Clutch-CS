@@ -87,12 +87,18 @@ function request(worker, type)
 /** 取得済みの件数を進捗表示へ反映します。 */
 function updateProgress(data)
 {
-    if (finished || !Number.isInteger(data?.completed) || !Number.isInteger(data.total) || data.total <= 0)
+    if (finished || !observed || !Number.isInteger(data?.completed) || !Number.isInteger(data.total) || data.total <= 0)
     {
         return;
     }
     progress.max = data.total;
     progress.value = Math.max(progress.value, Math.min(data.completed, data.total));
+    const percent = Math.floor(progress.value * 100 / progress.max);
+    status.replaceChildren(
+        '画面を読み込んでいます / Loading UI files',
+        document.createElement('br'),
+        Object.assign(document.createElement('span'), { className: 'update-progress-count',
+            textContent: `${progress.value} / ${progress.max} (${percent}\u00a0%)` }));
 }
 
 /** 受信データを検証し、現在の状態へ取り込みます。 */
@@ -159,8 +165,19 @@ async function watchAsync(worker)
     request(worker, 'contents.pwa.progress').then(updateProgress).catch(() =>
     {});
     await waitFor(worker, 'installed');
-    progress.max = 1;
-    progress.value = 1;
+    showDownloadComplete();
+}
+
+/** 取得完了と表示の切替を区別します。 */
+function showDownloadComplete()
+{
+    observed = null;
+    splash.hidden = false;
+    progress.value = progress.max;
+    status.replaceChildren(
+        '画面を切り替えています / Switching UI',
+        document.createElement('br'),
+        Object.assign(document.createElement('span'), { className: 'update-progress-count', textContent: '100\u00a0%' }));
 }
 
 /** 更新資材を検証して画面の版を切り替えます。
@@ -206,9 +223,7 @@ async function runAsync()
         const waiting = registration.waiting;
         if (waiting)
         {
-            splash.hidden = false;
-            progress.max = 1;
-            progress.value = 1;
+            showDownloadComplete();
             if (!(await request(waiting, 'contents.pwa.activate')).accepted)
             {
                 if (!automatic)

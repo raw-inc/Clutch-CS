@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 using Xunit;
 
 namespace ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
@@ -10,6 +11,11 @@ internal sealed class ConfiguredToolTheoryAttribute : TheoryAttribute
     public ConfiguredToolTheoryAttribute(string environmentVariable)
     {
         EnvironmentVariable = environmentVariable;
+        Skip = MediaFactAttribute.UnavailableReason;
+        if (Skip is not null)
+        {
+            return;
+        }
         if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(environmentVariable)))
         {
             Skip = environmentVariable + " に試験用の実行ファイルを指定してください。";

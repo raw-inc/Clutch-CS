@@ -21,6 +21,7 @@ internal sealed class LogStore : IDisposable
     private readonly SemaphoreSlim changes = new(1, 1);
     private readonly ConcurrentDictionary<Guid, LogSegment> segments = [];
     private readonly ConcurrentDictionary<Guid, byte> knownIds = [];
+    private long nextSequence;
     private bool initialized;
     private bool rawInitialized;
 
@@ -296,6 +297,14 @@ internal sealed class LogStore : IDisposable
     /// <summary>メタデータと重複確認を検索へ公開します。</summary>
     private void Add(LogSegment segment)
     {
+        if (!segments.TryGetValue(segment.Id, out LogSegment? existing))
+        {
+            segment = segment with { IndexSequence = checked(++nextSequence) };
+        }
+        else
+        {
+            segment = segment with { IndexSequence = existing.IndexSequence };
+        }
         segments[segment.Id] = segment;
         foreach (Guid id in segment.EntryIds)
         {
@@ -321,7 +330,7 @@ internal sealed class LogStore : IDisposable
     {
         string key = segment.Id.ToString("N");
         DurableEntry? previous = await repository.ReadAsync(scope, key, cancellationToken).ConfigureAwait(false);
-        DurableReceipt receipt = await repository.ApplyBatchAsync(Guid.CreateVersion7(), [new(scope, key, previous?.Version, null)], cancellationToken).ConfigureAwait(false);
+        DurableReceipt receipt = await repository.ApplyBatchAsync(OperationIdentity.Create(shared: false), [new(scope, key, previous?.Version, null)], cancellationToken).ConfigureAwait(false);
         if (receipt.Outcome != EOutcome.Succeeded)
         {
             throw new IOException("log.index.delete.unavailable");

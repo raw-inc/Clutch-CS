@@ -1,9 +1,12 @@
 .connection-button {
     font-size: 12px;
-    background: #292b30;
-    border-color: #3a3d45;
     gap: 9px;
     max-width: 340px;
+}
+
+.connection-button[aria-expanded="true"] {
+    background: var(--raised);
+    box-shadow: none;
 }
 
 .connection-name {
@@ -16,22 +19,20 @@
     font-size: 11px;
 }
 
-.connection-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--warn);
-    flex-shrink: 0;
+.connection-symbol {
+    display: inline-flex;
+    flex: none;
+    color: var(--warn);
 }
 
-.connection-dot.online {
-    background: var(--green);
+.connection-symbol.online {
+    color: var(--green);
 }
 
-.connection-button ::deep > .ui-icon {
+.connection-chevron ::deep .ui-icon {
     width: 12px;
     height: 12px;
-    margin-left: 4px;
+
 }
 
 @media (max-width: 1100px) {
@@ -43,6 +44,59 @@
 @media (max-width: 750px) {
     .connection-button {
         max-width: 220px;
-        font-size: 10px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 760px) {
+    .peer-connections,
+    .peer-connections tbody,
+    .peer-connections tr {
+        display: grid;
+        gap: 8px;
+    }
+
+    .peer-connections thead {
+        display: none;
+    }
+
+    .peer-connections tr {
+        border-block-start: 1px solid var(--line);
+        padding-block: 12px;
+    }
+
+    .peer-connections td {
+        display: grid;
+        grid-template-columns: minmax(5rem, 30%) minmax(0, 1fr);
+        gap: 8px;
+        padding: 0;
+        border: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .peer-connections td[data-label]::before {
+        content: attr(data-label);
+        color: var(--muted);
+        font-weight: 600;
+    }
+
+    .peer-connections td:last-child {
+        display: flex;
+        justify-content: end;
+    }
+}
+
+.connection-help {
+    word-break: auto-phrase;
+}
+
+.peer-connections td[data-label]::before {
+    font-size: 13px;
+    line-height: inherit;
+}
+
+@media (max-width: 760px) {
+    .peer-connections td:last-child button {
+        min-height: 44px;
     }
 }

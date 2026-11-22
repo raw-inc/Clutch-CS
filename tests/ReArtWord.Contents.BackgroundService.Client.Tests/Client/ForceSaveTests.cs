@@ -204,7 +204,7 @@ public sealed class ForceSaveTests
         private async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken = default)
         {
             string path = request.RequestUri!.AbsolutePath;
-            string save = "/api/workflows/save", validate = "/api/workflows/validate", operation = "/api/workflows/operations/";
+            string save = "/api/v2/workflows/save", validate = "/api/workflows/validate", operation = "/api/workflows/operations/";
             if (string.Equals(path, validate, StringComparison.Ordinal))
             {
                 return Reply(new ValidationView(Valid, [], null));

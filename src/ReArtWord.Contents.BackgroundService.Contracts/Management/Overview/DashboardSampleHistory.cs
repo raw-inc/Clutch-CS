@@ -5,11 +5,39 @@ namespace ReArtWord.Contents.BackgroundService.Contracts.Management.Overview;
 /// <summary>配信元と画面で共通の、実体別・有限のDashboard履歴を構成します。</summary>
 public static class DashboardSampleHistory
 {
+    /// <summary>Core上の採取からの経過時間を、Dashboardの時計へ換算します。</summary>
+    /// <returns>表示用の標本です。未来の採取時刻や保持範囲外の標本は確認不能とします。</returns>
+    public static ResourceSample? Rebase(ResourceSample sample, DateTimeOffset sourceNow, DateTimeOffset requestStartedAt)
+    {
+        ArgumentNullException.ThrowIfNull(sample);
+        TimeSpan age = sourceNow - sample.ObservedAt;
+        if (age < TimeSpan.Zero || TimeSpan.FromMinutes(6) < age || requestStartedAt - DateTimeOffset.MinValue < age)
+        {
+            return null;
+        }
+
+        // 通信にかかった時間で古い標本を新しく見せないよう、要求開始時刻を基準にします。
+        // 元の診断履歴は変更せず、同じ標本の再受信ではMergeが初回の換算値を保持します。
+        return sample with { ObservedAt = requestStartedAt - age };
+    }
+
     /// <summary>初回履歴と差分を統合し、同じ実体の6分・121点だけを残します。</summary>
     /// <returns>重複せず時刻順に並んだ履歴です。</returns>
     public static ResourceSample[] Merge(IEnumerable<ResourceSample> previous, IEnumerable<ResourceSample> incoming, Guid instance, DateTimeOffset now)
-        => previous.Concat(incoming).Where(sample => sample.InstanceId == instance && now.AddMinutes(-6) <= sample.ObservedAt)
+        => previous.Concat(incoming).Select(sample => Present(sample, now)).Where(sample => sample.InstanceId == instance && now.AddMinutes(-6) <= sample.ObservedAt)
             .DistinctBy(sample => sample.Id).OrderBy(sample => sample.ObservedAt).TakeLast(121).ToArray();
+
+    /// <summary>保存した経過時間を表示先の日時へ換算します。同じ標本の起点は更新しません。</summary>
+    /// <returns>表示用の日時を持つコピー、または経過時間がない旧標本です。</returns>
+    public static ResourceSample Present(ResourceSample sample, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(sample);
+        if (sample.Age is { } age)
+        {
+            return sample with { ObservedAt = now - age.Elapsed };
+        }
+        return sample;
+    }
 
     /// <summary>概要カード・グラフが使う計測値だけを保持し、プロセスやGPUエンジン別の診断を複製しません。</summary>
     /// <returns>詳細表示を含むDashboardに必要なサンプルです。</returns>

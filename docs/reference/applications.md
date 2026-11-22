@@ -49,6 +49,8 @@ Windows以外のOSでは「ログインユーザーのデスクトップ」の�
 
 試行上限は起動成功までの試行に適用されます。OSへ起動を依頼した後の失敗は回数に含め、プロセスが作成されていないことを確認できた場合に限り、設定した遅延後に上限まで再試行します。起動成功後に終了した場合は、次の復旧を新しい試行として扱います。手動停止したアプリは自動復旧しません。CoreService以外から停止する場合は、先に「自動復旧を抑止」を使用できます。終了コードを取得できなかった場合は0とみなさず、監視中の未取得終了を再起動するかも詳細設定で指定します。
 
+復旧待ち、後継プロセスの確認、グループ内の起動間隔には、PCの日時を補正しても変わらない経過時間を使います。同じOS起動回を確認できれば、CoreServiceを再起動しても残り時間を引き継ぎます。旧版の記録などで元の待機を確認できない場合は自動起動を保留します。対象アプリの状態を確認した上で復旧の確認操作を行ってください。その場合も、実行中の後継候補を区別できなければ追加起動しません。
+
 CoreServiceが終了しても管理しているアプリケーションを一律には停止しません。CoreService再起動後は保存済みのPIDとOS起動時刻を照合し、同じ実体が生存していれば監視を再開します。CoreService停止中に終了したなど、終了事象そのものを観測できなかった場合は、終了信号や自動再起動を後追いしません。結果不明の起動操作を新しい起動として再送せず、実体確認から解決します。
 
 ## アプリグループ
@@ -72,7 +74,7 @@ CoreServiceが終了しても管理しているアプリケーションを一律
 
 操作中のグループ設定は変更できません。グループ削除は待機中または操作保留中に行えます。削除してもアプリやその登録は残り、個別の監視設定へ戻ります。個別登録を削除する場合は、先にグループから外してください。
 
-管理APIは`GET /api/process-groups`、`POST /api/process-groups/register`、`POST /api/process-groups/remove`、`POST /api/process-groups/command`です。対応する管理操作名は`processes.groups.list`、`processes.groups.register`、`processes.groups.remove`、`processes.groups.command`です。操作要求の`expectedVersion`には確認済みのグループ登録版を指定できます。操作応答の`outcome`は受付結果であり、完了は一覧の同じ`operationId`を持つ`status.outcome`で確認してください。
+管理APIは`GET /api/process-groups`、`POST /api/v2/process-groups/register`、`POST /api/v2/process-groups/remove`、`POST /api/v2/process-groups/command`です。対応する管理操作名は`processes.groups.list`、`processes.groups.register`、`processes.groups.remove`、`processes.groups.command`です。操作要求の`expectedVersion`には確認済みのグループ登録版を指定できます。操作応答の`outcome`は受付結果であり、完了は一覧の同じ`operationId`を持つ`status.outcome`で確認してください。
 
 一覧は最新の操作状態を表示します。別の操作IDへ進んでいる場合は、元の操作IDを使って`ApplicationGroup.OperationCompleted`・`ApplicationGroup.OperationPaused`のログを確認してください。途中でグループの停止へ切り替えた場合は、新しい受付ログの`previousOperationId`から前の操作を確認できます。
 

@@ -33,6 +33,33 @@ public sealed partial class EditorNavigator
         get; set;
     }
 
+    /// <summary>狭い画面で重なるパネルを閉じ、コード入力時は編集欄を優先します。</summary>
+    [Parameter] public EventCallback<bool> CompactCanvasChanged
+    {
+        get; set;
+    }
+
+    /// <summary>キャンバスに重なる全体マップを閉じます。</summary>
+    public void CloseMap()
+    {
+        mapVisible = false;
+        StateHasChanged();
+    }
+
+    /// <summary>画面幅の変更やコード入力に合わせて、表示とツールバーの選択を同期します。</summary>
+    /// <returns>親画面のパネル状態の更新です。</returns>
+    // 抑制理由: ブラウザーから呼び出す固定署名です。
+    [JSInvokable, System.Diagnostics.CodeAnalysis.SuppressMessage("SourceQuality", "RAW510", Justification = "JSInvokableの固定署名です。")]
+    public Task CompactCanvasAsync(bool editingCode)
+    {
+        if (ComponentDisposed)
+        {
+            return Task.CompletedTask;
+        }
+        CloseMap();
+        return CompactCanvasChanged.InvokeAsync(editingCode);
+    }
+
     /// <summary>選択範囲に合わせた倍率を、キャンバスと同じ所有者へ通知します。</summary>
     [Parameter] public EventCallback<double> ZoomChanged
     {
@@ -57,6 +84,14 @@ public sealed partial class EditorNavigator
     [Parameter] public string? InitialNodeId
     {
         get; set;
+    }
+
+    /// <summary>キャンバスの手前に並べる共同編集者の表示です。</summary>
+    [Parameter]
+    public RenderFragment? Participants
+    {
+        get;
+        set;
     }
 
     /// <summary>マップ表示の有無に追従し、その下へ重ねる操作結果です。</summary>
@@ -117,6 +152,12 @@ public sealed partial class EditorNavigator
             if (ComponentDisposed || string.IsNullOrEmpty(CanvasHost.Id))
             {
                 return;
+            }
+            bool narrow = module is null && await Script.InvokeAsync<bool>("contentsBrowser.narrowEditor", UiCancellation).ConfigureAwait(true);
+            if (narrow)
+            {
+                mapVisible = false;
+                StateHasChanged();
             }
             module ??= await Script.InvokeAsync<IJSObjectReference>("import", UiCancellation, "./editor-navigation.js").ConfigureAwait(true);
             reference ??= DotNetObjectReference.Create(this);

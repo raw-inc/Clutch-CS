@@ -18,20 +18,37 @@
 @using ReArtWord.Contents.BackgroundService.Contracts.Cluster
 @using ReArtWord.Contents.BackgroundService.Client.Overview
 <main class="page dashboard-page">
-    <div class="page-title"><h1>@Ui["Dashboard"]</h1><div class="toolbar"><button class="quiet" @onclick="RefreshAsync"><UiIcon Name="refresh" />@Ui["Refresh"]</button><button @onclick="()=>membershipOpen=true" disabled="@(!HasSelection)"><UiIcon Name="settings" />@Ui["Peer membership"]</button></div></div>
-    @if(fleetUpdates is not null){<FleetUpdateBanner Updates="@fleetUpdates.Activities" OwnedOperations="@(fleetUpdates.Updates.Select(update=>update.OperationId).ToArray())" StaleOperations="@fleetUpdates.StaleOperations" Unavailable="@fleetUpdates.Unavailable" ShowDetails='()=>SelectViewAsync("Settings & maintenance")' />}
+    <div class="page-title"><h1>@Ui["Dashboard"]</h1><div class="toolbar"><button class="quiet" @onclick="RefreshAsync"><UiIcon Name="refresh" /><span class="control-label">@Ui["Refresh"]</span></button><button @onclick="()=>membershipOpen=true" disabled="@(!HasSelection)"><UiIcon Name="user" /><span class="control-label">@Ui["Peer membership"]</span></button></div></div>
+    @if(fleetUpdates is not null){<FleetUpdateBanner Updates="@fleetUpdates.Activities" OwnedOperations="@(fleetUpdates.Updates.Select(update=>update.OperationId).ToArray())" StaleOperations="@fleetUpdates.StaleOperations" Unavailable="@fleetUpdates.Unavailable" ShowDetails='()=>{settingsTopic=UpdateTopic;return SelectViewAsync("Settings & maintenance");}' />}
     <p class="notice" role="status">@Ui[message]</p>
-    <div class="tabs" role="tablist" aria-label='@Ui["Dashboard views"]'>
-        @foreach(var item in new[]{"All clusters","Peer list","Selected cluster","Execution & processes","Applications","Script packages","Snapshots","Resolve conflicts","Safety","Settings & maintenance","Operations"}){<button class="@(view==item?"active":string.Empty)" role="tab" aria-selected="@(view==item)" disabled="@(!HasSelection && item is not ("All clusters" or "Peer list" or "Settings & maintenance"))" @onclick="()=>SelectViewAsync(item)">@Ui[item]</button>}
-    </div>
+    <div class="dashboard-workspace">
+    <nav class="dashboard-sections" aria-label='@Ui["Dashboard views"]'>
+        <div class="tabs workspace-index" role="tablist" aria-label='@Ui["Dashboard views"]' aria-orientation="vertical">
+            @foreach (var item in views)
+            {
+                <button class="@(view == item.Name ? "active" : null)" role="tab" tabindex="@(view == item.Name ? 0 : -1)" aria-controls="dashboard-view" aria-selected="@(view == item.Name ? "true" : "false")" disabled="@ViewUnavailable(item.Name)" @onclick="()=>SelectViewAsync(item.Name)">
+                    <UiIcon Name="@item.Icon" /><span class="control-label">@Ui[item.Name]</span>@if(item.Name=="Resolve conflicts" && conflictCount>0 && conflictTarget==Connection.Current?.InstanceId){<span class="badge warn">@conflictCount</span>}
+                </button>
+            }
+        </div>
+        <label class="compact-view">@Ui["Dashboard views"]
+            <select value="@view" @onchange="e=>SelectViewAsync(e.Value?.ToString() ?? view)">
+                @foreach (var item in views)
+                {
+                    <option value="@item.Name" disabled="@ViewUnavailable(item.Name)">@(item.Name == "Resolve conflicts" && conflictCount > 0 && conflictTarget == Connection.Current?.InstanceId ? Ui[item.Name] + " (" + conflictCount + ")" : Ui[item.Name])</option>
+                }
+            </select>
+        </label>
+    </nav>
+    <div class="dashboard-content" id="dashboard-view" role="tabpanel" aria-label="@Ui[view]">
     <div hidden="@(view!="All clusters")"><AllClustersOverview @ref="allOverview" Active='@(view=="All clusters")' /></div>
     @if(view=="Peer list"){<PeerList @ref="peerList" />}
     <div hidden="@(view!="Selected cluster")">
         <DashboardOverview @ref="overview" Active='@(view=="Selected cluster")' />
         @if(!ListIsCurrent){<p class="footer-note">@Ui["Workflow and execution lists have not been retrieved for this connection."]</p>}
         <div hidden="@(!ListIsCurrent)">
-        <section class="section"><div class="section-heading"><h2>@Ui["Workflows"]</h2><a class="small" href="/editor">@Ui["Open Editor →"]</a></div><div class="table-wrap"><table><thead><tr><th>@Ui["Name"]</th><th>@Ui["Activation"]</th><th>@Ui["Saved / effective revision"]</th><th>@Ui["Actions"]</th></tr></thead><tbody>
-            @foreach(var item in workflows){<tr><td><a href="@("/editor?workflow="+Uri.EscapeDataString(item.Id!))">@item.Name</a><p class="small muted">@item.DetailReason</p></td><td><span class="badge @(item.EffectiveRevision==item.SavedRevision?"good":"warn")">@(item.LocalOnly ? Ui["Local · not shared"] : item.EffectiveRevision==item.SavedRevision ? Ui["Applied"] : Ui["Unapplied changes"])</span></td><td class="mono muted">@ShortRevision(item.SavedRevision)<br />@ShortRevision(item.EffectiveRevision)</td><td><button @onclick="()=>RunAsync(item)" disabled="@(item.Id is null)"><UiIcon Name="play" />@Ui["Run once"]</button>@if(item.EffectiveRevision!=item.SavedRevision){<button @onclick="()=>activation=item" disabled="@(item.Id is null)">@Ui["Apply saved revision"]</button>}</td></tr>}
+        <section class="section"><div class="section-heading"><h2>@Ui["Workflows"]</h2><a class="small" href="/editor"><span class="control-label">WorkflowEditor</span><UiIcon Name="arrow-right" /></a></div><div class="table-wrap workflow-records"><table class="record-table"><thead><tr><th>@Ui["Name"]</th><th>@Ui["Activation"]</th><th>@Ui["Saved / effective revision"]</th><th>@Ui["Actions"]</th></tr></thead><tbody>
+            @foreach(var item in workflows){<tr><td class="workflow-name" data-field='@Ui["Name"]'><a href="@("/editor?workflow="+Uri.EscapeDataString(item.Id!))">@item.Name</a><p class="small muted">@item.DetailReason</p></td><td data-field='@Ui["Activation"]'><span class="badge @(item.EffectiveRevision==item.SavedRevision?"good":"warn")">@(item.LocalOnly ? Ui["Local · not shared"] : item.EffectiveRevision==item.SavedRevision ? Ui["Applied"] : Ui["Unapplied changes"])</span></td><td data-field='@Ui["Saved / effective revision"]' class="mono muted">@if(item.SavedRevision == item.EffectiveRevision){<span title="@item.SavedRevision"><span class="workflow-revision-caption">@Ui["Saved and applied"] · </span>@ShortRevision(item.SavedRevision)</span>}else{<span>@Ui["Saved"]: @ShortRevision(item.SavedRevision)</span><br /><span>@Ui["Effective"]: @ShortRevision(item.EffectiveRevision)</span>}</td><td class="workflow-row-actions" data-field='@Ui["Actions"]'><button @onclick="()=>RunAsync(item)" disabled="@(item.Id is null)"><UiIcon Name="play" /><span class="control-label">@Ui["Run once"]</span></button>@if(item.EffectiveRevision!=item.SavedRevision){<button @onclick="()=>activation=item" disabled="@(item.Id is null)">@Ui["Apply saved revision"]</button>}</td></tr>}
         </tbody></table>@if(workflows.Count==0){<div class="empty"><UiIcon Name="nodes" />@Ui["No saved workflows."]</div>}</div>@if(workflowCursor is not null){<button class="section" @onclick="NextWorkflowsAsync">@Ui["Next workflow page"]</button>}</section>
         <details class="secondary-details"><summary>@Ui["Recent executions"] <span class="count">@executions.Count</span></summary>@foreach(var execution in executions){<details><summary>@FormatTime(execution.Report?.StartedAt??execution.Summary?.StartedAt) · @(execution.Report?.WorkflowId??execution.Summary?.WorkflowId) · @(execution.Report?.Outcome??execution.Summary?.Outcome)</summary><p class="notice">@execution.DetailReason</p><PcSelectionDetails Report="execution.Report" /><JsonDetails Value="execution" /></details>}@if(executionCursor is not null){<button @onclick="NextExecutionsAsync">@Ui["Next execution page"]</button>}</details>
         </div>
@@ -40,35 +57,103 @@
         <ActiveRunsPanel @key="(Api.SelectedClusterId, Api.SelectedPeerId, Connection.Current?.InstanceId)" />
         @if(Connection.Current is {} running)
         {
-            <div class="execution-telemetry">
-            @if(running.Schedules is {} schedules)
-            {
-                <p class="footer-note">@Ui.Format("Retained scheduled inputs: {0}; results awaiting confirmation: {1}.", schedules.LocallyManagedInputs, schedules.UnconfirmedResults)</p>
-            }
-            @if(running.ScheduleProblem is {} scheduleProblem)
-            {
-                <p class="footer-note">@Ui["Last schedule problem"]: @scheduleProblem</p>
-            }
-            @if(running.Events is {} eventStats)
-            {
-                <p class="footer-note">@Ui.Format("Hooks: {0} subscriptions, {1} events, {2} dropped deliveries, {3} omitted values.", eventStats.Subscribers, eventStats.Published, eventStats.DroppedDeliveries, eventStats.OmittedValues) @eventStats.LastProblem</p>
-            }
-            </div>
-            <section><div class="section-heading"><h2>@Ui["Sources"]</h2><span>@Ui["Manage listening sources"]</span></div><div class="table-wrap"><table><thead><tr><th>Workflow / Node</th><th>@Ui["State"]</th><th>@Ui["Reason"]</th><th>@Ui["Actions"]</th></tr></thead><tbody>@foreach(var source in running.Sources){<tr><td>@source.WorkflowId / @source.NodeId</td><td>@source.Status.State</td><td>@source.Status.ReasonCode</td><td><button disabled="@(!source.CanStop)" @onclick="()=>StopSourceAsync(source,false)">@Ui["Stop intake"]</button><button disabled="@(!source.CanStop)" @onclick="()=>StopSourceAsync(source,true)">@Ui["Cancel accepted work too"]</button></td></tr>}</tbody></table>@if(running.Sources.Count==0){<div class="empty">@Ui["No listening sources."]</div>}</div><p class="footer-note">@Ui["Stopping intake allows accepted work to finish. It does not confirm or undo external side effects."]</p></section>
+            <clutch-card-rows><div class="execution-telemetry">
+                @if (running.Schedules is {} schedules)
+                {
+                    <section class="card">
+                        <h2>@Ui["Scheduled inputs"]</h2>
+                        <dl class="stat-list">
+                            <div><dt>@Ui["Retained inputs"]</dt><dd>@schedules.LocallyManagedInputs</dd></div>
+                            <div><dt>@Ui["Results awaiting confirmation"]</dt><dd>@schedules.UnconfirmedResults</dd></div>
+                        </dl>
+                    </section>
+                }
+                @if (running.Events is {} events)
+                {
+                    <section class="card">
+                        <h2>@Ui["Event hooks"]</h2>
+                        <dl class="stat-list">
+                            <div><dt>@Ui["Subscriptions"]</dt><dd>@events.Subscribers</dd></div>
+                            <div><dt>@Ui["Published events"]</dt><dd>@events.Published</dd></div>
+                            <div><dt>@Ui["Dropped deliveries"]</dt><dd>@events.DroppedDeliveries</dd></div>
+                            <div><dt>@Ui["Omitted values"]</dt><dd>@events.OmittedValues</dd></div>
+                        </dl>
+                        @if (!string.IsNullOrEmpty(events.LastProblem)){<p class="notice">@events.LastProblem</p>}
+                    </section>
+                }
+                @if (running.ScheduleProblem is {} scheduleProblem)
+                {
+                    <p class="notice">@Ui["Last schedule problem"]: @scheduleProblem</p>
+                }
+            </div></clutch-card-rows>
+            <section><div class="section-heading"><h2>@Ui["Sources"]</h2><span>@Ui["Inputs waiting for events"]</span></div>@if (running.Sources.Count > 0){<div class="table-wrap"><table class="record-table"><thead><tr><th>Workflow / Node</th><th>@Ui["State"]</th><th>@Ui["Reason"]</th><th>@Ui["Actions"]</th></tr></thead><tbody>@foreach(var source in running.Sources){<tr><td data-field='Workflow / Node'>@source.WorkflowId / @source.NodeId</td><td data-field='@Ui["State"]'>@source.Status.State</td><td data-field='@Ui["Reason"]'>@source.Status.ReasonCode</td><td data-field='@Ui["Actions"]'><button disabled="@(!source.CanStop)" @onclick="()=>StopSourceAsync(source,false)">@Ui["Stop intake"]</button><button disabled="@(!source.CanStop)" @onclick="()=>StopSourceAsync(source,true)">@Ui["Cancel accepted work too"]</button></td></tr>}</tbody></table></div>}else{<div class="empty"><UiIcon Name="history" />@Ui["No listening sources."]</div>}<p class="footer-note">@Ui["Stopping intake allows accepted work to finish. It does not confirm or undo external side effects."]</p></section>
         }
-        <div class="section"><ResourcePanel @ref="resourcePanel" /></div>
+        <ResourcePanel @ref="resourcePanel" />
     </div>}
     @if(view=="Applications" && HasSelection){<div class="dashboard-operations"><ProcessPanel @ref="processPanel" @key="(Api.SelectedClusterId, Api.SelectedPeerId)" /></div>}
     @if(view=="Script packages" && HasSelection){<div class="dashboard-operations"><ScriptPackagePanel @key="(Api.SelectedClusterId, Api.SelectedPeerId, Connection.Current?.InstanceId)" /></div>}
     @if(view=="Snapshots" && HasSelection){<div class="dashboard-operations"><SnapshotPanel /></div>}
-    @if(view=="Resolve conflicts" && HasSelection){<div class="dashboard-operations"><ConflictPanel /><DetachedWorkflowPanel /></div>}
+    @if(view=="Resolve conflicts" && HasSelection){<div class="dashboard-operations"><ConflictPanel CountChanged="n=>{conflictCount=n;conflictTarget=Connection.Current?.InstanceId;}" /><DetachedWorkflowPanel /></div>}
     @if(view=="Safety" && HasSelection){<div class="dashboard-operations"><SafetyPanel /></div>}
-    @if(view=="Settings & maintenance"){<div class="dashboard-operations"><DisplaySettingsPanel /><ExperimentalSettingsPanel />@if(fleetUpdates is not null){<FleetUpdatePanel Updates="@fleetUpdates.Updates" ProgressUnavailable="@fleetUpdates.Unavailable" RefreshProgress="RefreshAsync" />}</div>}
-    @if(view=="Settings & maintenance" && HasSelection){<div class="dashboard-operations"><ConfigurationPanel /><details class="secondary-details"><summary>@Ui["Inspect and edit internal data"]</summary><InternalDataPanel /></details><details class="secondary-details"><summary>@Ui["Application updates"]</summary><UpdatePanel /></details><details class="secondary-details"><summary>@Ui["Connection secrets"]</summary><div class="toolbar"><button @onclick="SecretsAsync">@Ui["List registered names"]</button><button @onclick="()=>secretOpen=true">@Ui["Register a secret"]</button></div>@if(secretNames.Count!=0){<p>@string.Join(", ",secretNames)</p>}</details></div>}
+    @if (view == "Settings & maintenance")
+    {
+        <div class="settings-picker">
+            <h2>@Ui["Settings & maintenance"]</h2>
+            <fieldset class="choice-strip" aria-label='@Ui["Settings & maintenance"]'>
+                @foreach (var topic in settingsTopics)
+                {
+                    <label><input type="radio" name="maintenance-topic" checked="@(settingsTopic == topic)" disabled="@(!HasSelection && (topic == ClusterTopic || topic == ServiceTopic))" @onchange="()=>settingsTopic=topic" /><span>@Ui[topic]</span></label>
+                }
+            </fieldset>
+            <label class="settings-topic-compact">@Ui["Settings category"]
+                <select @bind="settingsTopic">
+                    @foreach(var topic in settingsTopics)
+                    {
+                        <option value="@topic" disabled="@(!HasSelection && (topic==ClusterTopic || topic==ServiceTopic))">@Ui[topic]</option>
+                    }
+                </select>
+            </label>
+        </div>
+        <clutch-card-rows><div class="dashboard-operations settings-browser" hidden="@(settingsTopic != BrowserTopic)">
+            <DisplaySettingsPanel /><ExperimentalSettingsPanel />
+        </div></clutch-card-rows>
+        <div class="dashboard-operations" hidden="@(settingsTopic != UpdateTopic)">
+            @if (fleetUpdates is not null)
+            {
+                <FleetUpdatePanel Updates="@fleetUpdates.Updates" ProgressUnavailable="@fleetUpdates.Unavailable" RefreshProgress="RefreshAsync" />
+            }
+            @if (HasSelection){<UpdatePanel />}
+        </div>
+        @if (HasSelection)
+        {
+            <div class="dashboard-operations" hidden="@(settingsTopic != ClusterTopic)">
+                <ConfigurationPanel /><ClusterArchivePanel />
+            </div>
+            <div class="dashboard-operations" hidden="@(settingsTopic != ServiceTopic)">
+                <section class="card"><h2>@Ui["Connection secrets"]</h2><p class="small muted">@Ui["Manage external credentials by name."]</p>
+                    <div class="toolbar"><button @onclick="SecretsAsync">@Ui["List registered names"]</button><button @onclick="()=>secretOpen=true">@Ui["Register a secret"]</button></div>
+                    @if(secretNames.Count!=0){<p>@string.Join(", ",secretNames)</p>}
+                </section>
+                <details class="secondary-details internal-data-card"><summary>@Ui["Inspect and edit internal data"]</summary><InternalDataPanel /></details>
+            </div>
+        }
+    }
     @if(view=="Operations" && HasSelection){<div class="dashboard-operations"><OperationList /></div>}
     @if(result is not null){<JsonDetails Value="result" Title='@Ui["Actual operation result"]' />}
+    </div>
+    </div>
 </main>
-<Modal Open="membershipOpen" Title='@Ui["Peer membership"]' Close="()=>membershipOpen=false"><p>@Ui.Format("Target: {0}",Connection.Current?.PeerId)</p><p class="muted">@Ui["A detached peer stays outside normal cluster execution until explicitly rejoined."]</p><div class="toolbar"><button @onclick="DetachAsync">@Ui["Detach this peer"]</button><button @onclick="RejoinAsync">@Ui["Rejoin"]</button></div></Modal>
+<Modal Open="membershipOpen" Title='@Ui["Peer membership"]' Close="()=>{membershipOpen=false;confirmDetach=false;}">
+    <ChildContent>
+        <p>@Ui.Format("Target: {0}",Connection.Current?.PeerId) · <span class="badge">@Ui[MembershipStatus == EPeerStatus.Ready ? "Participating in this cluster" : MembershipStatus?.ToString()??"Unconfirmed"]</span></p>
+        @if(confirmDetach){<p class="notice warning"><UiIcon Name="warning" /><span>@Ui.Format("Do not process new work until rejoined: {0}", Connection.Current?.PeerId)</span></p>}
+        else{<p>@Ui["A detached peer stays outside normal cluster execution until explicitly rejoined."]</p>}
+    </ChildContent>
+    <Actions>
+        @if(MembershipStatus==EPeerStatus.Detached){<button class="primary" @onclick="RejoinAsync">@Ui["Rejoin"]</button>}
+        else{<button class="@(confirmDetach ? "danger confirm-action" : "danger")" disabled="@(MembershipStatus is null)" @onclick="()=>{if(confirmDetach){confirmDetach=false;return DetachAsync();}confirmDetach=true;return Task.CompletedTask;}"><UiIcon Name="leave" /><span class="control-label">@Ui[confirmDetach?"Confirm detachment":"Detach this peer"]</span></button>}
+    </Actions>
+</Modal>
 <Modal Open="(activation is not null)" Title='@Ui["Apply saved revision to future inputs"]' Close="()=>activation=null">
 @if(activation is not null){<ConfigurationImpactPanel @key="(activation.Id,activation.SavedRevision,Api.SelectedClusterId,Api.SelectedPeerId)" WorkflowId="@(activation.Id!)" Revision="@activation.SavedRevision" Changed="value=>activationImpact=value" />}
 <p>@Ui.Format("Use the saved revision of {0}. Started work keeps its original revision.",activation?.Name)</p>

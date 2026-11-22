@@ -58,16 +58,18 @@ public sealed class TextAndSubworkflowEditorTests
     [Fact]
     public async Task WorkflowTabsRenderKindBeforeTheirNames()
     {
-        EditorDocument model = new(new(new BrowserTestRuntime()));
+        BrowserTestRuntime browser = new();
+        EditorDocument model = new(new(browser));
         NodeDefinition input = new("input", SubworkflowInterface.InputType, JsonSerializer.SerializeToElement(new { name = "text", valueType = new { type = "string" } }));
         WorkflowDefinition child = new("child", "Child recipe", [input], []);
         await model.LoadAsync(new(child, "revision", DateTimeOffset.UtcNow, EActivationPolicy.Auto));
         ServiceCollection services = new();
+        services.AddSingleton<Microsoft.JSInterop.IJSRuntime>(browser);
         services.AddLogging();
         services.AddSingleton(model);
-        services.AddSingleton(new ReArtWord.Contents.BackgroundService.Client.Services.BrowserStorage(new BrowserTestRuntime()));
+        services.AddSingleton(new ReArtWord.Contents.BackgroundService.Client.Services.BrowserStorage(browser));
         services.AddSingleton(new EditorDiagnostics());
-        services.AddSingleton(new UiText(new(new BrowserTestRuntime())));
+        services.AddSingleton(new UiText(new(browser)));
         using ServiceProvider provider = services.BuildServiceProvider();
         HtmlRenderer renderer = new(provider, provider.GetRequiredService<ILoggerFactory>());
         await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable lifetime = renderer.ConfigureAwait(true);

@@ -1,3 +1,4 @@
+import { setControlLabel } from './ui-icons.js';
 import { createTerminalStream } from './terminal-stream.js';
 import { createTerminalLayout } from './terminal-layout.js';
 import { createTerminalKeys } from './terminal-keys.js';
@@ -13,30 +14,57 @@ export async function terminalView(root, ctx)
     const experimental = experimentalEnabled();
     root.className = 'terminal-workspace';
     const sidebar = document.createElement('aside');
-    sidebar.className = 'remote-sidebar';
+    sidebar.className = 'remote-sidebar terminal-sidebar';
+    const sidebarDetails = document.createElement('details'), sidebarSummary = document.createElement('summary');
+    sidebarDetails.className = 'terminal-sources';
+    sidebarDetails.open = true;
+    sidebarSummary.textContent = ctx.t('Peers and shared sessions', 'ピアと共有セッション');
+    sidebarDetails.append(sidebarSummary, sidebar);
+    const sources = document.createElement('clutch-scroll-area');
+    sources.className = 'terminal-source-scroll';
+    sources.append(sidebarDetails);
+    const narrow = window.matchMedia('(max-width: 650px)');
+    narrow.addEventListener('change', () =>
+    {
+        sidebarDetails.open = !narrow.matches || !session;
+    }, { signal: ctx.signal });
     const peersTree = document.createElement('div');
     const sessions = document.createElement('div');
+    const peerHeading = document.createElement('div'), sessionHeading = document.createElement('div');
+    peerHeading.className = sessionHeading.className = 'terminal-sidebar-heading';
     const panel = document.createElement('section');
     panel.className = 'terminal-panel';
     const toolbar = document.createElement('div');
-    toolbar.className = 'toolbar tool-toolbar terminal-toolbar';
+    toolbar.className = 'toolbar tool-toolbar terminal-toolbar tool-connection';
     const host = document.createElement('div');
     host.className = 'terminal-screen';
     const note = document.createElement('p');
     note.className = 'tool-status terminal-target';
     note.textContent = ctx.t('Select a peer to start a shell, or take over a shared session.', 'ピアを選んでシェルを開始、または共有セッションへ接続します。');
-    sidebar.append(sessions, peersTree);
-    panel.append(note, host);
-    root.append(toolbar, sidebar, panel);
+    sidebar.append(peersTree, sessions);
+    const connectionState = document.createElement('span');
+    connectionState.className = 'badge terminal-state';
+    connectionState.setAttribute('role', 'status');
+    panel.append(connectionState, note, host);
+    root.append(toolbar, sources, panel);
     let peer, session, term, fit, stream, generation = 0, owner;
-    let disposed = false;
+    let disposed = false, terminationDialog;
     let peers = [], listTimer, listing, sessionSignature = '', peerSignature = '';
     const shellSelect = document.createElement('select');
     shellSelect.className = 'terminal-shell';
-    shellSelect.setAttribute('aria-label', ctx.t('New session shell', '新規セッションのShell'));
+    shellSelect.setAttribute('aria-label', ctx.t('New session shell', '新しいセッションのシェル'));
     const shellLabel = document.createElement('label');
-    shellLabel.textContent = 'Shell';
+    shellLabel.className = 'terminal-shell-field';
+    shellLabel.textContent = ctx.t('Shell', 'シェル');
     shellLabel.append(shellSelect);
+    const shellPath = document.createElement('p');
+    shellPath.className = 'terminal-shell-path';
+    shellPath.id = 'terminal-shell-path';
+    shellSelect.setAttribute('aria-describedby', shellPath.id);
+    const adminHint = document.createElement('p');
+    adminHint.className = 'terminal-launch-hint';
+    adminHint.id = 'terminal-launch-hint';
+    adminHint.hidden = true;
     const shellCatalogs = new Map();
     let shellTarget = '', shells = [], shellLoading = false, shellGeneration = 0;
     let capabilities = null, capabilityTarget = '', capabilityRequest = null, savingTokenPolicy = false;
@@ -47,8 +75,103 @@ export async function terminalView(root, ctx)
         focus: () => term?.focus(),
 
         applicationCursor: () => !!term?.modes?.applicationCursorKeysMode });
-    panel.append(keys.element);
+    const keyScroll = document.createElement('clutch-scroll-area');
+    keyScroll.className = 'terminal-key-scroll';
+    keyScroll.dataset.scrollAxis = 'inline';
+    keyScroll.append(keys.element);
+    panel.append(keyScroll);
     host.addEventListener('paste', () => keys.reset(), { capture: true, signal: ctx.signal });
+
+    /** 終了するセッションを確定し、取消時には接続を維持します。
+     * @returns 利用者が対象セッションの終了を確定した場合はtrueです。
+     */
+    function confirmTermination(target, value, endLabel)
+    {
+        const dialog = document.createElement('dialog'), heading = document.createElement('div'), title = document.createElement('h2');
+        const scroll = document.createElement('clutch-scroll-area'), body = document.createElement('div'), footer = document.createElement('form');
+        dialog.className = 'dialog dialog-compact terminal-termination';
+        title.textContent = endLabel;
+        dialog.setAttribute('aria-label', endLabel);
+        heading.className = 'dialog-heading';
+        const close = ctx.button(ctx.t('Close dialog', '閉じる'), () => dialog.close());
+        close.className = 'quiet icon-button';
+        close.setAttribute('aria-label', close.textContent);
+        close.replaceChildren(ctx.icon('close'));
+        heading.append(title, close);
+        body.className = 'dialog-content';
+        const impact = document.createElement('p'), description = document.createElement('span');
+        impact.className = 'notice warning';
+        description.textContent = ctx.t('This closes the shared session and interrupts commands still running in it.', '共有セッションを終了します。実行中のコマンドも中断されます。');
+        impact.append(ctx.icon('warning'), description);
+        const hostName = document.createElement('p'), sessionName = document.createElement('p');
+        hostName.textContent = `${target.clusterId} / ${target.hostId} / ${target.peerId}`;
+        sessionName.className = 'terminal-confirm-session';
+        const label = document.createElement('span');
+        label.textContent = summary(value);
+        sessionName.append(label);
+        if (samePeer(peer, target) && session?.sessionId === value.sessionId)
+        {
+            const connected = document.createElement('span');
+            connected.className = 'badge good';
+            connected.textContent = ctx.t('Connected', '接続中');
+            sessionName.append(connected);
+            description.textContent = ctx.t('This closes the shared session and interrupts commands still running in it. This screen will also disconnect.', '共有セッションを終了すると、実行中のコマンドが中断され、この画面の接続も切断されます。');
+        }
+        const details = document.createElement('details'), titleId = document.createElement('summary'), identifier = document.createElement('code');
+        details.className = 'secondary-details';
+        titleId.textContent = ctx.t('Session ID', 'セッションID');
+        identifier.textContent = value.sessionId;
+        details.append(titleId, identifier);
+        body.append(hostName, sessionName, impact, details);
+        scroll.append(body);
+        footer.className = 'toolbar';
+        footer.method = 'dialog';
+        const cancel = document.createElement('button'), confirm = document.createElement('button');
+        cancel.textContent = ctx.t('Cancel', 'キャンセル');
+        cancel.value = 'cancel';
+        cancel.autofocus = true;
+        confirm.textContent = endLabel;
+        const terminate = 'terminate';
+        confirm.value = terminate;
+        confirm.className = 'danger confirm-action';
+        setControlLabel(confirm, ctx.icon('stop'));
+        footer.append(cancel, confirm);
+        dialog.append(heading, scroll, footer);
+        root.append(dialog);
+        terminationDialog = dialog;
+        return new Promise(resolve =>
+        {
+            dialog.addEventListener('close', () =>
+            {
+                terminationDialog = null;
+                dialog.remove();
+                resolve(dialog.returnValue === terminate);
+            }, { once: true });
+            dialog.showModal();
+        });
+    }
+
+    /** xtermはCanvasに描画するため、端末面に適用された配色を渡します。
+     * @returns 文字・背景・カーソルの表示色です。
+     */
+    function terminalTheme()
+    {
+        const style = window.getComputedStyle(host);
+        return { background: style.backgroundColor, foreground: style.color, cursor: style.caretColor };
+    }
+
+    /** セッションとスクロール位置を保ったまま配色を切り替えます。 */
+    function refreshTheme()
+    {
+        if (term)
+        {
+            term.options.theme = terminalTheme();
+        }
+    }
+
+    const scheme = window.matchMedia('(prefers-color-scheme: dark)');
+    scheme.addEventListener('change', refreshTheme, { signal: ctx.signal });
+    window.addEventListener('clutch-theme-change', refreshTheme, { signal: ctx.signal });
     const sessionLists = new Map();
     const layout = createTerminalLayout(root, host, () => fit?.fit(), ctx.signal);
 
@@ -101,9 +224,7 @@ export async function terminalView(root, ctx)
         }
         sessionSignature = signature;
         sessions.replaceChildren();
-        const title = document.createElement('h2');
-        title.textContent = ctx.t('Shared sessions', '共有セッション');
-        sessions.append(title);
+        sessions.append(sessionHeading);
         const hint = document.createElement('p');
         hint.className = 'muted';
         hint.textContent = ctx.t('All discovered peers · automatic refresh', '全検出ピア · 自動更新');
@@ -131,31 +252,63 @@ export async function terminalView(root, ctx)
             {
                 total++;
                 const row = document.createElement('div');
-                row.className = 'terminal-session' + (samePeer(peer, selected) && session?.sessionId === value.sessionId ? ' selected' : '');
+                const current = samePeer(peer, selected) && session?.sessionId === value.sessionId;
+                row.className = 'terminal-session' + (current ? ' selected' : '');
+                if (current)
+                {
+                    row.setAttribute('aria-current', 'true');
+                }
                 row.dataset.peer = peerKey(selected);
                 const name = document.createElement('span');
                 name.textContent = summary(value);
                 row.append(name);
-                const claim = ctx.button(ctx.t('Take over', '接続を引き継ぐ'), () => connectAsync(value, false, selected));
-                const terminate = ctx.button(ctx.t('Terminate', '明示終了'), async () =>
+                if (current)
                 {
+                    const status = document.createElement('span'), indicator = document.createElement('span');
+                    status.className = 'terminal-connected';
+                    indicator.className = 'badge good';
+                    indicator.setAttribute('data-status-label', '');
+                    indicator.textContent = ctx.t('Connected', '接続中');
+                    status.append(indicator);
+                    row.append(status);
+                }
+                const claim = current ? null : ctx.button(ctx.t('Take over', '引き継ぐ'), () => connectAsync(value, false, selected));
+                claim?.setAttribute('aria-label', ctx.t('Take over', '接続を引き継ぐ'));
+                const endLabel = ctx.t('End session', 'セッションを終了');
+                const terminate = ctx.button(ctx.t('End', '終了'), async () =>
+                {
+                    if (!await confirmTermination(selected, value, endLabel) || disposed || ctx.signal.aborted)
+                    {
+                        return;
+                    }
                     if (samePeer(peer, selected) && session?.sessionId === value.sessionId)
                     {
                         disconnect();
                     }
-                    await ctx.api('/api/terminal/close', selected, { sessionId: value.sessionId });
+                    await ctx.api('/api/v2/terminal/close', selected, { sessionId: value.sessionId });
                     await list();
                 });
-                claim.disabled = terminate.disabled = item.failed;
-                row.append(claim, terminate);
+                terminate.className = 'danger terminal-end-session';
+                terminate.setAttribute('aria-label', endLabel);
+                terminate.title = endLabel;
+                setControlLabel(terminate, ctx.icon('stop'));
+                terminate.disabled = item.failed;
+                if (claim)
+                {
+                    claim.classList.add('terminal-claim');
+                    claim.disabled = item.failed;
+                    row.append(claim);
+                }
+                row.append(terminate);
                 sessions.append(row);
             }
         }
+        sessionTitle.textContent = ctx.t('Shared sessions', '共有セッション') + ' · ' + total;
         if (!total)
         {
             const empty = document.createElement('p');
             empty.className = 'remote-empty';
-            empty.textContent = ctx.t('No sessions confirmed. Select a peer to start a shell.', '確認できたセッションはありません。ピアを選択してシェルを開始できます。');
+            empty.textContent = ctx.t('No shared sessions.', '共有セッションはありません。');
             sessions.append(empty);
         }
         if (failed)
@@ -231,13 +384,17 @@ export async function terminalView(root, ctx)
         await selectPeer();
         const run = generation;
         owner = created ? value.owner : crypto.randomUUID();
-        const claimed = created ? value : await ctx.api('/api/terminal/claim', peer, { sessionId: value.sessionId, owner });
+        const claimed = created ? value : await ctx.api('/api/v2/terminal/claim', peer, { sessionId: value.sessionId, owner });
         if (run !== generation || disposed)
         {
             return;
         }
         session = claimed;
-        term = new window.Terminal({ cursorBlink: true, scrollback: 3000, fontSize: 14, theme: { background: '#101114', foreground: '#e5e7eb', cursor: '#91b8ee', selectionBackground: '#354a66' } });
+        if (narrow.matches)
+        {
+            sidebarDetails.open = false;
+        }
+        term = new window.Terminal({ cursorBlink: true, scrollback: 3000, fontSize: 14, fontFamily: 'Consolas, "Liberation Mono", monospace', minimumContrastRatio: 4.5, theme: terminalTheme() });
         const surface = document.createElement('div');
         surface.className = 'terminal-surface';
         host.append(surface);
@@ -341,9 +498,7 @@ export async function terminalView(root, ctx)
         }
         peerSignature = signature;
         peersTree.replaceChildren();
-        const title = document.createElement('h2');
-        title.textContent = ctx.t('Clusters & peers', 'クラスタ・ピア');
-        peersTree.append(title);
+        peersTree.append(peerHeading);
         if (!peers.length)
         {
             const empty = document.createElement('p');
@@ -369,8 +524,9 @@ export async function terminalView(root, ctx)
                     updateControls();
                     renderSessions();
                 });
+                button.className = 'row-button';
                 button.dataset.peer = peerKey(target);
-                button.prepend(ctx.icon('monitor'));
+                setControlLabel(button, ctx.icon('monitor'));
                 branch.append(button);
             }
             peersTree.append(branch);
@@ -383,11 +539,7 @@ export async function terminalView(root, ctx)
      */
     function selectPeer()
     {
-        if (peer)
-        {
-            note.textContent = `${peer.clusterId} / ${peer.hostId} / ${peer.peerId}`;
-        }
-        peersTree.querySelectorAll('button').forEach(button => button.classList.toggle('selected', button.dataset.peer === peerKey(peer)));
+        peersTree.querySelectorAll('button[data-peer]').forEach(button => button.classList.toggle('selected', button.dataset.peer === peerKey(peer)));
         return Promise.all([loadShellsAsync(), loadCapabilities()]);
     }
 
@@ -466,11 +618,21 @@ export async function terminalView(root, ctx)
         {
             const option = document.createElement('option');
             option.value = shell.path;
-            option.textContent = `${shell.name}${index === 0 ? ctx.t(' (default)', '（既定）') : ''} · ${shell.path}`;
+            const name = shell.name + (index === 0 ? ctx.t(' (default)', '（既定）') : '');
+            option.textContent = shells.some(item => item !== shell && item.name === shell.name) ? name + ' · ' + shell.path : name;
             shellSelect.append(option);
         }
         shellSelect.value = selected;
-        shellSelect.title = selected || message;
+        updateShellPath(message);
+    }
+
+    /** 選択したシェルのパスを、選択欄の幅に制限されない場所に表示します。 */
+    function updateShellPath(message = '')
+    {
+        const path = shellSelect.value;
+        shellPath.textContent = path;
+        shellPath.hidden = !path;
+        shellSelect.title = path || message;
     }
 
     /** シェル一覧の件数と必須項目を検証します。 */
@@ -496,7 +658,7 @@ export async function terminalView(root, ctx)
         shellTarget = key;
         shells = [];
         shellLoading = !!selected;
-        showShells(selected ? ctx.t('Loading shells…', 'Shellを取得中…') : ctx.t('Select a peer', 'ピアを選択'));
+        showShells(selected ? ctx.t('Loading shells…', 'シェルを取得中…') : ctx.t('Select a peer', 'ピアを選択'));
         updateControls();
         if (!selected)
         {
@@ -547,7 +709,7 @@ export async function terminalView(root, ctx)
         {
             catalog.selected = shellSelect.value;
         }
-        shellSelect.title = shellSelect.value;
+        updateShellPath();
     };
 
     /** 選択された内容をクリップボードへコピーします。
@@ -600,14 +762,14 @@ export async function terminalView(root, ctx)
     /** 入力された条件から新しい対象を作成します。
      * @returns 呼出し元が使用する値です。
      */
-    const create = elevated => ctx.button(elevated ? ctx.t('＋ Administrator', '＋ 管理者実行') : ctx.t('＋ User session', '＋ ユーザー実行'), async () =>
+    const create = elevated => ctx.button(elevated ? ctx.t('Administrator', '管理者実行') : ctx.t('User session', 'ユーザー実行'), async () =>
     {
         const selected = peer, run = generation, shell = shellSelect.value;
         if (disposed || ctx.signal.aborted || !selected || shellLoading || !shells.some(item => item.path === shell) || (elevated ? capabilities?.administratorAvailable !== true : capabilities?.userAvailable !== true))
         {
             return;
         }
-        const value = await ctx.api('/api/terminal/create', selected, { sessionId: crypto.randomUUID(), owner: crypto.randomUUID(), elevated, shell });
+        const value = await ctx.api('/api/v2/terminal/create', selected, { sessionId: crypto.randomUUID(), owner: crypto.randomUUID(), elevated, shell });
         if (selected === peer && run === generation && !disposed)
         {
             await connectAsync(value, true);
@@ -615,6 +777,7 @@ export async function terminalView(root, ctx)
     });
 
     const user = create(false), admin = create(true);
+    admin.setAttribute('aria-describedby', adminHint.id);
     user.className = 'primary';
     const copy = ctx.button(ctx.t('Copy', 'コピー'), copySelectionAsync), paste = ctx.button(ctx.t('Paste', '貼り付け'), pasteClipboardAsync);
     copy.title = 'Ctrl+Shift+C';
@@ -625,9 +788,9 @@ export async function terminalView(root, ctx)
         focus: () => term?.focus(),
 
         fit: () => layout.update() });
-    for (const [button, icon] of [[user, 'play'], [admin, 'settings'], [copy, 'copy'], [paste, 'clipboard'], [leave, 'stop']])
+    for (const [button, icon] of [[user, 'play'], [admin, 'settings'], [copy, 'copy'], [paste, 'clipboard'], [leave, 'close']])
     {
-        button.prepend(ctx.icon(icon));
+        setControlLabel(button, ctx.icon(icon));
     }
     const refreshSessions = ctx.button(ctx.t('Refresh sessions', 'セッション更新'), list);
     const tokenPolicy = experimental ? ctx.button('', async() =>
@@ -641,7 +804,7 @@ export async function terminalView(root, ctx)
         updateControls();
         try
         {
-            await ctx.api('/api/terminal/settings/save', selected, { strictUserToken: !current.strictUserToken, version: current.version });
+            await ctx.api('/api/v2/terminal/settings/save', selected, { strictUserToken: !current.strictUserToken, version: current.version });
             if (samePeer(selected, peer))
             {
                 ctx.say(ctx.t('Saved on this Core. Applies to new user sessions from every client.', 'このCoreに保存しました。全クライアントからの新規ユーザーセッションに適用します。'));
@@ -664,13 +827,14 @@ export async function terminalView(root, ctx)
         const unavailable = !peer || shellLoading || !shells.length || !peers.some(item => samePeer(item, peer));
         user.disabled = unavailable || capabilities?.userAvailable !== true;
         admin.disabled = unavailable || capabilities?.administratorAvailable !== true;
-        admin.textContent = capabilities?.administratorUsesSystem ? ctx.t('＋ SYSTEM session', '＋ SYSTEM実行') : ctx.t('＋ Administrator', '＋ 管理者実行');
-        admin.prepend(ctx.icon('settings'));
+        setControlLabel(admin, ctx.icon('shield'), capabilities?.administratorUsesSystem ? ctx.t('SYSTEM session', 'SYSTEM 実行') : ctx.t('Administrator', '管理者実行'));
         user.title = capabilities?.userAvailable ? '' : ctx.t('No non-elevated user token is available.', '通常ユーザーのトークンを取得できません。');
         admin.title = capabilities?.administratorUsesSystem ? ctx.t('No user is logged on. Start as SYSTEM.', '未ログオンのためSYSTEMとして起動します。') :
             capabilities?.administratorAvailable ? ctx.t('Start as this user with administrator privileges', 'ユーザー本人の管理者権限で起動') :
                 capabilities?.administratorReason === expectedCoreadministratorrequired ? ctx.t('Core must run as administrator or SYSTEM. Terminal does not request UAC elevation.', 'Coreを管理者またはSYSTEMで起動してください。TerminalからUAC昇格は行いません。') :
                     ctx.t('An elevated token could not be confirmed on this Core.', 'このCoreで昇格トークンを確認できません。');
+        adminHint.hidden = !capabilities || !admin.disabled || unavailable;
+        adminHint.textContent = ctx.t('Administrator: ', '管理者実行：') + admin.title;
         shellSelect.disabled = unavailable;
     }
 
@@ -681,6 +845,17 @@ export async function terminalView(root, ctx)
         refreshSessions.disabled = disposed;
         copy.disabled = leave.disabled = !term;
         paste.disabled = !stream?.ready || !session || session.exited;
+        host.dataset.emptyHint = user.disabled ? ctx.t('Choose an available peer and shell.', '接続できるピアとシェルを選んでください。')
+            : ctx.t('Use Run as user to open the terminal.', '「ユーザー実行」で端末を開けます。');
+        const connected = !!stream?.ready && !!session && !session.exited;
+        connectionState.textContent = connected ? ctx.t('Connected', '接続中') : ctx.t('Disconnected', '未接続');
+        connectionState.classList.toggle('good', connected);
+        if (peer)
+        {
+            const target = `${peer.clusterId} / ${peer.hostId} / ${peer.peerId}`;
+            note.textContent = session ? target + ' · ' + ctx.t('Session ', 'セッション ') + session.sessionId.slice(0, 8) : target;
+            note.title = session ? session.sessionId : '';
+        }
         keys.refresh();
         fullscreen.update();
         if (tokenPolicy)
@@ -694,21 +869,36 @@ export async function terminalView(root, ctx)
     }
 
     showShells(ctx.t('Select a peer', 'ピアを選択'));
-    toolbar.append(shellLabel, user, admin, leave, copy, paste, ...fullscreen.buttons);
+    const sessionActions = document.createElement('div'), screenActions = document.createElement('div');
+    sessionActions.className = 'terminal-session-actions';
+    screenActions.className = 'terminal-screen-actions';
+    sessionActions.append(shellLabel, shellPath, user, admin, leave);
+    screenActions.append(copy, paste, ...fullscreen.buttons);
+    toolbar.append(sessionActions, screenActions);
     if (tokenPolicy)
     {
-        toolbar.append(tokenPolicy);
+        sessionActions.append(tokenPolicy);
     }
-    const sessionHeading = document.createElement('h2');
-    sessionHeading.textContent = ctx.t('Shared sessions', '共有セッション');
+    sessionActions.append(adminHint);
+    const peerTitle = document.createElement('h2'), sessionTitle = document.createElement('h2');
+    peerTitle.textContent = ctx.t('Clusters & peers', 'クラスタ・ピア');
+    sessionTitle.textContent = ctx.t('Shared sessions', '共有セッション');
+    const refreshPeers = ctx.button(ctx.t('Refresh peers', 'ピア更新'), list);
+    for (const button of [refreshPeers, refreshSessions])
+    {
+        const label = button.textContent;
+        button.className = 'quiet icon-button';
+        button.title = label;
+        button.setAttribute('aria-label', label);
+        button.replaceChildren(ctx.icon('refresh'));
+    }
+    peerHeading.append(peerTitle, refreshPeers);
+    sessionHeading.append(sessionTitle, refreshSessions);
+    peersTree.append(peerHeading);
     const empty = document.createElement('p');
     empty.className = 'remote-empty';
     empty.textContent = ctx.t('Loading shared sessions…', '共有セッションを取得中…');
     sessions.append(sessionHeading, empty);
-    const sidebarActions = document.createElement('div');
-    sidebarActions.className = 'toolbar';
-    sidebarActions.append(refreshSessions, ctx.button(ctx.t('Refresh peers', 'ピア更新'), list));
-    sidebar.append(sidebarActions);
     const menu = document.createElement('div');
     menu.className = 'terminal-context-menu';
     menu.hidden = true;
@@ -797,6 +987,7 @@ export async function terminalView(root, ctx)
         dispose()
         {
             disposed = true;
+            terminationDialog?.close();
             clearTimeout(listTimer);
             shellCatalogs.clear();
             fullscreen.dispose();

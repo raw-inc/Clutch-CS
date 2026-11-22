@@ -9,4 +9,50 @@ namespace ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 /// <param name="TargetInstanceId">対象起動実体。</param>
 /// <param name="ExpiresAt">新規開始できる期限。</param>
 /// <param name="Payload">処理固有の入力。</param>
-public sealed record ClusterRequest(Guid Id, string Kind, string TargetPeerId, Guid TargetInstanceId, DateTimeOffset ExpiresAt, NodeValue Payload);
+public sealed record ClusterRequest(Guid Id, string Kind, string TargetPeerId, Guid TargetInstanceId, DateTimeOffset ExpiresAt, NodeValue Payload)
+{
+    /// <summary>永続的な操作受付には日時を持たないIDを使い、開始期限は別に固定します。</summary>
+    /// <returns>保存先の旧日時境界に巻き込まれない、新規の永続要求です。</returns>
+    public static ClusterRequest StartDurable(string kind, string targetPeerId, Guid targetInstanceId, TimeSpan lifetime,
+        NodeValue payload, TimeProvider? timeProvider = null)
+        => Start(Contracts.Execution.OperationIdentity.CreateDurableRequest(kind), kind, targetPeerId, targetInstanceId, lifetime, payload, timeProvider);
+
+    /// <summary>新しい時刻付きIDと受付期限を、一回の時刻取得から作成します。</summary>
+    /// <returns>IDの生成日時と受付期間の基準が一致する要求です。</returns>
+    public static ClusterRequest Start(string kind, string targetPeerId, Guid targetInstanceId, TimeSpan lifetime,
+        NodeValue payload, TimeProvider? timeProvider = null)
+    {
+        Contracts.Execution.RequestAdmission admission = Contracts.Execution.RequestAdmission.Start(timeProvider ?? TimeProvider.System, lifetime);
+        return new(Guid.CreateVersion7(admission.SourceNow), kind, targetPeerId, targetInstanceId, admission.ExpiresAt, payload) { Admission = admission };
+    }
+
+    /// <summary>新規要求の本文と受付期間を発行時に固定します。保存済み要求の再送には使いません。</summary>
+    /// <returns>時計が補正されても、発行からの経過時間で期限を守る要求です。</returns>
+    public static ClusterRequest Start(Guid id, string kind, string targetPeerId, Guid targetInstanceId, TimeSpan lifetime,
+        NodeValue payload, TimeProvider? timeProvider = null)
+    {
+        Contracts.Execution.RequestAdmission admission = Contracts.Execution.RequestAdmission.Start(timeProvider ?? TimeProvider.System, lifetime);
+        return new(id, kind, targetPeerId, targetInstanceId, admission.ExpiresAt, payload) { Admission = admission };
+    }
+
+    /// <summary>受信側の単調時計で判定する受付期限です。通信処理が設定し、要求のJSONや内容照合用のハッシュには含めません。</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public Contracts.Execution.RequestAdmission? Admission
+    {
+        get; init;
+    }
+
+    /// <summary>初回の配送準備が保存済みかどうかです。trueかつDeliveryTimingがnullなら、初回と同じ旧形式で送ります。</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool DeliveryPrepared
+    {
+        get; init;
+    }
+
+    /// <summary>最初に換算した対象Coreの期限です。別Coreから復元しても、保存済み要求の期限を換算し直しません。</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public Contracts.Execution.RequestClockStamp? DeliveryTiming
+    {
+        get; init;
+    }
+}

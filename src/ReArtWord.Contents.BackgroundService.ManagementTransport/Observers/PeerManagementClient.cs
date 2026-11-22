@@ -37,6 +37,12 @@ public sealed class PeerManagementClient(Func<string, string, UdpObserver?> find
         {
             throw new IOException("File transfer capabilities could not be confirmed.");
         }
+        ManagementReply clockSupport = await observer.InspectWithRetryAsync(capability with { RequestId = Guid.NewGuid(), Operation = "transfer.stream.clock" }, cancellationToken).ConfigureAwait(false);
+        bool clockAware = clockSupport.Outcome == EOutcome.Succeeded && clockSupport.Value?.Json.ValueKind == JsonValueKind.True;
+        if (!clockAware && !(clockSupport.Outcome == EOutcome.NotExecuted && unavailable.Contains(clockSupport.Reason, StringComparer.Ordinal)))
+        {
+            throw new IOException("File transfer clock support could not be confirmed.");
+        }
         Contracts.Cluster.PeerInfo peer = observer.GetClusters().Where(item => string.Equals(item.ClusterId, target.ClusterId, StringComparison.Ordinal))
             .SelectMany(item => item.Peers).Single(item => item.InstanceId == target.InstanceId && string.Equals(item.PeerId, target.PeerId, StringComparison.Ordinal));
         ClientNetworkBinding selected = observer.CaptureBindingStatus().Binding;
@@ -46,8 +52,20 @@ public sealed class PeerManagementClient(Func<string, string, UdpObserver?> find
         bool connected = false;
         try
         {
-            FileTransferTicket ticket = await SendAsync<FileTransferTicket>(target, "transfer.stream.open", Guid.NewGuid(), false, cancellationToken).ConfigureAwait(false);
-            if (ticket.Port is < 1 or > 65535 || ticket.Token.Length != 64 || ticket.ExpiresAt <= DateTimeOffset.UtcNow)
+            string open = "transfer.stream.open";
+            Func<ManagementCommand, CancellationToken, Task<RequestClockStamp?>>? prepareClock = null;
+            if (clockAware)
+            {
+                open = "transfer.stream.clock.open";
+                prepareClock = observer.PrepareClockAsync;
+            }
+            FileTransferTicket ticket = await SendAsync<FileTransferTicket>(target, open, Guid.NewGuid(), false, cancellationToken).ConfigureAwait(false);
+
+            // ExpiresAtはCoreの時計で作られた日時なので、このPCの現在時刻と比較すると、
+            // PC間の時計差だけで有効なチケットを拒否してしまいます。
+            // 受付期限はCore側のFileTransferSession.RunAsyncが管理します。TCP接続待ちからトークン受信までを
+            // 共通の15秒タイマーで打ち切るため、ここではポート番号とトークンの形式だけを検査します。
+            if (ticket.Port is < 1 or > 65535 || ticket.Token.Length != 64)
             {
                 throw new InvalidDataException("Invalid file transfer ticket.");
             }
@@ -64,7 +82,7 @@ public sealed class PeerManagementClient(Func<string, string, UdpObserver?> find
                 throw new InvalidDataException("File transfer ticket was not accepted.");
             }
             connected = true;
-            return new(this, target, client, lease);
+            return new(this, target, client, lease, prepareClock);
         }
         catch (Exception exception) when (exception is IOException or SocketException or OperationCanceledException)
         {
@@ -96,7 +114,7 @@ public sealed class PeerManagementClient(Func<string, string, UdpObserver?> find
         }
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(TimeSpan.FromMinutes(2));
-        ManagementCommand command = new(Guid.NewGuid(), target.ClusterId, target.PeerId, target.InstanceId, DateTimeOffset.UtcNow.AddMinutes(2), operation,
+        ManagementCommand command = ManagementCommand.Start(Guid.NewGuid(), target.ClusterId, target.PeerId, target.InstanceId, TimeSpan.FromMinutes(2), operation,
             NodeValue.FromJson(JsonSerializer.SerializeToElement(payload, ContractJson.Options)));
         ManagementReply reply;
         if (readOnly)
@@ -132,15 +150,27 @@ public sealed class PeerManagementClient(Func<string, string, UdpObserver?> find
     {
         ArgumentNullException.ThrowIfNull(observer);
         ArgumentNullException.ThrowIfNull(command);
-        while (DateTimeOffset.UtcNow < command.ExpiresAt)
+
+        // ファイル確定の受付期限を過ぎても、開始済みの処理の結果は照会できます。
+        using CancellationTokenSource confirmation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        confirmation.CancelAfter(TimeSpan.FromMinutes(5));
+        try
         {
-            ManagementQueryResult result = await observer.QueryAsync(command, cancellationToken).ConfigureAwait(false);
-            if (result.Reply is not null)
+            while (!confirmation.IsCancellationRequested)
             {
-                return result.Reply;
+                ManagementQueryResult result = await observer.QueryAsync(command, confirmation.Token).ConfigureAwait(false);
+                if (result.Reply is not null)
+                {
+                    return result.Reply;
+                }
+                await Task.Delay(250, confirmation.Token).ConfigureAwait(false);
             }
-            await Task.Delay(250, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            return unknown;
         }
-        return unknown;
+        catch (OperationCanceledException) when (confirmation.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            return unknown;
+        }
     }
 }

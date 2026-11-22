@@ -27,6 +27,7 @@ internal sealed class FileTransactionJournal(IDurableRepository repository, Peer
     /// <returns>保存確認。</returns>
     private async Task SaveCoreAsync(FileTransactionOperation operation, bool create, CancellationToken cancellationToken = default)
     {
+        using DerivedIdentityScope identities = new(operation.IdentityFormat);
         string key = operation.Request.OperationId.ToString("N");
         bool local = operation.Members.Count == 1 && operation.Members[0].Status == EPeerStatus.Detached;
         string scope = SharedScope;
@@ -42,7 +43,7 @@ internal sealed class FileTransactionJournal(IDurableRepository repository, Peer
             version = null;
             id = FileStageClient.Identity(operation.Request.OperationId, "start");
         }
-        DurableMutation[] mutations = [new(scope, key, version, NodeValue.FromObject(operation))];
+        DurableMutation[] mutations = [new(scope, key, version, FileTransactionRecord.Write(operation))];
         DurableReceipt result;
         if (local)
         {
@@ -63,6 +64,7 @@ internal sealed class FileTransactionJournal(IDurableRepository repository, Peer
     public async Task<FileTransactionOperation?> ReadAsync(Guid id, CancellationToken cancellationToken = default)
     {
         DurableEntry? entry = await repository.ReadAsync(SharedScope, id.ToString("N"), cancellationToken).ConfigureAwait(false) ?? await repository.ReadAsync(LocalScope, id.ToString("N"), cancellationToken).ConfigureAwait(false);
-        return entry?.Value?.Json.Deserialize<FileTransactionOperation>();
+        return entry?.Value is { } value ? FileTransactionRecord.Read(value.Json)
+                                         : null;
     }
 }

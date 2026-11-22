@@ -7,10 +7,14 @@
         @if(report.UnsavedCandidate){<p class="notice">@Ui["This candidate is not durably saved or shared."]</p>}
         <p>@Ui["Saved revision"]: <code>@report.SavedRevision</code></p>
         <p>@Ui["Effective revision"]: <code>@(report.EffectiveRevision??Ui["None"])</code></p>
-        <div class="table-wrap"><table><thead><tr><th>@Ui["Changed field"]</th><th>@Ui["Effective value"]</th><th>@Ui["Saved value"]</th></tr></thead><tbody>
+        <div class="table-wrap"><table class="record-table"><thead><tr><th>@Ui["Changed field"]</th><th>@Ui["Effective value"]</th><th>@Ui["Saved value"]</th></tr></thead><tbody>
             @foreach(var change in report.Differences)
             {
-                <tr><td>@change.Path @if(change.Omitted){<span class="badge warn">@Ui["Value omitted or shortened"]</span>}</td><td><code>@(change.Before??Ui["Missing"])</code></td><td><code>@(change.After??Ui["Missing"])</code></td></tr>
+                <tr>
+                    <td data-field="@Ui["Changed field"]"><div>@change.Path @if(change.Omitted){<span class="badge warn">@Ui["Value omitted or shortened"]</span>}</div></td>
+                    <td data-field="@Ui["Effective value"]"><code>@(change.Before??Ui["Missing"])</code></td>
+                    <td data-field="@Ui["Saved value"]"><code>@(change.After??Ui["Missing"])</code></td>
+                </tr>
             }
         </tbody></table></div>
         @if(report.Truncated){<p class="notice">@Ui["The comparison is limited. Review the full saved and effective definitions before applying."]</p>}

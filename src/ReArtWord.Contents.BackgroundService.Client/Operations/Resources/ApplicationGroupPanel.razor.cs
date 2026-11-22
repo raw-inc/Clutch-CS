@@ -162,7 +162,7 @@ public sealed partial class ApplicationGroupPanel
         {
             return;
         }
-        Saved response = await Api.PostForPeerAsync<Saved>("/api/process-groups/register", new ProcessGroupRegistrationRequest(draft.Build(), version), PeerId, ClusterId, cancellationToken: token).ConfigureAwait(true);
+        Saved response = await Api.PostForPeerAsync<Saved>("/api/v2/process-groups/register", new ProcessGroupRegistrationRequest(draft.Build(), version), PeerId, ClusterId, cancellationToken: token).ConfigureAwait(true);
         if (response.Outcome == EOutcome.Succeeded)
         {
             draft = null;
@@ -186,7 +186,7 @@ public sealed partial class ApplicationGroupPanel
     /// <returns>一回の操作受付です。</returns>
     private Task CommandAsync(RegisteredProcessGroup item, EProcessGroupCommand action, CancellationToken cancellationToken = default) => GuardAsync(async token =>
     {
-        ProcessGroupOperationResult? response = await Api.PostForPeerAsync<ProcessGroupOperationResult>("/api/process-groups/command", new ProcessGroupCommandRequest(item.Definition.Id, action, item.Version), PeerId, ClusterId, cancellationToken: token).ConfigureAwait(true);
+        ProcessGroupOperationResult? response = await Api.PostForPeerAsync<ProcessGroupOperationResult>("/api/v2/process-groups/command", new ProcessGroupCommandRequest(item.Definition.Id, action, item.Version), PeerId, ClusterId, cancellationToken: token).ConfigureAwait(true);
         confirming = null;
         message = response?.Outcome == EOutcome.Succeeded ? Ui.Deferred("Group operation accepted. Progress is shown in the list.")
                                                           : Ui.Deferred("Group operation was not accepted: {0}", Ui[response?.Reason ?? "Unknown"]);
@@ -204,7 +204,7 @@ public sealed partial class ApplicationGroupPanel
         {
             return;
         }
-        Saved response = await Api.PostForPeerAsync<Saved>("/api/process-groups/remove", new ProcessGroupRemovalRequest(item.Definition.Id, item.Version), PeerId, ClusterId, cancellationToken: token).ConfigureAwait(true);
+        Saved response = await Api.PostForPeerAsync<Saved>("/api/v2/process-groups/remove", new ProcessGroupRemovalRequest(item.Definition.Id, item.Version), PeerId, ClusterId, cancellationToken: token).ConfigureAwait(true);
         if (response.Outcome == EOutcome.Succeeded)
         {
             removing = null;
@@ -216,6 +216,11 @@ public sealed partial class ApplicationGroupPanel
                                                                                : "The group was not removed. Check its current operation and saved version.");
         }
     }, cancellationToken);
+
+    /// <summary>ミリ秒で入力した待機時間を秒で確認できるようにします。</summary>
+    /// <returns>入力途中の値を除いた秒数の表示です。</returns>
+    private string Seconds(string value) => int.TryParse(value, out int milliseconds) ? Ui.Format("{0} seconds", milliseconds / 1000m)
+                                                                                      : string.Empty;
 
     /// <summary>保存中以外は編集を閉じます。</summary>
     private void CloseEditor()

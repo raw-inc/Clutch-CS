@@ -1,3 +1,4 @@
+using ReArtWord.Contents.BackgroundService.Contracts.Execution;
 using System.Text.Json;
 using ReArtWord.Contents.BackgroundService.Contracts.Configuration;
 using ReArtWord.Contents.BackgroundService.Contracts.Configuration.Operational;
@@ -114,7 +115,7 @@ public sealed class ClusterConfigurationSnapshotParticipant : IConfigurationSnap
             {
                 mutations.Add(new(ClusterConfigurationStore.HistoryScope, state.Saved.Revision, null, savedValue));
             }
-            DurableReceipt restored = await cluster.ReplicateAsync(Guid.CreateVersion7(), mutations, cancellationToken).ConfigureAwait(false);
+            DurableReceipt restored = await cluster.ReplicateAsync(OperationIdentity.Create(), mutations, cancellationToken).ConfigureAwait(false);
         return new(restored.Outcome, restored.Reason);
     }
 

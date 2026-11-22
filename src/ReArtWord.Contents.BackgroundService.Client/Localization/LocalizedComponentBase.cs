@@ -92,6 +92,10 @@ public abstract class LocalizedComponentBase : ComponentBase, IAsyncDisposable
         => value is { } instant ? TimeZoneInfo.ConvertTime(instant, DisplayTimeZone).ToString(format, System.Globalization.CultureInfo.CurrentCulture)
                                 : null;
 
+    /// <summary>一覧や確認画面では版の先頭10文字を表示します。</summary>
+    /// <returns>表示用の短い版識別子です。</returns>
+    internal static string AbbreviatedRevision(string revision) => revision[..Math.Min(10, revision.Length)];
+
     /// <summary>画面が開始した非同期I/Oを取り消し、必要時にだけ作成した取消資源を解放します。</summary>
     /// <returns>取消通知と資源解放の完了です。</returns>
     // 抑制理由: IAsyncDisposable の固定署名で、画面が所有する取消資源を終了します。

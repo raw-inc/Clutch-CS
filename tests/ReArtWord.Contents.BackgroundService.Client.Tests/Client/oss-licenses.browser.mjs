@@ -79,13 +79,35 @@ for (const language of ['ja', 'en'])
         const csv = page.locator('section').filter({ has: page.getByRole('heading', { name: 'CsvHelper', exact: true }) });
         const selection = language === 'ja' ? '採用ライセンス: Apache-2.0' : 'Selected license: Apache-2.0';
         assert.ok(await csv.getByText(selection, { exact: true }).isVisible());
-        assert.match(await csv.locator('.muted').textContent(), /MS-PL OR Apache-2\.0/u);
-        await csv.locator('summary').first().click();
+        assert.ok(await csv.getByText('MS-PL OR Apache-2.0', { exact: true }).isVisible());
+        const disclosure = csv.getByRole('button', { name: /CsvHelper/u });
+        await disclosure.click();
+        assert.equal(await disclosure.getAttribute('aria-expanded'), 'true');
         await csv.locator('pre').filter({ hasText: 'Apache License' }).waitFor({ state: 'visible' });
         const zstd = page.locator('section').filter({ has: page.getByRole('heading', { name: 'ZstdSharp.Port', exact: true }) });
         assert.match(await zstd.textContent(), /Zstandard: .*BSD-3-Clause \(BSD-3-Clause OR GPL-2\.0-only\)/u);
         const editor = page.locator('section').filter({ has: page.getByRole('heading', { name: '@codemirror/autocomplete', exact: true }) });
-        assert.equal(await editor.locator('a').count(), 0);
+        assert.equal(await editor.locator('.license-website').count(), 0);
+        const bundled = editor.getByRole('button', { name: /@codemirror\/autocomplete/u });
+        await bundled.click();
+        const packageHeading = editor.getByRole('heading', { name: /^@codemirror\/commands /u });
+        await packageHeading.waitFor({ state: 'visible' });
+        const close = editor.getByRole('button', { name: language === 'ja' ? '本文を閉じる' : 'Close notice' });
+        assert.ok(await close.isHidden());
+        await packageHeading.scrollIntoViewIfNeeded();
+        await close.waitFor();
+        assert.equal(await close.locator('..').locator('strong').innerText(), '@codemirror/autocomplete');
+        await close.click();
+        assert.equal(await bundled.getAttribute('aria-expanded'), 'false');
+        assert.equal(await bundled.evaluate(button => button === document.activeElement), true);
+        assert.ok(await packageHeading.isHidden());
+        const filter = page.getByRole('searchbox', { name: language === 'ja' ? 'ライブラリーを検索' : 'Find a component' });
+        await filter.fill('CSVHELPER');
+        assert.deepEqual(await page.locator('section:visible h2').allTextContents(), ['CsvHelper']);
+        await filter.fill('missing-component');
+        assert.equal(await page.locator('section:visible').count(), 0);
+        await filter.fill('');
+        assert.equal(await page.locator('section:visible').count(), names.length);
     });
 }
 

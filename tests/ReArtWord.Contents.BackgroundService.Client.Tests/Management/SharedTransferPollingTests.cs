@@ -45,8 +45,6 @@ public sealed class SharedTransferPollingTests
             UdpTransport peer = new(new("p", "127.0.0.1", "127.255.255.255", port, clusterId), instance, TimeProvider.System);
             await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable peerLifetime = ((IAsyncDisposable)peer).ConfigureAwait(true);
             peer.Initialize(nic);
-            UdpObserver observer = new(new("observer", new(nic, "127.0.0.1", "127.255.255.255", port)));
-            await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable observerLifetime = observer.ConfigureAwait(true);
             ObserverConnection connection = new(Path.Combine(directory, "client"));
             await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable connectionLifetime = connection.ConfigureAwait(true);
             EditorTestClock clock = new();
@@ -80,10 +78,10 @@ public sealed class SharedTransferPollingTests
                 await peer.SendAsync(WireMessage.Reply(message, "p", instance, JsonSerializer.SerializeToElement(response)), token).ConfigureAwait(false);
             };
             peer.Start();
-            await observer.StartAsync();
+            await connection.SelectAsync(new(nic, "127.0.0.1", "127.255.255.255", port));
             using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
             long sequence = 0;
-            while (!observer.GetClusters().SelectMany(cluster => cluster.Peers).Any(item => item.InstanceId == instance))
+            while (!connection.GetClusters().SelectMany(cluster => cluster.Peers).Any(item => item.InstanceId == instance))
             {
                 PeerInfo announced = new("p", instance, "host", "127.0.0.1", port, EPeerStatus.Ready, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
                 await peer.SendAsync(new(Guid.NewGuid(), clusterId, "p", instance, "hello", null, null,
@@ -91,7 +89,7 @@ public sealed class SharedTransferPollingTests
                 await Task.Delay(25, timeout.Token);
             }
             using ClientCommandLedger ledger = new(directory);
-            using SharedTransfers transfers = new(connection, new((_, _) => observer), ledger, clock);
+            using SharedTransfers transfers = new(connection, new(connection.FindObserver), ledger, clock);
             Assert.True(await transfers.RefreshPeerAsync(target));
             Assert.Single(deliveries);
             Assert.True(await transfers.RefreshPeerAsync(target));

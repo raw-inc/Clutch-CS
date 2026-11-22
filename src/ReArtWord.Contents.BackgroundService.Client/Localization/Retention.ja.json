@@ -1,11 +1,19 @@
 {
+  "Storage used": "保存容量",
+  "Set a separate period for {0}": "{0}の保持期間を個別に指定",
+  "Apply retention to existing logs and history": "保存済みのログと履歴にも保持期間を適用",
+  "Total retention periods for existing records": "保存済みの記録に適用する総保持期間",
+  "Existing records beyond these periods are eligible for deletion during retention cleanup. Deleted records cannot be recovered.": "保持期間を過ぎた記録は、ログと履歴の整理時に削除されます。削除された記録は元に戻せません。",
+  "Update and apply to existing records": "保存済みの記録にも適用して更新",
+  "{0} days": "{0} 日",
+  "Retention by category": "種類別の保持期間",
   "Rolling time (HH:mm)": "日付切替時刻（HH:mm）",
   "Rolling time zone": "日付切替のタイムゾーン",
-  "Inspect retention on peer": "保持方針の反映を確認するPeer",
+  "Inspect retention on peer": "保持方針の反映を確認するピア",
   "Applied retention hash": "反映済み保持方針の識別子",
-  "Maintenance held": "圧縮・削除を保留中",
-  "Peer retention state": "Peerの保持方針の状態",
-  "The peer retention state could not be confirmed.": "Peerの保持方針の反映を確認できませんでした。",
+  "Maintenance held": "圧縮・削除の保留",
+  "Peer retention state": "ピアの保持方針の状態",
+  "The peer retention state could not be confirmed.": "ピアの保持方針の反映を確認できませんでした。",
   "Save shared log retention": "共通のログ・履歴保持方針を保存",
   "Log and history retention": "ログ・履歴の保持設定",
   "Logs and completed history are compressed after the raw period and deleted after the total period. Current state, unresolved operations and explicitly permanent snapshots are protected.": "ログと確定済み履歴は非圧縮期間後に圧縮し、総保持期間後に削除します。現在の状態、未確定の操作、明示的な永久保存は保護します。",
@@ -34,5 +42,6 @@
   "Captured at": "取得日時",
   "Committed event position": "確定変更の位置",
   "Stored bytes": "保存容量（バイト）",
-  "Compressed": "圧縮済み"
+  "Compressed": "圧縮済み",
+  "Choose a suggestion or enter a time zone ID.": "UTC、Asia/Tokyo などのタイムゾーン ID を入力するか、候補を選んでください。"
 }
