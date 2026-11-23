@@ -1,5 +1,5 @@
 import { setControlLabel } from './ui-icons.js';
-import { appendFileRows } from './file-pane-rows.js';
+import { appendFileRows, createFileSelectAll } from './file-pane-rows.js';
 import { hostIds, resolveHosts, samePeer, currentPeer } from './file-transfer-selection.js';
 import { createOverwriteFileControl, fileActionControls } from './file-action-controls.js';
 import { mutateHostFileAsync } from './file-mutations.js';
@@ -180,7 +180,8 @@ export async function filesView(root, ctx)
         const refresh = ctx.button(ctx.t('Refresh', '更新'), () => openAsync(state.directory));
         setControlLabel(refresh, ctx.icon('refresh'));
         toolbar.append(drives, up, refresh);
-        footer.append(count);
+        const selectAll = createFileSelectAll(tree, ctx, state.selected, () => updateAll());
+        footer.append(count, selectAll.button);
         const driveHint = document.createElement('p');
         driveHint.className = 'file-root-note';
         const hintText = document.createElement('span');
@@ -230,6 +231,7 @@ export async function filesView(root, ctx)
             address.placeholder = drivesListed ? ctx.t('Choose a drive or enter a folder path', 'ドライブを選ぶかパスを入力') : '';
             driveHint.hidden = !drivesListed;
             count.textContent = ctx.t(state.selected.size + ' selected', state.selected.size + ' 件を選択');
+            selectAll.update(locked || !state.peer);
             updateCopyAction(locked);
             drives.disabled = refresh.disabled = address.disabled = go.disabled = !state.peer || locked;
             up.disabled = !state.peer || !state.directory || locked;
