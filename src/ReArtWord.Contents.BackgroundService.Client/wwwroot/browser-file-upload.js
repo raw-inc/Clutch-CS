@@ -43,15 +43,17 @@ export function fileManifest(length, hash)
  * @returns 処理の完了と結果を伝えるPromiseです。
  * @contract 公開済みのJavaScriptメソッド名と呼出し側の契約を維持します。
  */
-export async function uploadBrowserFile(file, target, directory, api, signal, progress = () =>
-{})
+export async function uploadBrowserFile(file, target, directory, api, signal, options = {})
 {
     if (!file.name || /[\\/:]/.test(file.name) || ['.', '..'].includes(file.name) || !Number.isSafeInteger(file.size) || file.size < 0)
     {
         throw new Error('Invalid file name or size.');
     }
+    const callbackType = 'function';
+    const { progress = () =>
+    {}, overwrite = false } = typeof options === callbackType ? { progress: options } : options;
     const digest = await hashBrowserFile(file, signal, bytes => progress('hashing', bytes, file.size));
-    return uploadEntriesAsync([{ relativePath: '', isDirectory: false, length: file.size, sha256: digest, file }], file.name, target, directory, fileManifest(file.size, digest), { api, signal, progress });
+    return uploadEntriesAsync([{ relativePath: '', isDirectory: false, length: file.size, sha256: digest, file }], file.name, target, directory, fileManifest(file.size, digest), { api, signal, progress, overwrite });
 }
 
 /** 選択したディレクトリを列挙し、相対パスを保ってアップロードします。
@@ -102,14 +104,14 @@ export async function uploadBrowserDirectory(handle, target, directory, api, sig
 /** 転送項目の進捗と取消しを管理しながら送信します。
  * @returns 処理の完了と結果を伝えるPromiseです。
  */
-async function uploadEntriesAsync(entries, name, target, directory, manifest, { api, signal, progress })
+async function uploadEntriesAsync(entries, name, target, directory, manifest, { api, signal, progress, overwrite = false })
 {
     if (!name || /[\\/:]/.test(name) || ['.', '..'].includes(name))
     {
         throw new Error('Invalid file name.');
     }
     const destination = directory.replace(/[\\/]$/, '') + '/' + name;
-    const request = { requestId: crypto.randomUUID(), sourcePeer: 'browser', sourcePath: name, destinationPath: destination, manifestSha256: manifest, isDirectory: entries[0].isDirectory, overwrite: false };
+    const request = { requestId: crypto.randomUUID(), sourcePeer: 'browser', sourcePath: name, destinationPath: destination, manifestSha256: manifest, isDirectory: entries[0].isDirectory, overwrite };
     let stage, committing = false, completed = false;
     try
     {

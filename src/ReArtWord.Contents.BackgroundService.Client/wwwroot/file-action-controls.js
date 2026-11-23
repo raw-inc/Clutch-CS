@@ -1,6 +1,20 @@
 import { validFolderName } from './file-mutations.js';
 import { setControlLabel } from './ui-icons.js';
 
+/** コピーを開始する前に、同名ファイルを上書きするか選ぶための操作欄です。
+ * @returns 操作欄とチェックボックスです。
+ */
+export function createOverwriteFileControl(ctx)
+{
+    const label = document.createElement('label'), input = document.createElement('input');
+    const text = document.createElement('span');
+    label.className = 'file-overwrite-option';
+    input.type = 'checkbox';
+    text.textContent = ctx.t('Overwrite existing files', '同名ファイルを上書き');
+    label.append(input, text);
+    return { label, input };
+}
+
 /** 二種類のファイル画面で、対象の確認・実行中のロック・一覧更新を揃えます。
  * @returns ボタンと操作状態、画面終了時の解放処理です。
  */
