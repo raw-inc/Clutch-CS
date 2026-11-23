@@ -8,14 +8,16 @@ namespace ReArtWord.Contents.BackgroundService.ManagementTransport.Datagrams;
 /// <summary>不完全パケットを上限・期限付きで組み立てます。</summary>
 internal sealed class FragmentAssembler
 {
+    private static readonly TimeSpan retention = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan pruneInterval = TimeSpan.FromSeconds(1);
     private readonly Dictionary<string, FragmentAssembly> assemblies = new(StringComparer.Ordinal);
     private readonly int maximumBytes;
     private readonly TimeProvider clock;
     private readonly DatagramRecipient? recipient;
     private readonly HashSet<string> ignored = new(StringComparer.Ordinal);
-    private readonly Queue<(string Key, DateTimeOffset ExpiresAt)> ignoredOrder = [];
+    private readonly Queue<(string Key, long IgnoredAt)> ignoredOrder = [];
     private readonly List<string> expiredKeys = new(32);
-    private DateTimeOffset nextPrune;
+    private long? lastPrunedAt;
 
     /// <summary>一配送上限を指定します。</summary>
     public FragmentAssembler(int maximumBytes, TimeProvider clock, DatagramRecipient? recipient = null)
@@ -29,7 +31,7 @@ internal sealed class FragmentAssembler
     /// <returns>従来の厳密な契約検証を通した断片、または受信対象外のnullです。</returns>
     internal DatagramFragment? Decode(string sender, ReadOnlySpan<byte> packet)
     {
-        DateTimeOffset now = clock.GetUtcNow();
+        long now = clock.GetTimestamp();
         Prune(now);
         Utf8JsonReader reader = new(packet);
         Guid id = Guid.Empty;
@@ -79,34 +81,35 @@ internal sealed class FragmentAssembler
         return JsonSerializer.Deserialize<DatagramFragment>(packet, ContractJson.Options);
     }
 
-    /// <summary>除外済みと未完成の追跡を、通信内容にかかわらず同じ期限で回収します。</summary>
-    private void Prune(DateTimeOffset now)
+    /// <summary>日時補正で枠が消えたり残り続けたりしないよう、断片と除外記録を経過時間で回収します。</summary>
+    private void Prune(long now)
     {
-        if (nextPrune <= now)
+        if (lastPrunedAt is long previous && clock.GetElapsedTime(previous, now) < pruneInterval)
         {
-            foreach (KeyValuePair<string, FragmentAssembly> pair in assemblies)
+            return;
+        }
+        lastPrunedAt = now;
+        foreach (KeyValuePair<string, FragmentAssembly> pair in assemblies)
+        {
+            if (retention <= clock.GetElapsedTime(pair.Value.ReceivedAt, now))
             {
-                if (pair.Value.ExpiresAt <= now)
-                {
-                    expiredKeys.Add(pair.Key);
-                }
+                expiredKeys.Add(pair.Key);
             }
-            foreach (string expired in expiredKeys)
-            {
-                assemblies.Remove(expired);
-            }
-            expiredKeys.Clear();
-            while (ignoredOrder.TryPeek(out (string Key, DateTimeOffset ExpiresAt) oldest) && oldest.ExpiresAt <= now)
-            {
-                ignored.Remove(oldest.Key);
-                ignoredOrder.Dequeue();
-            }
-            nextPrune = now.AddSeconds(1);
+        }
+        foreach (string expired in expiredKeys)
+        {
+            assemblies.Remove(expired);
+        }
+        expiredKeys.Clear();
+        while (ignoredOrder.TryPeek(out (string Key, long IgnoredAt) oldest) && retention <= clock.GetElapsedTime(oldest.IgnoredAt, now))
+        {
+            ignored.Remove(oldest.Key);
+            ignoredOrder.Dequeue();
         }
     }
 
     /// <summary>対象外配送を有限件数だけ保持し、後続断片も本文を復号せず捨てます。</summary>
-    private void Ignore(string key, DateTimeOffset now)
+    private void Ignore(string key, long now)
     {
         assemblies.Remove(key);
         if (1024 <= ignoredOrder.Count)
@@ -115,7 +118,7 @@ internal sealed class FragmentAssembler
         }
         if (ignored.Add(key))
         {
-            ignoredOrder.Enqueue((key, now.AddSeconds(15)));
+            ignoredOrder.Enqueue((key, now));
         }
     }
 
@@ -123,7 +126,7 @@ internal sealed class FragmentAssembler
     /// <returns>完全本文、または不足・不正時null。</returns>
     public byte[]? Add(string sender, DatagramFragment fragment)
     {
-        DateTimeOffset now = clock.GetUtcNow();
+        long now = clock.GetTimestamp();
         Prune(now);
         if (fragment.Count <= 0 || 512 < fragment.Count || fragment.Index < 0 || fragment.Count <= fragment.Index || fragment.Length <= 0 || maximumBytes < fragment.Length || 12000 < fragment.Payload.Length)
         {
@@ -154,7 +157,7 @@ internal sealed class FragmentAssembler
             {
                 return null;
             }
-            assembly = new FragmentAssembly(fragment, now.AddSeconds(15));
+            assembly = new FragmentAssembly(fragment, now);
             assemblies.Add(key, assembly);
         }
         if (assembly.First.Count != fragment.Count || assembly.First.Length != fragment.Length || !string.Equals(assembly.First.Hash, fragment.Hash, StringComparison.Ordinal))
@@ -204,14 +207,14 @@ internal sealed class FragmentAssembler
             return false;
         }
         string? oldestKey = null;
-        DateTimeOffset oldestExpiry = DateTimeOffset.MaxValue;
+        long oldestReceivedAt = long.MaxValue;
         foreach (KeyValuePair<string, FragmentAssembly> entry in assemblies)
         {
             bool replaceable = !entry.Value.Parts.ContainsKey(0) || (!transient && entry.Value.Transient);
-            if (replaceable && (oldestKey is null || entry.Value.ExpiresAt < oldestExpiry))
+            if (replaceable && (oldestKey is null || entry.Value.ReceivedAt < oldestReceivedAt))
             {
                 oldestKey = entry.Key;
-                oldestExpiry = entry.Value.ExpiresAt;
+                oldestReceivedAt = entry.Value.ReceivedAt;
             }
         }
         return oldestKey is not null && assemblies.Remove(oldestKey);
