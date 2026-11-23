@@ -14,6 +14,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Persistence.Json;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Local;
 using ReArtWord.Contents.BackgroundService.ManagementTransport.Observers;
 using ReArtWord.Contents.BackgroundService.Runtime.Processes;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 
@@ -175,24 +176,17 @@ internal sealed class RollingUpdatePeer : IAsyncDisposable
         await ((IAsyncDisposable)observer).DisposeAsync().ConfigureAwait(false);
     }
 
-    /// <summary>既存ビルドの現在RIDの実行資産を、一つの検証可能な配布元へ梱包します。</summary>
+    /// <summary>Coreのビルド出力を、更新試験用の配布元へコピーします。</summary>
     /// <returns>Updaterで検証するハッシュ一覧です。</returns>
     internal static async Task<ReleaseManifest> PackageAsync(string destination, CancellationToken cancellationToken = default)
     {
+        const string application = "Clutch-CS.CoreService";
         string configuration = new DirectoryInfo(AppContext.BaseDirectory).Parent!.Name;
         string source = Path.GetFullPath("../../../../../src/ReArtWord.Contents.BackgroundService.CoreService/bin/" + configuration + "/net10.0", AppContext.BaseDirectory);
-        IEnumerable<string> files = Directory.EnumerateFiles(source).Concat(Directory.EnumerateDirectories(source)
-            .Where(directory => !File.Exists(Path.Combine(directory, "Clutch-CS.CoreService.runtimeconfig.json")))
-            .SelectMany(directory => Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)));
         List<ReleaseFile> entries = [];
-        string runtimes = "runtimes/", selectedRuntime = "runtimes/" + RuntimeInformation.RuntimeIdentifier + "/";
-        foreach (string file in files)
+        foreach (string file in TestApplicationOutput.EnumerateFiles(source, application))
         {
             string relative = Path.GetRelativePath(source, file).Replace(Path.DirectorySeparatorChar, '/');
-            if (relative.StartsWith(runtimes, StringComparison.Ordinal) && !relative.StartsWith(selectedRuntime, StringComparison.Ordinal))
-            {
-                continue;
-            }
             string target = Path.Combine(destination, relative);
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             File.Copy(file, target);
@@ -200,7 +194,7 @@ internal sealed class RollingUpdatePeer : IAsyncDisposable
             string hash = Convert.ToHexString(await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false));
             entries.Add(new(relative, stream.Length, hash));
         }
-        return new("old", RuntimeInformation.RuntimeIdentifier, Executable("Clutch-CS.CoreService"), entries, ["old", "new"]);
+        return new("old", RuntimeInformation.RuntimeIdentifier, Executable(application), entries, ["old", "new"]);
     }
 
     /// <summary>各OSのapphost名です。</summary>
