@@ -16,6 +16,7 @@ public sealed class UpdateStreamReceiver
     private readonly Func<UpdatesOptions> options;
     private readonly Func<string, string?> sourceAddress;
     private readonly Guid instanceId;
+    private readonly TimeProvider clock;
     private readonly Lock gate = new();
     private UpdateStreamSession? session;
     private int port;
@@ -29,14 +30,22 @@ public sealed class UpdateStreamReceiver
 
     /// <summary>転送対象ごとの固定ジョブを、同じ検証・保存処理へ接続します。</summary>
     public UpdateStreamReceiver(Func<Guid, CancellationToken, Task<LocalUpdateJob>> readJob, Func<UpdatesOptions> options, Func<string, string?> sourceAddress, Guid instanceId)
+        : this(readJob, options, sourceAddress, instanceId, TimeProvider.System)
+    {
+    }
+
+    /// <summary>転送先が使用する時計を指定して、接続受付を同じ基準で判定します。</summary>
+    internal UpdateStreamReceiver(Func<Guid, CancellationToken, Task<LocalUpdateJob>> readJob, Func<UpdatesOptions> options, Func<string, string?> sourceAddress, Guid instanceId, TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(readJob);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(sourceAddress);
+        ArgumentNullException.ThrowIfNull(clock);
         this.readJob = readJob;
         this.options = options;
         this.sourceAddress = sourceAddress;
         this.instanceId = instanceId;
+        this.clock = clock;
     }
 
     /// <summary>現在待受している場合だけ新しい転送方式を通知します。</summary>
@@ -78,7 +87,7 @@ public sealed class UpdateStreamReceiver
         UpdateLayout layout = new(job.Options, job.OperationId);
         string claim = Path.Combine(layout.OperationRoot, "stream-reserved");
         layout.Validate(claim);
-        UpdateStreamSession created = new(job.OperationId, source);
+        UpdateStreamSession created = new(job.OperationId, source, clock);
         using (gate.EnterScope())
         {
             if (session is not null && !session.CanReplace)

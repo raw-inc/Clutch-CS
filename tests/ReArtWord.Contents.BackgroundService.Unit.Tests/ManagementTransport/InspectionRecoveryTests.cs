@@ -117,4 +117,80 @@ public sealed class InspectionRecoveryTests
         }
         Assert.Equal(expected, reply.Outcome);
     }
+
+    /// <summary>照会元の日時が進んでも、最初の欠測後は元の受付期間が残っている間だけ再照会します。</summary>
+    /// <returns>実UDPで送った照会の回数と結果の確認です。</returns>
+    [Theory]
+    [InlineData(false, EOutcome.Succeeded, 2)]
+    [InlineData(true, EOutcome.Unknown, 1)]
+    public async Task InspectionRetryUsesTheOriginalElapsedDeadlineAfterUtcAdjustment(bool elapsedDeadlinePassed, EOutcome expectedOutcome, int expectedDeliveries)
+    {
+        using UdpClient reservation = new(new IPEndPoint(IPAddress.Loopback, 0));
+        int port = ((IPEndPoint)reservation.Client.LocalEndPoint!).Port;
+        reservation.Close();
+        string nic = ObserverNetwork.GetInterfaces().Single(item => item.Addresses.Any(address => string.Equals(address.Address, "127.0.0.1", StringComparison.Ordinal))).InterfaceId;
+        string cluster = Guid.NewGuid().ToString("N");
+        Guid instance = Guid.NewGuid();
+        ClientNetworkBinding binding = new(nic, "127.0.0.1", "127.255.255.255", port);
+        AdmissionTestClock clock = new();
+        UdpTransport target = new(new("target", binding.BindAddress, binding.BroadcastAddress, port, cluster), instance, TimeProvider.System);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable targetLifetime = ((IAsyncDisposable)target).ConfigureAwait(true);
+        UdpObserver observer = new(new("test", binding) { RequestTimeout = TimeSpan.FromSeconds(1) }, clock);
+        await using System.Runtime.CompilerServices.ConfiguredAsyncDisposable observerLifetime = ((IAsyncDisposable)observer).ConfigureAwait(true);
+        target.Initialize(nic);
+        TimeSpan period = TimeSpan.FromMinutes(2);
+        ConcurrentDictionary<Guid, ClusterRequest> deliveries = new();
+        Guid first = Guid.Empty;
+        Lock gate = new();
+        target.Received = async (message, _, token) =>
+        {
+            string inspect = "inspect";
+            if (!string.Equals(message.Kind, inspect, StringComparison.Ordinal))
+            {
+                return;
+            }
+            deliveries.TryAdd(message.Id, message.Body.Deserialize<ClusterRequest>(ContractJson.Options)!);
+            using (gate.EnterScope())
+            {
+                if (first == Guid.Empty)
+                {
+                    first = message.Id;
+                    clock.Adjust(TimeSpan.FromMinutes(3));
+                    if (elapsedDeadlinePassed)
+                    {
+                        clock.Advance(period);
+                    }
+                }
+                if (message.Id == first)
+                {
+                    return;
+                }
+            }
+            ClusterResponse response = new(EOutcome.Succeeded, NodeValue.FromObject(new ManagementReply(EOutcome.Succeeded, NodeValue.FromObject(true))));
+            await target.SendAsync(WireMessage.Reply(message, "target", instance, JsonSerializer.SerializeToElement(response)), token).ConfigureAwait(false);
+        };
+        target.Start();
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
+        await observer.StartAsync(timeout.Token).ConfigureAwait(true);
+        long sequence = 0;
+        while (observer.GetClusters().Count == 0)
+        {
+            PeerInfo peer = new("target", instance, "host", binding.BindAddress, port, EPeerStatus.Ready, 1, clock.GetUtcNow(), clock.GetUtcNow());
+            await target.SendAsync(new(Guid.NewGuid(), cluster, "target", instance, "hello", null, null,
+                JsonSerializer.SerializeToElement(new PeerAnnouncement(peer, "digest", "target", null, ++sequence))), timeout.Token).ConfigureAwait(true);
+            await Task.Delay(20, timeout.Token).ConfigureAwait(true);
+        }
+
+        ManagementCommand command = ManagementCommand.Start(Guid.NewGuid(), cluster, "target", instance, period, "setup.client.info", null, clock);
+        ManagementReply reply = await observer.InspectWithRetryAsync(command, timeout.Token).ConfigureAwait(true);
+
+        Assert.Equal(expectedOutcome, reply.Outcome);
+        Assert.Equal(expectedDeliveries, deliveries.Count);
+        Assert.All(deliveries.Values, request =>
+        {
+            Assert.Equal(command.RequestId, request.Id);
+            Assert.Equal(instance, request.TargetInstanceId);
+            Assert.Equal(command.ExpiresAt, request.ExpiresAt);
+        });
+    }
 }

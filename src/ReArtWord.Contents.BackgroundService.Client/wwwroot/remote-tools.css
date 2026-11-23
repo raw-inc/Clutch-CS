@@ -1452,6 +1452,14 @@
     min-width: 0;
 }
 
+.file-transfer-scope > .file-overwrite-option {
+    display: inline-flex;
+    align-items: center;
+    justify-self: start;
+    min-height: 32px;
+    gap: 8px;
+}
+
 .file-transfer-scope > button {
     justify-self: start;
 }

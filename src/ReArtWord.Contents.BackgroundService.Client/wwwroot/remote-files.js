@@ -1,7 +1,7 @@
 import { setControlLabel } from './ui-icons.js';
-import { appendFileRows } from './file-pane-rows.js';
+import { appendFileRows, createFileSelectAll } from './file-pane-rows.js';
 import { hostIds, resolveHosts, samePeer, currentPeer } from './file-transfer-selection.js';
-import { fileActionControls } from './file-action-controls.js';
+import { createOverwriteFileControl, fileActionControls } from './file-action-controls.js';
 import { mutateHostFileAsync } from './file-mutations.js';
 
 /** ホスト間のファイル転送と共有キューの表示を構成します。
@@ -12,11 +12,12 @@ export async function filesView(root, ctx)
 {
     root.className = 'files-tool';
     const explanation = document.createElement('p');
-    explanation.textContent = ctx.t('Choose a cluster or leave it automatic, then select a PC on each side. Automatic selection uses a cluster shared by both PCs. Click to select; double-click drives and folders to open them. Copy into the other open folder, or drag onto a folder. Existing names are never overwritten.', 'クラスタを選択、または自動のまま、左右のPCを選びます。自動選定では両方のPCが所属する共通クラスタを使います。シングルクリックで選択し、ドライブやフォルダーはダブルクリックで開きます。相手側のフォルダーへコピー、またはドラッグできます。同名の項目は上書きしません。');
+    explanation.textContent = ctx.t('Choose a cluster or leave it automatic, then select a PC on each side. Automatic selection uses a cluster shared by both PCs. Click to select; double-click drives and folders to open them. Copy into the other open folder, or drag onto a folder. Enable Overwrite existing files to replace files with matching names.', 'クラスタを選択、または自動のまま、左右のPCを選びます。自動選定では両方のPCが所属する共通クラスタを使います。シングルクリックで選択し、ドライブやフォルダーはダブルクリックで開きます。相手側のフォルダーへコピー、またはドラッグできます。同名ファイルを置き換える場合は「同名ファイルを上書き」を選んでください。');
     const clusterLabel = document.createElement('label');
     clusterLabel.textContent = ctx.t('Transfer cluster', '転送クラスタ');
     const clusters = document.createElement('select');
     clusterLabel.append(clusters);
+    const overwrite = createOverwriteFileControl(ctx);
     const clusterStatus = document.createElement('p');
     clusterStatus.className = 'tool-status';
     clusterStatus.setAttribute('role', 'status');
@@ -97,6 +98,7 @@ export async function filesView(root, ctx)
         }
         const sourcePeer = { clusterId: source.peer.clusterId, peerId: source.peer.peerId, instanceId: source.peer.instanceId };
         const destinationPeer = { clusterId: destination.peer.clusterId, peerId: destination.peer.peerId, instanceId: destination.peer.instanceId };
+        const options = overwrite.input.checked ? { overwrite: true } : {};
         const observed = await ctx.peers();
         if (sourcePeer.clusterId !== destinationPeer.clusterId || !currentPeer(observed, sourcePeer) || !currentPeer(observed, destinationPeer))
         {
@@ -105,7 +107,7 @@ export async function filesView(root, ctx)
         }
         for (const path of paths)
         {
-            await ctx.api('/client/transfers', null, { id: crypto.randomUUID(), source: sourcePeer, destination: destinationPeer, sourcePath: path, destinationDirectory: directory });
+            await ctx.api('/client/transfers', null, { id: crypto.randomUUID(), source: sourcePeer, destination: destinationPeer, sourcePath: path, destinationDirectory: directory, ...options });
         }
         ctx.say(ctx.t('Added to the shared copy queue.', '共有コピーキューへ追加しました。'));
         await progressAsync();
@@ -178,7 +180,8 @@ export async function filesView(root, ctx)
         const refresh = ctx.button(ctx.t('Refresh', '更新'), () => openAsync(state.directory));
         setControlLabel(refresh, ctx.icon('refresh'));
         toolbar.append(drives, up, refresh);
-        footer.append(count);
+        const selectAll = createFileSelectAll(tree, ctx, state.selected, () => updateAll());
+        footer.append(count, selectAll.button);
         const driveHint = document.createElement('p');
         driveHint.className = 'file-root-note';
         const hintText = document.createElement('span');
@@ -228,11 +231,12 @@ export async function filesView(root, ctx)
             address.placeholder = drivesListed ? ctx.t('Choose a drive or enter a folder path', 'ドライブを選ぶかパスを入力') : '';
             driveHint.hidden = !drivesListed;
             count.textContent = ctx.t(state.selected.size + ' selected', state.selected.size + ' 件を選択');
+            selectAll.update(locked || !state.peer);
             updateCopyAction(locked);
             drives.disabled = refresh.disabled = address.disabled = go.disabled = !state.peer || locked;
             up.disabled = !state.peer || !state.directory || locked;
             hosts.disabled = clusters.disabled = panes.some(item => item.actions?.busy);
-            reload.disabled = clusters.disabled;
+            reload.disabled = overwrite.input.disabled = clusters.disabled;
             state.actions.update();
         }
 
@@ -423,7 +427,7 @@ export async function filesView(root, ctx)
     }
 
     panes.push(pane(0), pane(1));
-    toolbar.append(clusterStatus, reload);
+    toolbar.append(reload, overwrite.label, clusterStatus);
 
     /** 処理結果を照会し、進捗の表示へ反映します。
      * @returns 処理の完了と結果を伝えるPromiseです。

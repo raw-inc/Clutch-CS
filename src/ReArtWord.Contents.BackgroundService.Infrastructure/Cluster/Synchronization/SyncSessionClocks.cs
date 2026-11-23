@@ -8,6 +8,10 @@ namespace ReArtWord.Contents.BackgroundService.Infrastructure.Cluster.Synchroniz
 /// <summary>固定した両実体の時計だけで同期期限を換算し、CoordinatorやUTCの一致を必要としません。</summary>
 internal sealed class SyncSessionClocks(PeerCluster cluster, TimeProvider clock)
 {
+    private static readonly TimeSpan sampleLifetime = TimeSpan.FromMinutes(1);
+
+    // 管理要求の受付と同じく時計の進み方に最大0.1%の差を見込み、1分間の換算差を上限とします。
+    private static readonly long maximumClockLeadTicks = sampleLifetime.Ticks / 1000;
     private readonly ConcurrentDictionary<Guid, Sample> samples = [];
 
     /// <summary>元の実体の時計を検証できず、日時形式へ切り替えて続行できない理由です。</summary>
@@ -32,7 +36,7 @@ internal sealed class SyncSessionClocks(PeerCluster cluster, TimeProvider clock)
     /// <returns>同じ実体の応答確認です。</returns>
     internal async Task EnsureAsync(PeerInfo peer, CancellationToken cancellationToken = default)
     {
-        if (samples.TryGetValue(peer.InstanceId, out Sample? known) && clock.GetElapsedTime(known.Received) < TimeSpan.FromMinutes(1))
+        if (samples.TryGetValue(peer.InstanceId, out Sample? known) && clock.GetElapsedTime(known.Received) < sampleLifetime)
         {
             return;
         }
@@ -109,7 +113,13 @@ internal sealed class SyncSessionClocks(PeerCluster cluster, TimeProvider clock)
             remaining = TimeSpan.FromTicks(checked(timing.TargetUntilTicks - cluster.AdmissionClock.Capture().ElapsedTicks));
             if (timing.MaximumLifetimeTicks < remaining.Ticks)
             {
-                throw new SyncFailureException("Sync.ManifestMismatch");
+                if (maximumClockLeadTicks < remaining.Ticks - timing.MaximumLifetimeTicks)
+                {
+                    throw new SyncFailureException("Sync.ManifestMismatch");
+                }
+
+                // 推定した期限がわずかに先行した場合は、送信元が指定した有効期間までに収めます。
+                remaining = TimeSpan.FromTicks(timing.MaximumLifetimeTicks);
             }
         }
         if (remaining <= TimeSpan.Zero || maximum < remaining)

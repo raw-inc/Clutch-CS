@@ -1,9 +1,9 @@
 import { setControlLabel } from './ui-icons.js';
 import { hostIds, resolveHosts, currentPeer } from './file-transfer-selection.js';
 import { uploadBrowserFile, uploadBrowserDirectory } from './browser-file-upload.js';
-import { appendFileRows } from './file-pane-rows.js';
+import { appendFileRows, createFileSelectAll } from './file-pane-rows.js';
 import { requireLocalPermission, localDirectory, listLocalFiles, downloadToLocal, browserDownloadUrl } from './browser-local-files.js';
-import { fileActionControls } from './file-action-controls.js';
+import { createOverwriteFileControl, fileActionControls } from './file-action-controls.js';
 import { mutateHostFileAsync, createLocalFolderAsync, deleteLocalEntryAsync } from './file-mutations.js';
 
 /** ブラウザーとホスト間のファイル転送画面を構成します。
@@ -26,7 +26,7 @@ export async function browserFilesView(root, ctx)
     const summary = document.createElement('summary');
     summary.textContent = ctx.t('Transfer help', '転送の使い方');
     const explanation = document.createElement('p');
-    explanation.textContent = ctx.t('Choose a local folder and grant browser access for two-pane file and folder copying. Click to select; double-click or Enter to open folders. Drag onto a destination folder or copy selected items. Keep this page open. Interrupted folder copies may leave completed or empty entries. Without folder access, use file selection and Download links.', 'ローカルフォルダーを選び、ブラウザーでアクセスを許可すると、この端末と接続先の間でファイルやフォルダーをコピーできます。クリックで選択、ダブルクリックまたはEnterで開きます。フォルダーへのドラッグ、または選択項目のコピーを使えます。転送中は画面を開いたままにしてください。同名項目は上書きせず、中断時は完了済み・空の項目が残る場合があります。フォルダーを許可しない場合はファイル選択とダウンロードを使えます。');
+    explanation.textContent = ctx.t('Choose a local folder and grant browser access for two-pane file and folder copying. Click to select; double-click or Enter to open folders. Drag onto a destination folder or copy selected items. Keep this page open. Enable Overwrite existing files to replace files with matching names. Interrupted folder copies may leave completed or empty entries. Without folder access, use file selection and Download links.', 'ローカルフォルダーを選び、ブラウザーでアクセスを許可すると、この端末と接続先の間でファイルやフォルダーをコピーできます。クリックで選択、ダブルクリックまたはEnterで開きます。フォルダーへのドラッグ、または選択項目のコピーを使えます。転送中は画面を開いたままにしてください。同名ファイルを置き換える場合は「同名ファイルを上書き」を選んでください。フォルダーのコピーを中断すると、作成済みの項目が残る場合があります。フォルダーを許可しない場合はファイル選択とダウンロードを使えます。');
     help.append(summary, explanation);
     const split = document.createElement('div');
     split.className = 'file-workspace';
@@ -42,12 +42,13 @@ export async function browserFilesView(root, ctx)
     hostLabel.textContent = ctx.t('Host', 'ホスト');
     clusterLabel.append(cluster);
     hostLabel.append(host);
-    toolbar.append(clusterLabel, hostLabel, status, reload);
+    const overwrite = createOverwriteFileControl(ctx);
+    toolbar.append(clusterLabel, hostLabel, reload, overwrite.label, status);
 
     /** 現在の接続・選択・処理中の状態を操作欄へ反映します。 */
     function updateControls()
     {
-        cluster.disabled = host.disabled = reload.disabled = busy || choosing || panes.some(pane => pane.actions?.busy);
+        cluster.disabled = host.disabled = reload.disabled = overwrite.input.disabled = busy || choosing || panes.some(pane => pane.actions?.busy);
         for (const pane of panes)
         {
             pane.update();
@@ -157,7 +158,8 @@ export async function browserFilesView(root, ctx)
         atRoot.append(ctx.icon('info'), rootText);
         atRoot.hidden = true;
         navigation.append(home, up, refresh);
-        footer.append(count);
+        const selectAll = createFileSelectAll(tree, ctx, state.selected, updateControls);
+        footer.append(count, selectAll.button);
         section.append(title, location, navigation, atRoot, tree, footer);
         split.append(section);
         state.actions = fileActionControls(section, ctx, {
@@ -495,6 +497,7 @@ export async function browserFilesView(root, ctx)
                 chooser.disabled = busy || choosing || panes.some(pane => pane.actions?.busy);
             }
             copy.disabled = !canCopy(locked);
+            selectAll.update(locked || (!available && !local));
             state.actions.update();
             count.textContent = ctx.t(`${state.selected.size} selected`, `${state.selected.size} 件を選択`);
         };
@@ -568,7 +571,7 @@ export async function browserFilesView(root, ctx)
         {
             throw new Error(ctx.t('Select at most 4096 entries.', '一度に選択できる項目は4096件までです。'));
         }
-        const peer = { ...target }, folder = localRoot;
+        const peer = { ...target }, folder = localRoot, allowOverwrite = overwrite.input.checked;
         busy = true;
         transfer = new AbortController();
         const active = transfer;
@@ -639,12 +642,14 @@ export async function browserFilesView(root, ctx)
                     }
                     else
                     {
-                        await uploadBrowserFile(entry.file || await entry.handle.getFile(), peer, destinationPath, ctx.api, active.signal, progress);
+                        await uploadBrowserFile(entry.file || await entry.handle.getFile(), peer, destinationPath, ctx.api, active.signal, { progress, overwrite: allowOverwrite });
                     }
                 }
                 else
                 {
-                    job.bytes = await downloadToLocal(entry, destination, peer, ctx.api, active.signal, { progress: bytes => progress('downloading', bytes) });
+                    job.bytes = await downloadToLocal(entry, destination, peer, ctx.api, active.signal, { progress: bytes => progress('downloading', bytes),
+
+                        overwrite: allowOverwrite });
                 }
                 job.state = ctx.t('Completed', '完了');
                 job.total = job.bytes;

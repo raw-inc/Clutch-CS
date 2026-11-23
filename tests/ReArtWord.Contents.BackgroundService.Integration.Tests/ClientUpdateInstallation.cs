@@ -12,6 +12,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Updates;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Client;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Local;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Releases;
+using ReArtWord.Contents.BackgroundService.Tests.Shared;
 
 namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 
@@ -185,23 +186,15 @@ internal sealed class ClientUpdateInstallation : IAsyncDisposable
         }
     }
 
-    /// <summary>試験用に対象RIDのビルドだけを複製します。</summary>
+    /// <summary>依存DLLを含むビルド出力を試験用にコピーします。</summary>
     /// <returns>独立した配布ディレクトリです。</returns>
     private static async Task CopyBuildAsync(string component, string destination, CancellationToken cancellationToken = default)
     {
         string configuration = new DirectoryInfo(AppContext.BaseDirectory).Parent!.Name;
         string source = Path.GetFullPath("../../../../../src/ReArtWord.Contents.BackgroundService." + component + "/bin/" + configuration + "/net10.0", AppContext.BaseDirectory);
-        string runtimes = "runtimes/", selected = runtimes + RuntimeInformation.RuntimeIdentifier + "/";
-        IEnumerable<string> buildFiles = Directory.EnumerateFiles(source).Concat(Directory.EnumerateDirectories(source)
-            .Where(directory => !File.Exists(Path.Combine(directory, AssemblyName(component) + ".runtimeconfig.json")))
-            .SelectMany(directory => Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)));
-        foreach (string path in buildFiles)
+        foreach (string path in TestApplicationOutput.EnumerateFiles(source, AssemblyName(component)))
         {
             string relative = Path.GetRelativePath(source, path).Replace(Path.DirectorySeparatorChar, '/');
-            if (relative.StartsWith(runtimes, StringComparison.Ordinal) && !relative.StartsWith(selected, StringComparison.Ordinal))
-            {
-                continue;
-            }
             string target = Path.Combine(destination, relative);
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             using FileStream input = File.OpenRead(path);

@@ -47,7 +47,8 @@ internal sealed class FileCopyWorker(PeerManagementClient remote)
             using FileTransferClient destinationClient = await remote.OpenFileTransferAsync(request.Destination, cancellationToken).ConfigureAwait(false);
             int chunkBytes = Math.Min(source.ChunkBytes, destinationClient.ChunkBytes);
             stage = await remote.SendAsync<FileStageToken>(request.Destination, "transfer.open", new FileStageRequest(request.Id.ToString("N"),
-                request.Source.ClusterId + "/" + request.Source.PeerId, request.SourcePath, destination, FileTransferManifest.ComputeSha256(manifest), entries[0].Info.IsDirectory), false, cancellationToken).ConfigureAwait(false);
+                request.Source.ClusterId + "/" + request.Source.PeerId, request.SourcePath, destination, FileTransferManifest.ComputeSha256(manifest),
+                entries[0].Info.IsDirectory, Overwrite: request.Overwrite && !entries[0].Info.IsDirectory), false, cancellationToken).ConfigureAwait(false);
             foreach ((FileEntryInfo info, string relative) in entries)
             {
                 phase = "data transfer";

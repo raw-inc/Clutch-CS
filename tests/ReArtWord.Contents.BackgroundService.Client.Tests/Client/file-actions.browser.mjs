@@ -119,16 +119,46 @@ async function openFilesAsync(context, engine, mode)
 /** パス欄を使い、一覧の取得完了まで待ちます。
  * @returns 対象フォルダーの閲覧完了です。
  */
-async function openDirectoryAsync(pane)
+async function openDirectoryAsync(pane, directory = 'C:/files')
 {
     const input = pane.locator('.file-location input');
-    await input.fill('C:/files');
+    await input.fill(directory);
     await input.press('Enter');
     await pane.getByRole('button', { name: 'keep.txt', exact: true }).waitFor();
 }
 
 for (const [name, engine] of [['Chrome', chromium], ['Firefox', firefox]])
 {
+    for (const mode of ['files', 'browser-files'])
+    {
+        test(`${name}: ${mode} selects and clears the visible checkboxes in one pane`, async context =>
+        {
+            const { page, state } = await openFilesAsync(context, engine, mode);
+            const expectedHostMode = 'files';
+            const pane = page.locator('.file-pane').nth(mode === expectedHostMode ? 0 : 1);
+            const select = pane.getByRole('button', { name: 'Select all shown', exact: true });
+            assert.equal(await select.isDisabled(), true);
+            if (mode === expectedHostMode)
+            {
+                await pane.locator('select').selectOption('test-host');
+            }
+            else
+            {
+                await page.getByLabel('Host', { exact: true }).selectOption('test-host');
+            }
+            await openDirectoryAsync(pane);
+            await pane.getByRole('checkbox', { name: 'Select keep.txt', exact: true }).check();
+            await select.click();
+            assert.equal(await pane.locator('.file-row input:checked').count(), 3);
+            assert.equal(await page.locator('.file-row input:checked').count(), 3);
+            assert.equal(await pane.getByRole('status').textContent(), '3 selected');
+            await pane.getByRole('button', { name: 'Clear selection', exact: true }).click();
+            assert.equal(await pane.locator('.file-row input:checked').count(), 0);
+            assert.equal(await pane.getByRole('status').textContent(), '0 selected');
+            assert.equal(state.calls.length, 0);
+        });
+    }
+
     test(`${name}: folder fields use the dialog focus treatment and keyboard focus returns to the opener`, async context =>
     {
         const { page } = await openFilesAsync(context, engine, 'files');
@@ -276,5 +306,65 @@ for (const [name, engine] of [['Chrome', chromium], ['Firefox', firefox]])
         await page.evaluate(() => window.fileTool.unmount(document.querySelector('#tool')));
         assert.deepEqual(await page.evaluate(() => [...window.localRoot.children.keys()]), ['created']);
         assert.equal(state.calls.length, 0);
+    });
+
+    test(`${name}: Cluster copy includes overwrite only when selected`, async context =>
+    {
+        const { page } = await openFilesAsync(context, engine, 'files');
+        const left = page.locator('.file-pane').nth(0), right = page.locator('.file-pane').nth(1);
+        const requests = [];
+        await page.route('**/client/transfers', async route =>
+        {
+            const request = route.request();
+            if (request.method() === 'POST')
+            {
+                requests.push(request.postDataJSON());
+            }
+            await route.fulfill({ json: { jobs: [], totalJobs: 0, offset: 0, unconfirmedPeers: 0 } });
+        });
+        await left.locator('select').selectOption('test-host');
+        await right.locator('select').selectOption('test-host');
+        await openDirectoryAsync(left);
+        await openDirectoryAsync(right, 'C:/target');
+        await left.getByRole('checkbox', { name: 'Select keep.txt', exact: true }).check();
+        const option = page.getByRole('checkbox', { name: 'Overwrite existing files', exact: true });
+        const copy = left.getByRole('button', { name: 'Copy to test-host', exact: true });
+        assert.equal(await option.isChecked(), false);
+        await copy.click();
+        await option.check();
+        await Promise.all([
+            page.waitForResponse(response => response.url().endsWith('/client/transfers') && response.request().postDataJSON()?.overwrite === true),
+            copy.click()
+        ]);
+        assert.deepEqual(requests.map(request => [request.sourcePath, request.destinationDirectory, request.overwrite]),
+            [['C:/files/keep.txt', 'C:/target', undefined], ['C:/files/keep.txt', 'C:/target', true]]);
+    });
+
+    test(`${name}: Browser file upload uses the overwrite preference`, async context =>
+    {
+        const { page } = await openFilesAsync(context, engine, 'browser-files');
+        const host = page.locator('.file-pane').nth(1), local = page.locator('.file-pane').nth(0);
+        const stages = [];
+        await page.setViewportSize({ width: 390, height: 850 });
+        await page.route('**/api/browser-files/open', async route =>
+        {
+            stages.push(route.request().postDataJSON());
+            await route.fulfill({ json: { id: crypto.randomUUID() } });
+        });
+        await page.route('**/client/browser-files/write?*', route => route.fulfill({ json: true }));
+        await page.route('**/api/v2/browser-files/commit', route => route.fulfill({ json: true }));
+        await page.route('**/api/browser-files/discard', route => route.fulfill({ json: true }));
+        await page.getByLabel('Host', { exact: true }).selectOption('test-host');
+        await openDirectoryAsync(host);
+        const option = page.getByRole('checkbox', { name: 'Overwrite existing files', exact: true });
+        assert.equal(await option.isChecked(), false);
+        assert.ok(await page.locator('.file-transfer-scope').evaluate(toolbar => toolbar.scrollWidth <= toolbar.clientWidth));
+        await option.check();
+        await local.getByLabel('Choose local files').setInputFiles({ name: 'keep.txt', mimeType: 'text/plain', buffer: Buffer.from('new') });
+        await local.getByRole('button', { name: 'Copy to host', exact: true }).click();
+        await page.getByText('keep.txt · → Host · Completed', { exact: true }).waitFor();
+        assert.equal(stages.length, 1);
+        assert.equal(stages[0].overwrite, true);
+        assert.equal(stages[0].destinationPath, 'C:/files/keep.txt');
     });
 }

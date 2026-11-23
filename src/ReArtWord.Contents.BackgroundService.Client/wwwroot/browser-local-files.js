@@ -62,13 +62,24 @@ export async function listLocalFiles(root, path, signal)
 /** 同名のファイル・フォルダーが存在する場合は作成を拒否します。
  * @returns 処理の完了と結果を伝えるPromiseです。
  */
-export async function requireLocalAbsenceAsync(parent, name)
+export function requireLocalAbsenceAsync(parent, name)
+{
+    return requireLocalCopyTargetAsync(parent, name, false);
+}
+
+/** コピー先に同名の項目がないか調べます。上書きが選ばれた場合は同名のファイルを許可します。
+ * @returns コピー先の確認が完了するPromiseです。
+ */
+async function requireLocalCopyTargetAsync(parent, name, overwriteFile)
 {
     if (!validName(name))
     {
         throw new Error('Invalid destination name.');
     }
-    for (const method of ['getFileHandle', 'getDirectoryHandle'])
+    const methods = overwriteFile ? ['getDirectoryHandle'] : ['getFileHandle', 'getDirectoryHandle'];
+    const entryMissing = 'NotFoundError', existingFile = 'TypeMismatchError';
+
+    for (const method of methods)
     {
         try
         {
@@ -76,9 +87,7 @@ export async function requireLocalAbsenceAsync(parent, name)
         }
         catch (error)
         {
-            const expectedNotfounderror = 'NotFoundError';
-
-            if (error.name === expectedNotfounderror)
+            if (error.name === entryMissing || overwriteFile && error.name === existingFile)
             {
                 continue;
             }
@@ -86,6 +95,20 @@ export async function requireLocalAbsenceAsync(parent, name)
         }
         throw new Error('The destination already exists: ' + name);
     }
+}
+
+/** 応答を待つ間に同名の項目が作成されることがあるため、書き込む直前にもコピー先を確認します。
+ * @returns 内容の確定まで既存ファイルを保持する書込みストリームです。
+ */
+async function openLocalCopyAsync(parent, name, overwriteFile)
+{
+    await requireLocalCopyTargetAsync(parent, name, overwriteFile);
+    const file = await parent.getFileHandle(name, { create: true });
+    if (!overwriteFile && (await file.getFile()).size !== 0)
+    {
+        throw new Error('Destination changed before writing.');
+    }
+    return file.createWritable({ keepExistingData: false, mode: 'exclusive' });
 }
 
 /** ブラウザーから取得するファイルのURLを構築します。
@@ -103,10 +126,11 @@ export function browserDownloadUrl(target, path)
  * @contract 公開済みのJavaScriptメソッド名と呼出し側の契約を維持します。
  */
 export async function downloadToLocal(entry, destination, target, api, signal, { progress = () =>
-{}, fetchFile = globalThis.fetch } = {})
+{}, fetchFile = globalThis.fetch, overwrite = false } = {})
 {
     await requireLocalPermission(destination, 'readwrite');
     const plan = [];
+    const replaceFile = overwrite && !entry.isDirectory;
 
     /** 配下の項目を収集し、処理する一覧を組み立てます。
      * @returns 処理の完了と結果を伝えるPromiseです。
@@ -156,14 +180,13 @@ export async function downloadToLocal(entry, destination, target, api, signal, {
     }
 
     await collectAsync(entry, [entry.name], 0);
-    await requireLocalAbsenceAsync(destination, entry.name);
     const folders = new Map([['', destination]]);
     let copied = 0;
     for (const item of plan)
     {
         signal.throwIfAborted();
         const name = item.names.at(-1), parent = folders.get(item.names.slice(0, -1).join('/'));
-        await requireLocalAbsenceAsync(parent, name);
+        await requireLocalCopyTargetAsync(parent, name, replaceFile);
         if (item.entry.isDirectory)
         {
             folders.set(item.names.join('/'), await parent.getDirectoryHandle(name, { create: true }));
@@ -174,13 +197,7 @@ export async function downloadToLocal(entry, destination, target, api, signal, {
         let writer, reader, closing = false, received = 0;
         try
         {
-            await requireLocalAbsenceAsync(parent, name);
-            const file = await parent.getFileHandle(name, { create: true });
-            if ((await file.getFile()).size !== 0)
-            {
-                throw new Error('Destination changed before writing.');
-            }
-            writer = await file.createWritable({ keepExistingData: false, mode: 'exclusive' });
+            writer = await openLocalCopyAsync(parent, name, replaceFile);
             reader = response.body.getReader();
             let reading = true;
             while (reading)
