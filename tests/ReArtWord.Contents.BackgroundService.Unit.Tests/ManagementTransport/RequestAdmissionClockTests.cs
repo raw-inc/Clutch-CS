@@ -97,4 +97,28 @@ public sealed class RequestAdmissionClockTests
         Assert.Equal(original.StartByTicks, repeated.StartByTicks);
         Assert.True(server.Accept(repeated).Admission!.IsExpired);
     }
+
+    /// <summary>時計の進み方に小さな差があっても、送信元の残り時間を超えて受け付けません。</summary>
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(60, true)]
+    [InlineData(61, false)]
+    public void ReceiverBoundsTheBudgetWhenTheClockEstimateLeads(int leadMilliseconds, bool accepted)
+    {
+        AdmissionTestClock clock = new();
+        Guid instance = Guid.NewGuid();
+        RequestAdmissionClock server = new(instance, clock);
+        DateTimeOffset now = clock.GetUtcNow();
+        TimeSpan budget = TimeSpan.FromSeconds(5);
+        ClusterRequest request = new(Guid.NewGuid(), "fixture", "peer", instance, now + budget, NodeValue.Null);
+        ClockedClusterRequest envelope = new(request, instance, (budget + TimeSpan.FromMilliseconds(leadMilliseconds)).Ticks, now);
+        if (accepted)
+        {
+            Assert.Equal(budget, server.Accept(envelope).Admission!.Remaining);
+        }
+        else
+        {
+            Assert.Throws<InvalidDataException>(() => server.Accept(envelope));
+        }
+    }
 }
