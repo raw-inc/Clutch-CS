@@ -84,17 +84,12 @@ internal sealed class UpdateTestScope : IDisposable
     /// <returns>チェックサム付きマニフェストとペイロードです。</returns>
     internal async Task<(ReleaseManifest Manifest, string Root)> PackageAsync(string version, bool ready, CancellationToken cancellationToken = default)
     {
+        const string application = "ContentsUpdateFixture";
         string payload = Path.Combine(Options.StagingRoot!, version);
         Directory.CreateDirectory(payload);
-        foreach (string source in Directory.EnumerateFiles(fixtureDirectory, "*", SearchOption.AllDirectories))
+        foreach (string source in TestApplicationOutput.EnumerateFiles(fixtureDirectory, application))
         {
             string relative = Path.GetRelativePath(fixtureDirectory, source);
-            string runtimePrefix = "runtimes" + Path.DirectorySeparatorChar;
-            string currentRuntime = runtimePrefix + RuntimeInformation.RuntimeIdentifier + Path.DirectorySeparatorChar;
-            if (relative.StartsWith(runtimePrefix, StringComparison.Ordinal) && !relative.StartsWith(currentRuntime, StringComparison.Ordinal))
-            {
-                continue;
-            }
             string target = Path.Combine(payload, relative);
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             File.Copy(source, target);
@@ -103,10 +98,11 @@ internal sealed class UpdateTestScope : IDisposable
         List<ReleaseFile> files = [];
         foreach (string path in Directory.GetFiles(payload, "*", SearchOption.AllDirectories))
         {
-            byte[] bytes = await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false);
-            files.Add(new ReleaseFile(Path.GetRelativePath(payload, path).Replace(Path.DirectorySeparatorChar, '/'), bytes.Length, Convert.ToHexStringLower(SHA256.HashData(bytes))));
+            using FileStream stream = File.OpenRead(path);
+            string hash = Convert.ToHexStringLower(await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false));
+            files.Add(new ReleaseFile(Path.GetRelativePath(payload, path).Replace(Path.DirectorySeparatorChar, '/'), stream.Length, hash));
         }
-        return (new ReleaseManifest(version, RuntimeInformation.RuntimeIdentifier, "ContentsUpdateFixture.dll", files, ["v1", "v2"], version), payload);
+        return (new ReleaseManifest(version, RuntimeInformation.RuntimeIdentifier, application + ".dll", files, ["v1", "v2"], version), payload);
     }
 
     /// <summary>初期リリースを実際に起動して旧実体を取得します。</summary>

@@ -39,7 +39,14 @@ public sealed class UdpCoreUpdateTests
         string destination = Path.Combine(root, "package");
         string name = "Clutch-CS.CoreService";
         string native = "runtimes/" + RuntimeInformation.RuntimeIdentifier + "/native/fixture.dat";
-        string[] paths = [Executable(name), name + ".deps.json", name + ".runtimeconfig.json", "win-x64/" + name + ".deps.json", "win-x64/" + name + ".runtimeconfig.json", "win-x64/duplicate.dll", native, "ja/fixture.resources.dll", "assets/" + name + ".deps.json", "assets/keep.dat"];
+        string windows = "runtimes/win/lib/net10.0/System.Diagnostics.EventLog.dll";
+        string portable = "runtimes/any/lib/net10.0/fixture.dll";
+        string[] paths =
+        [
+            Executable(name), name + ".deps.json", name + ".runtimeconfig.json",
+            "win-x64/" + name + ".deps.json", "win-x64/" + name + ".runtimeconfig.json", "win-x64/duplicate.dll",
+            native, windows, portable, "ja/fixture.resources.dll", "assets/" + name + ".deps.json", "assets/keep.dat"
+        ];
         try
         {
             foreach (string relative in paths)
@@ -51,12 +58,16 @@ public sealed class UdpCoreUpdateTests
             ReleaseManifest manifest = await PackageAsync(source, destination, "fixture").ConfigureAwait(true);
             Assert.Contains(manifest.Files, file => string.Equals(file.Path, Executable(name), StringComparison.Ordinal));
             Assert.Contains(manifest.Files, file => string.Equals(file.Path, native, StringComparison.Ordinal));
+            Assert.Contains(manifest.Files, file => string.Equals(file.Path, windows, StringComparison.Ordinal));
+            Assert.Contains(manifest.Files, file => string.Equals(file.Path, portable, StringComparison.Ordinal));
             Assert.Contains(manifest.Files, file => string.Equals(file.Path, "ja/fixture.resources.dll", StringComparison.Ordinal));
             Assert.Contains(manifest.Files, file => string.Equals(file.Path, "assets/keep.dat", StringComparison.Ordinal));
             Assert.Contains(manifest.Files, file => string.Equals(file.Path, "assets/" + name + ".deps.json", StringComparison.Ordinal));
             Assert.DoesNotContain(manifest.Files, file => file.Path.StartsWith("win-x64/", StringComparison.Ordinal));
             Assert.False(Directory.Exists(Path.Combine(destination, "win-x64")));
             Assert.True(File.Exists(Path.Combine(destination, native)));
+            Assert.True(File.Exists(Path.Combine(destination, windows)));
+            Assert.True(File.Exists(Path.Combine(destination, portable)));
             Assert.True(File.Exists(Path.Combine(destination, "ja/fixture.resources.dll")));
         }
         finally
@@ -326,54 +337,26 @@ public sealed class UdpCoreUpdateTests
         throw new OperationCanceledException(cancellationToken);
     }
 
-    /// <summary>現RIDの実行物だけを独立ペイロードへコピーします。</summary>
+    /// <summary>ビルド出力から、更新前後に起動できる試験用の配布元を作ります。</summary>
     /// <returns>コピー後実体のチェックサム一覧です。</returns>
     private static async Task<ReleaseManifest> PackageAsync(string source, string destination, string release, string application = "Clutch-CS.CoreService", CancellationToken cancellationToken = default)
     {
         Directory.CreateDirectory(destination);
         List<ReleaseFile> files = [];
-        foreach (string file in PayloadFiles(source, application))
+        foreach (string file in TestApplicationOutput.EnumerateFiles(source, application))
         {
             string relative = Path.GetRelativePath(source, file).Replace(Path.DirectorySeparatorChar, '/');
-            string runtimes = "runtimes/";
-            string currentRuntime = runtimes + RuntimeInformation.RuntimeIdentifier + "/";
-            if (relative.StartsWith(runtimes, StringComparison.Ordinal) && !relative.StartsWith(currentRuntime, StringComparison.Ordinal))
-            {
-                continue;
-            }
             string target = Path.Combine(destination, relative);
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             File.Copy(file, target);
-            byte[] bytes = await File.ReadAllBytesAsync(target, cancellationToken).ConfigureAwait(false);
-            files.Add(new(relative, bytes.Length, Convert.ToHexString(SHA256.HashData(bytes))));
+            using FileStream stream = File.OpenRead(target);
+            string hash = Convert.ToHexString(await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false));
+            files.Add(new(relative, stream.Length, hash));
         }
         await File.WriteAllTextAsync(Path.Combine(destination, "release-marker.txt"), release, cancellationToken).ConfigureAwait(false);
         byte[] marker = System.Text.Encoding.UTF8.GetBytes(release);
         files.Add(new("release-marker.txt", marker.Length, Convert.ToHexString(SHA256.HashData(marker))));
         return new(release, RuntimeInformation.RuntimeIdentifier, Executable(application), files, ["old", "new"]);
-    }
-
-    /// <summary>トップ直下の独立アプリ出力を再梱包せず、通常の資産階層だけ列挙します。</summary>
-    /// <returns>指定された実行物の出力に属するファイルです。</returns>
-    private static IEnumerable<string> PayloadFiles(string source, string application)
-    {
-        foreach (string file in Directory.EnumerateFiles(source))
-        {
-            yield return file;
-        }
-        foreach (string directory in Directory.EnumerateDirectories(source))
-        {
-            string dependencies = Path.Combine(directory, application + ".deps.json");
-            string runtimeConfiguration = Path.Combine(directory, application + ".runtimeconfig.json");
-            if (File.Exists(dependencies) && File.Exists(runtimeConfiguration))
-            {
-                continue;
-            }
-            foreach (string file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
-            {
-                yield return file;
-            }
-        }
     }
 
     /// <summary>対象OSのapphost名を選びます。</summary>
