@@ -64,6 +64,45 @@ public sealed class SyncSessionClockTests : IAsyncDisposable
         Assert.Equal("Sync.SessionExpired", Assert.Throws<SyncFailureException>(() => sourceSessions.Accept(reverse, DateTimeOffset.MaxValue, target.LocalInstanceId, TimeSpan.FromHours(1))).Code);
     }
 
+    /// <summary>時計の進み方に小さな差があっても同期を受け付け、往復とも元の有効期間を超えないことを確認します。</summary>
+    [Theory]
+    [InlineData(30, 1)]
+    [InlineData(300, 1)]
+    [InlineData(30, 60)]
+    public void CachedClockLeadDoesNotRejectOrExtendTheSynchronization(int lifetimeSeconds, int leadMilliseconds)
+    {
+        sourceSessions.Observe(target.LocalInstanceId, target.AdmissionClock.Capture(), sourceClock.GetTimestamp());
+        sourceClock.Advance(TimeSpan.FromSeconds(10) + TimeSpan.FromMilliseconds(leadMilliseconds));
+        targetClock.Advance(TimeSpan.FromSeconds(10));
+        TimeSpan duration = TimeSpan.FromSeconds(lifetimeSeconds);
+        SyncLifetime owned = new(sourceClock, duration);
+        SyncTiming timing = Assert.IsType<SyncTiming>(sourceSessions.Create(target.LocalInstanceId, owned));
+
+        SyncLifetime accepted = targetSessions.Accept(timing, DateTimeOffset.MaxValue, source.LocalInstanceId, TimeSpan.FromHours(1));
+        Assert.Equal(duration, accepted.Remaining);
+        SyncTiming reverse = Assert.IsType<SyncTiming>(targetSessions.Reverse(timing, source.LocalInstanceId, accepted));
+        SyncLifetime returning = sourceSessions.Accept(reverse, DateTimeOffset.MaxValue, target.LocalInstanceId, TimeSpan.FromHours(1));
+        Assert.True(returning.Remaining <= owned.Remaining);
+
+        sourceClock.Advance(duration);
+        targetClock.Advance(duration);
+        Assert.True(accepted.Expired);
+        Assert.True(returning.Expired);
+    }
+
+    /// <summary>許容差を超える換算値は、同期の期限として受け付けません。</summary>
+    [Fact]
+    public void ClockLeadAboveTheAllowanceStillRejectsTheSynchronization()
+    {
+        sourceSessions.Observe(target.LocalInstanceId, target.AdmissionClock.Capture(), sourceClock.GetTimestamp());
+        sourceClock.Advance(TimeSpan.FromMilliseconds(10061));
+        targetClock.Advance(TimeSpan.FromSeconds(10));
+        SyncTiming timing = Assert.IsType<SyncTiming>(sourceSessions.Create(target.LocalInstanceId, new(sourceClock, TimeSpan.FromSeconds(30))));
+
+        Assert.Equal("Sync.ManifestMismatch", Assert.Throws<SyncFailureException>(() => targetSessions.Accept(timing, DateTimeOffset.MaxValue,
+            source.LocalInstanceId, TimeSpan.FromHours(1))).Code);
+    }
+
     /// <summary>再起動後の別実体や不正な有効期間を、同じ同期の期限として採用しません。</summary>
     [Fact]
     public void InstanceAndDurationChecksRejectChangedClockContracts()
