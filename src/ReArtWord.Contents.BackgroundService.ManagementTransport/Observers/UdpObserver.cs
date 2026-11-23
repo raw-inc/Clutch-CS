@@ -106,7 +106,7 @@ public sealed class UdpObserver : IAsyncDisposable
             cancellationToken.ThrowIfCancellationRequested();
             reply = await InspectAsync(command, cancellationToken).ConfigureAwait(false);
             if (attempt == 2 || reply.Outcome != EOutcome.Unknown || !string.Equals(reply.Reason, unconfirmed, StringComparison.Ordinal)
-                || command.ExpiresAt <= clock.GetUtcNow())
+                || IsExpired(command))
             {
                 return reply;
             }
@@ -172,7 +172,7 @@ public sealed class UdpObserver : IAsyncDisposable
     private async Task<ManagementReply> SendAsync(ManagementCommand command, bool readOnly, bool transient, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        if (command.RequestId == Guid.Empty || command.DeliveryTiming is null && (command.Admission?.IsExpired ?? command.ExpiresAt <= clock.GetUtcNow()) || string.IsNullOrWhiteSpace(command.Operation)
+        if (command.RequestId == Guid.Empty || command.DeliveryTiming is null && IsExpired(command) || string.IsNullOrWhiteSpace(command.Operation)
             || !started || !transport.BindingAvailable || !FindPeers(command.ClusterId, command.TargetPeerId).Any(peer => peer.InstanceId == command.TargetInstanceId))
         {
             return new(EOutcome.NotExecuted, Reason: "Observer.OriginalTargetOrRequestUnavailable");
@@ -206,6 +206,10 @@ public sealed class UdpObserver : IAsyncDisposable
         WireMessage? response = await ExchangeAsync(command.ClusterId, command.TargetPeerId, command.TargetInstanceId, kind, request, cancellationToken).ConfigureAwait(false);
         return ManagementWire.Response(response);
     }
+
+    /// <summary>発行時に固定された経過時間の期限を、初回送信と再照会で共通に使います。</summary>
+    /// <returns>元の受付期間を過ぎたかです。</returns>
+    private bool IsExpired(ManagementCommand command) => command.Admission?.IsExpired ?? command.ExpiresAt <= clock.GetUtcNow();
 
     /// <summary>クラスタと論理Peerを明示して対象を検索します。</summary>
     /// <returns>観測した元または再起動後の実体です。</returns>
