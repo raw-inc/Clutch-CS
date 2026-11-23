@@ -27,6 +27,22 @@ public sealed class DatagramReplyTests
         Assert.Equal(request.InstanceId, actual.TargetInstanceId);
     }
 
+    /// <summary>組み立て中に日時が進んでも、保持期間内に届いた残りの断片を復元できます。</summary>
+    [Fact]
+    public void AssemblySurvivesAForwardUtcAdjustment()
+    {
+        WireMessage request = Request();
+        WireMessage reply = WireMessage.Reply(request, "source", Guid.NewGuid(), JsonSerializer.SerializeToElement(new string('x', 4096)));
+        AdmissionTestClock clock = new();
+        FragmentAssembler assembler = new(4194304, clock, new(request.SenderId, request.InstanceId, request.ClusterId));
+        Assert.Null(Deliver(assembler, reply, 0));
+
+        clock.Advance(TimeSpan.FromMilliseconds(10));
+        clock.Adjust(TimeSpan.FromSeconds(30));
+
+        Assert.Equal(JsonSerializer.SerializeToUtf8Bytes(reply), Deliver(assembler, reply, 1));
+    }
+
     /// <summary>同じ照会でも応答内容が変わった場合、古い断片を混ぜて完成させません。</summary>
     [Fact]
     public void ChangedReplyBodyNeverCombinesDifferentSnapshots()

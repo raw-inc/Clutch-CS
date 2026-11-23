@@ -176,6 +176,44 @@ public sealed class DatagramRecipientTests
         Assert.Equal(JsonSerializer.SerializeToUtf8Bytes(expected), Assemble(assembler, expected));
     }
 
+    /// <summary>日時を戻しても、未完成の配送枠を経過時間で回収し、新しい配送を受け付けます。</summary>
+    [Fact]
+    public void ExpiredAssembliesReleaseCapacityAfterBackwardUtcAdjustment()
+    {
+        Guid receiver = Guid.NewGuid();
+        AdmissionTestClock clock = new();
+        FragmentAssembler assembler = new(4194304, clock, new("receiver", receiver, "cluster"));
+        for (int index = 0; index < 32; index++)
+        {
+            Assert.Null(assembler.Add("sender", Fragments(Message(receiver))[0]));
+        }
+
+        clock.Adjust(TimeSpan.FromMinutes(-1));
+        clock.Advance(TimeSpan.FromSeconds(16));
+
+        WireMessage expected = Message(receiver);
+        Assert.Equal(JsonSerializer.SerializeToUtf8Bytes(expected), Assemble(assembler, expected));
+    }
+
+    /// <summary>日時を戻しても、宛先外と記録した配送IDを保持期間が過ぎた時点で回収します。</summary>
+    [Fact]
+    public void IgnoredDeliveryExpiresAfterBackwardUtcAdjustment()
+    {
+        Guid receiver = Guid.NewGuid();
+        AdmissionTestClock clock = new();
+        FragmentAssembler assembler = new(4194304, clock, new("receiver", receiver, "cluster"));
+        WireMessage foreign = Message(Guid.NewGuid());
+        Assert.Null(assembler.Decode("sender", DatagramEncoding.Encode(foreign, 4194304)[0]));
+        WireMessage addressed = foreign with { TargetInstanceId = receiver };
+        byte[] header = DatagramEncoding.Encode(addressed, 4194304)[0];
+        Assert.Null(assembler.Decode("sender", header));
+
+        clock.Adjust(TimeSpan.FromMinutes(-1));
+        clock.Advance(TimeSpan.FromSeconds(16));
+
+        Assert.NotNull(assembler.Decode("sender", header));
+    }
+
     /// <summary>順序が逆転した自分宛ての配送と、全員宛ての通知を引き続き復元できます。</summary>
     [Theory]
     [InlineData(false)]
