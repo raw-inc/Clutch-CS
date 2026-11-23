@@ -15,6 +15,7 @@ using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Cluster;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Health;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Releases;
 using ReArtWord.Contents.BackgroundService.Infrastructure.Updates.Streams;
+using ReArtWord.Contents.BackgroundService.Unit.Tests.ManagementTransport;
 using ReArtWord.Contents.BackgroundService.Unit.Tests.Media;
 using Xunit;
 
@@ -119,6 +120,58 @@ public sealed class UpdateStreamTests
             await lifetime.CancelAsync();
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => serving);
         }
+    }
+
+    /// <summary>チケット発行後に受信側の日時が進んでも、期限内なら実TCPで受信します。</summary>
+    /// <returns>送信した内容と受信結果の確認です。</returns>
+    [Fact]
+    public async Task TcpUpdateAcceptsAnUnexpiredTicketAfterAForwardUtcAdjustment()
+    {
+        using MediaTestFiles files = new();
+        byte[] bytes = [1, 2, 3, 4];
+        LocalUpdateJob job = await JobAsync(files.Root, bytes).ConfigureAwait(true);
+        string source = Path.Combine(files.Root, "source");
+        Directory.CreateDirectory(source);
+        await File.WriteAllBytesAsync(Path.Combine(source, "app.dat"), bytes).ConfigureAwait(true);
+
+        AdmissionTestClock clock = new();
+        UpdateStreamReceiver receiver = new((_, _) => Task.FromResult(job),
+            () => job.Options, _ => null, job.PreviousInstanceId, clock);
+        using CancellationTokenSource lifetime = new(TimeSpan.FromSeconds(30));
+        Task serving = receiver.RunAsync(lifetime.Token);
+        try
+        {
+            UpdateStreamTicket ticket = await receiver.OpenAsync(job.OperationId, "127.0.0.1", lifetime.Token).ConfigureAwait(true);
+            clock.Adjust(TimeSpan.FromMinutes(3));
+            ClusterUpdateRequest request = new(job.OperationId, job.Manifest, source, [job.PeerId], EUpdateFailurePolicy.RollbackSuccessful);
+            await UpdateStreamSender.SendAsync(request, UpdateObserver.Binding(job.Options), "127.0.0.1", receiver.Capabilities.Port, ticket, lifetime.Token).ConfigureAwait(true);
+
+            UpdateStreamStatus status = receiver.Read(ticket.Token);
+            Assert.True(status.Completed);
+            Assert.Null(status.Reason);
+            Assert.Equal(bytes.Length, status.Bytes);
+            await ReleaseVerifier.VerifyAsync(job.Manifest, job.PayloadRoot, lifetime.Token).ConfigureAwait(true);
+        }
+        finally
+        {
+            await lifetime.CancelAsync().ConfigureAwait(true);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => serving).ConfigureAwait(true);
+        }
+    }
+
+    /// <summary>受信側の日時を戻しても、未接続のチケットは実際の経過時間で失効し、予約を解放します。</summary>
+    [Fact]
+    public void AnUnusedTicketExpiresAfterTwoMinutesDespiteBackwardUtcAdjustment()
+    {
+        AdmissionTestClock clock = new();
+        UpdateStreamSession session = new(Guid.NewGuid(), IPAddress.Loopback, clock);
+        clock.Adjust(TimeSpan.FromMinutes(-3));
+        clock.Advance(TimeSpan.FromMinutes(2) - TimeSpan.FromTicks(1));
+        Assert.False(session.CanReplace);
+
+        clock.Advance(TimeSpan.FromTicks(1));
+        Assert.True(session.CanReplace);
+        Assert.False(session.TryStart());
     }
 
     /// <summary>切断、改変、宣言外の余分なバイトを成功にしません。</summary>
