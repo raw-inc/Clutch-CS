@@ -14,16 +14,17 @@ namespace ReArtWord.Contents.BackgroundService.Integration.Tests;
 /// <summary>ブラウザー用HTTP中継を、別プロセスのCoreと実ファイルで検証します。</summary>
 public sealed class BrowserFileTransferTests
 {
-    /// <summary>空ファイルを含む分割アップロードとダウンロード、段階回収、実体固定を確認します。</summary>
+    /// <summary>空ファイルを含む分割転送、上書き、段階回収、実体固定を確認します。</summary>
     /// <returns>実HTTPとPeer通信の検証です。</returns>
     [Theory]
-    [InlineData(0, false)]
-    [InlineData(80000, false)]
-    [InlineData(2097169, false)]
-    [InlineData(0, true)]
-    [InlineData(80000, true)]
-    [InlineData(2097169, true)]
-    public async Task TransfersVerifiedFilesAndDiscardsOnlyStagingAsync(int length, bool directory)
+    [InlineData(0, false, false)]
+    [InlineData(80000, false, false)]
+    [InlineData(2097169, false, false)]
+    [InlineData(0, true, false)]
+    [InlineData(80000, true, false)]
+    [InlineData(2097169, true, false)]
+    [InlineData(80000, false, true)]
+    public async Task TransfersVerifiedFilesAndDiscardsOnlyStagingAsync(int length, bool directory, bool overwrite)
     {
         string cluster = Guid.NewGuid().ToString("N");
         int port = CorePeer.AvailablePort();
@@ -44,6 +45,11 @@ public sealed class BrowserFileTransferTests
             return instance != Guid.Empty;
         }).ConfigureAwait(true);
         string destination = Path.Combine(core.DirectoryPath, "browser file 日本語.bin");
+        const string original = "original content";
+        if (overwrite)
+        {
+            await File.WriteAllTextAsync(destination, original).ConfigureAwait(true);
+        }
         byte[] bytes = Enumerable.Range(0, length).Select(index => (byte)(index % 251)).ToArray();
         string hash = Convert.ToHexString(SHA256.HashData(bytes));
         string relativePath = string.Empty;
@@ -61,7 +67,7 @@ public sealed class BrowserFileTransferTests
         computed.EnsureSuccessStatusCode();
         using System.Text.Json.JsonDocument metadata = await System.Text.Json.JsonDocument.ParseAsync(await computed.Content.ReadAsStreamAsync().ConfigureAwait(true)).ConfigureAwait(true);
         Assert.Equal(manifest, metadata.RootElement.GetProperty("sha256").GetString());
-        FileStageRequest open = new(Guid.NewGuid().ToString("D"), "browser", "file.bin", destination, manifest, directory);
+        FileStageRequest open = new(Guid.NewGuid().ToString("D"), "browser", "file.bin", destination, manifest, directory, Overwrite: overwrite);
         using HttpResponseMessage opened = await client.SendAsync(HttpMethod.Post, "api/browser-files/open", open, cluster, "target").ConfigureAwait(true);
         opened.EnsureSuccessStatusCode();
         FileStageToken stage = (await opened.Content.ReadFromJsonAsync<FileStageToken>(ContractJson.Options).ConfigureAwait(true))!;
@@ -102,7 +108,14 @@ public sealed class BrowserFileTransferTests
                 invalid.Content = new ByteArrayContent(bytes, offset, count);
                 using HttpResponseMessage rejected = await uploadClient.SendAsync(invalid).ConfigureAwait(true);
                 Assert.False(rejected.IsSuccessStatusCode);
-                Assert.False(File.Exists(destination));
+                if (overwrite)
+                {
+                    Assert.Equal(original, await File.ReadAllTextAsync(destination).ConfigureAwait(true));
+                }
+                else
+                {
+                    Assert.False(File.Exists(destination));
+                }
             }
             using HttpResponseMessage written = await uploadClient.SendAsync(request).ConfigureAwait(true);
             written.EnsureSuccessStatusCode();
@@ -110,6 +123,10 @@ public sealed class BrowserFileTransferTests
             {
                 break;
             }
+        }
+        if (overwrite)
+        {
+            Assert.Equal(original, await File.ReadAllTextAsync(destination).ConfigureAwait(true));
         }
         using HttpResponseMessage committed = await client.SendAsync(HttpMethod.Post, "api/browser-files/commit", stage, cluster, "target", Guid.NewGuid()).ConfigureAwait(true);
         committed.EnsureSuccessStatusCode();

@@ -132,6 +132,37 @@ test('same-name file, directory and denied permission cannot be overwritten', as
     assert.equal(folder.children.size, 0);
 });
 
+test('opt-in overwrite preserves the existing file until a complete download is committed', async() =>
+{
+    const file = new LocalFile('a.bin', 'original'), folder = new LocalFolder('target', [file]);
+
+    /** 単一ファイルのコピーで一覧取得が行われると試験を失敗させます。
+     * @returns この関数は異常を検出した時点で例外を送出します。
+     */
+    const unexpectedBrowse = () => assert.fail('A file copy should not enumerate the source');
+
+    await assert.rejects(downloadToLocal(source, folder, target, unexpectedBrowse, signal(),
+        { overwrite: true,
+
+            fetchFile: async() => download('x', 3) }), /incomplete/);
+    assert.equal(await (await file.getFile()).text(), 'original');
+    assert.equal(file.aborts, 1);
+    assert.equal(file.closes, 0);
+    assert.equal(await downloadToLocal(source, folder, target, unexpectedBrowse, signal(),
+        { overwrite: true,
+
+            fetchFile: async() => download() }), 3);
+    assert.equal(await (await file.getFile()).text(), 'abc');
+    assert.equal(file.closes, 1);
+
+    const directory = new LocalFolder('a.bin', [new LocalFile('keep.txt')]);
+    await assert.rejects(downloadToLocal(source, new LocalFolder('other', [directory]), target, unexpectedBrowse, signal(),
+        { overwrite: true,
+
+            fetchFile: async() => assert.fail('A directory collision should be rejected before downloading') }), /already exists/);
+    assert.ok(directory.children.has('keep.txt'));
+});
+
 test('truncation and cancellation abort local writes without claiming completion', async() =>
 {
     const folder = new LocalFolder('target');

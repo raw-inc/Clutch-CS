@@ -33,7 +33,7 @@ for (const length of [0, 80000, 2 * 1024 * 1024 + 17])
 {
     test(`upload ${length} bytes pins the target, verifies chunks and discards the completed stage`, async() =>
     {
-        const file = new File([new Uint8Array(length).fill(91)], '日本語.bin'), calls = [], received = [];
+        const file = new File([new Uint8Array(length).fill(91)], '日本語.bin'), calls = [], received = [], progress = [];
 
         /** 取消しと応答の確認を伴う管理要求を送信します。
          * @returns 処理の完了と結果を伝えるPromiseです。
@@ -59,11 +59,29 @@ for (const length of [0, 80000, 2 * 1024 * 1024 + 17])
             return true;
         };
 
-        await uploadBrowserFile(file, target, 'C:/target', apiAsync, new AbortController().signal);
+        await uploadBrowserFile(file, target, 'C:/target', apiAsync, new AbortController().signal, (phase, bytes) => progress.push([phase, bytes]));
+        assert.deepEqual(progress.at(-1), ['completed', length]);
         assert.equal(Buffer.concat(received).length, length);
         assert.deepEqual(calls.slice(-2), ['/api/v2/browser-files/commit', '/api/browser-files/discard']);
     });
 }
+test('opt-in overwrite is sent with the staged file upload', async() =>
+{
+    const stages = [];
+    await uploadBrowserFile(new File(['new'], 'a.txt'), target, 'C:/target', async(path, peer, body) =>
+    {
+        if (path.endsWith('/open'))
+        {
+            stages.push(body);
+            return { id: 'stage' };
+        }
+        return true;
+    }, new AbortController().signal, { overwrite: true });
+    assert.equal(stages.length, 1);
+    assert.equal(stages[0].destinationPath, 'C:/target/a.txt');
+    assert.equal(stages[0].overwrite, true);
+});
+
 test('cancellation discards a partial stage and does not commit', async() =>
 {
     const controller = new AbortController(), calls = [];
