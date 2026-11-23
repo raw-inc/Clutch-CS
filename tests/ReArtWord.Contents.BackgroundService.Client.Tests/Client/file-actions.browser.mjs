@@ -129,6 +129,36 @@ async function openDirectoryAsync(pane)
 
 for (const [name, engine] of [['Chrome', chromium], ['Firefox', firefox]])
 {
+    for (const mode of ['files', 'browser-files'])
+    {
+        test(`${name}: ${mode} selects and clears the visible checkboxes in one pane`, async context =>
+        {
+            const { page, state } = await openFilesAsync(context, engine, mode);
+            const expectedHostMode = 'files';
+            const pane = page.locator('.file-pane').nth(mode === expectedHostMode ? 0 : 1);
+            const select = pane.getByRole('button', { name: 'Select all shown', exact: true });
+            assert.equal(await select.isDisabled(), true);
+            if (mode === expectedHostMode)
+            {
+                await pane.locator('select').selectOption('test-host');
+            }
+            else
+            {
+                await page.getByLabel('Host', { exact: true }).selectOption('test-host');
+            }
+            await openDirectoryAsync(pane);
+            await pane.getByRole('checkbox', { name: 'Select keep.txt', exact: true }).check();
+            await select.click();
+            assert.equal(await pane.locator('.file-row input:checked').count(), 3);
+            assert.equal(await page.locator('.file-row input:checked').count(), 3);
+            assert.equal(await pane.getByRole('status').textContent(), '3 selected');
+            await pane.getByRole('button', { name: 'Clear selection', exact: true }).click();
+            assert.equal(await pane.locator('.file-row input:checked').count(), 0);
+            assert.equal(await pane.getByRole('status').textContent(), '0 selected');
+            assert.equal(state.calls.length, 0);
+        });
+    }
+
     test(`${name}: folder fields use the dialog focus treatment and keyboard focus returns to the opener`, async context =>
     {
         const { page } = await openFilesAsync(context, engine, 'files');

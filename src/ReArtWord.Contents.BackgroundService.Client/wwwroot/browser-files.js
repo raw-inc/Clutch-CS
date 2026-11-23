@@ -1,7 +1,7 @@
 import { setControlLabel } from './ui-icons.js';
 import { hostIds, resolveHosts, currentPeer } from './file-transfer-selection.js';
 import { uploadBrowserFile, uploadBrowserDirectory } from './browser-file-upload.js';
-import { appendFileRows } from './file-pane-rows.js';
+import { appendFileRows, createFileSelectAll } from './file-pane-rows.js';
 import { requireLocalPermission, localDirectory, listLocalFiles, downloadToLocal, browserDownloadUrl } from './browser-local-files.js';
 import { fileActionControls } from './file-action-controls.js';
 import { mutateHostFileAsync, createLocalFolderAsync, deleteLocalEntryAsync } from './file-mutations.js';
@@ -157,7 +157,8 @@ export async function browserFilesView(root, ctx)
         atRoot.append(ctx.icon('info'), rootText);
         atRoot.hidden = true;
         navigation.append(home, up, refresh);
-        footer.append(count);
+        const selectAll = createFileSelectAll(tree, ctx, state.selected, updateControls);
+        footer.append(count, selectAll.button);
         section.append(title, location, navigation, atRoot, tree, footer);
         split.append(section);
         state.actions = fileActionControls(section, ctx, {
@@ -495,6 +496,7 @@ export async function browserFilesView(root, ctx)
                 chooser.disabled = busy || choosing || panes.some(pane => pane.actions?.busy);
             }
             copy.disabled = !canCopy(locked);
+            selectAll.update(locked || (!available && !local));
             state.actions.update();
             count.textContent = ctx.t(`${state.selected.size} selected`, `${state.selected.size} 件を選択`);
         };
