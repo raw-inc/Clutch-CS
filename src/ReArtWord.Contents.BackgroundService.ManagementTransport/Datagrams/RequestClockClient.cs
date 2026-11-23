@@ -14,6 +14,9 @@ public sealed class RequestClockClient(TimeProvider clock)
     private DateTimeOffset originNow = clock.GetUtcNow();
     private long originTimestamp = clock.GetTimestamp();
 
+    /// <summary>時計の照会結果を再利用できる最長時間です。</summary>
+    internal static TimeSpan CalibrationLifetime => TimeSpan.FromMinutes(1);
+
     /// <summary>時計照会に未対応との応答がある場合だけ旧形式を使います。通信失敗を未対応とみなすと、時計差のある要求を旧形式で送ってしまうためです。</summary>
     /// <returns>元の要求に換算済みの期限を添えたデータです。送信先が未対応の場合はnullです。</returns>
     public async Task<ClockedClusterRequest?> PrepareAsync(ClusterRequest request,
@@ -21,7 +24,7 @@ public sealed class RequestClockClient(TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(inspect);
-        if (!clocks.TryGetValue(request.TargetInstanceId, out Calibration? calibration) || TimeSpan.FromMinutes(1) <= clock.GetElapsedTime(calibration.ReceivedAt))
+        if (!clocks.TryGetValue(request.TargetInstanceId, out Calibration? calibration) || CalibrationLifetime <= clock.GetElapsedTime(calibration.ReceivedAt))
         {
             ClusterRequest probe = new(Guid.NewGuid(), RequestClockSnapshot.Capability, request.TargetPeerId, request.TargetInstanceId, request.ExpiresAt, NodeValue.Null);
             ClusterResponse response = await inspect(probe, cancellationToken).ConfigureAwait(false);
@@ -41,7 +44,7 @@ public sealed class RequestClockClient(TimeProvider clock)
                 throw new IOException("The admission clock response is unconfirmed.");
             }
             calibration = new(snapshot, receivedAt);
-            foreach (Guid expired in clocks.Where(pair => TimeSpan.FromMinutes(1) <= clock.GetElapsedTime(pair.Value.ReceivedAt)).Select(pair => pair.Key))
+            foreach (Guid expired in clocks.Where(pair => CalibrationLifetime <= clock.GetElapsedTime(pair.Value.ReceivedAt)).Select(pair => pair.Key))
             {
                 clocks.TryRemove(expired, out _);
             }
